@@ -151,10 +151,6 @@ export default function NewCaseModal({
             const filed = state.date;
             const documentDate = appealDate;
             [appealDate, received, filed].forEach(dateObject);
-            if (received > filed || filed > state.date)
-              throw new Error(
-                "Проверьте порядок дат: документ → получение → подача → регистрация",
-              );
             const amount = 0;
             const counter =
               Math.max(
