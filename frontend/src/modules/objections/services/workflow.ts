@@ -683,15 +683,19 @@ export function applyAction(
       const request = pendingDvgaOrKvgaRequest(c, role);
       if (!request)
         throw new Error("Это действие доступно только для запроса в ДВГА/КВГА");
+      request.authorityResponses ||= {};
       for (const point of disputed(c)) {
-        point.authorityFinding = text(
+        const finding = text(
           `authorityFinding_${point.id}`,
           `Нарушение по пункту ${point.number}`,
         );
-        point.position = text(
+        const response = text(
           `authorityResponse_${point.id}`,
           `Мотивированный ответ по пункту ${point.number}`,
         );
+        request.authorityResponses[point.id] = { finding, response };
+        point.authorityFinding = finding;
+        point.position = response;
       }
       request.responded = date;
       c.documents
