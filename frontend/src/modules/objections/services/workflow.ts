@@ -764,19 +764,9 @@ export function applyAction(
     }
     case "analysis": {
       if (form.has("davgaArguments")) {
-        const memberPositions = Array.from({ length: 20 }, (_, index) => {
-          const number = index + 1;
-          const name = String(form.get(`certificateMember_${number}`) || "").trim();
-          return name ? { id: String(number), name, argument: "" } : null;
-        }).filter(
-          (member): member is { id: string; name: string; argument: string } =>
-            member !== null,
-        );
-        if (!memberPositions.length)
-          throw new Error("Добавьте хотя бы одного члена апелляционной комиссии");
         c.certificate = {
           davgaArguments: text("davgaArguments", "Доводы ДАВГА"),
-          memberPositions,
+          memberPositions: [],
         };
         c.status = "certificate_approval";
         c.result = null;
