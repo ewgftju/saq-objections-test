@@ -119,6 +119,7 @@ export function actionForm(
     action === "request" ||
     action === "request-other" ||
     action === "vote" ||
+    action === "analysis" ||
     action === "assign-work-executor" ||
     action === "choose-commission-members" ||
     action === "commission-vote"
@@ -258,8 +259,15 @@ export function actionForm(
       break;
     case "analysis":
       title = "Сформировать справку";
+      fields.push(
+        area(
+          "davgaArguments",
+          "Доводы ДАВГА",
+          c.certificate?.davgaArguments || "",
+        ),
+      );
       note =
-        "Выберите членов апелляционной комиссии и заполните доводы ДАВГА. Доводы ДВГА будут заполнены по ответу на запрос автоматически.";
+        "Заполните доводы рабочего органа. Доводы ДВГА и КВГА будут подставлены в справку из ответов на запросы автоматически.";
       break;
     case "control-analysis":
       title = "Изучение административного дела";
