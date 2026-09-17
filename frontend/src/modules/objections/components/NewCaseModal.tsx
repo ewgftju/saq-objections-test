@@ -103,10 +103,31 @@ export default function NewCaseModal({
 }) {
   const [appealType, setAppealType] = useState<string>(APPEAL_TYPES[0].value);
   const [pointCount, setPointCount] = useState(1);
+  const [hasProcurement, setHasProcurement] = useState(true);
+  const [decisionKind, setDecisionKind] = useState<
+    "prescription" | "inspection-act"
+  >("prescription");
   const [error, setError] = useState("");
   const selectedAppealType =
     APPEAL_TYPES.find((item) => item.value === appealType) ?? APPEAL_TYPES[0];
   const type = selectedAppealType.caseType;
+  const isNotice = appealType === "notice-objection";
+  const isAudit = appealType === "audit-objection";
+  const isActionComplaint = appealType === "action-inaction-complaint";
+  const isDecisionComplaint = appealType === "kvga-dvga-decision-complaint";
+  const needsAgendaTemplateFields =
+    isNotice || isAudit || isActionComplaint || isDecisionComplaint;
+  const sourceDocumentLabel = isNotice
+    ? "Уведомление об устранении нарушений"
+    : isAudit
+      ? "Аудиторский отчет"
+      : isActionComplaint
+        ? "Обращение, по которому обжалуется действие/бездействие"
+        : isDecisionComplaint
+          ? decisionKind === "prescription"
+            ? "Предписание"
+            : "Акт о результатах проверки"
+          : "Оспариваемый документ";
   return (
     <Modal title="Новое тестовое обращение" onClose={onClose}>
       <form
@@ -149,8 +170,10 @@ export default function NewCaseModal({
             );
             const received = get("received", "Дата получения документа");
             const filed = state.date;
-            const documentDate = appealDate;
-            [appealDate, received, filed].forEach(dateObject);
+            const documentDate = needsAgendaTemplateFields
+              ? get("documentDate", `Дата: ${sourceDocumentLabel}`)
+              : appealDate;
+            [appealDate, received, filed, documentDate].forEach(dateObject);
             const amount = 0;
             const counter =
               Math.max(
@@ -180,16 +203,40 @@ export default function NewCaseModal({
                   ? "Вышестоящий орган — определить компетенцию"
                   : "Апелляционная комиссия при Министерстве финансов РК",
               document: {
-                number: "",
+                number: needsAgendaTemplateFields
+                  ? get("documentNumber", `Номер: ${sourceDocumentLabel}`)
+                  : "",
                 date: documentDate,
                 received,
-                name:
-                  type === "notice"
-                    ? "Уведомление об устранении нарушений"
-                    : type === "audit"
-                      ? "Аудиторский отчёт"
-                      : "Акт о результатах профилактического контроля",
+                name: needsAgendaTemplateFields
+                  ? sourceDocumentLabel
+                  : "Акт о результатах профилактического контроля",
                 appealExplained: data.get("appealExplained") !== "no",
+              },
+              agendaDetails: {
+                ...(isNotice
+                  ? {
+                      cameraControlNumber: get(
+                        "cameraControlNumber",
+                        "Номер результата камерального контроля",
+                      ),
+                      cameraControlDate: get(
+                        "cameraControlDate",
+                        "Дата результата камерального контроля",
+                      ),
+                    }
+                  : {}),
+                ...(isActionComplaint && hasProcurement
+                  ? {
+                      procurementNumber: get("procurementNumber", "Номер закупки"),
+                      lotNumber: get("lotNumber", "Номер лота"),
+                      procurementSubject: get(
+                        "procurementSubject",
+                        "Предмет государственной закупки",
+                      ),
+                    }
+                  : {}),
+                ...(isDecisionComplaint ? { decisionKind } : {}),
               },
               request: get("request", "Требования"),
               amount,
@@ -330,6 +377,107 @@ export default function NewCaseModal({
             />
           ))}
         </div>
+        {needsAgendaTemplateFields && (
+          <>
+            <h3 className="form-section">Реквизиты для повестки дня</h3>
+            <div className="form-grid">
+              <Field
+                field={{
+                  name: "documentNumber",
+                  label: `Номер: ${sourceDocumentLabel}`,
+                  type: "text",
+                  required: true,
+                }}
+              />
+              <Field
+                field={{
+                  name: "documentDate",
+                  label: `Дата: ${sourceDocumentLabel}`,
+                  type: "date",
+                  value: state.date,
+                  required: true,
+                }}
+              />
+              {isNotice && (
+                <>
+                  <Field
+                    field={{
+                      name: "cameraControlNumber",
+                      label: "Номер результата камерального контроля",
+                      type: "text",
+                      required: true,
+                    }}
+                  />
+                  <Field
+                    field={{
+                      name: "cameraControlDate",
+                      label: "Дата результата камерального контроля",
+                      type: "date",
+                      value: state.date,
+                      required: true,
+                    }}
+                  />
+                </>
+              )}
+            </div>
+          </>
+        )}
+        {isActionComplaint && (
+          <section>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={hasProcurement}
+                onChange={(event) => setHasProcurement(event.target.checked)}
+              />
+              Связано с государственной закупкой
+            </label>
+            {hasProcurement && (
+              <div className="form-grid">
+                <Field
+                  field={{
+                    name: "procurementNumber",
+                    label: "Номер государственной закупки",
+                    type: "text",
+                    required: true,
+                  }}
+                />
+                <Field
+                  field={{
+                    name: "lotNumber",
+                    label: "Номер лота",
+                    type: "text",
+                    required: true,
+                  }}
+                />
+                <Field
+                  field={{
+                    name: "procurementSubject",
+                    label: "Предмет государственной закупки",
+                    type: "text",
+                    required: true,
+                  }}
+                />
+              </div>
+            )}
+          </section>
+        )}
+        {isDecisionComplaint && (
+          <label className="field">
+            <span>Вид обжалуемого решения</span>
+            <select
+              value={decisionKind}
+              onChange={(event) =>
+                setDecisionKind(
+                  event.target.value as "prescription" | "inspection-act",
+                )
+              }
+            >
+              <option value="prescription">Предписание</option>
+              <option value="inspection-act">Акт о результатах проверки</option>
+            </select>
+          </label>
+        )}
         <Field
           field={{
             name: "channel",
