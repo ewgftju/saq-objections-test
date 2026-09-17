@@ -7,6 +7,7 @@ export const ROLES = {
   work: "Рабочий орган",
   director: "Директор ДАВГА",
   dvga: "ДВГА",
+  kvga: "КВГА",
   commission: "Апелляционная комиссия",
   subject: "Объект",
   higher: "Вышестоящий орган",
