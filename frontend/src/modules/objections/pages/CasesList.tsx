@@ -130,7 +130,7 @@ export default function CasesList({
             </thead>
             <tbody>
               {visible.map((c) => (
-                <tr key={c.id}>
+                <tr key={c.id} className={c.unread ? "unread-case" : ""}>
                   <td>
                     <button className="text-button" onClick={() => onOpen(c)}>
                       {c.id}
