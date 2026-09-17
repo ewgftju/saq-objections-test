@@ -11,10 +11,12 @@ export function members(): CommissionMember[] {
   ].map((m) => ({ ...m, present: true, recused: false, reason: "" }));
 }
 export function makeCase(c: NewCaseInput): ObjectionCase {
+  const receivedViaSaq = c.channel === "SAQ";
   return {
     ...c,
-    status: "accepted",
-    assignee: "Не назначен",
+    status: receivedViaSaq ? "received" : "accepted",
+    assignee: receivedViaSaq ? "Не назначен" : "Исполнитель рабочего органа",
+    unread: receivedViaSaq,
     extensionDays: 0,
     pauseDays: 0,
     documents: [],
@@ -24,8 +26,12 @@ export function makeCase(c: NewCaseInput): ObjectionCase {
       {
         date: c.registered,
         actor: "Объект",
-        title: "Обращение создано вручную",
-        text: "Обращение зарегистрировано и сразу направлено на формирование запроса.",
+        title: receivedViaSaq
+          ? "Обращение поступило через SAQ"
+          : "Обращение создано вручную",
+        text: receivedViaSaq
+          ? "Обращение направлено директору ДАВГА для выбора исполнителя рабочего органа."
+          : "Обращение зарегистрировано и сразу направлено на формирование запроса.",
       },
     ],
   };
