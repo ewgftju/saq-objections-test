@@ -27,6 +27,7 @@ export function DocumentContent({
   kind,
   document,
   requestPreview,
+  appendixRecipient,
   appendixFindingPreview,
   appendixPreview,
   certificatePreview,
@@ -39,6 +40,7 @@ export function DocumentContent({
     CaseRequest,
     "recipient" | "deadline" | "customText" | "template" | "author"
   >;
+  appendixRecipient?: string;
   appendixFindingPreview?: Record<string, string>;
   appendixPreview?: Record<string, string>;
   certificatePreview?: CaseCertificate;
@@ -59,6 +61,11 @@ export function DocumentContent({
       ? c.requests.find((item) => item.id === document.requestId)
       : undefined);
   const certificate = certificatePreview || snapshot.certificate || undefined;
+  const appendixAuthority = (appendixRecipient || request?.recipient || "ДВГА")
+    .toUpperCase()
+    .includes("КВГА")
+    ? "КВГА"
+    : "ДВГА";
   const title =
     document?.name ||
     (kind === "source"
@@ -181,7 +188,7 @@ export function DocumentContent({
               <th>Нарушение, по которым поступило возражение</th>
               <th>Возражение объекта аудита</th>
               <th>
-                Мотивированный ответ ДВГА по доводам возражения объекта аудита
+                Мотивированный ответ {appendixAuthority} по доводам возражения объекта аудита
                 с приложением подтверждающих документов по фактам нарушений
               </th>
             </tr>
@@ -194,7 +201,7 @@ export function DocumentContent({
                   <td>{point.number}</td>
                   <td>{appendixFindingPreview?.[point.id] ?? point.authorityFinding ?? ""}</td>
                   <td>{point.title}</td>
-                  <td aria-label="Мотивированный ответ ДВГА">
+                  <td aria-label={`Мотивированный ответ ${appendixAuthority}`}>
                     {appendixPreview?.[point.id] ?? point.position ?? ""}
                   </td>
                 </tr>
