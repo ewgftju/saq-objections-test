@@ -3,6 +3,7 @@ export type Role =
   | "work"
   | "director"
   | "dvga"
+  | "kvga"
   | "commission"
   | "subject"
   | "higher";
