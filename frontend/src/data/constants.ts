@@ -18,6 +18,8 @@ export const STATUS = {
   request_approval: "Согласование запроса",
   request_signed: "Подписание запроса",
   request_approved: "Ожидание ответа на запрос",
+  response_approval: "Согласование ответа",
+  response_signed: "Подписание ответа",
   response_ready: "Ожидание ответа на запрос",
   materials: "Формирование справки",
   certificate_approval: "Согласование справки",
