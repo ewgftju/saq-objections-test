@@ -408,17 +408,6 @@
   padding: 64px 72px;
   box-shadow: 0 2px 9px #00263e2e;
 }
-.certificate-member-form {
-  margin: 0 0 18px;
-  padding: 0 0 18px;
-  border-bottom: 1px solid var(--line);
-}
-.certificate-member-form .form-section {
-  margin-top: 0;
-}
-.certificate-authority-arguments {
-  margin-top: 22px;
-}
 .certificate-template {
   box-sizing: border-box;
   min-height: 900px;
@@ -441,19 +430,32 @@
   text-align: justify;
   text-indent: 28px;
 }
+.certificate-template-explanation {
+  margin: 4px 0 18px !important;
+  font-style: italic;
+  text-align: center;
+}
 .certificate-template-point-list {
-  margin: 28px 46px !important;
+  margin: 20px 46px 4px !important;
 }
 .certificate-template-lead {
   margin-top: 30px !important;
-  text-align: center;
-  font-weight: 700;
+}
+.certificate-template-point {
+  margin-top: 28px;
+  break-inside: avoid;
+}
+.certificate-template-point h3 {
+  margin: 0 0 14px;
+  font-size: 20px;
 }
 .certificate-template-line {
-  margin: 20px 0 !important;
-  padding: 6px 0;
-  border-bottom: 2px solid #111;
+  margin: 14px 0 !important;
+  padding: 0;
   white-space: pre-wrap;
+}
+.certificate-template-line p {
+  margin: 6px 0 0;
 }
 .certificate-members-table {
   table-layout: fixed;
