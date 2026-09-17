@@ -1,5 +1,5 @@
 import { preparedActionValues } from "./demoForm";
-import type { Action, ObjectionCase } from "../../types";
+import type { Action, ObjectionCase, Role } from "../../types";
 import { DEMO_USER } from "../../config";
 import { OUTCOMES } from "../../data/constants";
 import { addWorkdays, filingDeadline } from "./services/deadlines";
@@ -112,6 +112,7 @@ export function actionForm(
   c: ObjectionCase,
   date: string,
   values: FormValues,
+  role?: Role,
 ): FormDefinition {
   const day = input("date", "Дата действия", date, "date");
   let fields: FormField[] =
@@ -222,18 +223,28 @@ export function actionForm(
       break;
     case "fill-request-response":
       title = "Ответ ДВГА/КВГА на запрос";
+      const authorityRequest = c.requests.find(
+        (request) =>
+          !request.responded &&
+          (request.recipient.toUpperCase().includes("ДВГА") ||
+            request.recipient.toUpperCase().includes("КВГА")) &&
+          (role !== "dvga" && role !== "kvga" ||
+            (role === "kvga"
+              ? request.recipient.toUpperCase().includes("КВГА")
+              : request.recipient.toUpperCase().includes("ДВГА"))),
+      );
       for (const point of disputed(c))
         fields.push(
           heading(point.id, `Пункт ${point.number} — ${point.title}`),
           area(
             `authorityFinding_${point.id}`,
             "Нарушение, по которым поступило возражение",
-            point.authorityFinding,
+            authorityRequest?.authorityResponses?.[point.id]?.finding,
           ),
           area(
             `authorityResponse_${point.id}`,
             "Мотивированный ответ ДВГА/КВГА по доводу возражения",
-            point.position,
+            authorityRequest?.authorityResponses?.[point.id]?.response,
           ),
         );
       note =
