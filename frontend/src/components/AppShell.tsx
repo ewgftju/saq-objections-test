@@ -23,6 +23,7 @@ export default function AppShell({
   unreadNotifications,
   onRoleChange,
   onNavigate,
+  onClock,
 }: {
   children: ReactNode;
   route: Route;
@@ -133,7 +134,14 @@ export default function AppShell({
                 ))}
               </select>
             </label>
-            <span className="date-control">Дата учёта: {formatDate(date)}</span>
+            <button
+              type="button"
+              className="date-control"
+              onClick={onClock}
+              title="Изменить дату учёта для тестирования"
+            >
+              Дата учёта: {formatDate(date)}
+            </button>
           </div>
         </div>
         {children}
