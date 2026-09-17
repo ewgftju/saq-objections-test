@@ -1090,7 +1090,7 @@ test("дело открывает процесс, а одно действие �
   assert.doesNotMatch(controlHtml, /Позиции комиссии/);
 });
 
-test("справка выводит доводы ДВГА и ДАВГА в печатной форме", () => {
+test("справка формируется по новому шаблону и содержит только поле доводов ДАВГА", () => {
   const h = harness(0);
   screen(h);
   h.run("request", "work", {
@@ -1120,10 +1120,12 @@ test("справка выводит доводы ДВГА и ДАВГА в пе�
   h.run("position", "work");
   h.run("analysis", "work", {
     davgaArguments: "Доводы ДАВГА для справки",
-    certificateMember_1: "ФИО 1",
-    certificateMember_2: "ФИО 2",
   });
   assert.equal(h.c.status, "certificate_approval");
+  assert.deepEqual(
+    actionForm("analysis", h.c, "2026-09-10").fields.map((field) => field.name),
+    ["davgaArguments"],
+  );
   const certificateMaterialsHtml = renderToStaticMarkup(
     createElement(CaseWorkspace, {
       c: h.c,
@@ -1229,11 +1231,16 @@ test("справка выводит доводы ДВГА и ДАВГА в пе�
       document: certificate,
     }),
   );
-  assert.match(html, /Нарушение, заполненное ДВГА/);
-  assert.match(html, /Мотивированный ответ ДВГА/);
+  assert.match(html, /В Министерство финансов Республики Казахстан поступило возражение/);
+  assert.match(html, /Доводы ДВГА\/КВГА:/);
+  assert.match(html, /ДВГА:<\/b> Нарушение, заполненное ДВГА/);
+  assert.match(html, /Мотивированный ответ ДВГА\/КВГА:/);
+  assert.match(html, /ДВГА:<\/b> Мотивированный ответ ДВГА/);
+  assert.match(html, /Доводы объекта гос\. аудита \(заявителя\):/);
   assert.match(html, /Доводы ДАВГА для справки/);
   assert.match(html, /Доводы рабочего органа \(ДАВГА МФ РК\):/);
-  assert.match(html, /ФИО 1/);
+  assert.match(html, /ФИО члены АК/);
+  assert.doesNotMatch(html, /ФИО 1/);
   assert.match(html, /certificate-members-table/);
   assert.match(html, /ГУ «Управление образования»/);
 });
