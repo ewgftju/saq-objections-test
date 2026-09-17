@@ -240,6 +240,8 @@ export interface ObjectionCase {
   screening?: string;
   actEffect?: string;
   memberPosition?: string;
+  /** Новое обращение, поступившее через SAQ и ещё не открытое директором. */
+  unread?: boolean;
   agendaMeetingDate?: string;
   certificate?: CaseCertificate | null;
   hearing?: Hearing | null;
@@ -300,6 +302,7 @@ export interface Route {
 
 export type Action =
   | "screen"
+  | "assign-work-executor"
   | "request"
   | "request-other"
   | "send-request-approval"
