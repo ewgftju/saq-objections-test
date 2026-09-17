@@ -106,6 +106,16 @@ export function nextAction(c: ObjectionCase): ActionOption | null {
           role: "work",
         }
         : undefined,
+    response_approval: {
+      action: "approve-response",
+      label: "Согласовать",
+      role: "dvga",
+    },
+    response_signed: {
+      action: "sign-response",
+      label: "Подписать",
+      role: "dvga",
+    },
     response_ready: {
       action: "position",
       label: "Ответ получен",
@@ -638,8 +648,20 @@ export function applyAction(
             document.snapshot.issues = structuredClone(c.issues);
       });
       note = "Мотивированные ответы ДВГА/КВГА заполнены по всем оспариваемым пунктам.";
-      c.status = "response_ready";
+      c.status = "response_approval";
       doc("Мотивированный ответ ДВГА/КВГА", "authority-response", note);
+      break;
+    }
+    case "approve-response": {
+      c.status = "response_signed";
+      title = "Ответ ДВГА/КВГА согласован";
+      note = "Согласованный ответ ДВГА/КВГА ожидает подписания.";
+      break;
+    }
+    case "sign-response": {
+      c.status = "response_ready";
+      title = "Ответ ДВГА/КВГА подписан";
+      note = "Подписанный ответ готов к фиксации рабочим органом.";
       break;
     }
     case "position": {
