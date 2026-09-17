@@ -309,6 +309,10 @@
 .saq-demo-controls .date-control {
   padding: 6px 8px;
 }
+.saq-demo-controls button.date-control {
+  cursor: pointer;
+  font: inherit;
+}
 .saq-demo-controls > .text-button {
   margin-left: auto;
 }
