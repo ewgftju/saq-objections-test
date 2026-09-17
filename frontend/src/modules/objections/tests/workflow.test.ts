@@ -120,6 +120,8 @@ function prepare(h: Harness, partial = false) {
         ]),
     ),
   );
+  h.run("approve-response", "dvga");
+  h.run("sign-response", "dvga");
   h.run("position", "work");
   analysis(h, partial);
   h.run("members", "work", {
@@ -298,6 +300,12 @@ test("ответ ДВГА сначала фиксируется инициато
         ]),
     ),
   );
+  assert.equal(h.c.status, "response_approval");
+  assert.equal(nextAction(h.c)?.action, "approve-response");
+  h.run("approve-response", "dvga");
+  assert.equal(h.c.status, "response_signed");
+  assert.equal(nextAction(h.c)?.action, "sign-response");
+  h.run("sign-response", "dvga");
   assert.equal(h.c.status, "response_ready");
   assert.equal(nextAction(h.c)?.action, "position");
   h.run("position", "work");
@@ -325,6 +333,8 @@ test("фиксация ответа продлевает срок на пери�
         ]),
     ),
   );
+  h.run("approve-response", "dvga");
+  h.run("sign-response", "dvga");
   h.run("position", "work", { date: "2026-09-11" });
   assert.equal(h.c.pauseDays, 3);
   assert.equal(reviewDeadline(h.c), "2026-09-29");
@@ -957,6 +967,8 @@ test("справка выводит доводы ДВГА и ДАВГА в пе�
         ]),
     ),
   );
+  h.run("approve-response", "dvga");
+  h.run("sign-response", "dvga");
   h.run("position", "work");
   h.run("analysis", "work", {
     davgaArguments: "Доводы ДАВГА для справки",
