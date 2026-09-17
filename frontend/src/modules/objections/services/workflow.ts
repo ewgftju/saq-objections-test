@@ -33,9 +33,20 @@ export const controlDecisions = [
   ["without", "Оставить жалобу без рассмотрения"],
 ] as const;
 
+function isKvgaRequest(recipient: string) {
+  return recipient.toUpperCase().includes("КВГА");
+}
+
+function isDvgaRequest(recipient: string) {
+  return recipient.toUpperCase().includes("ДВГА");
+}
+
 function isDvgaOrKvgaRequest(recipient: string) {
-  const value = recipient.toUpperCase();
-  return value.includes("ДВГА") || value.includes("КВГА");
+  return isDvgaRequest(recipient) || isKvgaRequest(recipient);
+}
+
+function authorityRole(recipient: string): Role {
+  return isKvgaRequest(recipient) ? "kvga" : "dvga";
 }
 
 function pendingDvgaOrKvgaRequest(c: ObjectionCase) {
@@ -97,7 +108,7 @@ export function nextAction(c: ObjectionCase): ActionOption | null {
       ? {
           action: "fill-request-response",
           label: "Заполнить ответ ДВГА/КВГА",
-          role: "dvga",
+          role: authorityRole(pendingDvgaOrKvgaRequest(c)!.recipient),
         }
       : pendingOtherRequest(c)
         ? {
@@ -109,12 +120,12 @@ export function nextAction(c: ObjectionCase): ActionOption | null {
     response_approval: {
       action: "approve-response",
       label: "Согласовать",
-      role: "dvga",
+      role: authorityRole(pendingAuthorityConfirmation(c)?.recipient || "ДВГА"),
     },
     response_signed: {
       action: "sign-response",
       label: "Подписать",
-      role: "dvga",
+      role: authorityRole(pendingAuthorityConfirmation(c)?.recipient || "ДВГА"),
     },
     response_ready: {
       action: "position",
@@ -487,11 +498,20 @@ export function applyAction(
       c.status = "request_approved";
       c.requests.forEach((request) => {
         request.sent ||= date;
+        if (isDvgaOrKvgaRequest(request.recipient))
+          next.notifications.push({
+            id: `notification-${c.id}-${next.notifications.length + 1}`,
+            caseId: c.id,
+            recipient: isKvgaRequest(request.recipient) ? "КВГА" : "ДВГА",
+            date,
+            read: false,
+            text: `В ваш кабинет направлен запрос по обращению №${c.appealNumber || c.id} для подготовки мотивированного ответа.`,
+          });
       });
       c.requestPauseStartedAt ||= date;
       title = "Запрос подписан";
       note = directedToDvgaOrKvga(c)
-        ? "Подписанный запрос направлен в кабинет ДВГА/КВГА для подготовки мотивированного ответа."
+        ? "Подписанные запросы направлены отдельно в кабинеты ДВГА и КВГА для подготовки мотивированных ответов."
         : "Подписанный запрос ожидает поступления ответа.";
       next.notifications.push({
         id: `notification-${c.id}-${next.notifications.length + 1}`,
@@ -688,9 +708,8 @@ export function applyAction(
         }
         c.requestPauseStartedAt = undefined;
       }
-      c.status = authorityRequest
-        ? "materials"
-        : pendingDvgaOrKvgaRequest(c) || pendingOtherRequest(c)
+      c.status =
+        pendingDvgaOrKvgaRequest(c) || pendingOtherRequest(c)
           ? "request_approved"
           : "materials";
       doc("Полученные материалы по запросу", "position", note);
