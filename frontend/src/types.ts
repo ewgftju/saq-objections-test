@@ -176,6 +176,16 @@ export interface AgendaRegistryEntry {
   created: string;
 }
 
+/** Реквизиты, используемые исключительно для текста пункта повестки дня. */
+export interface AgendaDetails {
+  cameraControlNumber?: string;
+  cameraControlDate?: string;
+  procurementNumber?: string;
+  lotNumber?: string;
+  procurementSubject?: string;
+  decisionKind?: "prescription" | "inspection-act";
+}
+
 export interface CaseNotification {
   id: string;
   caseId: string;
@@ -234,6 +244,7 @@ export interface ObjectionCase {
   certificate?: CaseCertificate | null;
   hearing?: Hearing | null;
   meeting?: Meeting | null;
+  agendaDetails?: AgendaDetails;
   votes?: Record<string, VoteResult> | null;
   result?: CaseResult | null;
   delivery?: Delivery | null;
@@ -271,7 +282,9 @@ export type NewCaseInput = Pick<
   | "request"
   | "issues"
 > &
-  Partial<Pick<ObjectionCase, "procurement" | "affectedParties">>;
+  Partial<
+    Pick<ObjectionCase, "procurement" | "affectedParties" | "agendaDetails">
+  >;
 export interface DemoState {
   version: number;
   date: string;
