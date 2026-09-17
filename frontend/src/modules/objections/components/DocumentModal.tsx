@@ -231,69 +231,111 @@ export function DocumentContent({
     );
 
   if (kind === "certificate") {
-    const applicantArguments = snapshot.issues
-      .filter((point) => point.disputed)
-      .map((point) => point.argument)
-      .join("\n");
-    const disputedPoints = snapshot.issues
-      .filter((point) => point.disputed)
-      .map((point) => point.title)
-      .join("; ");
-    const authorityArguments = snapshot.issues
-      .filter((point) => point.disputed)
-      .map(
-        (point) =>
-          `Пункт ${point.number}. Нарушение: ${point.authorityFinding || "—"}\nМотивированный ответ: ${point.position || "—"}`,
-      )
-      .join("\n\n");
+    const points = snapshot.issues.filter((point) => point.disputed);
+    const authorityRequests = c.requests.filter((item) =>
+      /ДВГА|КВГА/i.test(item.recipient),
+    );
+    const appealNoun = /жалоб/i.test(snapshot.appealType || "")
+      ? "жалоба"
+      : /заявлен/i.test(snapshot.appealType || "")
+        ? "заявление"
+        : "возражение";
+    const authorityText = (
+      pointId: string,
+      field: "finding" | "response",
+    ) => {
+      if (!authorityRequests.length)
+        return [{ authority: "ДВГА/КВГА", value: "—" }];
+      return authorityRequests.map((item) => {
+        const authority = item.recipient.toUpperCase().includes("КВГА")
+          ? "КВГА"
+          : "ДВГА";
+        const point = points.find((value) => value.id === pointId);
+        const fallback =
+          authorityRequests.length === 1
+            ? field === "finding"
+              ? point?.authorityFinding
+              : point?.position
+            : undefined;
+        return {
+          authority,
+          value: item.authorityResponses?.[pointId]?.[field] || fallback || "—",
+        };
+      });
+    };
     return (
       <article className="print-document certificate-template">
         <h1>Справка</h1>
         <h2>по результатам изучения и анализа возражения</h2>
         <p className="certificate-template-intro">
-          В Министерство финансов Республики Казахстан поступило возражение от{" "}
+          В Министерство финансов Республики Казахстан поступило {appealNoun} от{" "}
           {formatDate(snapshot.appealDate || snapshot.filed)} года №
-          {snapshot.appealNumber || snapshot.document.number} «{snapshot.org}»,
-          БИН {snapshot.bin} (далее – объект государственного аудита) к
-          уведомлению {snapshot.issuer} от {formatDate(snapshot.document.date)}
-          года №{snapshot.document.number}.
+          {snapshot.appealNumber || snapshot.document.number} {snapshot.org}, БИН{" "}
+          {snapshot.bin} (далее – объект государственного аудита) к уведомлению{" "}
+          {snapshot.issuer} (далее – ДВГА)
         </p>
-        <p className="certificate-template-point-list">{disputedPoints || "—"}</p>
+        <p className="certificate-template-explanation">
+          (наименование, БИН/ИИН лица, подавшего возражение, жалобу)
+        </p>
+        <p className="certificate-template-intro">{snapshot.issuer} (далее – ДВГА).</p>
+        <p className="certificate-template-explanation">
+          (наименование органа, чьи акты, действия (бездействие) обжалуются)
+        </p>
+        <ol className="certificate-template-point-list">
+          {points.map((point) => (
+            <li key={point.id}>{point.title}</li>
+          ))}
+        </ol>
+        <p className="certificate-template-explanation">
+          (перечень обжалуемых вопросов)
+        </p>
         <p className="certificate-template-lead">
           По результатам проведенного анализа рабочий орган (ДАВГА) сообщает
           следующее:
         </p>
-        <p className="certificate-template-line">
-          <b>Доводы ДВГА:</b> {authorityArguments || "—"}
-        </p>
-        <p className="certificate-template-line">
-          <b>Доводы объекта гос. аудита (заявителя):</b>{" "}
-          {applicantArguments || "—"}
-        </p>
-        <p className="certificate-template-line">
-          <b>Доводы рабочего органа (ДАВГА МФ РК):</b>{" "}
-          {certificate?.davgaArguments || "—"}
-        </p>
-        <table className="certificate-members-table">
-          <tbody>
-            <tr>
-              {(certificate?.memberPositions.length
-                ? certificate.memberPositions
-                : [{ id: "preview", name: "ФИО члена АК", argument: "" }]
-              ).map((member) => (
-                <th key={member.id}>{member.name}</th>
+        {points.map((point) => (
+          <section className="certificate-template-point" key={point.id}>
+            <h3>Пункт {point.number}</h3>
+            <div className="certificate-template-line">
+              <b>Доводы ДВГА/КВГА:</b>
+              {authorityText(point.id, "finding").map((item) => (
+                <p key={item.authority}>
+                  <b>{item.authority}:</b> {item.value}
+                </p>
               ))}
-            </tr>
-            <tr>
-              {(certificate?.memberPositions.length
-                ? certificate.memberPositions
-                : [{ id: "preview", name: "", argument: "" }]
-              ).map((member) => (
-                <td key={member.id} aria-label={`Довод ${member.name}`} />
+            </div>
+            <div className="certificate-template-line">
+              <b>Доводы объекта гос. аудита (заявителя):</b>{" "}
+              {point.argument || "—"}
+            </div>
+            <div className="certificate-template-line">
+              <b>Мотивированный ответ ДВГА/КВГА:</b>
+              {authorityText(point.id, "response").map((item) => (
+                <p key={item.authority}>
+                  <b>{item.authority}:</b> {item.value}
+                </p>
               ))}
-            </tr>
-          </tbody>
-        </table>
+            </div>
+            <div className="certificate-template-line">
+              <b>Доводы рабочего органа (ДАВГА МФ РК):</b>{" "}
+              {certificate?.davgaArguments || "—"}
+            </div>
+            <table className="certificate-members-table">
+              <tbody>
+                <tr>
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <th key={index}>ФИО члены АК</th>
+                  ))}
+                </tr>
+                <tr>
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <td key={index} />
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          </section>
+        ))}
       </article>
     );
   }
@@ -689,7 +731,7 @@ export function wordDocumentHtml({
   document,
 }: Pick<Parameters<typeof DocumentContent>[0], "c" | "kind" | "document">) {
   const css =
-    "body{font:14pt 'Times New Roman',serif;line-height:1.45;color:#111}p{white-space:pre-wrap}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #111;padding:8px;vertical-align:top}.certificate-template{padding:20mm 15mm}.certificate-template h1,.certificate-template h2{text-align:center;font-size:16pt}.certificate-template-intro{text-align:justify;text-indent:12mm}.certificate-template-line{padding:6px 0;border-bottom:2px solid #111}.certificate-members-table th{text-align:center}";
+    "body{font:14pt 'Times New Roman',serif;line-height:1.45;color:#111}p{white-space:pre-wrap}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #111;padding:8px;vertical-align:top}.certificate-template{padding:20mm 15mm}.certificate-template h1,.certificate-template h2{text-align:center;font-size:16pt}.certificate-template-intro{text-align:justify;text-indent:12mm}.certificate-template-explanation{text-align:center;font-style:italic}.certificate-template-point{break-inside:avoid}.certificate-template-line{padding:2px 0}.certificate-template-line p{margin:4px 0}.certificate-members-table th{text-align:center}";
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Справка</title><style>${css}</style></head><body>${renderToStaticMarkup(
     <DocumentContent c={c} kind={kind} document={document} />,
   )}</body></html>`;
@@ -705,7 +747,7 @@ export default function DocumentModal(props: {
   const otherRequestCss =
     ".other-request-template{box-sizing:border-box;min-height:880px;padding:30px 48px 54px;font-family:'Times New Roman',Times,serif;font-size:14px;line-height:1.35}.other-request-template-header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;color:#0872ae;font-family:Georgia,'Times New Roman',serif;font-size:14px;font-weight:700;line-height:1.05;text-align:center}.other-request-template-header span{display:grid;width:52px;height:52px;place-items:center;border:1px solid #9a7700;border-radius:50%;background:#ddbd47;color:#1f4e35;font-size:13px}.other-request-template-contacts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px;padding-top:8px;border-top:2px solid #4d9bc4;color:#287dac;font-family:Georgia,'Times New Roman',serif;font-size:9px;line-height:1.3}.other-request-template-contacts span:last-child{text-align:right}.other-request-template-line{height:1px;margin:28px 0 44px;background:#4d9bc4}.other-request-template-recipient{width:46%;margin:0 0 44px auto!important;font-size:14px;line-height:1.4}.other-request-template-body{margin:0!important;overflow-wrap:anywhere;white-space:pre-wrap;text-align:justify;text-indent:28px}.other-request-template-signature{display:grid;grid-template-columns:1fr auto;gap:26px;align-items:end;margin:48px 0 28px;font-size:14px}.other-request-template-executor{margin:0!important;font-size:10px;font-style:italic;line-height:1.25}";
   const css =
-    "body{font:14px Arial,sans-serif;line-height:1.6;color:#111;max-width:850px;margin:28px auto;padding:24px}h2{text-align:center}p{white-space:pre-wrap}table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:8px;text-align:left}.document-watermark{color:#555;text-align:center;font-size:11px}.document-footer{font-size:12px;border-top:1px solid #bbb;padding-top:16px}.appendix-template{box-sizing:border-box;min-height:680px;padding:52px 54px 96px;font-family:'Times New Roman',Times,serif}.appendix-template-number{margin:0 14px 14px 0!important;font-size:16px!important;text-align:right}.appendix-template table{table-layout:fixed;font-size:16px;line-height:1.35}.appendix-template th,.appendix-template td{border:1px solid #111;padding:7px 9px;vertical-align:top;word-break:break-word}.appendix-template th{text-align:center;font-size:17px;background:white}.appendix-template tbody tr{height:40px}.appendix-template th:first-child,.appendix-template td:first-child{width:5%;text-align:center;font-weight:bold}.appendix-template th:nth-child(2),.appendix-template td:nth-child(2){width:23%}.appendix-template th:nth-child(3),.appendix-template td:nth-child(3){width:31%}.appendix-template th:nth-child(4),.appendix-template td:nth-child(4){width:41%}.certificate-template{box-sizing:border-box;min-height:900px;padding:58px 68px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.45}.certificate-template h1,.certificate-template h2{text-align:center;font-size:22px;margin:0;font-weight:700}.certificate-template h2{font-size:20px;margin-bottom:34px}.certificate-template-intro{text-align:justify;text-indent:28px}.certificate-template-point-list{margin:28px 46px}.certificate-template-lead{margin-top:30px;font-weight:700;text-align:center}.certificate-template-line{border-bottom:2px solid #111;padding:6px 0;margin:20px 0}.certificate-template-section-title{margin:28px 0 12px 46px;font-size:20px;font-weight:700}.certificate-members-table{table-layout:fixed}.certificate-members-table th,.certificate-members-table td{border:1px solid #111;padding:10px;vertical-align:top;white-space:pre-wrap}.certificate-members-table th{text-align:center;font-weight:700}.protocol-template{box-sizing:border-box;padding:56px 64px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.4}.protocol-template h1{margin:0 0 34px;text-align:center;font-size:21px;font-weight:400}.protocol-template-place-date{display:flex;justify-content:space-between;margin-bottom:28px}.protocol-template-intro,.protocol-template-result{text-align:justify;text-indent:28px}.protocol-votes-table{table-layout:fixed}.protocol-votes-table th,.protocol-votes-table td{border:1px solid #111;padding:7px 8px;vertical-align:top}.protocol-votes-table th{text-align:center;font-weight:400}.protocol-template-signatures{margin-top:46px}@page{size:A4;margin:18mm}";
+    "body{font:14px Arial,sans-serif;line-height:1.6;color:#111;max-width:850px;margin:28px auto;padding:24px}h2{text-align:center}p{white-space:pre-wrap}table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:8px;text-align:left}.document-watermark{color:#555;text-align:center;font-size:11px}.document-footer{font-size:12px;border-top:1px solid #bbb;padding-top:16px}.appendix-template{box-sizing:border-box;min-height:680px;padding:52px 54px 96px;font-family:'Times New Roman',Times,serif}.appendix-template-number{margin:0 14px 14px 0!important;font-size:16px!important;text-align:right}.appendix-template table{table-layout:fixed;font-size:16px;line-height:1.35}.appendix-template th,.appendix-template td{border:1px solid #111;padding:7px 9px;vertical-align:top;word-break:break-word}.appendix-template th{text-align:center;font-size:17px;background:white}.appendix-template tbody tr{height:40px}.appendix-template th:first-child,.appendix-template td:first-child{width:5%;text-align:center;font-weight:bold}.appendix-template th:nth-child(2),.appendix-template td:nth-child(2){width:23%}.appendix-template th:nth-child(3),.appendix-template td:nth-child(3){width:31%}.appendix-template th:nth-child(4),.appendix-template td:nth-child(4){width:41%}.certificate-template{box-sizing:border-box;min-height:900px;padding:58px 68px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.45}.certificate-template h1,.certificate-template h2{text-align:center;font-size:22px;margin:0;font-weight:700}.certificate-template h2{font-size:20px;margin-bottom:34px}.certificate-template-intro{text-align:justify;text-indent:28px}.certificate-template-explanation{margin:4px 0 18px;text-align:center;font-style:italic}.certificate-template-point-list{margin:20px 46px 4px}.certificate-template-lead{margin-top:30px}.certificate-template-point{margin-top:28px;break-inside:avoid}.certificate-template-point h3{margin:0 0 14px;font-size:20px}.certificate-template-line{padding:0;margin:14px 0;white-space:pre-wrap}.certificate-template-line p{margin:6px 0 0}.certificate-members-table{table-layout:fixed}.certificate-members-table th,.certificate-members-table td{border:1px solid #111;padding:10px;vertical-align:top;white-space:pre-wrap}.certificate-members-table th{text-align:center;font-weight:700}.protocol-template{box-sizing:border-box;padding:56px 64px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.4}.protocol-template h1{margin:0 0 34px;text-align:center;font-size:21px;font-weight:400}.protocol-template-place-date{display:flex;justify-content:space-between;margin-bottom:28px}.protocol-template-intro,.protocol-template-result{text-align:justify;text-indent:28px}.protocol-votes-table{table-layout:fixed}.protocol-votes-table th,.protocol-votes-table td{border:1px solid #111;padding:7px 8px;vertical-align:top}.protocol-votes-table th{text-align:center;font-weight:400}.protocol-template-signatures{margin-top:46px}@page{size:A4;margin:18mm}";
   const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>SAQ — документ</title><style>${css}${otherRequestCss}</style></head><body>${renderToStaticMarkup(<DocumentContent {...props} />)}</body></html>`;
   return (
     <Modal title="Просмотр документа" onClose={props.onClose} wide>
