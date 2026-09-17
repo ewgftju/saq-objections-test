@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { Action, ObjectionCase } from "../../../types";
+import type { Action, ObjectionCase, Role } from "../../../types";
 import { Button, Modal, Notice } from "../../../components/ui";
 import { actionForm } from "../formDefinitions";
 import type { FormField, FormValues } from "../formDefinitions";
@@ -242,12 +242,14 @@ export default function ActionModal({
   action,
   c,
   date,
+  role,
   onSubmit,
   onClose,
 }: {
   action: Action;
   c: ObjectionCase;
   date: string;
+  role: Role;
   onSubmit: (form: FormData) => void | Promise<void>;
   onClose: () => void;
 }) {
@@ -325,7 +327,11 @@ export default function ActionModal({
       !request.responded &&
       (request.template === "dvga" ||
         request.recipient.toUpperCase().includes("ДВГА") ||
-        request.recipient.toUpperCase().includes("КВГА")),
+        request.recipient.toUpperCase().includes("КВГА")) &&
+      (role !== "dvga" && role !== "kvga" ||
+        (role === "kvga"
+          ? request.recipient.toUpperCase().includes("КВГА")
+          : request.recipient.toUpperCase().includes("ДВГА"))),
   );
   const authorityAppendix = authorityRequestForConfirmation
     ? c.documents.find(
