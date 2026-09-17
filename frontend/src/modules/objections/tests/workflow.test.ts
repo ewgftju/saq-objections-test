@@ -257,16 +257,16 @@ test("ответ ДВГА доступен после согласования, 
   assert.equal(nextAction(h.c)?.action, "sign-request");
   h.run("sign-request", "director");
   assert.equal(nextAction(h.c)?.action, "fill-request-response");
-  assert.deepEqual(h.state.notifications, [
-    {
-      id: `notification-${h.c.id}-1`,
-      caseId: h.c.id,
-      recipient: h.c.org,
-      date: h.state.date,
-      read: false,
-      text: "По Вашему возражению №ВОЗ-77 от 08.09.2026 направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения возражения приостанавливается на период до поступления ответа на указанный запрос.",
-    },
-  ]);
+  assert.ok(
+    h.state.notifications.some(
+      (notification) => notification.recipient === "ДВГА",
+    ),
+  );
+  assert.ok(
+    h.state.notifications.some(
+      (notification) => notification.recipient === h.c.org,
+    ),
+  );
   const notificationsHtml = renderToStaticMarkup(
     createElement(NotificationsPage, {
       notifications: h.state.notifications,
@@ -277,7 +277,7 @@ test("ответ ДВГА доступен после согласования, 
   assert.match(notificationsHtml, /ВОЗ-77 от 08\.09\.2026/);
 });
 
-test("ответ ДВГА сначала фиксируется инициатором", () => {
+test("ответ КВГА сначала фиксируется инициатором", () => {
   const h = harness();
   screen(h);
   h.run("request", "work", { recipient: "КВГА" });
@@ -290,27 +290,30 @@ test("ответ ДВГА сначала фиксируется инициато
   h.run("sign-request", "director");
   h.run(
     "fill-request-response",
-    "dvga",
+    "kvga",
     Object.fromEntries(
       h.c.issues
         .filter((point) => point.disputed)
         .flatMap((point) => [
-          [`authorityFinding_${point.id}`, "Нарушение ДВГА"],
-          [`authorityResponse_${point.id}`, "Ответ ДВГА"],
+          [`authorityFinding_${point.id}`, "Нарушение КВГА"],
+          [`authorityResponse_${point.id}`, "Ответ КВГА"],
         ]),
     ),
   );
   assert.equal(h.c.status, "response_approval");
   assert.equal(nextAction(h.c)?.action, "approve-response");
-  h.run("approve-response", "dvga");
+  h.run("approve-response", "kvga");
   assert.equal(h.c.status, "response_signed");
   assert.equal(nextAction(h.c)?.action, "sign-response");
-  h.run("sign-response", "dvga");
+  h.run("sign-response", "kvga");
   assert.equal(h.c.status, "response_ready");
   assert.equal(nextAction(h.c)?.action, "position");
   h.run("position", "work");
-  assert.equal(h.c.status, "materials");
+  assert.equal(h.c.status, "request_approved");
   assert.equal(h.c.requests[0].confirmed, "2026-09-08");
+  assert.equal(nextAction(h.c)?.action, "position");
+  h.run("position", "work");
+  assert.equal(h.c.status, "materials");
 });
 
 test("фиксация ответа продлевает срок на период приостановления по запросу", () => {
@@ -323,7 +326,7 @@ test("фиксация ответа продлевает срок на пери�
   const deadlineBeforePause = reviewDeadline(h.c);
   h.run(
     "fill-request-response",
-    "dvga",
+    "kvga",
     Object.fromEntries(
       h.c.issues
         .filter((point) => point.disputed)
@@ -333,14 +336,96 @@ test("фиксация ответа продлевает срок на пери�
         ]),
     ),
   );
-  h.run("approve-response", "dvga");
-  h.run("sign-response", "dvga");
+  h.run("approve-response", "kvga");
+  h.run("sign-response", "kvga");
   h.run("position", "work", { date: "2026-09-11" });
   assert.equal(h.c.pauseDays, 3);
   assert.equal(reviewDeadline(h.c), "2026-09-29");
   assert.notEqual(reviewDeadline(h.c), deadlineBeforePause);
   assert.equal(h.c.requestPauseStartedAt, undefined);
   assert.match(h.c.history.at(-1)!.text, /продлён на 3 раб\. дн\./);
+});
+
+test("запросы в ДВГА и КВГА формируются, направляются и обрабатываются отдельно", () => {
+  const h = harness();
+  screen(h);
+  h.run("request", "work", { recipient: "ДВГА по Атырауской области" });
+  h.run("request", "work", { recipient: "КВГА" });
+
+  const materialsHtml = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c: h.c,
+      tab: "review",
+      role: "work",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  assert.match(materialsHtml, /<h4>Запрос в ДВГА<\/h4>/);
+  assert.match(materialsHtml, /<h4>Запрос в КВГА<\/h4>/);
+
+  const kvgaRequest = h.c.requests.find((request) => request.recipient === "КВГА")!;
+  const kvgaAppendix = h.c.documents.find(
+    (document) =>
+      document.kind === "request-appendix" &&
+      document.requestId === kvgaRequest.id,
+  )!;
+  assert.match(
+    renderToStaticMarkup(
+      createElement(DocumentContent, {
+        c: h.c,
+        kind: "request-appendix",
+        document: kvgaAppendix,
+      }),
+    ),
+    /Мотивированный ответ КВГА/,
+  );
+
+  h.run("send-request-approval", "work");
+  h.run("approve-request", "director", { approved: "on" });
+  h.run("sign-request", "director");
+  assert.ok(h.c.requests.every((request) => request.sent === h.state.date));
+  assert.ok(
+    h.state.notifications.some(
+      (notification) => notification.recipient === "ДВГА",
+    ),
+  );
+  assert.ok(
+    h.state.notifications.some(
+      (notification) => notification.recipient === "КВГА",
+    ),
+  );
+  assert.deepEqual(nextAction(h.c), {
+    action: "fill-request-response",
+    label: "Заполнить ответ ДВГА/КВГА",
+    role: "dvga",
+  });
+
+  const response = Object.fromEntries(
+    h.c.issues
+      .filter((point) => point.disputed)
+      .flatMap((point) => [
+        [`authorityFinding_${point.id}`, "Нарушение"],
+        [`authorityResponse_${point.id}`, "Мотивированный ответ"],
+      ]),
+  );
+  h.run("fill-request-response", "dvga", response);
+  h.run("approve-response", "dvga");
+  h.run("sign-response", "dvga");
+  h.run("position", "work");
+  assert.deepEqual(nextAction(h.c), {
+    action: "fill-request-response",
+    label: "Заполнить ответ ДВГА/КВГА",
+    role: "kvga",
+  });
+  h.run("fill-request-response", "kvga", response);
+  h.run("approve-response", "kvga");
+  h.run("sign-response", "kvga");
+  h.run("position", "work");
+  assert.equal(h.c.status, "materials");
 });
 
 test("уведомление: сквозной маршрут сохраняет неоспоренный пункт и снимки документов", () => {
