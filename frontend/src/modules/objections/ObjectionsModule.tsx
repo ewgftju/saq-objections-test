@@ -44,8 +44,15 @@ export default function ObjectionsModule() {
     setDialog(null);
     setDialogError("");
   };
-  const openCase = (c: ObjectionCase) =>
+  const openCase = (c: ObjectionCase) => {
+    if (c.unread) {
+      const next = structuredClone(model.state);
+      const target = next.cases.find((item) => item.id === c.id)!;
+      target.unread = false;
+      model.commit(next, "");
+    }
     model.navigate({ page: "detail", caseId: c.id, tab: "review" });
+  };
   const openNotifications = () => {
     if (model.state.notifications.some((notification) => !notification.read)) {
       const next = structuredClone(model.state);
@@ -243,6 +250,7 @@ export default function ObjectionsModule() {
             onTab={(tab) => model.navigate({ ...model.route, tab })}
             onAction={(action, role) => {
               if (
+                action === "assign-work-executor" ||
                 action === "choose-commission-members" ||
                 action === "commission-vote" ||
                 action === "vote"
