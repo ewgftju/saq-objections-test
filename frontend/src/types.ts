@@ -155,6 +155,11 @@ export interface CaseRequest {
   customText?: string;
   sent?: string;
   responded?: string;
+  /** Ответ органа хранится в запросе и недоступен другому адресату. */
+  authorityResponses?: Record<
+    string,
+    { finding: string; response: string }
+  >;
   responseApproved?: string;
   responseSigned?: string;
   confirmed?: string;
