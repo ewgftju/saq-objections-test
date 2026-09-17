@@ -287,7 +287,7 @@ export default function ActionModal({
         )
       : [1],
   );
-  const definition = actionForm(action, c, date, values);
+  const definition = actionForm(action, c, date, values, role);
   const isRequest = action === "request" || action === "request-other";
   const isOtherRequest = action === "request-other";
   const requestDeadline =
@@ -557,13 +557,19 @@ export default function ActionModal({
                 appendixFindingPreview={Object.fromEntries(
                   disputed(c).map((point) => [
                     point.id,
-                    values[`authorityFinding_${point.id}`] || point.authorityFinding || "",
+                    values[`authorityFinding_${point.id}`] ||
+                      authorityRequestForResponse?.authorityResponses?.[point.id]
+                        ?.finding ||
+                      "",
                   ]),
                 )}
                 appendixPreview={Object.fromEntries(
                   disputed(c).map((point) => [
                     point.id,
-                    values[`authorityResponse_${point.id}`] || point.position || "",
+                    values[`authorityResponse_${point.id}`] ||
+                      authorityRequestForResponse?.authorityResponses?.[point.id]
+                        ?.response ||
+                      "",
                   ]),
                 )}
               />
