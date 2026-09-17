@@ -132,12 +132,20 @@ export default function ObjectionsModule() {
 
   async function submitAction(action: Action, form: FormData) {
     if (!c) return;
-    if (!["position", "fill-request-response", "request"].includes(action)) {
+    if (
+      !["position", "fill-request-response", "request", "request-other"].includes(
+        action,
+      )
+    ) {
       model.perform(c.id, action, form);
       return;
     }
     const files = form
-      .getAll(action === "request" ? "requestAttachments" : "responseFiles")
+      .getAll(
+        ["request", "request-other"].includes(action)
+          ? "requestAttachments"
+          : "responseFiles",
+      )
       .filter(
         (item): item is File => item instanceof File && item.name.length > 0,
       );
@@ -176,7 +184,7 @@ export default function ObjectionsModule() {
     const next = applyAction(model.state, c.id, action, model.role, form);
     const updated = next.cases.find((item) => item.id === c.id)!;
     const responseRequestId =
-      action === "request"
+      ["request", "request-other"].includes(action)
         ? updated.requests.at(-1)?.id
         : responseRequestIdBeforeAction;
     if (attached.length) {
@@ -185,13 +193,13 @@ export default function ObjectionsModule() {
           name: file.name,
           filename: file.name,
           kind:
-            action === "request"
+            ["request", "request-other"].includes(action)
               ? "request-attachment"
               : action === "fill-request-response"
               ? "authority-response-attachment"
               : "response-attachment",
           text:
-            action === "request"
+            ["request", "request-other"].includes(action)
               ? "Приложение исполнителя рабочего органа к запросу"
               : action === "fill-request-response"
               ? "Подтверждающий документ ДВГА/КВГА"
@@ -206,7 +214,7 @@ export default function ObjectionsModule() {
         date: next.date,
         actor: ROLES[model.role],
         title:
-          action === "request"
+          ["request", "request-other"].includes(action)
             ? "Вложены приложения к запросу"
             : action === "fill-request-response"
             ? "Вложены документы ДВГА/КВГА"
@@ -216,7 +224,7 @@ export default function ObjectionsModule() {
     }
     model.commit(
       next,
-      action === "request"
+      ["request", "request-other"].includes(action)
         ? attached.length
           ? "Запрос и приложения сохранены"
           : "Запрос сохранён"
