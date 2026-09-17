@@ -155,6 +155,8 @@ export interface CaseRequest {
   customText?: string;
   sent?: string;
   responded?: string;
+  responseApproved?: string;
+  responseSigned?: string;
   confirmed?: string;
 }
 
