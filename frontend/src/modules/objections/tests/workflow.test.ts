@@ -403,6 +403,16 @@ test("запросы в ДВГА и КВГА формируются, напра�
     label: "Заполнить ответ ДВГА/КВГА",
     role: "dvga",
   });
+  assert.deepEqual(nextAction(h.c, "dvga"), {
+    action: "fill-request-response",
+    label: "Заполнить ответ ДВГА/КВГА",
+    role: "dvga",
+  });
+  assert.deepEqual(nextAction(h.c, "kvga"), {
+    action: "fill-request-response",
+    label: "Заполнить ответ ДВГА/КВГА",
+    role: "kvga",
+  });
 
   const response = Object.fromEntries(
     h.c.issues
@@ -413,6 +423,11 @@ test("запросы в ДВГА и КВГА формируются, напра�
       ]),
   );
   h.run("fill-request-response", "dvga", response);
+  assert.deepEqual(nextAction(h.c, "kvga"), {
+    action: "fill-request-response",
+    label: "Заполнить ответ ДВГА/КВГА",
+    role: "kvga",
+  });
   h.run("approve-response", "dvga");
   h.run("sign-response", "dvga");
   h.run("position", "work");
