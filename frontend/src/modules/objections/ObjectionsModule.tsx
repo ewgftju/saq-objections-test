@@ -45,10 +45,14 @@ export default function ObjectionsModule() {
     setDialogError("");
   };
   const openCase = (c: ObjectionCase) => {
-    if (c.unread) {
+    const shouldMarkRead =
+      (model.role === "director" && c.unread) ||
+      (model.role === "work" && c.unreadForAssignee);
+    if (shouldMarkRead) {
       const next = structuredClone(model.state);
       const target = next.cases.find((item) => item.id === c.id)!;
-      target.unread = false;
+      if (model.role === "director") target.unread = false;
+      if (model.role === "work") target.unreadForAssignee = false;
       model.commit(next, "");
     }
     model.navigate({ page: "detail", caseId: c.id, tab: "review" });
@@ -229,6 +233,7 @@ export default function ObjectionsModule() {
         <CasesList
           cases={model.state.cases}
           date={model.state.date}
+          role={model.role}
           onOpen={openCase}
           onCreate={() => setDialog({ type: "new" })}
           onExport={(cases) =>
