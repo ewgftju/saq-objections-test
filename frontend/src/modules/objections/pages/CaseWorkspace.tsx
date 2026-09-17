@@ -336,46 +336,77 @@ export default function CaseWorkspace({
                     </section>
                   ) : null;
                 })()}
-                {(() => {
-                  const answeredAuthorityRequestIds = new Set(
-                    c.requests
-                      .filter(
+                {role === "work" &&
+                  [
+                    {
+                      title: "Ответ ДВГА",
+                      requests: c.requests.filter(
                         (request) =>
-                          !!request.responded &&
-                          !!request.confirmed &&
-                          request.template !== "other",
-                      )
-                      .map((request) => request.id),
-                  );
-                  const responseMaterials = c.documents.filter(
-                    (document) =>
-                      !!document.requestId &&
-                      answeredAuthorityRequestIds.has(document.requestId) &&
-                      [
-                        "request-appendix",
-                        "authority-response-attachment",
-                        "response-attachment",
-                      ].includes(document.kind),
-                  );
-                  return responseMaterials.length ? (
-                    <section className="request-documents-section">
-                      <h4>Полученный(ые) ответ на запрос(ы)</h4>
-                      <div className="request-documents-list">
-                        {responseMaterials.map((document) => (
-                          <div
-                            className="request-document-row"
-                            key={`response-${document.requestId}-${document.name}`}
-                          >
-                            <span>{document.name}</span>
-                            <Button onClick={() => onDocument(document.kind, document)}>
-                              Просмотр
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null;
-                })()}
+                          !!request.sent &&
+                          request.template !== "other" &&
+                          request.recipient.toUpperCase().includes("ДВГА"),
+                      ),
+                    },
+                    {
+                      title: "Ответ КВГА",
+                      requests: c.requests.filter(
+                        (request) =>
+                          !!request.sent &&
+                          request.template !== "other" &&
+                          request.recipient.toUpperCase().includes("КВГА"),
+                      ),
+                    },
+                  ].map(
+                    (group) => {
+                      if (!group.requests.length) return null;
+                      const responseMaterials = group.requests.flatMap((request) =>
+                        !request.responded
+                          ? []
+                          : c.documents.filter(
+                              (document) =>
+                                document.requestId === request.id &&
+                                [
+                                  "request-appendix",
+                                  "authority-response-attachment",
+                                  "response-attachment",
+                                ].includes(document.kind),
+                            ),
+                      );
+                      const awaitingResponse = group.requests.some(
+                        (request) => !request.responded,
+                      );
+                      return (
+                        <section
+                          className="request-documents-section"
+                          key={group.title}
+                        >
+                          <h4>{group.title}</h4>
+                          {responseMaterials.length > 0 && (
+                            <div className="request-documents-list">
+                              {responseMaterials.map((document) => (
+                                <div
+                                  className="request-document-row"
+                                  key={`response-${document.requestId}-${document.name}`}
+                                >
+                                  <span>{document.name}</span>
+                                  <Button
+                                    onClick={() =>
+                                      onDocument(document.kind, document)
+                                    }
+                                  >
+                                    Просмотр
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {awaitingResponse && (
+                            <p className="muted">Ожидается поступление ответа.</p>
+                          )}
+                        </section>
+                      );
+                    },
+                  )}
                 {!hideRequestBlocks && c.requests.length > 0 && (
                   <>
                     {[
@@ -418,7 +449,6 @@ export default function CaseWorkspace({
                                       !(
                                         request.template !== "other" &&
                                         !!request.responded &&
-                                        !!request.confirmed &&
                                         [
                                           "request-appendix",
                                           "authority-response-attachment",
