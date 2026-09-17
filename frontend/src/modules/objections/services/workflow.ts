@@ -383,6 +383,7 @@ export function applyAction(
     case "assign-work-executor": {
       c.assignee = text("assignee", "Исполнитель рабочего органа");
       c.unread = false;
+      c.unreadForAssignee = true;
       c.status = "accepted";
       title = "Исполнитель рабочего органа назначен";
       note = `Директор ДАВГА назначил исполнителем: ${c.assignee}.`;
