@@ -1,19 +1,21 @@
 import { useMemo, useState } from "react";
 import { Button, PageHeading } from "../../../components/ui";
 import { CLOSED, STATUS, TYPES } from "../../../data/constants";
-import type { ObjectionCase } from "../../../types";
+import type { ObjectionCase, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import { executionDeadline, reviewDeadline } from "../services/deadlines";
 
 export default function CasesList({
   cases,
   date,
+  role,
   onOpen,
   onCreate,
   onExport,
 }: {
   cases: ObjectionCase[];
   date: string;
+  role: Role;
   onOpen: (c: ObjectionCase) => void;
   onCreate: () => void;
   onExport: (cases: ObjectionCase[]) => void;
@@ -21,6 +23,10 @@ export default function CasesList({
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
   const [tab, setTab] = useState("all");
+  const incomingCount = cases.filter((c) => c.status === "received").length;
+  const newlyAssignedCount = cases.filter(
+    (c) => c.status === "accepted" && c.unreadForAssignee,
+  ).length;
   const visible = useMemo(
     () =>
       cases.filter((c) => {
@@ -80,15 +86,24 @@ export default function CasesList({
             ["new", "Поступившие"],
             ["active", "В работе"],
             ["closed", "Завершённые"],
-          ].map(([value, label]) => (
+          ].map(([value, label]) => {
+            const count =
+              value === "new" && role === "director"
+                ? incomingCount
+                : value === "active" && role === "work"
+                  ? newlyAssignedCount
+                  : 0;
+            return (
             <button
               key={value}
               className={tab === value ? "active" : ""}
               onClick={() => setTab(value)}
             >
               {label}
+              {count > 0 && <span className="count">{count}</span>}
             </button>
-          ))}
+            );
+          })}
         </div>
         <div className="registry-filters">
           <label className="field">
@@ -129,8 +144,12 @@ export default function CasesList({
               </tr>
             </thead>
             <tbody>
-              {visible.map((c) => (
-                <tr key={c.id} className={c.unread ? "unread-case" : ""}>
+              {visible.map((c) => {
+                const unread =
+                  (role === "director" && c.unread) ||
+                  (role === "work" && c.unreadForAssignee);
+                return (
+                <tr key={c.id} className={unread ? "unread-case" : ""}>
                   <td>
                     <button className="text-button" onClick={() => onOpen(c)}>
                       {c.id}
@@ -187,7 +206,8 @@ export default function CasesList({
                     <Button onClick={() => onOpen(c)}>Открыть</Button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {!visible.length && (
                 <tr>
                   <td colSpan={7}>
