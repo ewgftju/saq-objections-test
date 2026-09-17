@@ -38,7 +38,12 @@ export function DocumentContent({
   document?: CaseDocument;
   requestPreview?: Pick<
     CaseRequest,
-    "recipient" | "deadline" | "customText" | "template" | "author"
+    | "recipient"
+    | "deadline"
+    | "customText"
+    | "template"
+    | "author"
+    | "authorityResponses"
   >;
   appendixRecipient?: string;
   appendixFindingPreview?: Record<string, string>;
@@ -66,6 +71,12 @@ export function DocumentContent({
     .includes("КВГА")
     ? "КВГА"
     : "ДВГА";
+  const useLegacyAuthorityValues =
+    c.requests.filter(
+      (item) =>
+        item.recipient.toUpperCase().includes("ДВГА") ||
+        item.recipient.toUpperCase().includes("КВГА"),
+    ).length <= 1;
   const title =
     document?.name ||
     (kind === "source"
@@ -199,10 +210,18 @@ export function DocumentContent({
               .map((point) => (
                 <tr key={point.id}>
                   <td>{point.number}</td>
-                  <td>{appendixFindingPreview?.[point.id] ?? point.authorityFinding ?? ""}</td>
+                  <td>
+                    {appendixFindingPreview?.[point.id] ??
+                      request?.authorityResponses?.[point.id]?.finding ??
+                      (useLegacyAuthorityValues ? point.authorityFinding : "") ??
+                      ""}
+                  </td>
                   <td>{point.title}</td>
                   <td aria-label={`Мотивированный ответ ${appendixAuthority}`}>
-                    {appendixPreview?.[point.id] ?? point.position ?? ""}
+                    {appendixPreview?.[point.id] ??
+                      request?.authorityResponses?.[point.id]?.response ??
+                      (useLegacyAuthorityValues ? point.position : "") ??
+                      ""}
                   </td>
                 </tr>
               ))}
