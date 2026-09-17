@@ -403,6 +403,24 @@ test("запросы в ДВГА и КВГА формируются, напра�
     label: "Заполнить ответ ДВГА/КВГА",
     role: "dvga",
   });
+  const awaitingResponsesHtml = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c: h.c,
+      tab: "review",
+      role: "work",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  assert.match(awaitingResponsesHtml, /<h4>Ответ ДВГА<\/h4>/);
+  assert.match(awaitingResponsesHtml, /<h4>Ответ КВГА<\/h4>/);
+  assert.equal(
+    [...awaitingResponsesHtml.matchAll(/Ожидается поступление ответа\./g)].length,
+    2,
+  );
   assert.deepEqual(nextAction(h.c, "dvga"), {
     action: "fill-request-response",
     label: "Заполнить ответ ДВГА/КВГА",
@@ -423,6 +441,23 @@ test("запросы в ДВГА и КВГА формируются, напра�
       ]),
   );
   h.run("fill-request-response", "dvga", response);
+  const dvgaResponseHtml = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c: h.c,
+      tab: "review",
+      role: "work",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  assert.match(dvgaResponseHtml, /Приложение к запросу в ДВГА по Атырауской области/);
+  assert.equal(
+    [...dvgaResponseHtml.matchAll(/Ожидается поступление ответа\./g)].length,
+    1,
+  );
   const kvgaForm = actionForm("fill-request-response", h.c, h.state.date, {}, "kvga");
   assert.equal(
     kvgaForm.fields.find(
@@ -1132,7 +1167,7 @@ test("справка выводит доводы ДВГА и ДАВГА в пе�
       onUpload() {},
     }),
   );
-  assert.match(commissionMaterialsHtml, /Полученный\(ые\) ответ на запрос\(ы\)/);
+  assert.match(commissionMaterialsHtml, /<h4>Ответ ДВГА<\/h4>/);
   assert.doesNotMatch(commissionMaterialsHtml, /<h4>Запрос в ДВГА<\/h4>/);
   assert.doesNotMatch(commissionMaterialsHtml, /<h4>Запрос в другие органы<\/h4>/);
   h.run("review-commission-documents", "commission");
