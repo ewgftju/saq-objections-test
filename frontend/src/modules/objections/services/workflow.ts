@@ -49,11 +49,16 @@ function authorityRole(recipient: string): Role {
   return isKvgaRequest(recipient) ? "kvga" : "dvga";
 }
 
-function pendingDvgaOrKvgaRequest(c: ObjectionCase) {
-  return c.requests.find(
+function authorityRequestsForRole(c: ObjectionCase, role?: Role) {
+  return c.requests.filter(
     (request) =>
-      !request.responded && isDvgaOrKvgaRequest(request.recipient),
+      isDvgaOrKvgaRequest(request.recipient) &&
+      (role !== "dvga" && role !== "kvga" || authorityRole(request.recipient) === role),
   );
+}
+
+function pendingDvgaOrKvgaRequest(c: ObjectionCase, role?: Role) {
+  return authorityRequestsForRole(c, role).find((request) => !request.responded);
 }
 
 function pendingOtherRequest(c: ObjectionCase) {
@@ -63,12 +68,9 @@ function pendingOtherRequest(c: ObjectionCase) {
   );
 }
 
-function pendingAuthorityConfirmation(c: ObjectionCase) {
-  return c.requests.find(
-    (request) =>
-      !!request.responded &&
-      !request.confirmed &&
-      isDvgaOrKvgaRequest(request.recipient),
+function pendingAuthorityConfirmation(c: ObjectionCase, role?: Role) {
+  return authorityRequestsForRole(c, role).find(
+    (request) => !!request.responseSigned && !request.confirmed,
   );
 }
 
@@ -76,8 +78,68 @@ function directedToDvgaOrKvga(c: ObjectionCase) {
   return c.requests.some((request) => isDvgaOrKvgaRequest(request.recipient));
 }
 
-export function nextAction(c: ObjectionCase): ActionOption | null {
+function authorityResponseAction(
+  c: ObjectionCase,
+  role?: Role,
+): ActionOption | null {
+  const requests = authorityRequestsForRole(c, role);
+  const toFill = requests.find((request) => !request.responded);
+  if (toFill)
+    return {
+      action: "fill-request-response",
+      label: "Заполнить ответ ДВГА/КВГА",
+      role: authorityRole(toFill.recipient),
+    };
+  const toApprove = requests.find(
+    (request) => !!request.responded && !request.responseApproved,
+  );
+  if (toApprove)
+    return {
+      action: "approve-response",
+      label: "Согласовать",
+      role: authorityRole(toApprove.recipient),
+    };
+  const toSign = requests.find(
+    (request) => !!request.responseApproved && !request.responseSigned,
+  );
+  if (toSign)
+    return {
+      action: "sign-response",
+      label: "Подписать",
+      role: authorityRole(toSign.recipient),
+    };
+  return null;
+}
+
+function authorityStatus(c: ObjectionCase): ObjectionCase["status"] | null {
+  const requests = authorityRequestsForRole(c);
+  if (requests.some((request) => !request.responded)) return "request_approved";
+  if (requests.some((request) => !request.responseApproved)) return "response_approval";
+  if (requests.some((request) => !request.responseSigned)) return "response_signed";
+  if (requests.some((request) => !request.confirmed)) return "response_ready";
+  return null;
+}
+
+export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
   const reviewer: Role = "work";
+  const authorityInProgress = [
+    "request_approved",
+    "response_approval",
+    "response_signed",
+    "response_ready",
+  ].includes(c.status);
+  if (authorityInProgress) {
+    if (role === "work") {
+      const receivedResponse = pendingAuthorityConfirmation(c);
+      if (receivedResponse)
+        return { action: "position", label: "Ответ получен", role: "work" };
+    }
+    const authorityAction = authorityResponseAction(c, role);
+    if (authorityAction) return authorityAction;
+    if (role === "dvga" || role === "kvga") return null;
+    if (pendingOtherRequest(c))
+      return { action: "position", label: "Ответ получен", role: "work" };
+  }
   const map: Partial<Record<ObjectionCase["status"], ActionOption>> = {
     received: {
       action: "assign-work-executor",
@@ -104,34 +166,9 @@ export function nextAction(c: ObjectionCase): ActionOption | null {
       label: "Подписать запрос",
       role: "director",
     },
-    request_approved: pendingDvgaOrKvgaRequest(c)
-      ? {
-          action: "fill-request-response",
-          label: "Заполнить ответ ДВГА/КВГА",
-          role: authorityRole(pendingDvgaOrKvgaRequest(c)!.recipient),
-        }
-      : pendingOtherRequest(c)
-        ? {
-          action: "position",
-          label: "Ответ получен",
-          role: "work",
-        }
-        : undefined,
-    response_approval: {
-      action: "approve-response",
-      label: "Согласовать",
-      role: authorityRole(pendingAuthorityConfirmation(c)?.recipient || "ДВГА"),
-    },
-    response_signed: {
-      action: "sign-response",
-      label: "Подписать",
-      role: authorityRole(pendingAuthorityConfirmation(c)?.recipient || "ДВГА"),
-    },
-    response_ready: {
-      action: "position",
-      label: "Ответ получен",
-      role: "work",
-    },
+    request_approved: pendingOtherRequest(c)
+      ? { action: "position", label: "Ответ получен", role: "work" }
+      : undefined,
     certificate_approval: {
       action: "approve-certificate",
       label: "Согласовать справку",
@@ -384,7 +421,7 @@ export function applyAction(
   const next = structuredClone(state);
   const c = next.cases.find((item) => item.id === caseId);
   if (!c) throw new Error("Обращение не найдено");
-  const available = [nextAction(c), ...additionalActions(c)].find(
+  const available = [nextAction(c, role), ...additionalActions(c)].find(
     (item) => item?.action === action,
   );
   if (!available || (available.role !== role && action !== "upload"))
@@ -643,7 +680,7 @@ export function applyAction(
       break;
     }
     case "fill-request-response": {
-      const request = pendingDvgaOrKvgaRequest(c);
+      const request = pendingDvgaOrKvgaRequest(c, role);
       if (!request)
         throw new Error("Это действие доступно только для запроса в ДВГА/КВГА");
       for (const point of disputed(c)) {
@@ -668,18 +705,28 @@ export function applyAction(
             document.snapshot.issues = structuredClone(c.issues);
       });
       note = "Мотивированные ответы ДВГА/КВГА заполнены по всем оспариваемым пунктам.";
-      c.status = "response_approval";
+      c.status = authorityStatus(c) || "response_approval";
       doc("Мотивированный ответ ДВГА/КВГА", "authority-response", note);
       break;
     }
     case "approve-response": {
-      c.status = "response_signed";
+      const request = authorityRequestsForRole(c, role).find(
+        (item) => !!item.responded && !item.responseApproved,
+      );
+      if (!request) throw new Error("Нет ответа, ожидающего согласования");
+      request.responseApproved = date;
+      c.status = authorityStatus(c) || "response_signed";
       title = "Ответ ДВГА/КВГА согласован";
       note = "Согласованный ответ ДВГА/КВГА ожидает подписания.";
       break;
     }
     case "sign-response": {
-      c.status = "response_ready";
+      const request = authorityRequestsForRole(c, role).find(
+        (item) => !!item.responseApproved && !item.responseSigned,
+      );
+      if (!request) throw new Error("Нет согласованного ответа для подписания");
+      request.responseSigned = date;
+      c.status = authorityStatus(c) || "response_ready";
       title = "Ответ ДВГА/КВГА подписан";
       note = "Подписанный ответ готов к фиксации рабочим органом.";
       break;
@@ -697,9 +744,8 @@ export function applyAction(
         note = "Получен ответ на направленный запрос.";
       }
       const hasPendingResponses =
-        pendingDvgaOrKvgaRequest(c) ||
-        pendingOtherRequest(c) ||
-        pendingAuthorityConfirmation(c);
+        authorityRequestsForRole(c).some((item) => !item.confirmed) ||
+        pendingOtherRequest(c);
       if (!hasPendingResponses && c.requestPauseStartedAt) {
         const pausedDays = workdaysBetween(c.requestPauseStartedAt, date);
         if (pausedDays > 0) {
@@ -708,10 +754,7 @@ export function applyAction(
         }
         c.requestPauseStartedAt = undefined;
       }
-      c.status =
-        pendingDvgaOrKvgaRequest(c) || pendingOtherRequest(c)
-          ? "request_approved"
-          : "materials";
+      c.status = authorityStatus(c) || (pendingOtherRequest(c) ? "request_approved" : "materials");
       doc("Полученные материалы по запросу", "position", note);
       break;
     }
