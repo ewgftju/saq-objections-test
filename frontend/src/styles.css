@@ -391,6 +391,10 @@ small,
 .agenda-vote-summary:last-child {
   margin-bottom: 0;
 }
+
+.registry-table tr.unread-case td {
+  font-weight: 700;
+}
 .button {
   min-height: 38px;
   display: inline-flex;
