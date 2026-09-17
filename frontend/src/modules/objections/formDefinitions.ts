@@ -100,6 +100,13 @@ const REQUEST_RECIPIENT_OPTIONS = [
   ["ДВГА по области Абай", "ДВГА по области Абай"],
 ] as const satisfies FormField["options"];
 
+const WORK_EXECUTOR_OPTIONS = [
+  ["", "Выберите исполнителя"],
+  ["Исполнитель рабочего органа", "Исполнитель рабочего органа"],
+  ["Главный эксперт ДАВГА", "Главный эксперт ДАВГА"],
+  ["Эксперт ДАВГА", "Эксперт ДАВГА"],
+] as const satisfies FormField["options"];
+
 export function actionForm(
   action: Action,
   c: ObjectionCase,
@@ -111,6 +118,7 @@ export function actionForm(
     action === "request" ||
     action === "request-other" ||
     action === "vote" ||
+    action === "assign-work-executor" ||
     action === "choose-commission-members" ||
     action === "commission-vote"
       ? []
@@ -118,6 +126,18 @@ export function actionForm(
   let title = "Действие по обращению";
   let note = "";
   switch (action) {
+    case "assign-work-executor":
+      title = "Выбрать исполнителя рабочего органа";
+      fields.push(
+        select(
+          "assignee",
+          "Исполнитель рабочего органа",
+          WORK_EXECUTOR_OPTIONS,
+        ),
+      );
+      note =
+        "После выбора исполнителю будет направлено уведомление, а обращение переместится во вкладку «В работе».";
+      break;
     case "screen":
       title = "Проверка допустимости и компетенции";
       fields.push(
