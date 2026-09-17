@@ -423,6 +423,19 @@ test("запросы в ДВГА и КВГА формируются, напра�
       ]),
   );
   h.run("fill-request-response", "dvga", response);
+  const kvgaForm = actionForm("fill-request-response", h.c, h.state.date, {}, "kvga");
+  assert.equal(
+    kvgaForm.fields.find(
+      (field) => field.name === `authorityFinding_${h.c.issues[0].id}`,
+    )?.value,
+    "",
+  );
+  assert.equal(
+    kvgaForm.fields.find(
+      (field) => field.name === `authorityResponse_${h.c.issues[0].id}`,
+    )?.value,
+    "",
+  );
   assert.deepEqual(nextAction(h.c, "kvga"), {
     action: "fill-request-response",
     label: "Заполнить ответ ДВГА/КВГА",
