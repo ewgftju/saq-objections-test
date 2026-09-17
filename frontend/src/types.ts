@@ -242,6 +242,8 @@ export interface ObjectionCase {
   memberPosition?: string;
   /** Новое обращение, поступившее через SAQ и ещё не открытое директором. */
   unread?: boolean;
+  /** Новое назначение, которое ещё не открыто исполнителем рабочего органа. */
+  unreadForAssignee?: boolean;
   agendaMeetingDate?: string;
   certificate?: CaseCertificate | null;
   hearing?: Hearing | null;
