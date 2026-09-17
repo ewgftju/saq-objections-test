@@ -171,7 +171,13 @@ export default function ObjectionsModule() {
     const responseRequestIdBeforeAction =
       action === "fill-request-response"
         ? c.requests.find(
-            (request) => !request.responded && request.template !== "other",
+            (request) =>
+              !request.responded &&
+              request.template !== "other" &&
+              (model.role !== "dvga" && model.role !== "kvga" ||
+                (model.role === "kvga"
+                  ? request.recipient.toUpperCase().includes("КВГА")
+                  : request.recipient.toUpperCase().includes("ДВГА"))),
           )?.id
         : action === "position"
           ? c.requests.find(
@@ -444,6 +450,7 @@ export default function ObjectionsModule() {
           action={dialog.action}
           c={c}
           date={model.state.date}
+          role={model.role}
           onClose={close}
           onSubmit={(form) => submitAction(dialog.action, form)}
         />
