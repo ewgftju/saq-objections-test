@@ -443,42 +443,40 @@ export default function ActionModal({
               {definition.fields.map((field) => (
                 <Field key={field.name} field={field} />
               ))}
-              {!isOtherRequest && (
-                <label className="field request-attachments-field">
-                  <span>Вложить приложения</span>
-                  <input
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
-                    multiple
-                    onChange={(event) => {
-                      const files = Array.from(event.currentTarget.files || []);
-                      if (files.length)
-                        setRequestAttachments((current) => [...current, ...files]);
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                  <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
-                  {requestAttachments.length > 0 && (
-                    <div className="request-attachments-list">
-                      {requestAttachments.map((file, index) => (
-                        <div key={`${file.name}-${index}`}>
-                          <span>{file.name}</span>
-                          <Button
-                            type="button"
-                            onClick={() =>
-                              setRequestAttachments((current) =>
-                                current.filter((_, itemIndex) => itemIndex !== index),
-                              )
-                            }
-                          >
-                            Удалить
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </label>
-              )}
+              <label className="field request-attachments-field">
+                <span>Вложить приложения</span>
+                <input
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                  multiple
+                  onChange={(event) => {
+                    const files = Array.from(event.currentTarget.files || []);
+                    if (files.length)
+                      setRequestAttachments((current) => [...current, ...files]);
+                    event.currentTarget.value = "";
+                  }}
+                />
+                <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
+                {requestAttachments.length > 0 && (
+                  <div className="request-attachments-list">
+                    {requestAttachments.map((file, index) => (
+                      <div key={`${file.name}-${index}`}>
+                        <span>{file.name}</span>
+                        <Button
+                          type="button"
+                          onClick={() =>
+                            setRequestAttachments((current) =>
+                              current.filter((_, itemIndex) => itemIndex !== index),
+                            )
+                          }
+                        >
+                          Удалить
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </label>
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
               <DocumentContent
