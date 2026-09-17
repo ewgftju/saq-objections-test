@@ -35,6 +35,9 @@ export function seed(): ObjectionCase[] {
     makeCase({
       id: "ВОЗ-2026-001",
       type: "notice",
+      appealType: "Возражение на уведомления",
+      appealNumber: "ВОЗ-2026-001",
+      appealDate: "2026-09-08",
       org: "ГУ «Управление образования»",
       bin: "000000000001",
       address: "Атырауская область",
@@ -49,6 +52,10 @@ export function seed(): ObjectionCase[] {
         date: "2026-09-03",
         received: "2026-09-03",
         name: "Уведомление об устранении нарушений по результатам камерального контроля",
+      },
+      agendaDetails: {
+        cameraControlNumber: "КК-2026-0148",
+        cameraControlDate: "2026-08-25",
       },
       procurement: "№ 15084231-1 · Приобретение учебного оборудования",
       amount: 18450000,
@@ -94,6 +101,9 @@ export function seed(): ObjectionCase[] {
     makeCase({
       id: "ВОЗ-2026-002",
       type: "audit",
+      appealType: "Возражение на аудиторский отчет",
+      appealNumber: "ВОЗ-2026-002",
+      appealDate: "2026-09-08",
       org: "КГП «Городской центр услуг»",
       bin: "000000000002",
       address: "г. Атырау",
