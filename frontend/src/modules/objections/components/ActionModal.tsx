@@ -320,6 +320,13 @@ export default function ActionModal({
         request.recipient.toUpperCase().includes("ДВГА") ||
         request.recipient.toUpperCase().includes("КВГА")),
   );
+  const authorityRequestForResponse = c.requests.find(
+    (request) =>
+      !request.responded &&
+      (request.template === "dvga" ||
+        request.recipient.toUpperCase().includes("ДВГА") ||
+        request.recipient.toUpperCase().includes("КВГА")),
+  );
   const authorityAppendix = authorityRequestForConfirmation
     ? c.documents.find(
         (document) =>
@@ -540,6 +547,7 @@ export default function ActionModal({
               <DocumentContent
                 c={c}
                 kind="request-appendix"
+                appendixRecipient={authorityRequestForResponse?.recipient}
                 appendixFindingPreview={Object.fromEntries(
                   disputed(c).map((point) => [
                     point.id,
