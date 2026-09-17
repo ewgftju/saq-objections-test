@@ -10,15 +10,6 @@ import { DEMO_USER } from "../../../config";
 import { OUTCOMES } from "../../../data/constants";
 import { downloadFile } from "../../../utils/download";
 
-const COMMISSION_MEMBER_OPTIONS = [
-  "ФИО 1",
-  "ФИО 2",
-  "ФИО 3",
-  "ФИО 4",
-  "ФИО 5",
-  "ФИО 6",
-] as const;
-
 const PROTOCOL_MEMBER_OPTIONS = [
   "Председатель Апелляционной комиссии: ФИО",
   "Заместитель Председателя Апелляционной комиссии: ФИО",
@@ -278,7 +269,6 @@ export default function ActionModal({
   const [saving, setSaving] = useState(false);
   const [requestAttachments, setRequestAttachments] = useState<File[]>([]);
   const [requestTab, setRequestTab] = useState<"form" | "print">("form");
-  const [certificateMembers, setCertificateMembers] = useState([1]);
   const [protocolMemberRows, setProtocolMemberRows] = useState(() =>
     action === "vote" && c.members.length
       ? c.members.map(
@@ -605,55 +595,9 @@ export default function ActionModal({
               </button>
             </div>
             <div hidden={requestTab !== "form"}>
-              {certificateMembers.map((number) => (
-                <section className="certificate-member-form" key={number}>
-                  <h3 className="form-section">
-                    Член апелляционной комиссии {number}
-                  </h3>
-                  <label className="field">
-                    <span>
-                      ФИО члена апелляционной комиссии
-                      <span className="required"> *</span>
-                    </span>
-                    <select
-                      name={`certificateMember_${number}`}
-                      defaultValue={
-                        values[`certificateMember_${number}`] ||
-                        COMMISSION_MEMBER_OPTIONS[0]
-                      }
-                      required
-                    >
-                      {COMMISSION_MEMBER_OPTIONS.map((member) => (
-                        <option key={member} value={member}>
-                          {member}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </section>
+              {definition.fields.map((field) => (
+                <Field key={field.name} field={field} />
               ))}
-              <Button
-                type="button"
-                onClick={() =>
-                  setCertificateMembers((members) => [
-                    ...members,
-                    members.length + 1,
-                  ])
-                }
-              >
-                Добавить члена АК
-              </Button>
-              <label className="field certificate-authority-arguments">
-                <span>
-                  Доводы ДАВГА <span className="required"> *</span>
-                </span>
-                <textarea
-                  name="davgaArguments"
-                  defaultValue={values.davgaArguments || ""}
-                  rows={4}
-                  required
-                />
-              </label>
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
               <DocumentContent
@@ -661,13 +605,7 @@ export default function ActionModal({
                 kind="certificate"
                 certificatePreview={{
                   davgaArguments: values.davgaArguments || "",
-                  memberPositions: certificateMembers.map((number) => ({
-                    id: String(number),
-                    name:
-                      values[`certificateMember_${number}`] ||
-                      COMMISSION_MEMBER_OPTIONS[0],
-                    argument: "",
-                  })),
+                  memberPositions: [],
                 }}
               />
             </div>
