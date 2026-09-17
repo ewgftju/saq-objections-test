@@ -12,7 +12,7 @@ export const ROLES = {
   higher: "Вышестоящий орган",
 } as const;
 export const STATUS = {
-  received: "Поступило",
+  received: "Выбор исполнителя рабочего органа",
   accepted: "Формирование запроса",
   requested: "Формирование запроса",
   request_approval: "Согласование запроса",
