@@ -25,6 +25,8 @@ const OBJECTION_STAGES: ProcessStage[] = [
       "request_approval",
       "request_signed",
       "request_approved",
+      "response_approval",
+      "response_signed",
       "response_ready",
       "materials",
       "certificate_approval",
@@ -65,6 +67,8 @@ const TASK_HELP: Partial<Record<Action, string>> = {
     "Подпишите согласованный запрос. После этого он будет направлен адресату для подготовки ответа.",
   "fill-request-response":
     "Заполните мотивированный ответ по каждому пункту и приложите подтверждающие документы.",
+  "approve-response": "Согласуйте заполненный ответ ДВГА/КВГА.",
+  "sign-response": "Подпишите согласованный ответ ДВГА/КВГА.",
   position:
     "Вложите полученные файлы в материалы дела, затем подтвердите поступление ответа.",
   analysis:
