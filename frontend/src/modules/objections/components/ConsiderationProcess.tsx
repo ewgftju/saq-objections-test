@@ -120,7 +120,7 @@ export default function ConsiderationProcess({
   onAction: (action: Action, role: Role) => void;
   onHistory: () => void;
 }) {
-  const next = nextAction(c);
+  const next = nextAction(c, role);
   const stages = OBJECTION_STAGES;
   const currentStatus = c.status === "paused" ? c.resumeStatus : c.status;
   const inRequestFormationStage = stages[1].statuses.includes(
