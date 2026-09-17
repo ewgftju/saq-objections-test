@@ -51,6 +51,8 @@ const OBJECTION_STAGES: ProcessStage[] = [
 ];
 
 const TASK_HELP: Partial<Record<Action, string>> = {
+  "assign-work-executor":
+    "Выберите исполнителя рабочего органа. После назначения обращение будет передано ему для формирования запроса.",
   screen:
     "Проверьте заявителя, исходный документ, срок подачи и компетенцию органа. Назначьте ответственного и зафиксируйте основание принятия к рассмотрению.",
   request:
@@ -175,7 +177,7 @@ export default function ConsiderationProcess({
           </div>
           <div className="consideration-task-action">
             <Button primary onClick={() => onAction(next.action, next.role)}>
-              {c.status === "received" ? "Начать рассмотрение" : next.label}
+              {next.label}
             </Button>
             {parallelProtocolAvailable && (
               <Button primary onClick={() => onAction("vote", "work")}>
