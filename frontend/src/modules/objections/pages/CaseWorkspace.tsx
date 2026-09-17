@@ -382,7 +382,17 @@ export default function CaseWorkspace({
                       {
                         title: "Запрос в ДВГА",
                         requests: c.requests.filter(
-                          (request) => request.template !== "other",
+                          (request) =>
+                            request.template !== "other" &&
+                            request.recipient.toUpperCase().includes("ДВГА"),
+                        ),
+                      },
+                      {
+                        title: "Запрос в КВГА",
+                        requests: c.requests.filter(
+                          (request) =>
+                            request.template !== "other" &&
+                            request.recipient.toUpperCase().includes("КВГА"),
                         ),
                       },
                       {
