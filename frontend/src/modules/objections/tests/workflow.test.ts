@@ -8,7 +8,7 @@ import {
   createDemoRepository,
   STORAGE_KEY,
 } from "../../../api/objectionsRepository";
-import { members } from "../../../data/objections";
+import { makeCase, members } from "../../../data/objections";
 import type { Action, DemoState, Role } from "../../../types";
 import {
   additionalActions,
@@ -29,7 +29,7 @@ import {
   remainingIssues,
 } from "../services/decisions";
 import { DocumentContent } from "../components/DocumentModal";
-import { AgendaDocument } from "../components/AgendaModal";
+import { AgendaDocument, agendaItemText } from "../components/AgendaModal";
 import AgendaResultsModal from "../components/AgendaResultsModal";
 import { SessionsPage } from "../pages/ReferencePages";
 import CasesList from "../pages/CasesList";
@@ -649,10 +649,50 @@ test("сохранённое до обновления голосование п
     getItem: (key) => storage.get(key) || null,
     setItem: (key, value) => storage.set(key, value),
   }).load();
-  assert.equal(state.version, 5);
+  assert.equal(state.version, 6);
   assert.deepEqual(state.agendas, []);
   assert.deepEqual(state.notifications, []);
   assert.equal(state.cases[0].status, "commission_members");
+});
+
+test("обращение из SAQ направляется директору, затем исполнителю рабочего органа", () => {
+  const base = initialState().cases[0];
+  const incoming = makeCase({
+    ...base,
+    id: "ВОЗ-2026-SAQ",
+    appealNumber: "ВОЗ-SAQ-01",
+    channel: "SAQ",
+  });
+  const state: DemoState = {
+    ...initialState(),
+    cases: [incoming],
+    notifications: [
+      {
+        id: "notification-incoming",
+        caseId: incoming.id,
+        recipient: "Директор ДАВГА",
+        date: "2026-09-08",
+        read: false,
+        text: "Поступило обращение. Выберите исполнителя рабочего органа.",
+      },
+    ],
+  };
+  assert.equal(incoming.status, "received");
+  assert.equal(incoming.unread, true);
+  assert.equal(nextAction(incoming)?.action, "assign-work-executor");
+  const form = new FormData();
+  form.set("assignee", "Главный эксперт ДАВГА");
+  const next = applyAction(
+    state,
+    incoming.id,
+    "assign-work-executor",
+    "director",
+    form,
+  );
+  assert.equal(next.cases[0].status, "accepted");
+  assert.equal(next.cases[0].unread, false);
+  assert.equal(next.cases[0].assignee, "Главный эксперт ДАВГА");
+  assert.equal(next.notifications.at(-1)?.recipient, "Главный эксперт ДАВГА");
 });
 
 test("направленные членам АК материалы сразу появляются в реестре заседаний", () => {
@@ -1038,7 +1078,7 @@ test("справка выводит доводы ДВГА и ДАВГА в пе�
   assert.match(html, /ГУ «Управление образования»/);
 });
 
-test("повестка дня подставляет реквизиты отмеченного обращения", () => {
+test("повестка дня формируется по шаблону возражения на аудиторский отчет", () => {
   const h = harness(0);
   h.c.appealType = "Возражение на аудиторский отчет";
   h.c.appealNumber = "В-17";
@@ -1046,8 +1086,12 @@ test("повестка дня подставляет реквизиты отме
   h.c.org = "КГП «Городской центр услуг»";
   h.c.issuer = "ДВГА по Атырауской области";
   h.c.assignee = "Тестовый исполнитель";
-  h.c.issues[0].disputed = true;
-  h.c.issues[0].authorityFinding = "Нарушение, указанное ДВГА";
+  h.c.bin = "123456789012";
+  h.c.document = {
+    ...h.c.document,
+    number: "АО-2026-0062",
+    date: "2026-09-02",
+  };
   const html = renderToStaticMarkup(
     createElement(AgendaDocument, {
       cases: [h.c],
@@ -1055,14 +1099,49 @@ test("повестка дня подставляет реквизиты отме
     }),
   );
   assert.match(html, /24\.09\.2026/);
-  assert.match(html, /Возражение В-17 от 09\.09\.2026/);
-  assert.match(html, /КГП «Городской центр услуг» на аудиторский отчет/);
-  assert.match(html, /ДВГА по Атырауской области Нарушение, указанное ДВГА/);
-  assert.doesNotMatch(
-    html,
-    /ДВГА по Атырауской области от Нарушение, указанное ДВГА/,
-  );
+  assert.match(html, /Возражение №В-17 от 09\.09\.2026/);
+  assert.match(html, /КГП «Городской центр услуг» 123456789012 на аудиторский отчет от 02\.09\.2026 №АО-2026-0062/);
+  assert.match(html, /проведенного ДВГА по Атырауской области/);
   assert.match(html, /\(Тестовый исполнитель\)/);
+});
+
+test("повестка дня выбирает шаблон по виду обращения", () => {
+  const h = harness(0);
+  h.c.appealNumber = "В-18";
+  h.c.appealDate = "2026-09-09";
+  h.c.org = "ГУ «Объект»";
+  h.c.bin = "123456789012";
+  h.c.issuer = "ДВГА по Атырауской области";
+  h.c.assignee = "Исполнитель ДАВГА";
+  h.c.document = { ...h.c.document, number: "Д-01", date: "2026-08-30" };
+
+  h.c.appealType = "Возражение на уведомления";
+  h.c.agendaDetails = {
+    cameraControlNumber: "КК-55",
+    cameraControlDate: "2026-08-25",
+  };
+  assert.equal(
+    agendaItemText(h.c),
+    "Возражение №В-18 от 09.09.2026 ГУ «Объект» 123456789012 к нарушению, указанному в уведомлении об устранении нарушений от 30.08.2026 №Д-01, выявленному по результатам камерального контроля №КК-55 от 25.08.2026 ГУ «Объект» (Исполнитель ДАВГА)",
+  );
+
+  h.c.appealType = "Жалоба на действие/бездействие";
+  h.c.agendaDetails = {
+    procurementNumber: "2026-77",
+    lotNumber: "5",
+    procurementSubject: "Поставка оборудования",
+  };
+  assert.match(
+    agendaItemText(h.c),
+    /при рассмотрении обращения от 30\.08\.2026 №Д-01 по государственной закупке №2026-77 \(лот №5\) на Поставка оборудования \(Исполнитель ДАВГА\)/,
+  );
+
+  h.c.appealType = "Жалоба на решение КВГА/ДВГА";
+  h.c.agendaDetails = { decisionKind: "inspection-act" };
+  assert.match(
+    agendaItemText(h.c),
+    /Жалоба от 09\.09\.2026 №В-18 ГУ «Объект» 123456789012 на акт о результатах проверки ДВГА по Атырауской области от 30\.08\.2026 №Д-01/,
+  );
 });
 
 test("итоги повестки фильтруются по дате и показывают голоса", () => {
