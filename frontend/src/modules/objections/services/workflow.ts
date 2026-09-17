@@ -69,9 +69,9 @@ export function nextAction(c: ObjectionCase): ActionOption | null {
   const reviewer: Role = "work";
   const map: Partial<Record<ObjectionCase["status"], ActionOption>> = {
     received: {
-      action: "screen",
-      label: "Проверить поступление",
-      role: "work",
+      action: "assign-work-executor",
+      label: "Выбрать исполнителя рабочего органа",
+      role: "director",
     },
     accepted: {
       action: "request",
@@ -380,6 +380,22 @@ export function applyAction(
   let note = "";
 
   switch (action) {
+    case "assign-work-executor": {
+      c.assignee = text("assignee", "Исполнитель рабочего органа");
+      c.unread = false;
+      c.status = "accepted";
+      title = "Исполнитель рабочего органа назначен";
+      note = `Директор ДАВГА назначил исполнителем: ${c.assignee}.`;
+      next.notifications.push({
+        id: `notification-${c.id}-${next.notifications.length + 1}`,
+        caseId: c.id,
+        recipient: c.assignee,
+        date,
+        read: false,
+        text: `Вам назначено обращение №${c.appealNumber || c.id} от ${formatDate(c.appealDate || c.registered)}. Необходимо сформировать запрос в ДВГА/КВГА.`,
+      });
+      break;
+    }
     case "screen": {
       checked(form, "identity", "document", "grounds", "competence");
       if (c.filed > filingDeadline(c)) {
