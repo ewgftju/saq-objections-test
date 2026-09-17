@@ -546,7 +546,7 @@ export default function NewCaseModal({
               <Field
                 field={{
                   name: `pointTitle_${pointId}`,
-                  label: "Описание",
+                  label: "Описание оспариваемого вопроса",
                   type: "text",
                   required: true,
                 }}
