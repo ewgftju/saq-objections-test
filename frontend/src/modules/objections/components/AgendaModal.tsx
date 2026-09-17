@@ -4,26 +4,61 @@ import { Button, Modal } from "../../../components/ui";
 import type { ObjectionCase } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 
-function appealTypeParts(appealType?: string) {
-  const [first = "", ...rest] = (appealType || "").trim().split(/\s+/);
-  return { first, rest: rest.join(" ") };
+function value(text?: string) {
+  return text?.trim() || "—";
 }
 
-function authorityFindings(c: ObjectionCase) {
-  return c.issues
-    .filter((point) => point.disputed)
-    .map((point) => point.authorityFinding?.trim())
-    .filter((finding): finding is string => Boolean(finding))
-    .join("; ");
+function numbered(number?: string) {
+  return `№${value(number)}`;
+}
+
+function appealReference(c: ObjectionCase, dateFirst = false) {
+  const number = numbered(c.appealNumber);
+  const date = formatDate(c.appealDate || c.filed);
+  return dateFirst ? `от ${date} ${number}` : `${number} от ${date}`;
+}
+
+function documentReference(c: ObjectionCase) {
+  return `от ${formatDate(c.document.date)} ${numbered(c.document.number)}`;
 }
 
 export function agendaItemText(c: ObjectionCase) {
-  const appealType = appealTypeParts(c.appealType);
-  return `${appealType.first || "—"} ${c.appealNumber || "—"} от ${formatDate(
-    c.appealDate || c.filed,
-  )} ${c.org || "—"} ${appealType.rest} ${c.issuer || "—"} ${
-    authorityFindings(c) || "—"
-  } (${c.assignee || "—"})`;
+  const details = c.agendaDetails;
+  const appealType =
+    c.appealType ??
+    (c.type === "notice"
+      ? "Возражение на уведомления"
+      : c.type === "audit"
+        ? "Возражение на аудиторский отчет"
+        : "");
+  const common = `${value(c.org)} ${value(c.bin)}`;
+  const executor = value(c.assignee);
+
+  if (appealType === "Возражение на уведомления") {
+    return `Возражение ${appealReference(c)} ${common} к нарушению, указанному в уведомлении об устранении нарушений ${documentReference(c)}, выявленному по результатам камерального контроля ${numbered(details?.cameraControlNumber)} от ${formatDate(details?.cameraControlDate)} ${value(c.org)} (${executor})`;
+  }
+
+  if (appealType === "Возражение на аудиторский отчет") {
+    return `Возражение ${appealReference(c)} ${common} на аудиторский отчет ${documentReference(c)}, проведенного ${value(c.issuer)} (${executor})`;
+  }
+
+  if (appealType === "Жалоба на действие/бездействие") {
+    const appeal = `при рассмотрении обращения ${documentReference(c)}`;
+    const procurement = details?.procurementNumber
+      ? ` по государственной закупке ${numbered(details.procurementNumber)} (лот ${numbered(details.lotNumber)}) на ${value(details.procurementSubject)}`
+      : "";
+    return `Жалоба ${appealReference(c)} ${common} касательно действия/бездействия ${value(c.issuer)} ${appeal}${procurement} (${executor})`;
+  }
+
+  if (appealType === "Жалоба на решение КВГА/ДВГА") {
+    const kind =
+      details?.decisionKind === "inspection-act"
+        ? "акт о результатах проверки"
+        : "предписание";
+    return `Жалоба ${appealReference(c, true)} ${common} на ${kind} ${value(c.issuer)} ${documentReference(c)}`;
+  }
+
+  return `${value(appealType)} ${appealReference(c)} ${common} (${executor})`;
 }
 
 export function AgendaDocument({
