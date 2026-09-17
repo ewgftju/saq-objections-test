@@ -298,7 +298,21 @@ export default function NewCaseModal({
                 text: requirementFiles.map((file) => file.name).join(", "),
               });
             }
-            onSave({ ...state, cases: [...state.cases, c] }, id);
+            const next = { ...state, cases: [...state.cases, c] };
+            if (c.status === "received") {
+              next.notifications = [
+                ...state.notifications,
+                {
+                  id: `notification-${c.id}-${state.notifications.length + 1}`,
+                  caseId: c.id,
+                  recipient: "Директор ДАВГА",
+                  date: state.date,
+                  read: false,
+                  text: `Поступило обращение №${c.appealNumber || c.id} от ${appealDate}. Выберите исполнителя рабочего органа.`,
+                },
+              ];
+            }
+            onSave(next, id);
             onClose();
           } catch (cause) {
             setError(
@@ -489,6 +503,10 @@ export default function NewCaseModal({
             required: true,
           }}
         />
+        <small className="muted">
+          При выборе «SAQ» обращение сначала поступает директору ДАВГА для
+          назначения исполнителя рабочего органа.
+        </small>
         <Field
           field={{
             name: "request",
