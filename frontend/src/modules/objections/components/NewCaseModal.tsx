@@ -105,8 +105,8 @@ export default function NewCaseModal({
   const [pointCount, setPointCount] = useState(1);
   const [hasProcurement, setHasProcurement] = useState(true);
   const [decisionKind, setDecisionKind] = useState<
-    "prescription" | "inspection-act"
-  >("prescription");
+    "prescription-audit" | "prescription-preventive" | "quality-control"
+  >("prescription-audit");
   const [error, setError] = useState("");
   const selectedAppealType =
     APPEAL_TYPES.find((item) => item.value === appealType) ?? APPEAL_TYPES[0];
@@ -115,19 +115,29 @@ export default function NewCaseModal({
   const isAudit = appealType === "audit-objection";
   const isActionComplaint = appealType === "action-inaction-complaint";
   const isDecisionComplaint = appealType === "kvga-dvga-decision-complaint";
+  const isPreventiveComplaint =
+    appealType === "preventive-control-complaint";
   const needsAgendaTemplateFields =
-    isNotice || isAudit || isActionComplaint || isDecisionComplaint;
+    isNotice ||
+    isAudit ||
+    isActionComplaint ||
+    isDecisionComplaint ||
+    isPreventiveComplaint;
   const sourceDocumentLabel = isNotice
     ? "Уведомление об устранении нарушений"
-    : isAudit
-      ? "Аудиторский отчет"
-      : isActionComplaint
-        ? "Обращение, по которому обжалуется действие/бездействие"
+      : isAudit
+        ? "Аудиторский отчет"
+        : isActionComplaint
+        ? hasProcurement
+          ? "Обращение, по которому обжалуется действие/бездействие"
+          : "Аудиторский отчет"
         : isDecisionComplaint
-          ? decisionKind === "prescription"
-            ? "Предписание"
-            : "Акт о результатах проверки"
-          : "Оспариваемый документ";
+          ? decisionKind === "quality-control"
+            ? "Результат контроля качества"
+            : "Предписание"
+          : isPreventiveComplaint
+            ? "Акт о результате профилактического контроля"
+            : "Оспариваемый документ";
   return (
     <Modal title="Новое тестовое обращение" onClose={onClose}>
       <form
@@ -236,7 +246,26 @@ export default function NewCaseModal({
                       ),
                     }
                   : {}),
-                ...(isDecisionComplaint ? { decisionKind } : {}),
+                ...(isDecisionComplaint
+                  ? {
+                      decisionKind,
+                      ...((decisionKind === "prescription-audit" ||
+                        decisionKind === "prescription-preventive") && {
+                        relatedDocumentNumber: get(
+                          "relatedDocumentNumber",
+                          decisionKind === "prescription-audit"
+                            ? "Номер аудиторского отчета"
+                            : "Номер профилактического контроля",
+                        ),
+                        relatedDocumentDate: get(
+                          "relatedDocumentDate",
+                          decisionKind === "prescription-audit"
+                            ? "Дата подписания аудиторского отчета"
+                            : "Дата подписания профилактического контроля",
+                        ),
+                      }),
+                    }
+                  : {}),
               },
               request: get("request", "Требования"),
               amount,
@@ -477,20 +506,58 @@ export default function NewCaseModal({
           </section>
         )}
         {isDecisionComplaint && (
-          <label className="field">
-            <span>Вид обжалуемого решения</span>
-            <select
-              value={decisionKind}
-              onChange={(event) =>
-                setDecisionKind(
-                  event.target.value as "prescription" | "inspection-act",
-                )
-              }
-            >
-              <option value="prescription">Предписание</option>
-              <option value="inspection-act">Акт о результатах проверки</option>
-            </select>
-          </label>
+          <>
+            <label className="field">
+              <span>Вид обжалуемого решения</span>
+              <select
+                value={decisionKind}
+                onChange={(event) =>
+                  setDecisionKind(
+                    event.target.value as
+                      | "prescription-audit"
+                      | "prescription-preventive"
+                      | "quality-control",
+                  )
+                }
+              >
+                <option value="prescription-audit">
+                  Предписание на аудиторский отчет
+                </option>
+                <option value="prescription-preventive">
+                  Предписание по профилактическому контролю
+                </option>
+                <option value="quality-control">Контроль качества</option>
+              </select>
+            </label>
+            {(decisionKind === "prescription-audit" ||
+              decisionKind === "prescription-preventive") && (
+              <div className="form-grid">
+                <Field
+                  field={{
+                    name: "relatedDocumentNumber",
+                    label:
+                      decisionKind === "prescription-audit"
+                        ? "Номер аудиторского отчета"
+                        : "Номер профилактического контроля",
+                    type: "text",
+                    required: true,
+                  }}
+                />
+                <Field
+                  field={{
+                    name: "relatedDocumentDate",
+                    label:
+                      decisionKind === "prescription-audit"
+                        ? "Дата подписания аудиторского отчета"
+                        : "Дата подписания профилактического контроля",
+                    type: "date",
+                    value: state.date,
+                    required: true,
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
         <Field
           field={{
@@ -510,7 +577,7 @@ export default function NewCaseModal({
         <Field
           field={{
             name: "request",
-            label: "Краткое описание",
+            label: appealType === "statement" ? "О чем заявление" : "Краткое описание",
             type: "textarea",
             required: true,
           }}
