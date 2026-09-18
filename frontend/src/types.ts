@@ -117,6 +117,7 @@ export interface Delivery {
   number: string;
   receipt: string;
   channel: string;
+  recipient?: string;
   appealCourt: string;
   appealProcedure: string;
   published?: string | null;
@@ -193,7 +194,15 @@ export interface AgendaDetails {
   procurementNumber?: string;
   lotNumber?: string;
   procurementSubject?: string;
-  decisionKind?: "prescription" | "inspection-act";
+  relatedDocumentNumber?: string;
+  relatedDocumentDate?: string;
+  decisionKind?:
+    | "prescription-audit"
+    | "prescription-preventive"
+    | "quality-control"
+    /** Значения сохранённых до обновления карточек. */
+    | "prescription"
+    | "inspection-act";
 }
 
 export interface CaseNotification {
