@@ -212,6 +212,22 @@ export interface CaseNotification {
   text: string;
   date: string;
   read: boolean;
+  kind?: "attendance-poll";
+  attendancePollId?: string;
+  commissionMemberId?: string;
+}
+
+export interface CommissionAttendanceMember {
+  id: string;
+  name: string;
+}
+
+export interface CommissionAttendancePoll {
+  id: string;
+  dateTime: string;
+  caseIds: string[];
+  sentAt: string;
+  responses: Record<string, "pending" | "yes" | "no">;
 }
 
 export interface HistoryEvent {
@@ -314,6 +330,8 @@ export interface DemoState {
   cases: ObjectionCase[];
   agendas: AgendaRegistryEntry[];
   notifications: CaseNotification[];
+  attendancePolls: CommissionAttendancePoll[];
+  activeCommissionMemberId: string;
 }
 export interface Route {
   page: Page;
