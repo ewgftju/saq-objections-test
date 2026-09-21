@@ -269,6 +269,13 @@ test("печатная форма запроса использует полны
   assert.match(html(), new RegExp(fullDvga));
   assert.match(html(), /возражения ГУ «Объект» к нарушениям, указанным в уведомлении/);
   assert.match(html(), /камерального контроля от 25\.08\.2026 года № КК-55/);
+  assert.match(html(), /в соответствии с пунктом 14 Положения об апелляционной комиссии/);
+  assert.match(
+    html(),
+    /Директор Департамента<br\/>апелляции по внутреннему<br\/>государственному аудиту/,
+  );
+  assert.match(html(), /Ш\. Күреңбек тегі/);
+  assert.match(html(), new RegExp(DEMO_USER.fullName));
 
   h.c.appealType = "Возражение на аудиторский отчет";
   assert.match(html(), /возражения ГУ «Объект» к нарушениям, указанным в аудиторском отчете от 30\.08\.2026 №Д-01/);
@@ -510,6 +517,36 @@ test("запросы в ДВГА и КВГА формируются, напра�
       ]),
   );
   h.run("fill-request-response", "dvga", response);
+  const originalDvgaAppendix = h.c.documents.find(
+    (document) =>
+      document.kind === "request-appendix" &&
+      document.requestId === h.c.requests[0].id,
+  )!;
+  const completedDvgaAppendix = h.c.documents.find(
+    (document) =>
+      document.kind === "authority-response-appendix" &&
+      document.requestId === h.c.requests[0].id,
+  )!;
+  assert.doesNotMatch(
+    renderToStaticMarkup(
+      createElement(DocumentContent, {
+        c: h.c,
+        kind: "request-appendix",
+        document: originalDvgaAppendix,
+      }),
+    ),
+    /<td>Нарушение<\/td>/,
+  );
+  assert.match(
+    renderToStaticMarkup(
+      createElement(DocumentContent, {
+        c: h.c,
+        kind: "authority-response-appendix",
+        document: completedDvgaAppendix,
+      }),
+    ),
+    /<td>Нарушение<\/td>/,
+  );
   const dvgaResponseHtml = renderToStaticMarkup(
     createElement(CaseWorkspace, {
       c: h.c,
@@ -876,9 +913,10 @@ test("сохранённое до обновления голосование п
     getItem: (key) => storage.get(key) || null,
     setItem: (key, value) => storage.set(key, value),
   }).load();
-  assert.equal(state.version, 6);
+  assert.equal(state.version, 7);
   assert.deepEqual(state.agendas, []);
   assert.deepEqual(state.notifications, []);
+  assert.deepEqual(state.attendancePolls, []);
   assert.equal(state.cases[0].status, "commission_members");
 });
 
@@ -1144,7 +1182,9 @@ test("дело открывает процесс, а одно действие �
   h.run("approve-request", "director", { approved: "on" });
   assert.match(renderToStaticMarkup(process()), /Подписать запрос/);
   h.run("sign-request", "director");
-  assert.match(renderToStaticMarkup(process()), /Заполнить ответ ДВГА\/КВГА/);
+  const workProcessHtml = renderToStaticMarkup(process());
+  assert.match(workProcessHtml, /Ожидание ответа на запрос/);
+  assert.doesNotMatch(workProcessHtml, /Заполнить ответ ДВГА\/КВГА/);
 
   const control = harness(2);
   screen(control);
