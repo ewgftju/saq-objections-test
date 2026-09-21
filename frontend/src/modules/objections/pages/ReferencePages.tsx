@@ -2,7 +2,7 @@ import { Button, Notice, PageHeading } from "../../../components/ui";
 import { useState } from "react";
 import { STATUS } from "../../../data/constants";
 import { STEPS } from "../../../data/workflowDefinitions";
-import type { AgendaRegistryEntry, ObjectionCase } from "../../../types";
+import type { AgendaRegistryEntry, ObjectionCase, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 
 const sources = [
@@ -228,6 +228,8 @@ export function SessionsPage({
   onGenerateAgendaResults,
   onPreviewAgendaResults,
   onDownloadAgendaResults,
+  onAttendancePoll,
+  role,
 }: {
   cases: ObjectionCase[];
   agendas: AgendaRegistryEntry[];
@@ -239,6 +241,8 @@ export function SessionsPage({
   onGenerateAgendaResults: (agenda: AgendaRegistryEntry) => void;
   onPreviewAgendaResults: (agenda: AgendaRegistryEntry) => void;
   onDownloadAgendaResults: (agenda: AgendaRegistryEntry) => void;
+  onAttendancePoll: (cases: ObjectionCase[]) => void;
+  role: Role;
 }) {
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
   const [section, setSection] = useState<"sessions" | "agendas">("sessions");
@@ -263,8 +267,18 @@ export function SessionsPage({
       <PageHeading
         title="Заседания комиссии"
         subtitle="Подготовка, голосование и подписанные протоколы"
-        action={section === "sessions" ? (
+        action={section === "sessions" && role === "work" ? (
           <div className="session-heading-actions">
+            <Button
+              disabled={!selectedCaseIds.length}
+              onClick={() =>
+                onAttendancePoll(
+                  visible.filter((c) => selectedCaseIds.includes(c.id)),
+                )
+              }
+            >
+              Направить опрос о присутствии на заседании
+            </Button>
             <Button
               primary
               disabled={!selectedCaseIds.length}
@@ -322,7 +336,7 @@ export function SessionsPage({
                     <input
                       type="checkbox"
                       checked={allSelected}
-                      disabled={!visible.length}
+                      disabled={!visible.length || role !== "work"}
                       aria-label="Выбрать все обращения"
                       onChange={() =>
                         setSelectedCaseIds(
@@ -348,6 +362,7 @@ export function SessionsPage({
                       <input
                         type="checkbox"
                         checked={selectedCaseIds.includes(c.id)}
+                        disabled={role !== "work"}
                         onChange={() => toggleCase(c.id)}
                         aria-label={`Выбрать обращение ${c.id}`}
                       />
