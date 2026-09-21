@@ -359,19 +359,24 @@ export default function CaseWorkspace({
                   ].map(
                     (group) => {
                       if (!group.requests.length) return null;
-                      const responseMaterials = group.requests.flatMap((request) =>
-                        !request.responded
-                          ? []
-                          : c.documents.filter(
-                              (document) =>
-                                document.requestId === request.id &&
-                                [
-                                  "request-appendix",
-                                  "authority-response-attachment",
-                                  "response-attachment",
-                                ].includes(document.kind),
-                            ),
-                      );
+                      const responseMaterials = group.requests.flatMap((request) => {
+                        if (!request.responded) return [];
+                        const hasResponseAppendix = c.documents.some(
+                          (document) =>
+                            document.requestId === request.id &&
+                            document.kind === "authority-response-appendix",
+                        );
+                        return c.documents.filter(
+                          (document) =>
+                            document.requestId === request.id &&
+                            [
+                              "authority-response-appendix",
+                              "authority-response-attachment",
+                              "response-attachment",
+                              ...(hasResponseAppendix ? [] : ["request-appendix"]),
+                            ].includes(document.kind),
+                        );
+                      });
                       const awaitingResponse = group.requests.some(
                         (request) => !request.responded,
                       );
@@ -389,13 +394,28 @@ export default function CaseWorkspace({
                                   key={`response-${document.requestId}-${document.name}`}
                                 >
                                   <span>{document.name}</span>
-                                  <Button
-                                    onClick={() =>
-                                      onDocument(document.kind, document)
-                                    }
-                                  >
-                                    Просмотр
-                                  </Button>
+                                  {document.dataUrl ? (
+                                    <a
+                                      className="button"
+                                      href={document.dataUrl}
+                                      download={document.filename || document.name}
+                                    >
+                                      Скачать
+                                    </a>
+                                  ) : (
+                                    <Button
+                                      onClick={() =>
+                                        onDocument(
+                                          document.kind === "request-appendix"
+                                            ? "authority-response-appendix"
+                                            : document.kind,
+                                          document,
+                                        )
+                                      }
+                                    >
+                                      Просмотр
+                                    </Button>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -450,7 +470,7 @@ export default function CaseWorkspace({
                                         request.template !== "other" &&
                                         !!request.responded &&
                                         [
-                                          "request-appendix",
+                                          "authority-response-appendix",
                                           "authority-response-attachment",
                                           "response-attachment",
                                         ].includes(document.kind)
@@ -462,13 +482,23 @@ export default function CaseWorkspace({
                                       key={`${request.id}-${document.name}`}
                                     >
                                       <span>{document.name}</span>
-                                      <Button
-                                        onClick={() =>
-                                          onDocument(document.kind, document)
-                                        }
-                                      >
-                                        Просмотр
-                                      </Button>
+                                      {document.dataUrl ? (
+                                        <a
+                                          className="button"
+                                          href={document.dataUrl}
+                                          download={document.filename || document.name}
+                                        >
+                                          Скачать
+                                        </a>
+                                      ) : (
+                                        <Button
+                                          onClick={() =>
+                                            onDocument(document.kind, document)
+                                          }
+                                        >
+                                          Просмотр
+                                        </Button>
+                                      )}
                                     </div>
                                   )),
                               )}
