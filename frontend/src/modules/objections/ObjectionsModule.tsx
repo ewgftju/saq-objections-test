@@ -164,6 +164,40 @@ export default function ObjectionsModule() {
     );
     close();
   };
+  const updateAttendanceResponse = (
+    pollId: string,
+    memberId: string,
+    response: "yes" | "no",
+  ) => {
+    const member = COMMISSION_ATTENDANCE_MEMBERS.find(
+      (item) => item.id === memberId,
+    );
+    const next = structuredClone(model.state);
+    const poll = next.attendancePolls.find((item) => item.id === pollId);
+    if (!poll || !member) return;
+    poll.responses[memberId] = response;
+    next.notifications.forEach((notification) => {
+      if (
+        notification.attendancePollId === pollId &&
+        notification.commissionMemberId === memberId
+      ) {
+        notification.read = true;
+      }
+    });
+    poll.caseIds.forEach((caseId) => {
+      const target = next.cases.find((item) => item.id === caseId);
+      target?.history.push({
+        date: next.date,
+        actor: ROLES.work,
+        title: "Статус присутствия отмечен рабочим органом",
+        text: `${member.name}: ${response === "yes" ? "Да" : "Нет"}.`,
+      });
+    });
+    model.commit(
+      next,
+      `Статус участия члена АК «${member.name}» сохранён.`,
+    );
+  };
   const openAgendaCase = (caseId: string) => {
     const target = model.state.cases.find((item) => item.id === caseId);
     if (target) openCase(target);
@@ -546,6 +580,9 @@ export default function ObjectionsModule() {
             )
           }
           onAttendancePoll={(cases) => setDialog({ type: "attendance", cases })}
+          attendancePolls={model.state.attendancePolls}
+          commissionMembers={COMMISSION_ATTENDANCE_MEMBERS}
+          onUpdateAttendanceResponse={updateAttendanceResponse}
           role={model.role}
         />
       )}
