@@ -267,6 +267,11 @@ export function SessionsPage({
   const selectedAttendancePoll = attendancePolls.find(
     (poll) => poll.id === selectedAttendancePollId,
   );
+  const selectedAttendancePollCases = selectedAttendancePoll
+    ? selectedAttendancePoll.caseIds
+        .map((caseId) => cases.find((item) => item.id === caseId))
+        .filter((item): item is ObjectionCase => Boolean(item))
+    : [];
   const visible = cases.filter(
     (c) =>
       c.meeting ||
@@ -521,13 +526,40 @@ export function SessionsPage({
                       Дата и время: <strong>{formatDateTime(selectedAttendancePoll.dateTime)}</strong>
                     </p>
                     <p className="muted">
-                      Обращения: {selectedAttendancePoll.caseIds.join(", ")}
+                      Связано обращений: {selectedAttendancePollCases.length}
                     </p>
                   </div>
                   <Button onClick={() => setSelectedAttendancePollId(null)}>
                     К списку опросов
                   </Button>
                 </div>
+                <section className="attendance-linked-cases" aria-labelledby="linked-attendance-cases">
+                  <h4 id="linked-attendance-cases">Связанные обращения с заседанием</h4>
+                  <div className="table-scroll">
+                    <table className="registry-table">
+                      <thead>
+                        <tr>
+                          <th>Обращение</th>
+                          <th>Объект</th>
+                          <th>Статус</th>
+                          <th />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedAttendancePollCases.map((caseItem) => (
+                          <tr key={caseItem.id}>
+                            <td>{caseItem.id}</td>
+                            <td>{caseItem.org}</td>
+                            <td>{STATUS[caseItem.status]}</td>
+                            <td>
+                              <Button onClick={() => onOpen(caseItem)}>Открыть</Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
                 <div className="table-scroll">
                   <table className="registry-table attendance-status-table">
                     <thead>
