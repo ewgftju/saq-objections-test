@@ -1,4 +1,4 @@
-import { seed } from "../data/objections";
+import { COMMISSION_ATTENDANCE_MEMBERS, seed } from "../data/objections";
 import type { DemoState } from "../types";
 
 /** The demo adapter is the only module that reads or writes case storage. */
@@ -8,7 +8,7 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 6;
+const CURRENT_VERSION = 7;
 
 // Version 6 distinguishes incoming SAQ appeals from manually created appeals.
 
@@ -19,6 +19,8 @@ export function initialState(): DemoState {
     cases: seed(),
     agendas: [],
     notifications: [],
+    attendancePolls: [],
+    activeCommissionMemberId: COMMISSION_ATTENDANCE_MEMBERS[0].id,
   };
 }
 
@@ -31,7 +33,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -44,6 +46,9 @@ export function createDemoRepository(
         version: CURRENT_VERSION,
         agendas: value.agendas || [],
         notifications: value.notifications || [],
+        attendancePolls: value.attendancePolls || [],
+        activeCommissionMemberId:
+          value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
         cases: value.cases.map((c) => {
           const migrated =
             value.version === 1 && c.status === "commission_voting"
