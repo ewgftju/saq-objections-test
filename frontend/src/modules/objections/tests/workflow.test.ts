@@ -902,10 +902,10 @@ test("совместимость сохранения, прямые ссылки
   assert.match(caseCsv(state.cases), /'=CMD\(\)/);
 });
 
-test("сохранённое до обновления голосование переводится на выбор участников АК", () => {
+test("сохранённый выбор участников АК переводится на голосование", () => {
   const legacy = initialState();
   legacy.version = 1;
-  legacy.cases[0].status = "commission_voting";
+  legacy.cases[0].status = "commission_members";
   const storage = new Map<string, string>([
     [STORAGE_KEY, JSON.stringify(legacy)],
   ]);
@@ -917,7 +917,7 @@ test("сохранённое до обновления голосование п
   assert.deepEqual(state.agendas, []);
   assert.deepEqual(state.notifications, []);
   assert.deepEqual(state.attendancePolls, []);
-  assert.equal(state.cases[0].status, "commission_members");
+  assert.equal(state.cases[0].status, "commission_voting");
 });
 
 test("обращение из SAQ направляется директору, затем исполнителю рабочего органа", () => {
@@ -1284,19 +1284,15 @@ test("справка формируется по новому шаблону и 
   assert.doesNotMatch(commissionMaterialsHtml, /<h4>Запрос в ДВГА<\/h4>/);
   assert.doesNotMatch(commissionMaterialsHtml, /<h4>Запрос в другие органы<\/h4>/);
   h.run("review-commission-documents", "commission");
-  assert.equal(h.c.status, "commission_members");
-  assert.equal(nextAction(h.c)?.action, "choose-commission-members");
-  h.run("choose-commission-members", "commission", {
-    protocolMember_1: "Председатель Апелляционной комиссии: ФИО",
-    protocolMember_2: "Директор ДМБУА: ФИО",
-  });
   assert.equal(h.c.status, "commission_voting");
   assert.equal(nextAction(h.c)?.action, "commission-vote");
+  // Состав поступает из опроса о присутствии; в сценарии подтверждены два участника.
+  h.c.members = h.c.members.slice(0, 2);
   h.run(
     "commission-vote",
     "commission",
     {
-      commissionMember: "protocol-member-1",
+      commissionMember: "chair",
       ...Object.fromEntries(
         h.c.issues
           .filter((point) => point.disputed)
@@ -1312,7 +1308,7 @@ test("справка формируется по новому шаблону и 
     "commission-vote",
     "commission",
     {
-      commissionMember: "protocol-member-2",
+      commissionMember: "deputy",
       ...Object.fromEntries(
         h.c.issues
           .filter((point) => point.disputed)
@@ -1326,7 +1322,7 @@ test("справка формируется по новому шаблону и 
   assert.equal(h.c.status, "circulated");
   assert.equal(
     h.c.votes?.[h.c.issues.find((point) => point.disputed)!.id]?.voteReasons?.[
-      "protocol-member-1"
+      "chair"
     ],
     "Обоснование председателя",
   );
