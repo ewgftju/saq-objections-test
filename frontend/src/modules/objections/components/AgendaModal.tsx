@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Button, Modal } from "../../../components/ui";
 import type { ObjectionCase } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
+import { auditAuthorityFullName } from "../../../utils/auditAuthority";
 
 function value(text?: string) {
   return text?.trim() || "—";
@@ -33,33 +34,34 @@ export function agendaItemText(c: ObjectionCase) {
         : "");
   const common = `${value(c.org)} ИИН/БИН ${value(c.bin)}`;
   const executor = value(c.assignee);
+  const issuer = auditAuthorityFullName(c.issuer);
 
   if (appealType === "Возражение на уведомления") {
     return `Возражение ${appealReference(c)} ${common} к нарушению, указанным в уведомлении об устранении нарушений ${documentReference(c)}, выявленных по результатам камерального контроля ${numbered(details?.cameraControlNumber)} от ${formatDate(details?.cameraControlDate)} ${value(c.org)} (${executor})`;
   }
 
   if (appealType === "Возражение на аудиторский отчет") {
-    return `Возражение ${appealReference(c)} ${common} на аудиторский отчет ${documentReference(c)}, проведенного ${value(c.issuer)} (${executor})`;
+    return `Возражение ${appealReference(c)} ${common} на аудиторский отчет ${documentReference(c)}, проведенного ${issuer} (${executor})`;
   }
 
   if (appealType === "Жалоба на действие/бездействие") {
     if (!details?.procurementNumber)
-      return `Жалоба ${appealReference(c)} ${common} касательно действия/бездействия ${value(c.issuer)} на аудиторский отчет ${documentReference(c)}`;
-    return `Жалоба ${appealReference(c)} ${common} касательно действия/бездействия ${value(c.issuer)} при рассмотрении обращения ${documentReference(c)} по государственной закупке ${numbered(details.procurementNumber)} (лот ${numbered(details.lotNumber)}) на ${value(details.procurementSubject)} (${executor})`;
+      return `Жалоба ${appealReference(c)} ${common} касательно действия/бездействия ${issuer} на аудиторский отчет ${documentReference(c)}`;
+    return `Жалоба ${appealReference(c)} ${common} касательно действия/бездействия ${issuer} при рассмотрении обращения ${documentReference(c)} по государственной закупке ${numbered(details.procurementNumber)} (лот ${numbered(details.lotNumber)}) на ${value(details.procurementSubject)} (${executor})`;
   }
 
   if (appealType === "Жалоба на решение КВГА/ДВГА") {
     const kind = details?.decisionKind;
     const related = `${numbered(details?.relatedDocumentNumber)} от ${formatDate(details?.relatedDocumentDate)}`;
     if (kind === "prescription-audit" || kind === "prescription")
-      return `Жалоба ${appealReference(c)} ${common} на предписание ${value(c.issuer)} ${documentReference(c)} по аудиторскому отчету ${related}`;
+      return `Жалоба ${appealReference(c)} ${common} на предписание ${issuer} ${documentReference(c)} по аудиторскому отчету ${related}`;
     if (kind === "prescription-preventive")
-      return `Жалоба ${appealReference(c)} ${common} на предписание ${value(c.issuer)} ${documentReference(c)} по профилактическому контролю ${related}`;
-    return `Жалоба ${appealReference(c)} ${common} по результатам контроля качества ${value(c.issuer)} ${documentReference(c)}`;
+      return `Жалоба ${appealReference(c)} ${common} на предписание ${issuer} ${documentReference(c)} по профилактическому контролю ${related}`;
+    return `Жалоба ${appealReference(c)} ${common} по результатам контроля качества ${issuer} ${documentReference(c)}`;
   }
 
   if (appealType === "Жалоба на акт о результате профилактического контроля")
-    return `Жалоба ${appealReference(c)} ${common} на акт о результате профилактического контроля ${value(c.issuer)} ${documentReference(c)}`;
+    return `Жалоба ${appealReference(c)} ${common} на акт о результате профилактического контроля ${issuer} ${documentReference(c)}`;
 
   if (appealType === "Заявление")
     return `Заявление ${appealReference(c)} ${common} ${value(c.request)}.`;
