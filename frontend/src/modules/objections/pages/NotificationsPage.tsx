@@ -1,7 +1,6 @@
 import { Button, Notice, PageHeading } from "../../../components/ui";
 import type {
   CaseNotification,
-  CommissionAttendanceMember,
   Role,
 } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
@@ -10,17 +9,13 @@ export default function NotificationsPage({
   notifications,
   onOpenCase,
   role,
-  activeCommissionMember,
-  commissionMembers,
-  onCommissionMemberChange,
+  activeCommissionMemberId,
   onAnswerAttendancePoll,
 }: {
   notifications: CaseNotification[];
   onOpenCase: (caseId: string) => void;
   role: Role;
-  activeCommissionMember: CommissionAttendanceMember;
-  commissionMembers: CommissionAttendanceMember[];
-  onCommissionMemberChange: (memberId: string) => void;
+  activeCommissionMemberId: string;
   onAnswerAttendancePoll: (pollId: string) => void;
 }) {
   const visibleNotifications =
@@ -28,7 +23,7 @@ export default function NotificationsPage({
       ? notifications.filter(
           (notification) =>
             notification.kind === "attendance-poll" &&
-            notification.commissionMemberId === activeCommissionMember.id,
+            notification.commissionMemberId === activeCommissionMemberId,
         )
       : notifications.filter((notification) => notification.kind !== "attendance-poll");
   return (
@@ -41,28 +36,6 @@ export default function NotificationsPage({
             : "Автоматические сообщения объектам аудита и заявителям"
         }
       />
-      {role === "commission" && (
-        <section className="card commission-member-switcher">
-          <div className="card-body">
-            <label className="field">
-              <span>Член Апелляционной комиссии</span>
-              <select
-                value={activeCommissionMember.id}
-                onChange={(event) => onCommissionMemberChange(event.target.value)}
-              >
-                {commissionMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <p className="muted">
-              В одном кабинете можно проверить ответы всех членов АК.
-            </p>
-          </div>
-        </section>
-      )}
       {visibleNotifications.length === 0 ? (
         <Notice>Уведомлений пока нет.</Notice>
       ) : (
