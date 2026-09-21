@@ -8,6 +8,7 @@ import { COMMISSION_ATTENDANCE_MEMBERS } from "../../data/objections";
 import type {
   Action,
   CaseDocument,
+  CommissionAttendancePoll,
   ObjectionCase,
 } from "../../types";
 import { caseCsv, downloadFile } from "../../utils/download";
@@ -38,6 +39,26 @@ type DialogState =
   | { type: "attendance-answer"; pollId: string }
   | { type: "new" | "clock" | "reset" | "upload" }
   | null;
+
+function participantsFromPoll(poll: CommissionAttendancePoll) {
+  return COMMISSION_ATTENDANCE_MEMBERS
+    .filter((member) => poll.responses[member.id] === "yes")
+    .map((member) => ({
+      id: member.id,
+      name: member.name,
+      present: true,
+      recused: false,
+      reason: "",
+    }));
+}
+
+function syncPollParticipants(cases: ObjectionCase[], poll: CommissionAttendancePoll) {
+  const participants = participantsFromPoll(poll);
+  poll.caseIds.forEach((caseId) => {
+    const target = cases.find((item) => item.id === caseId);
+    if (target) target.members = participants.map((member) => ({ ...member }));
+  });
+}
 
 export default function ObjectionsModule() {
   const model = useObjectionsModel();
@@ -108,6 +129,7 @@ export default function ObjectionsModule() {
       responses,
       manualResponseChanges: {},
     });
+    syncPollParticipants(next.cases, next.attendancePolls.at(-1)!);
     COMMISSION_ATTENDANCE_MEMBERS.forEach((member) => {
       next.notifications.push({
         id: `${pollId}-${member.id}`,
@@ -141,6 +163,7 @@ export default function ObjectionsModule() {
     const poll = next.attendancePolls.find((item) => item.id === pollId);
     if (!poll) return;
     poll.responses[activeCommissionMember.id] = response;
+    syncPollParticipants(next.cases, poll);
     next.notifications.forEach((notification) => {
       if (
         notification.attendancePollId === pollId &&
@@ -183,6 +206,7 @@ export default function ObjectionsModule() {
       changedBy: DEMO_USER.fullName,
       changedAt: next.date,
     };
+    syncPollParticipants(next.cases, poll);
     next.notifications.forEach((notification) => {
       if (
         notification.attendancePollId === pollId &&
@@ -275,7 +299,20 @@ export default function ObjectionsModule() {
         action,
       )
     ) {
-      model.perform(c.id, action, form);
+      if (action === "review-commission-documents") {
+        const next = applyAction(model.state, c.id, action, model.role, form);
+        const updated = next.cases.find((item) => item.id === c.id)!;
+        const poll = next.attendancePolls
+          .filter((item) => item.caseIds.includes(c.id))
+          .sort((a, b) => a.dateTime.localeCompare(b.dateTime))
+          .at(-1);
+        if (!poll || !participantsFromPoll(poll).length)
+          throw new Error("Для заседания нужен хотя бы один подтверждённый ответ «Да» в опросе о присутствии");
+        updated.members = participantsFromPoll(poll);
+        model.commit(next, "Материалы изучены. Состав участников определён по опросу о присутствии.");
+      } else {
+        model.perform(c.id, action, form);
+      }
       return;
     }
     const files = form
@@ -437,7 +474,6 @@ export default function ObjectionsModule() {
             onAction={(action, role) => {
               if (
                 action === "assign-work-executor" ||
-                action === "choose-commission-members" ||
                 action === "commission-vote" ||
                 action === "vote"
               ) {
