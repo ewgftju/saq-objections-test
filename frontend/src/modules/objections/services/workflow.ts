@@ -197,11 +197,6 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       label: "Ознакомиться с документами",
       role: "commission",
     },
-    commission_members: {
-      action: "choose-commission-members",
-      label: "Выбрать участников АК",
-      role: "commission",
-    },
     commission_voting: {
       action: "commission-vote",
       label: "Проголосовать",
@@ -594,38 +589,14 @@ export function applyAction(
       break;
     }
     case "review-commission-documents": {
-      c.status = "commission_members";
+      c.status = "commission_voting";
       title = "Члены АК ознакомились с документами";
-      note = "Ознакомление членов апелляционной комиссии со справкой и материалами обращения завершено. Ожидается выбор участников заседания.";
+      note = "Ознакомление членов апелляционной комиссии со справкой и материалами обращения завершено. Состав участников определяется подтверждёнными ответами «Да» в опросе о присутствии.";
       doc("Ознакомление членов АК с документами", "commission-review", note);
       break;
     }
     case "choose-commission-members": {
-      const selectedMembers = Array.from(form.entries())
-        .filter(
-          ([name, value]) =>
-            name.startsWith("protocolMember_") &&
-            typeof value === "string" &&
-            value.trim().length > 0,
-        )
-        .map(([name, value]) => ({
-          id: `protocol-member-${name.replace("protocolMember_", "")}`,
-          name: String(value).trim(),
-        }));
-      if (!selectedMembers.length)
-        throw new Error("Добавьте хотя бы одного участника заседания");
-      c.members = selectedMembers.map((member) => ({
-        id: member.id,
-        name: member.name,
-        present: true,
-        recused: false,
-        reason: "",
-      }));
-      c.status = "commission_voting";
-      title = "Участники АК выбраны";
-      note = "Состав участников заседания сохранён. Ожидается голосование членов АК по пунктам обращения.";
-      doc("Состав участников заседания", "commission-members", note);
-      break;
+      throw new Error("Состав участников определяется ответами в опросе о присутствии");
     }
     case "commission-vote": {
       const voterId = text("commissionMember", "Голосующий член АК");
