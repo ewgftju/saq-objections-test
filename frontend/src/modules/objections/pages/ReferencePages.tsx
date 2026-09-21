@@ -534,12 +534,15 @@ export function SessionsPage({
                       <tr>
                         <th>Член АК</th>
                         <th>Статус голосования</th>
+                        <th>Изменено исполнителем</th>
                         {role === "work" && <th>Отметить вручную</th>}
                       </tr>
                     </thead>
                     <tbody>
                       {commissionMembers.map((member) => {
                         const response = selectedAttendancePoll.responses[member.id] || "pending";
+                        const manuallyChangedBy =
+                          selectedAttendancePoll.manualResponseChanges?.[member.id]?.changedBy;
                         return (
                           <tr key={member.id}>
                             <td>{member.name}</td>
@@ -548,6 +551,7 @@ export function SessionsPage({
                                 {response === "yes" ? "Да" : response === "no" ? "Нет" : "Нет ответа"}
                               </span>
                             </td>
+                            <td>{manuallyChangedBy ? `${manuallyChangedBy} изменил ответ` : "—"}</td>
                             {role === "work" && (
                               <td>
                                 <select
