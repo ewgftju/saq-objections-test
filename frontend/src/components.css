@@ -36,12 +36,6 @@
   padding-top: 16px;
   border-top: 1px solid var(--line-soft);
 }
-.commission-member-switcher {
-  margin-bottom: 18px;
-}
-.commission-member-switcher .field {
-  max-width: 620px;
-}
 .notification-new-badge {
   margin-left: 8px;
 }
