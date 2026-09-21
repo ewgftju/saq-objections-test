@@ -228,6 +228,13 @@ export interface CommissionAttendancePoll {
   caseIds: string[];
   sentAt: string;
   responses: Record<string, "pending" | "yes" | "no">;
+  manualResponseChanges?: Record<
+    string,
+    {
+      changedBy: string;
+      changedAt: string;
+    }
+  >;
 }
 
 export interface HistoryEvent {
