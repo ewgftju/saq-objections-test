@@ -133,8 +133,16 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       const receivedResponse = pendingAuthorityConfirmation(c);
       if (receivedResponse)
         return { action: "position", label: "Ответ получен", role: "work" };
+      if (pendingOtherRequest(c))
+        return { action: "position", label: "Ответ получен", role: "work" };
+      return null;
     }
-    const authorityAction = authorityResponseAction(c, role);
+    const authorityAction =
+      role === "dvga" || role === "kvga"
+        ? authorityResponseAction(c, role)
+        : role
+          ? null
+          : authorityResponseAction(c);
     if (authorityAction) return authorityAction;
     if (role === "dvga" || role === "kvga") return null;
     if (pendingOtherRequest(c))
