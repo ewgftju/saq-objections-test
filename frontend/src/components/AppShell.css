@@ -309,6 +309,21 @@
 .saq-demo-controls .date-control {
   padding: 6px 8px;
 }
+.commission-member-control {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.commission-member-control > span {
+  flex: none;
+  color: #627187;
+  font-size: 13px;
+}
+.commission-member-control select {
+  width: min(420px, 38vw);
+  padding: 6px 30px 6px 8px;
+}
 .saq-demo-controls button.date-control {
   cursor: pointer;
   font: inherit;
@@ -498,6 +513,12 @@
   .saq-demo-controls .role-control select {
     max-width: 100%;
     font-size: 14px;
+  }
+  .commission-member-control {
+    width: 100%;
+  }
+  .commission-member-control select {
+    width: min(100%, 420px);
   }
   .saq-demo-controls > .text-button {
     margin-left: 0;
