@@ -2,8 +2,14 @@ import { Button, Notice, PageHeading } from "../../../components/ui";
 import { useState } from "react";
 import { STATUS } from "../../../data/constants";
 import { STEPS } from "../../../data/workflowDefinitions";
-import type { AgendaRegistryEntry, ObjectionCase, Role } from "../../../types";
-import { formatDate } from "../../../utils/dateFormat";
+import type {
+  AgendaRegistryEntry,
+  CommissionAttendanceMember,
+  CommissionAttendancePoll,
+  ObjectionCase,
+  Role,
+} from "../../../types";
+import { formatDate, formatDateTime } from "../../../utils/dateFormat";
 
 const sources = [
   [
@@ -229,6 +235,9 @@ export function SessionsPage({
   onPreviewAgendaResults,
   onDownloadAgendaResults,
   onAttendancePoll,
+  attendancePolls = [],
+  commissionMembers = [],
+  onUpdateAttendanceResponse = () => {},
   role,
 }: {
   cases: ObjectionCase[];
@@ -242,11 +251,22 @@ export function SessionsPage({
   onPreviewAgendaResults: (agenda: AgendaRegistryEntry) => void;
   onDownloadAgendaResults: (agenda: AgendaRegistryEntry) => void;
   onAttendancePoll: (cases: ObjectionCase[]) => void;
+  attendancePolls: CommissionAttendancePoll[];
+  commissionMembers: CommissionAttendanceMember[];
+  onUpdateAttendanceResponse: (
+    pollId: string,
+    memberId: string,
+    response: "yes" | "no",
+  ) => void;
   role: Role;
 }) {
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
-  const [section, setSection] = useState<"sessions" | "agendas">("sessions");
+  const [section, setSection] = useState<"sessions" | "agendas" | "attendance">("sessions");
+  const [selectedAttendancePollId, setSelectedAttendancePollId] = useState<string | null>(null);
   const pendingAgendaResults = agendas.filter((agenda) => !agenda.resultsHtml).length;
+  const selectedAttendancePoll = attendancePolls.find(
+    (poll) => poll.id === selectedAttendancePollId,
+  );
   const visible = cases.filter(
     (c) =>
       c.meeting ||
@@ -315,6 +335,20 @@ export function SessionsPage({
               aria-label={`Требуется сформировать итогов: ${pendingAgendaResults}`}
             >
               {pendingAgendaResults}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={section === "attendance"}
+          className={section === "attendance" ? "active" : ""}
+          onClick={() => setSection("attendance")}
+        >
+          Опрос о присутствии
+          {attendancePolls.length > 0 && (
+            <span className="session-tab-badge" aria-label={`Направлено опросов: ${attendancePolls.length}`}>
+              {attendancePolls.length}
             </span>
           )}
         </button>
@@ -396,7 +430,7 @@ export function SessionsPage({
             </div>
           </section>
         </>
-      ) : (
+      ) : section === "agendas" ? (
         <section className="card">
           <div className="table-scroll">
             <table className="registry-table agenda-registry-table">
@@ -473,6 +507,121 @@ export function SessionsPage({
                 )}
               </tbody>
             </table>
+          </div>
+        </section>
+      ) : (
+        <section className="card">
+          <div className="card-body attendance-polls">
+            {selectedAttendancePoll ? (
+              <>
+                <div className="attendance-poll-heading">
+                  <div>
+                    <h3>Опрос о присутствии на заседании</h3>
+                    <p>
+                      Дата и время: <strong>{formatDateTime(selectedAttendancePoll.dateTime)}</strong>
+                    </p>
+                    <p className="muted">
+                      Обращения: {selectedAttendancePoll.caseIds.join(", ")}
+                    </p>
+                  </div>
+                  <Button onClick={() => setSelectedAttendancePollId(null)}>
+                    К списку опросов
+                  </Button>
+                </div>
+                <div className="table-scroll">
+                  <table className="registry-table attendance-status-table">
+                    <thead>
+                      <tr>
+                        <th>Член АК</th>
+                        <th>Статус голосования</th>
+                        {role === "work" && <th>Отметить вручную</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {commissionMembers.map((member) => {
+                        const response = selectedAttendancePoll.responses[member.id] || "pending";
+                        return (
+                          <tr key={member.id}>
+                            <td>{member.name}</td>
+                            <td>
+                              <span className={`badge ${response === "yes" ? "green" : response === "no" ? "gray" : "amber"}`}>
+                                {response === "yes" ? "Да" : response === "no" ? "Нет" : "Нет ответа"}
+                              </span>
+                            </td>
+                            {role === "work" && (
+                              <td>
+                                <select
+                                  aria-label={`Отметить участие: ${member.name}`}
+                                  value={response}
+                                  onChange={(event) => {
+                                    const nextResponse = event.target.value as "pending" | "yes" | "no";
+                                    if (nextResponse !== "pending") {
+                                      onUpdateAttendanceResponse(
+                                        selectedAttendancePoll.id,
+                                        member.id,
+                                        nextResponse,
+                                      );
+                                    }
+                                  }}
+                                >
+                                  <option value="pending">Нет ответа</option>
+                                  <option value="yes">Да</option>
+                                  <option value="no">Нет</option>
+                                </select>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : attendancePolls.length ? (
+              <div className="table-scroll">
+                <table className="registry-table">
+                  <thead>
+                    <tr>
+                      <th>Дата и время заседания</th>
+                      <th>Обращения</th>
+                      <th>Статус ответов</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...attendancePolls]
+                      .sort((a, b) => b.dateTime.localeCompare(a.dateTime))
+                      .map((poll) => {
+                        const responses = Object.values(poll.responses);
+                        const yes = responses.filter((response) => response === "yes").length;
+                        const no = responses.filter((response) => response === "no").length;
+                        const pending = commissionMembers.length - yes - no;
+                        return (
+                          <tr key={poll.id}>
+                            <td>{formatDateTime(poll.dateTime)}</td>
+                            <td>{poll.caseIds.join(", ")}</td>
+                            <td>
+                              <span className="attendance-poll-summary">
+                                Да: {yes} · Нет: {no} · Нет ответа: {pending}
+                              </span>
+                            </td>
+                            <td>
+                              <Button onClick={() => setSelectedAttendancePollId(poll.id)}>
+                                Открыть
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="empty-state">
+                <h3>Опросы о присутствии ещё не направлены</h3>
+                <p>После направления опроса рабочим органом он появится в этом разделе.</p>
+              </div>
+            )}
           </div>
         </section>
       )}
