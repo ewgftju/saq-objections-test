@@ -2,6 +2,7 @@ import { useState } from "react";
 import AppShell from "../../components/AppShell";
 import { Button, Modal, Notice } from "../../components/ui";
 import { initialState } from "../../api/objectionsRepository";
+import { DEMO_USER } from "../../config";
 import { ROLES } from "../../data/constants";
 import { COMMISSION_ATTENDANCE_MEMBERS } from "../../data/objections";
 import type {
@@ -105,6 +106,7 @@ export default function ObjectionsModule() {
       caseIds: cases.map((item) => item.id),
       sentAt: next.date,
       responses,
+      manualResponseChanges: {},
     });
     COMMISSION_ATTENDANCE_MEMBERS.forEach((member) => {
       next.notifications.push({
@@ -176,6 +178,11 @@ export default function ObjectionsModule() {
     const poll = next.attendancePolls.find((item) => item.id === pollId);
     if (!poll || !member) return;
     poll.responses[memberId] = response;
+    poll.manualResponseChanges ??= {};
+    poll.manualResponseChanges[memberId] = {
+      changedBy: DEMO_USER.fullName,
+      changedAt: next.date,
+    };
     next.notifications.forEach((notification) => {
       if (
         notification.attendancePollId === pollId &&
