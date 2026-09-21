@@ -42,6 +42,28 @@
 .attendance-choice-active {
   box-shadow: 0 0 0 3px #006da833;
 }
+.attendance-polls {
+  min-height: 160px;
+}
+.attendance-poll-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.attendance-poll-heading h3 {
+  margin: 0 0 8px;
+}
+.attendance-poll-heading p {
+  margin: 4px 0;
+}
+.attendance-status-table select {
+  min-width: 150px;
+}
+.attendance-poll-summary {
+  white-space: nowrap;
+}
 .icon-button {
   border: 0;
   background: none;
