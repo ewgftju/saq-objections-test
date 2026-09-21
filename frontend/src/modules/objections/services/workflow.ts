@@ -698,16 +698,12 @@ export function applyAction(
         point.position = response;
       }
       request.responded = date;
-      c.documents
-        .filter(
-          (document) =>
-            document.kind === "request-appendix" &&
-            document.requestId === request.id,
-        )
-        .forEach((document) => {
-          if (document.snapshot)
-            document.snapshot.issues = structuredClone(c.issues);
-      });
+      doc(
+        `Заполненное приложение к запросу в ${request.recipient}`,
+        "authority-response-appendix",
+        `Заполненное приложение к запросу в ${request.recipient}.`,
+        request.id,
+      );
       note = "Мотивированные ответы ДВГА/КВГА заполнены по всем оспариваемым пунктам.";
       c.status = authorityStatus(c) || "response_approval";
       doc("Мотивированный ответ ДВГА/КВГА", "authority-response", note);
