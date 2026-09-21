@@ -348,6 +348,14 @@ export default function CaseWorkspace({
                       ),
                     },
                     {
+                      title: "Ответ с других ГО",
+                      requests: c.requests.filter(
+                        (request) =>
+                          !!request.sent &&
+                          request.template === "other",
+                      ),
+                    },
+                    {
                       title: "Ответ КВГА",
                       requests: c.requests.filter(
                         (request) =>
@@ -361,6 +369,7 @@ export default function CaseWorkspace({
                       if (!group.requests.length) return null;
                       const responseMaterials = group.requests.flatMap((request) => {
                         if (!request.responded) return [];
+                        const isAuthorityRequest = request.template !== "other";
                         const hasResponseAppendix = c.documents.some(
                           (document) =>
                             document.requestId === request.id &&
@@ -369,12 +378,17 @@ export default function CaseWorkspace({
                         return c.documents.filter(
                           (document) =>
                             document.requestId === request.id &&
-                            [
-                              "authority-response-appendix",
-                              "authority-response-attachment",
-                              "response-attachment",
-                              ...(hasResponseAppendix ? [] : ["request-appendix"]),
-                            ].includes(document.kind),
+                            (isAuthorityRequest
+                              ? [
+                                  "authority-response-appendix",
+                                  "authority-response-attachment",
+                                  "response-attachment",
+                                  ...(hasResponseAppendix
+                                    ? []
+                                    : ["request-appendix"]),
+                                ]
+                              : ["response-attachment", "position"]
+                            ).includes(document.kind),
                         );
                       });
                       const awaitingResponse = group.requests.some(
