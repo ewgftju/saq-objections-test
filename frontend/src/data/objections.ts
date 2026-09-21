@@ -1,4 +1,25 @@
-import type { CommissionMember, NewCaseInput, ObjectionCase } from "../types";
+import type {
+  CommissionAttendanceMember,
+  CommissionMember,
+  NewCaseInput,
+  ObjectionCase,
+} from "../types";
+
+export const COMMISSION_ATTENDANCE_MEMBERS: CommissionAttendanceMember[] = [
+  { id: "alieva-at", name: "Директор ДМБУА Алиева А.Т." },
+  { id: "urkhumbayeva-tzh", name: "Руководитель управления ДМБУА Урхумбаева Т.Ж." },
+  { id: "abetova-ku", name: "Заместитель директора ДЮС Абетова К.У." },
+  { id: "kenbeil-dm", name: "Вице-министр Кенбеил Д.М." },
+  { id: "kurenbek-shb", name: "Директор ДАВГА Күреңбек тегі Ш.Б." },
+  { id: "akhmetov-rk", name: "Заместитель Председателя КВГА Ахметов Р.К." },
+  { id: "turgeldiev-ra", name: "Заместитель председателя КВГА Тургелдиев Р.А." },
+  { id: "seitov-et", name: "Директор ДЗГЗ Сеитов Е.Т." },
+  { id: "kaskenova-i", name: "Руководитель управления ДЗГЗ Каскенова И." },
+  { id: "umertayev-bk", name: "Представитель НПО «Атамекен» Умертаев Б.К." },
+  { id: "gusmanova-ab", name: "Представитель АО «ЩЮЛ Застройщики» Гусманова А.Б." },
+  { id: "ten-vs", name: "Представитель АО «ОЮЛ застройщиков» ТЭН В.С." },
+  { id: "mikrokov-v", name: "Представитель ОЮЛ «Микроков» В." },
+];
 export function members(): CommissionMember[] {
   return [
     { id: "chair", name: "Председатель комиссии" },
