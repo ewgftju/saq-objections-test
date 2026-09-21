@@ -354,6 +354,9 @@ export default function ObjectionsModule() {
       }
       onClock={() => setDialog({ type: "clock" })}
       onReset={() => setDialog({ type: "reset" })}
+      activeCommissionMember={activeCommissionMember}
+      commissionMembers={COMMISSION_ATTENDANCE_MEMBERS}
+      onCommissionMemberChange={setActiveCommissionMember}
     >
       {model.error && <Notice tone="amber">{model.error}</Notice>}
       {model.route.page === "registry" && (
@@ -550,9 +553,7 @@ export default function ObjectionsModule() {
         <NotificationsPage
           notifications={model.state.notifications}
           role={model.role}
-          activeCommissionMember={activeCommissionMember}
-          commissionMembers={COMMISSION_ATTENDANCE_MEMBERS}
-          onCommissionMemberChange={setActiveCommissionMember}
+          activeCommissionMemberId={activeCommissionMember.id}
           onAnswerAttendancePoll={(pollId) =>
             setDialog({ type: "attendance-answer", pollId })
           }
