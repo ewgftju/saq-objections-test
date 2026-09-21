@@ -243,7 +243,12 @@ export function DocumentContent({
       </article>
     );
 
-  if (kind === "request-appendix")
+  if (
+    kind === "request-appendix" ||
+    kind === "authority-response-appendix"
+  ) {
+    const isResponseAppendix = kind === "authority-response-appendix";
+
     return (
       <article className="print-document appendix-template">
         <p className="appendix-template-number">Таблица №1</p>
@@ -268,15 +273,21 @@ export function DocumentContent({
                   <td>{point.number}</td>
                   <td>
                     {appendixFindingPreview?.[point.id] ??
-                      request?.authorityResponses?.[point.id]?.finding ??
-                      (useLegacyAuthorityValues ? point.authorityFinding : "") ??
+                      (isResponseAppendix
+                        ? request?.authorityResponses?.[point.id]?.finding ??
+                          (useLegacyAuthorityValues
+                            ? point.authorityFinding
+                            : "")
+                        : point.authorityFinding) ??
                       ""}
                   </td>
                   <td>{point.title}</td>
                   <td aria-label={`Мотивированный ответ ${appendixAuthority}`}>
                     {appendixPreview?.[point.id] ??
-                      request?.authorityResponses?.[point.id]?.response ??
-                      (useLegacyAuthorityValues ? point.position : "") ??
+                      (isResponseAppendix
+                        ? request?.authorityResponses?.[point.id]?.response ??
+                          (useLegacyAuthorityValues ? point.position : "")
+                        : point.position) ??
                       ""}
                   </td>
                 </tr>
@@ -286,6 +297,7 @@ export function DocumentContent({
         </div>
       </article>
     );
+  }
 
   if (kind === "certificate") {
     const points = snapshot.issues.filter((point) => point.disputed);
@@ -803,6 +815,44 @@ export default function DocumentModal(props: {
   onClose: () => void;
 }) {
   const [error, setError] = useState("");
+  const attachment = props.document?.dataUrl ? props.document : undefined;
+
+  // Вложения не являются шаблонными документами SAQ. Их нужно открывать как
+  // исходный файл, а не подставлять в демонстрационный шаблон с реквизитами дела.
+  if (attachment) {
+    const isImage = /^data:image\//i.test(attachment.dataUrl!);
+    const filename = attachment.filename || attachment.name;
+
+    return (
+      <Modal title={attachment.name} onClose={props.onClose} wide>
+        <div className="actions">
+          <a
+            className="button"
+            href={attachment.dataUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Открыть оригинал
+          </a>
+          <a
+            className="button primary"
+            href={attachment.dataUrl}
+            download={filename}
+          >
+            Скачать оригинал
+          </a>
+        </div>
+        <div className="attachment-document-preview">
+          {isImage ? (
+            <img src={attachment.dataUrl} alt={attachment.name} />
+          ) : (
+            <iframe src={attachment.dataUrl} title={attachment.name} />
+          )}
+        </div>
+      </Modal>
+    );
+  }
+
   const otherRequestCss =
     ".other-request-template{box-sizing:border-box;min-height:880px;padding:30px 48px 54px;font-family:'Times New Roman',Times,serif;font-size:14px;line-height:1.35}.other-request-template-header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:16px;color:#0872ae;font-family:Georgia,'Times New Roman',serif;font-size:14px;font-weight:700;line-height:1.05;text-align:center}.other-request-template-header span{display:grid;width:52px;height:52px;place-items:center;border:1px solid #9a7700;border-radius:50%;background:#ddbd47;color:#1f4e35;font-size:13px}.other-request-template-contacts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:12px;padding-top:8px;border-top:2px solid #4d9bc4;color:#287dac;font-family:Georgia,'Times New Roman',serif;font-size:9px;line-height:1.3}.other-request-template-contacts span:last-child{text-align:right}.other-request-template-line{height:1px;margin:28px 0 44px;background:#4d9bc4}.other-request-template-recipient{width:46%;margin:0 0 44px auto!important;font-size:14px;line-height:1.4}.other-request-template-body{margin:0!important;overflow-wrap:anywhere;white-space:pre-wrap;text-align:justify;text-indent:28px}.other-request-template-signature{display:grid;grid-template-columns:1fr auto;gap:26px;align-items:end;margin:48px 0 28px;font-size:14px}.other-request-template-executor{margin:0!important;font-size:10px;font-style:italic;line-height:1.25}";
   const requestTemplateCss =

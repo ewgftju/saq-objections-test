@@ -23,7 +23,11 @@ function appendixDocumentHtml(c: ObjectionCase, document: NonNullable<ObjectionC
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!,
   );
   const content = renderToStaticMarkup(
-    <DocumentContent c={c} kind="request-appendix" document={document} />,
+    <DocumentContent
+      c={c}
+      kind="authority-response-appendix"
+      document={document}
+    />,
   );
   return `<!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><title>${safeTitle}</title>
@@ -326,6 +330,11 @@ export default function ActionModal({
   const authorityAppendix = authorityRequestForConfirmation
     ? c.documents.find(
         (document) =>
+          document.kind === "authority-response-appendix" &&
+          document.requestId === authorityRequestForConfirmation.id,
+      ) ||
+      c.documents.find(
+        (document) =>
           document.kind === "request-appendix" &&
           document.requestId === authorityRequestForConfirmation.id,
       )
@@ -542,7 +551,7 @@ export default function ActionModal({
             <div hidden={requestTab !== "print"} className="request-print-preview">
               <DocumentContent
                 c={c}
-                kind="request-appendix"
+                kind="authority-response-appendix"
                 appendixRecipient={authorityRequestForResponse?.recipient}
                 appendixFindingPreview={Object.fromEntries(
                   disputed(c).map((point) => [
