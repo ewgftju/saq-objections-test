@@ -3,6 +3,7 @@ import AppShell from "../../components/AppShell";
 import { Button, Modal, Notice } from "../../components/ui";
 import { initialState } from "../../api/objectionsRepository";
 import { ROLES } from "../../data/constants";
+import { COMMISSION_ATTENDANCE_MEMBERS } from "../../data/objections";
 import type {
   Action,
   CaseDocument,
@@ -25,12 +26,15 @@ import {
 import { dateObject } from "./services/deadlines";
 import { applyAction } from "./services/workflow";
 import { useObjectionsModel } from "./useObjectionsModel";
+import { formatDateTime } from "../../utils/dateFormat";
 
 type DialogState =
   | { type: "action"; action: Action }
   | { type: "document"; kind: string; document?: CaseDocument }
   | { type: "agenda"; cases: ObjectionCase[] }
   | { type: "agenda-results"; agendaId: string }
+  | { type: "attendance"; cases: ObjectionCase[] }
+  | { type: "attendance-answer"; pollId: string }
   | { type: "new" | "clock" | "reset" | "upload" }
   | null;
 
@@ -40,11 +44,26 @@ export default function ObjectionsModule() {
   const [dialogError, setDialogError] = useState("");
   const [uploading, setUploading] = useState(false);
   const c = model.state.cases.find((item) => item.id === model.route.caseId);
+  const activeCommissionMember = COMMISSION_ATTENDANCE_MEMBERS.find(
+    (member) => member.id === model.state.activeCommissionMemberId,
+  ) || COMMISSION_ATTENDANCE_MEMBERS[0];
+  const commissionCanOpenCase = (caseId: string) =>
+    model.state.attendancePolls.some(
+      (poll) =>
+        poll.caseIds.includes(caseId) &&
+        poll.responses[activeCommissionMember.id] === "yes",
+    );
   const close = () => {
     setDialog(null);
     setDialogError("");
   };
   const openCase = (c: ObjectionCase) => {
+    if (model.role === "commission" && !commissionCanOpenCase(c.id)) {
+      model.setToast(
+        "Карточка станет доступна после подтверждения присутствия на заседании.",
+      );
+      return;
+    }
     const shouldMarkRead =
       (model.role === "director" && c.unread) ||
       (model.role === "work" && c.unreadForAssignee);
@@ -66,6 +85,84 @@ export default function ObjectionsModule() {
       model.commit(next, "");
     }
     model.navigate({ page: "notifications" });
+  };
+  const setActiveCommissionMember = (memberId: string) => {
+    model.commit(
+      { ...model.state, activeCommissionMemberId: memberId },
+      "",
+    );
+  };
+  const sendAttendancePoll = (cases: ObjectionCase[], dateTime: string) => {
+    if (!cases.length || !dateTime) return;
+    const next = structuredClone(model.state);
+    const pollId = `attendance-${next.attendancePolls.length + 1}`;
+    const responses = Object.fromEntries(
+      COMMISSION_ATTENDANCE_MEMBERS.map((member) => [member.id, "pending"]),
+    ) as Record<string, "pending" | "yes" | "no">;
+    next.attendancePolls.push({
+      id: pollId,
+      dateTime,
+      caseIds: cases.map((item) => item.id),
+      sentAt: next.date,
+      responses,
+    });
+    COMMISSION_ATTENDANCE_MEMBERS.forEach((member) => {
+      next.notifications.push({
+        id: `${pollId}-${member.id}`,
+        caseId: cases[0].id,
+        recipient: member.name,
+        text: `Укажите, будете ли присутствовать на заседании ${formatDateTime(dateTime)}.`,
+        date: next.date,
+        read: false,
+        kind: "attendance-poll",
+        attendancePollId: pollId,
+        commissionMemberId: member.id,
+      });
+    });
+    cases.forEach((item) => {
+      const target = next.cases.find((caseItem) => caseItem.id === item.id);
+      target?.history.push({
+        date: next.date,
+        actor: ROLES.work,
+        title: "Направлен опрос о присутствии на заседании",
+        text: `Дата и время заседания: ${formatDateTime(dateTime)}. Опрос направлен членам АК и их и.о.`,
+      });
+    });
+    model.commit(next, "Опрос о присутствии направлен членам АК и их и.о.");
+    close();
+  };
+  const answerAttendancePoll = (
+    pollId: string,
+    response: "yes" | "no",
+  ) => {
+    const next = structuredClone(model.state);
+    const poll = next.attendancePolls.find((item) => item.id === pollId);
+    if (!poll) return;
+    poll.responses[activeCommissionMember.id] = response;
+    next.notifications.forEach((notification) => {
+      if (
+        notification.attendancePollId === pollId &&
+        notification.commissionMemberId === activeCommissionMember.id
+      ) {
+        notification.read = true;
+      }
+    });
+    poll.caseIds.forEach((caseId) => {
+      const target = next.cases.find((item) => item.id === caseId);
+      target?.history.push({
+        date: next.date,
+        actor: activeCommissionMember.name,
+        title: response === "yes" ? "Подтверждено присутствие" : "Отказ от участия в заседании",
+        text: `Ответ на опрос о заседании ${formatDateTime(poll.dateTime)}: ${response === "yes" ? "Да" : "Нет"}.`,
+      });
+    });
+    model.commit(
+      next,
+      response === "yes"
+        ? "Присутствие подтверждено. Карточки обращений открыты."
+        : "Отказ от участия сохранён. Карточки обращений недоступны.",
+    );
+    close();
   };
   const openAgendaCase = (caseId: string) => {
     const target = model.state.cases.find((item) => item.id === caseId);
@@ -246,7 +343,10 @@ export default function ObjectionsModule() {
       date={model.state.date}
       role={model.role}
       unreadNotifications={model.state.notifications.filter(
-        (notification) => !notification.read,
+        (notification) =>
+          !notification.read &&
+          (model.role !== "commission" ||
+            notification.commissionMemberId === activeCommissionMember.id),
       ).length}
       onRoleChange={model.setRole}
       onNavigate={(next) =>
@@ -258,7 +358,11 @@ export default function ObjectionsModule() {
       {model.error && <Notice tone="amber">{model.error}</Notice>}
       {model.route.page === "registry" && (
         <CasesList
-          cases={model.state.cases}
+          cases={
+            model.role === "commission"
+              ? model.state.cases.filter((item) => commissionCanOpenCase(item.id))
+              : model.state.cases
+          }
           date={model.state.date}
           role={model.role}
           onOpen={openCase}
@@ -274,6 +378,12 @@ export default function ObjectionsModule() {
       )}
       {model.route.page === "detail" &&
         (c ? (
+          model.role === "commission" && !commissionCanOpenCase(c.id) ? (
+            <Notice tone="amber">
+              Карточка обращения доступна члену АК только после ответа «Да» в
+              опросе о присутствии на заседании.
+            </Notice>
+          ) : (
           <CaseWorkspace
             c={c}
             tab={model.route.tab || "review"}
@@ -389,6 +499,7 @@ export default function ObjectionsModule() {
             }
             onUpload={() => setDialog({ type: "upload" })}
           />
+          )
         ) : (
           <Notice>
             Обращение не найдено в этом браузере.{" "}
@@ -431,11 +542,20 @@ export default function ObjectionsModule() {
               agenda.resultsHtml!,
             )
           }
+          onAttendancePoll={(cases) => setDialog({ type: "attendance", cases })}
+          role={model.role}
         />
       )}
       {model.route.page === "notifications" && (
         <NotificationsPage
           notifications={model.state.notifications}
+          role={model.role}
+          activeCommissionMember={activeCommissionMember}
+          commissionMembers={COMMISSION_ATTENDANCE_MEMBERS}
+          onCommissionMemberChange={setActiveCommissionMember}
+          onAnswerAttendancePoll={(pollId) =>
+            setDialog({ type: "attendance-answer", pollId })
+          }
           onOpenCase={(caseId) => {
             const target = model.state.cases.find((item) => item.id === caseId);
             if (target) openCase(target);
@@ -497,6 +617,77 @@ export default function ObjectionsModule() {
           onClose={close}
         />
       )}
+      {dialog?.type === "attendance" && (
+        <Modal title="Опрос о присутствии на заседании" onClose={close}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const dateTime = String(
+                new FormData(event.currentTarget).get("dateTime") || "",
+              );
+              if (!dateTime) {
+                setDialogError("Укажите дату и время проведения заседания");
+                return;
+              }
+              sendAttendancePoll(dialog.cases, dateTime);
+            }}
+          >
+            <p>
+              Опрос будет направлен всем членам Апелляционной комиссии и
+              лицам, исполняющим их обязанности, по выбранным обращениям.
+            </p>
+            <label className="field">
+              <span>
+                Дата и время проведения заседания <b className="required">*</b>
+              </span>
+              <input
+                name="dateTime"
+                type="datetime-local"
+                required
+                defaultValue={`${model.state.date}T10:00`}
+              />
+            </label>
+            {dialogError && <p className="form-error">{dialogError}</p>}
+            <div className="dialog-actions">
+              <Button onClick={close}>Отмена</Button>
+              <Button primary type="submit">
+                Направить опрос
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {dialog?.type === "attendance-answer" && (() => {
+        const poll = model.state.attendancePolls.find(
+          (item) => item.id === dialog.pollId,
+        );
+        if (!poll) return null;
+        const answer = poll.responses[activeCommissionMember.id];
+        return (
+          <Modal title="Подтвердите присутствие" onClose={close}>
+            <p>
+              {`Укажите, будете ли присутствовать на заседании ${formatDateTime(poll.dateTime)}.`}
+            </p>
+            <p className="muted">Член АК: {activeCommissionMember.name}</p>
+            <div className="dialog-actions">
+              <Button onClick={close}>Отмена</Button>
+              <Button
+                className={answer === "no" ? "attendance-choice-active" : ""}
+                onClick={() => answerAttendancePoll(poll.id, "no")}
+              >
+                Нет
+              </Button>
+              <Button
+                primary
+                className={answer === "yes" ? "attendance-choice-active" : ""}
+                onClick={() => answerAttendancePoll(poll.id, "yes")}
+              >
+                Да
+              </Button>
+            </div>
+          </Modal>
+        );
+      })()}
       {dialog?.type === "agenda-results" && (() => {
         const agenda = model.state.agendas.find(
           (item) => item.id === dialog.agendaId,
