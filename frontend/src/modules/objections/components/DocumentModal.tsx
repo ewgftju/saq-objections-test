@@ -11,9 +11,9 @@ import type {
 } from "../../../types";
 import {
   formatDate,
-  formatDateTime,
   formatMoney,
 } from "../../../utils/dateFormat";
+import { auditAuthorityFullName } from "../../../utils/auditAuthority";
 import { downloadFile } from "../../../utils/download";
 import { DEMO_USER } from "../../../config";
 import {
@@ -21,6 +21,53 @@ import {
   overall,
   pointOutcomeFromVotes,
 } from "../services/decisions";
+
+function requestDeadlineDate(deadline: string) {
+  return formatDate(deadline.slice(0, 10));
+}
+
+function requestIntro(c: ObjectionCase, deadline: string) {
+  const details = c.agendaDetails;
+  const appealType =
+    c.appealType ??
+    (c.type === "notice"
+      ? "Возражение на уведомления"
+      : c.type === "audit"
+        ? "Возражение на аудиторский отчет"
+        : "");
+  const deadlineDate = requestDeadlineDate(deadline);
+  const finish = (appeal: "возражения" | "заявления" | "жалобы") =>
+    `, просим в срок до 18:00 часов ${deadlineDate} представить мотивированный ответ по каждому доводу ${appeal} с приложением подтверждающих документов.`;
+
+  if (appealType === "Возражение на уведомления")
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения ${c.org} к нарушениям, указанным в уведомлении об устранении нарушений, выявленных по результатам камерального контроля от ${formatDate(details?.cameraControlDate)} года № ${details?.cameraControlNumber || "—"}${finish("возражения")}`;
+
+  if (appealType === "Возражение на аудиторский отчет")
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения ${c.org} к нарушениям, указанным в аудиторском отчете от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("возражения")}`;
+
+  if (appealType === "Заявление")
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан заявления ${c.org}${finish("заявления")}`;
+
+  if (appealType === "Жалоба на решение КВГА/ДВГА") {
+    if (details?.decisionKind === "quality-control" || details?.decisionKind === "inspection-act")
+      return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на решение контроля качества от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
+    if (details?.decisionKind === "prescription-preventive")
+      return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на предписание на акт о результате профилактического контроля от ${formatDate(details.relatedDocumentDate)} №${details.relatedDocumentNumber || "—"}${finish("жалобы")}`;
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на предписание на аудиторский отчет от ${formatDate(details?.relatedDocumentDate)} №${details?.relatedDocumentNumber || "—"}${finish("жалобы")}`;
+  }
+
+  if (appealType === "Жалоба на действие/бездействие") {
+    const authority = auditAuthorityFullName(c.issuer);
+    if (details?.procurementNumber)
+      return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} касательно действия/бездействия ${authority} при рассмотрении обращения от ${formatDate(c.document.date)} №${c.document.number || "—"} по государственной закупке № ${details.procurementNumber} (лот №${details.lotNumber || "—"}) на ${details.procurementSubject || "—"}${finish("жалобы")}`;
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} касательно действия/бездействия ${authority} на аудиторский отчет от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
+  }
+
+  if (appealType === "Жалоба на акт о результате профилактического контроля")
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на акт о результате профилактического контроля ${auditAuthorityFullName(c.issuer)} от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
+
+  return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан обращения ${c.org}${finish("жалобы")}`;
+}
 
 export function DocumentContent({
   c,
@@ -120,7 +167,7 @@ export function DocumentContent({
         </div>
         <div className="other-request-template-line" />
         <p className="other-request-template-recipient">
-          <b>{request.recipient || "<Кому направить запрос>"}</b>
+          <b>{auditAuthorityFullName(request.recipient) || "<Кому направить запрос>"}</b>
         </p>
         <p className="other-request-template-body">
           {request.customText || "<Текст запроса>"}
@@ -161,7 +208,7 @@ export function DocumentContent({
         </div>
         <div className="request-template-line" />
         <p className="request-template-recipient">
-          <b>{request.recipient || "Кому направить запрос"}</b>
+          <b>{auditAuthorityFullName(request.recipient) || "Кому направить запрос"}</b>
         </p>
         <p
           className={`request-template-body ${
@@ -170,15 +217,7 @@ export function DocumentContent({
         >
           {request.customText !== undefined
             ? request.customText
-            :
-            `Қазақстан Республикасы Қаржы министрлігінің апелляциялық
-комиссиясының қарауына «${c.org}» ${formatDate(c.appealDate || c.filed)}
-жылғы №${c.appealNumber || c.document.number} камералдық бақылау
-нәтижелері бойынша анықталған бұзушылықтарды жою туралы
-хабарламаларда көрсетілген бұзушылықтарға қарсылықтарының келіп
-түсуіне байланысты ${formatDateTime(request.deadline)} мерзімде
-қарсылықтың дәлелдері бойынша дәлелді жауапты және растайтын
-құжаттарды қоса бере отырып ұсынуыңызды талап етеміз.`}
+            : requestIntro(c, request.deadline)}
         </p>
         <p>Қосымша __ бетте.</p>
         <div className="request-template-signature">
@@ -272,12 +311,14 @@ export function DocumentContent({
           {formatDate(snapshot.appealDate || snapshot.filed)} года №
           {snapshot.appealNumber || snapshot.document.number} {snapshot.org}, БИН{" "}
           {snapshot.bin} (далее – объект государственного аудита) к уведомлению{" "}
-          {snapshot.issuer} (далее – ДВГА)
+          {auditAuthorityFullName(snapshot.issuer)} (далее – ДВГА)
         </p>
         <p className="certificate-template-explanation">
           (наименование, БИН/ИИН лица, подавшего возражение, жалобу)
         </p>
-        <p className="certificate-template-intro">{snapshot.issuer} (далее – ДВГА).</p>
+        <p className="certificate-template-intro">
+          {auditAuthorityFullName(snapshot.issuer)} (далее – ДВГА).
+        </p>
         <p className="certificate-template-explanation">
           (наименование органа, чьи акты, действия (бездействие) обжалуются)
         </p>
@@ -405,7 +446,7 @@ export function DocumentContent({
           Возражение «{snapshot.org}», БИН {snapshot.bin} от{" "}
           {formatDate(snapshot.appealDate || snapshot.filed)} года №
           {snapshot.appealNumber || snapshot.document.number} к уведомлению{" "}
-          {snapshot.issuer} от {formatDate(snapshot.document.date)} года №
+          {auditAuthorityFullName(snapshot.issuer)} от {formatDate(snapshot.document.date)} года №
           {snapshot.document.number}.
         </p>
         <p>
@@ -496,7 +537,7 @@ export function DocumentContent({
         <b>Заявитель:</b> {c.applicant}
       </p>
       <p>
-        <b>Орган, чей документ обжалуется:</b> {c.issuer}
+        <b>Орган, чей документ обжалуется:</b> {auditAuthorityFullName(c.issuer)}
         <br />
         <b>Исходный документ:</b> {c.document.name} № {c.document.number} от{" "}
         {formatDate(c.document.date)}
@@ -521,7 +562,7 @@ export function DocumentContent({
           <p>
             <b>Адресат:</b> {c.authority}
             <br />
-            <b>Копия:</b> {c.issuer}
+            <b>Копия:</b> {auditAuthorityFullName(c.issuer)}
             <br />
             <b>Подача:</b> {formatDate(c.filed)} · {c.channel}
           </p>
