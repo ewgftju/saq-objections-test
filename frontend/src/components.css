@@ -690,6 +690,7 @@
   min-height: 680px;
   padding: 52px 54px 96px;
   font-family: "Times New Roman", Times, serif;
+  overflow: hidden;
 }
 .appendix-template-number {
   margin: 0 14px 14px 0 !important;
@@ -698,20 +699,29 @@
 }
 .appendix-template table {
   width: 100%;
+  min-width: 700px;
   table-layout: fixed;
-  font-size: 16px;
+  font-size: clamp(12px, 1.6vw, 16px);
   line-height: 1.35;
+}
+.appendix-template-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 .appendix-template th,
 .appendix-template td {
+  box-sizing: border-box;
   border: 1px solid #111;
   padding: 7px 9px;
   vertical-align: top;
-  word-break: break-word;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 .appendix-template th {
   text-align: center;
-  font-size: 17px;
+  font-size: clamp(12px, 1.7vw, 17px);
   color: #111;
   background: white;
 }
