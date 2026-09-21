@@ -142,6 +142,11 @@ export default function ConsiderationProcess({
         ? ROLES[next.role]
         : "";
   const parallelProtocolAvailable = c.status === "commission_voting";
+  const awaitingAuthorityResponse =
+    role === "work" &&
+    ["request_approved", "response_approval", "response_signed"].includes(
+      c.status,
+    );
 
   return (
     <section
@@ -223,6 +228,14 @@ export default function ConsiderationProcess({
             </small>
           </div>
         </div>
+      ) : awaitingAuthorityResponse ? (
+        <Notice tone="amber">
+          <strong>Ожидание ответа на запрос</strong>
+          <p>
+            Запрос направлен в ДВГА/КВГА. Рабочий орган ожидает заполненный,
+            согласованный и подписанный ответ от адресата.
+          </p>
+        </Notice>
       ) : (
         <Notice tone={c.status === "completed" ? "green" : "amber"}>
           <strong>{STATUS[c.status]}</strong>
