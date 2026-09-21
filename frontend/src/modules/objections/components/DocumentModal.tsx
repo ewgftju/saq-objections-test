@@ -820,34 +820,18 @@ export default function DocumentModal(props: {
   // Вложения не являются шаблонными документами SAQ. Их нужно открывать как
   // исходный файл, а не подставлять в демонстрационный шаблон с реквизитами дела.
   if (attachment) {
-    const isImage = /^data:image\//i.test(attachment.dataUrl!);
     const filename = attachment.filename || attachment.name;
 
     return (
       <Modal title={attachment.name} onClose={props.onClose} wide>
         <div className="actions">
           <a
-            className="button"
-            href={attachment.dataUrl}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Открыть оригинал
-          </a>
-          <a
             className="button primary"
             href={attachment.dataUrl}
             download={filename}
           >
-            Скачать оригинал
+            Скачать
           </a>
-        </div>
-        <div className="attachment-document-preview">
-          {isImage ? (
-            <img src={attachment.dataUrl} alt={attachment.name} />
-          ) : (
-            <iframe src={attachment.dataUrl} title={attachment.name} />
-          )}
         </div>
       </Modal>
     );
