@@ -346,6 +346,23 @@ export default function ActionModal({
           document.requestId === authorityRequestForConfirmation.id,
       )
     : [];
+  const isAuthorityRequest = (request: ObjectionCase["requests"][number]) =>
+    request.template === "dvga" ||
+    request.recipient.toUpperCase().includes("ДВГА") ||
+    request.recipient.toUpperCase().includes("КВГА");
+  const otherRequestForConfirmation = c.requests.find(
+    (request) => !isAuthorityRequest(request) && !request.responded,
+  );
+  const receiptRequest =
+    authorityRequestForConfirmation || otherRequestForConfirmation;
+  const responseStatus = (request: ObjectionCase["requests"][number]) => {
+    if (request.confirmed) return "Получен и зафиксирован";
+    if (isAuthorityRequest(request) && request.responseSigned)
+      return "Поступил — ждёт фиксации";
+    if (isAuthorityRequest(request) && request.responded)
+      return "Ответ готовится в ДВГА/КВГА";
+    return "Ожидается ответ";
+  };
   const openAppendix = () => {
     if (!authorityAppendix) return;
     const popup = window.open("", "_blank");
@@ -795,16 +812,53 @@ export default function ActionModal({
         ) : action === "position" ? (
           <>
             <Notice tone="amber">
-              Ответ от адресата ещё не подтверждён. Внесите дату поступления и
-              вложите все полученные файлы.
+              {receiptRequest ? (
+                <>
+                  Получен ответ от <strong>{receiptRequest.recipient}</strong>.
+                  Внесите дату поступления и вложите все полученные файлы.
+                </>
+              ) : (
+                "Ответ от адресата ещё не подтверждён. Внесите дату поступления и вложите все полученные файлы."
+              )}
             </Notice>
+            <section className="response-receipt-statuses" aria-label="Статусы ответов по запросам">
+              <b>Статус ответов по запросам</b>
+              <ul>
+                {c.requests.map((request) => (
+                  <li key={request.id}>
+                    <span>{request.recipient}</span>
+                    <em
+                      className={
+                        request.confirmed
+                          ? "received"
+                          : isAuthorityRequest(request) && request.responseSigned
+                            ? "ready"
+                            : "waiting"
+                      }
+                    >
+                      {responseStatus(request)}
+                    </em>
+                  </li>
+                ))}
+              </ul>
+            </section>
             <div className="response-receipt-grid">
               <section className="response-receipt-card response-receipt-system">
                 <div className="response-receipt-heading">
                   <span aria-hidden="true">↓</span>
                   <div>
-                    <b>Из кабинета ДВГА/КВГА</b>
-                    <small>Электронное поступление</small>
+                    <b>
+                      {authorityRequestForConfirmation
+                        ? `Из кабинета ${authorityRequestForConfirmation.recipient}`
+                        : receiptRequest
+                          ? `Ответ от ${receiptRequest.recipient}`
+                          : "Из кабинета ДВГА/КВГА"}
+                    </b>
+                    <small>
+                      {authorityRequestForConfirmation
+                        ? "Электронное поступление"
+                        : "Ответ ожидается от адресата"}
+                    </small>
                   </div>
                   <em>{authorityRequestForConfirmation ? "ПОСТУПИЛ" : "НЕ ПОСТУПИЛО"}</em>
                 </div>
