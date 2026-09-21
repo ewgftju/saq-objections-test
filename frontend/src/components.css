@@ -857,6 +857,58 @@
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+.response-receipt-statuses {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0 16px;
+  padding: 13px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7fbfd;
+}
+.response-receipt-statuses > b {
+  font-size: 14px;
+}
+.response-receipt-statuses ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.response-receipt-statuses li {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  font-size: 13px;
+}
+.response-receipt-statuses li > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.response-receipt-statuses em {
+  flex: 0 0 auto;
+  border: 1px solid #d7e0e6;
+  border-radius: 12px;
+  padding: 3px 8px;
+  color: var(--muted);
+  background: #fff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.response-receipt-statuses em.ready {
+  border-color: #9bd2e6;
+  color: #076c9d;
+  background: #eef9fd;
+}
+.response-receipt-statuses em.received {
+  border-color: #9dccb2;
+  color: #17643c;
+  background: #eff9f2;
+}
 .response-receipt-card {
   border: 1px solid var(--line);
   border-top: 4px solid var(--blue);
@@ -977,6 +1029,11 @@
   .response-receipt-grid,
   .request-modal-details {
     grid-template-columns: 1fr;
+  }
+  .response-receipt-statuses li {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
   .request-modal-details > div + div {
     border-top: 1px solid var(--line-soft);
