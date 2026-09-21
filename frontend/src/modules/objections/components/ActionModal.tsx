@@ -390,8 +390,7 @@ export default function ActionModal({
         isRequest ||
         action === "fill-request-response" ||
         action === "analysis" ||
-        action === "position" ||
-        action === "choose-commission-members"
+        action === "position"
       }
     >
       <form
@@ -635,25 +634,6 @@ export default function ActionModal({
                 }}
               />
             </div>
-          </>
-        ) : action === "choose-commission-members" ? (
-          <>
-            {definition.note && <Notice>{definition.note}</Notice>}
-            <ProtocolParticipantsFields
-              rows={protocolMemberRows}
-              values={values}
-              onAdd={() =>
-                setProtocolMemberRows((rows) => [
-                  ...rows,
-                  Math.max(0, ...rows) + 1,
-                ])
-              }
-              onRemove={(row) =>
-                setProtocolMemberRows((rows) =>
-                  rows.filter((item) => item !== row),
-                )
-              }
-            />
           </>
         ) : action === "vote" ? (
           <>
