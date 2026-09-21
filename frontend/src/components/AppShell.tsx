@@ -2,7 +2,12 @@ import type { ReactNode } from "react";
 import { useDemoSession } from "../auth/useDemoSession";
 import { DEMO_USER, MAIN_MENU_URL } from "../config";
 import { ROLES } from "../data/constants";
-import type { Page, Role, Route } from "../types";
+import type {
+  CommissionAttendanceMember,
+  Page,
+  Role,
+  Route,
+} from "../types";
 import { formatDate } from "../utils/dateFormat";
 import SaqSidebar from "./SaqSidebar";
 import { Button } from "./ui";
@@ -24,6 +29,9 @@ export default function AppShell({
   onRoleChange,
   onNavigate,
   onClock,
+  activeCommissionMember,
+  commissionMembers,
+  onCommissionMemberChange,
 }: {
   children: ReactNode;
   route: Route;
@@ -34,6 +42,9 @@ export default function AppShell({
   onNavigate: (route: Route) => void;
   onClock: () => void;
   onReset: () => void;
+  activeCommissionMember?: CommissionAttendanceMember;
+  commissionMembers?: CommissionAttendanceMember[];
+  onCommissionMemberChange?: (memberId: string) => void;
 }) {
   const session = useDemoSession();
   const home = () => onNavigate({ page: "registry" });
@@ -142,6 +153,26 @@ export default function AppShell({
             >
               Дата учёта: {formatDate(date)}
             </button>
+            {role === "commission" &&
+              activeCommissionMember &&
+              commissionMembers &&
+              onCommissionMemberChange && (
+                <label className="commission-member-control">
+                  <span>Член АК</span>
+                  <select
+                    value={activeCommissionMember.id}
+                    onChange={(event) =>
+                      onCommissionMemberChange(event.target.value)
+                    }
+                  >
+                    {commissionMembers.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
           </div>
         </div>
         {children}
