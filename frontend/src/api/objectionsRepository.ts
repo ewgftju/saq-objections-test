@@ -51,15 +51,31 @@ export function createDemoRepository(
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
         cases: value.cases.map((c) => {
           const migrated =
-            value.version === 1 && c.status === "commission_voting"
-              ? { ...c, status: "commission_members" as const }
+            c.status === "commission_members"
+              ? { ...c, status: "commission_voting" as const }
               : c;
           const normalized =
             value.version < 5 && migrated.status === "received"
               ? { ...migrated, status: "accepted" as const }
               : migrated;
+          const latestAttendancePoll = [...(value.attendancePolls || [])]
+            .filter((poll) => poll.caseIds.includes(c.id))
+            .sort((a, b) => a.dateTime.localeCompare(b.dateTime))
+            .at(-1);
+          const attendanceMembers = latestAttendancePoll
+            ? COMMISSION_ATTENDANCE_MEMBERS
+                .filter((member) => latestAttendancePoll.responses[member.id] === "yes")
+                .map((member) => ({
+                  id: member.id,
+                  name: member.name,
+                  present: true,
+                  recused: false,
+                  reason: "",
+                }))
+            : normalized.members;
           return {
             ...normalized,
+            members: attendanceMembers,
             unread:
               normalized.unread ??
               (normalized.status === "received" && normalized.channel === "SAQ"),
