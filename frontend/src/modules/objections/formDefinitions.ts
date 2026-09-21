@@ -121,7 +121,6 @@ export function actionForm(
     action === "vote" ||
     action === "analysis" ||
     action === "assign-work-executor" ||
-    action === "choose-commission-members" ||
     action === "commission-vote"
       ? []
       : [day];
@@ -400,11 +399,6 @@ export function actionForm(
       );
       note =
         "Укажите реквизиты протокола и состав участников заседания. Печатная форма обновляется в реальном времени.";
-      break;
-    case "choose-commission-members":
-      title = "Выбрать участников АК";
-      note =
-        "Выберите председательствующего и членов апелляционной комиссии для участия в заседании.";
       break;
     case "commission-vote":
       title = "Проголосовать";
