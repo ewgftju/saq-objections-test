@@ -763,7 +763,7 @@ export function applyAction(
         c.requestPauseStartedAt = undefined;
       }
       c.status = authorityStatus(c) || (pendingOtherRequest(c) ? "request_approved" : "materials");
-      doc("Полученные материалы по запросу", "position", note);
+      doc("Полученные материалы по запросу", "position", note, request.id);
       break;
     }
     case "analysis": {
