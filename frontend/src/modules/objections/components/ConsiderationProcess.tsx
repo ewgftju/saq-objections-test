@@ -95,6 +95,7 @@ const TASK_HELP: Partial<Record<Action, string>> = {
   sign: "Проверьте результаты голосования и зарегистрируйте подписание протокола. После этого оформляется результат рассмотрения.",
   deliver:
     "Оформите результат, укажите канал направления и порядок дальнейшего обжалования. Получение результата учитывается отдельно.",
+  "close-review": "Заключение по обращению вложено. Закройте рассмотрение.",
   execute:
     "Зафиксируйте исполнение принятого решения и его последствия для исходного документа.",
   forward:
@@ -214,6 +215,10 @@ export default function ConsiderationProcess({
                 Сформировать запрос в другой орган
               </Button>
             )}
+            {c.status === "decided" && c.type === "notice" &&
+              !c.documents.some((document) => document.kind === "conclusion") && (
+                <Button disabled>Закрыть рассмотрение</Button>
+              )}
             {c.status === "accepted" && (
               <Button
                 primary
