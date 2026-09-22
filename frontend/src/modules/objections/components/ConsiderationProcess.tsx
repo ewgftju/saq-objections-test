@@ -130,11 +130,14 @@ export default function ConsiderationProcess({
   role,
   onAction,
   onHistory,
+  hideStages = false,
 }: {
   c: ObjectionCase;
   role: Role;
   onAction: (action: Action, role: Role) => void;
   onHistory: () => void;
+  /** Члены АК работают только с задачей по делу, без служебной схемы процесса. */
+  hideStages?: boolean;
 }) {
   const next = nextAction(c, role);
   const stages = OBJECTION_STAGES;
@@ -175,27 +178,31 @@ export default function ConsiderationProcess({
       className="consideration-process"
       aria-label="Процесс рассмотрения"
     >
-      <div className="section-heading">
-        <h3>Процесс рассмотрения</h3>
-        <span className="badge blue">{STATUS[c.status]}</span>
-      </div>
-      <ol className="consideration-stages" aria-label="Этапы рассмотрения">
-        {stages.map((stage, index) => {
-          const current =
-            !!currentStatus && stage.statuses.includes(currentStatus);
-          return (
-            <li key={stage.label} aria-current={current ? "step" : undefined}>
-              <span className="consideration-stage-number" aria-hidden="true">
-                {index + 1}
-              </span>
-              <div>
-                <strong>{stage.label}</strong>
-                <span>{stage.description}</span>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+      {!hideStages && (
+        <>
+          <div className="section-heading">
+            <h3>Процесс рассмотрения</h3>
+            <span className="badge blue">{STATUS[c.status]}</span>
+          </div>
+          <ol className="consideration-stages" aria-label="Этапы рассмотрения">
+            {stages.map((stage, index) => {
+              const current =
+                !!currentStatus && stage.statuses.includes(currentStatus);
+              return (
+                <li key={stage.label} aria-current={current ? "step" : undefined}>
+                  <span className="consideration-stage-number" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  <div>
+                    <strong>{stage.label}</strong>
+                    <span>{stage.description}</span>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </>
+      )}
       {next ? (
         <div className="consideration-task">
           <div>
