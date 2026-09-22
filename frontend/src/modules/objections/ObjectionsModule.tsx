@@ -563,6 +563,10 @@ export default function ObjectionsModule() {
                 action === "sign-response" ||
                 action === "approve-final-response" ||
                 action === "sign-final-response" ||
+                action === "approve-decision-project" ||
+                action === "sign-decision-project" ||
+                action === "send-decision-project-eotinish" ||
+                action === "hearing-after-decision-project" ||
                 action === "approve-certificate" ||
                 action === "sign-certificate" ||
                 action === "review-commission-documents" ||
@@ -633,6 +637,14 @@ export default function ObjectionsModule() {
                       ? "Окончательный ответ согласован"
                     : action === "sign-final-response"
                       ? "Окончательный ответ подписан"
+                    : action === "approve-decision-project"
+                      ? "Проект решения согласован"
+                    : action === "sign-decision-project"
+                      ? "Проект решения подписан"
+                    : action === "send-decision-project-eotinish"
+                      ? "Проект решения направлен через систему E-Otinish"
+                    : action === "hearing-after-decision-project"
+                      ? "Заслушивание проведено"
                     : action === "approve-certificate"
                       ? "Справка согласована"
                       : action === "sign-certificate"
