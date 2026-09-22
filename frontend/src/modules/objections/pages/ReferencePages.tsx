@@ -277,7 +277,7 @@ export function SessionsPage({
   const visible = cases.filter(
     (c) =>
       c.meeting ||
-        ["documents_review", "commission_members", "commission_voting", "circulated", "hearing", "hearing_ready", "meeting"].includes(
+        ["certificate_approved", "documents_review", "commission_members", "commission_voting", "circulated", "hearing", "hearing_ready", "meeting"].includes(
           c.status,
         ),
   );
