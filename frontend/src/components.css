@@ -513,6 +513,32 @@
   padding: 62px 70px;
   box-shadow: 0 2px 9px #00263e2e;
 }
+.request-print-preview .final-response-template {
+  width: min(820px, 100%);
+  min-height: 1040px;
+  margin: 0 auto;
+  padding: 62px 70px;
+  box-shadow: 0 2px 9px #00263e2e;
+}
+.final-response-template {
+  box-sizing: border-box;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 16px;
+  line-height: 1.35;
+}
+.final-response-template p { white-space: normal; }
+.final-response-recipient { width: 54%; margin: 0 0 46px auto; }
+.final-response-recipient p { margin: 0 0 8px; }
+.final-response-body p { margin: 0 0 10px; text-align: justify; text-indent: 30px; }
+.final-response-attachment-note { margin-top: 30px !important; text-indent: 0 !important; }
+.final-response-signature { display: grid; grid-template-columns: 1fr auto; gap: 26px; align-items: end; margin: 60px 0 35px; }
+.final-response-signature span { max-width: 320px; }
+.final-response-executor { font-size: 13px !important; line-height: 1.25; }
+.final-response-appendix { margin-top: 70px; padding-top: 20px; break-before: page; page-break-before: always; }
+.final-response-appendix h2 { font-size: 19px; font-family: "Times New Roman", Times, serif; }
+.final-response-appendix table { font-family: "Times New Roman", Times, serif; font-size: 14px; }
+.final-response-appendix th, .final-response-appendix td { padding: 8px; border: 1px solid #111; vertical-align: top; }
+.final-response-appendix th { text-align: center; }
 .protocol-template {
   box-sizing: border-box;
   font-family: "Times New Roman", Times, serif;
