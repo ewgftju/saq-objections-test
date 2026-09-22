@@ -320,9 +320,11 @@ export default function CaseWorkspace({
                   ) : null;
                 })()}
                 {(() => {
-                  const certificate = c.documents.find(
-                    (document) => document.kind === "certificate",
-                  );
+                  // Each intermediate save creates a new certificate snapshot.
+                  // Materials must always expose the latest saved version.
+                  const certificate = c.documents
+                    .filter((document) => document.kind === "certificate")
+                    .at(-1);
                   return certificate ? (
                     <section className="request-documents-section">
                       <h4>Справка</h4>
