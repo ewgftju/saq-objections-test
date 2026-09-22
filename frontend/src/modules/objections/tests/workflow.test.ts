@@ -1019,6 +1019,16 @@ test("голосование членов АК и формирование пр�
       role: "work",
     },
   );
+  assert.deepEqual(
+    additionalActions(h.c).find(
+      (action) => action.action === "fill-meeting-certificate",
+    ),
+    {
+      action: "fill-meeting-certificate",
+      label: "Заполнить справку",
+      role: "work",
+    },
+  );
   const process = renderToStaticMarkup(
     createElement(ConsiderationProcess, {
       c: h.c,
@@ -1029,6 +1039,7 @@ test("голосование членов АК и формирование пр�
   );
   assert.match(process, /Проголосовать/);
   assert.match(process, /Сформировать протокол заседания/);
+  assert.match(process, /Заполнить справку/);
   assert.match(process, /голосуют параллельно/);
 
   h.run("vote", "work", {
@@ -1266,8 +1277,8 @@ test("справка формируется по новому шаблону и 
   h.run("sign-certificate", "work");
   assert.equal(h.c.status, "certificate_approved");
   h.run("send-certificate-to-commission", "work");
-  assert.equal(h.c.status, "documents_review");
-  assert.equal(nextAction(h.c)?.action, "review-commission-documents");
+  assert.equal(h.c.status, "commission_voting");
+  assert.equal(nextAction(h.c)?.action, "commission-vote");
   const commissionMaterialsHtml = renderToStaticMarkup(
     createElement(CaseWorkspace, {
       c: h.c,
@@ -1283,9 +1294,6 @@ test("справка формируется по новому шаблону и 
   assert.match(commissionMaterialsHtml, /<h4>Ответ ДВГА<\/h4>/);
   assert.doesNotMatch(commissionMaterialsHtml, /<h4>Запрос в ДВГА<\/h4>/);
   assert.doesNotMatch(commissionMaterialsHtml, /<h4>Запрос в другие органы<\/h4>/);
-  h.run("review-commission-documents", "commission");
-  assert.equal(h.c.status, "commission_voting");
-  assert.equal(nextAction(h.c)?.action, "commission-vote");
   // Состав поступает из опроса о присутствии; в сценарии подтверждены два участника.
   h.c.members = h.c.members.slice(0, 2);
   h.run(
@@ -1326,6 +1334,16 @@ test("справка формируется по новому шаблону и 
     ],
     "Обоснование председателя",
   );
+  h.run("fill-meeting-certificate", "work", {
+    meetingCertificateComment_chair: "Комментарий председателя",
+    meetingCertificateComment_deputy: "Комментарий заместителя",
+  });
+  assert.equal(h.c.certificate?.memberPositions[0]?.name, h.c.members[0]?.name);
+  assert.equal(h.c.certificate?.memberPositions[0]?.result, "accept");
+  assert.equal(
+    h.c.certificate?.memberPositions[0]?.comment,
+    "Комментарий председателя",
+  );
   h.run("members", "work", { meetingConducted: "on" });
   assert.equal(h.c.status, "meeting");
   const certificate = h.c.documents.find(
@@ -1346,8 +1364,9 @@ test("справка формируется по новому шаблону и 
   assert.match(html, /Доводы объекта гос\. аудита \(заявителя\):/);
   assert.match(html, /Доводы ДАВГА для справки/);
   assert.match(html, /Доводы рабочего органа \(ДАВГА МФ РК\):/);
-  assert.match(html, /ФИО члены АК/);
-  assert.doesNotMatch(html, /ФИО 1/);
+  assert.match(html, /Председатель комиссии/);
+  assert.match(html, /Комментарий председателя/);
+  assert.doesNotMatch(html, /ФИО члены АК/);
   assert.match(html, /certificate-members-table/);
   assert.match(html, /ГУ «Управление образования»/);
 });
