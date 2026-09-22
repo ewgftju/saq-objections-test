@@ -1548,7 +1548,7 @@ test("протокол формируется с выбранными участ
   const definition = actionForm("vote", h.c, "2026-09-10", {});
   assert.deepEqual(
     definition.fields.map((field) => field.name),
-    ["number", "protocolDate", "secretary", "recommendations"],
+    ["number", "protocolDate", "chairperson", "secretary", "recommendations"],
   );
   h.c.status = "meeting";
   h.run("vote", "work", {
