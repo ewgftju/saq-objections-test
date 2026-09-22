@@ -68,7 +68,9 @@ export default function NotificationsPage({
                           onClick={() =>
                             notification.attendancePollId &&
                             notification.commissionMemberId &&
-                            onAnswerAttendancePoll(notification.id)
+                            onAnswerAttendancePoll(
+                            notification.id,
+                            )
                           }
                         >
                           Ответить
