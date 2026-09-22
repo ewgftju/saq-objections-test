@@ -558,6 +558,8 @@ export default function ObjectionsModule() {
                 action === "sign-request" ||
                 action === "approve-response" ||
                 action === "sign-response" ||
+                action === "approve-final-response" ||
+                action === "sign-final-response" ||
                 action === "approve-certificate" ||
                 action === "sign-certificate" ||
                 action === "send-certificate-to-commission" ||
@@ -625,6 +627,10 @@ export default function ObjectionsModule() {
                       ? "Ответ ДВГА/КВГА согласован"
                     : action === "sign-response"
                       ? "Ответ ДВГА/КВГА подписан"
+                    : action === "approve-final-response"
+                      ? "Окончательный ответ согласован"
+                    : action === "sign-final-response"
+                      ? "Окончательный ответ подписан"
                     : action === "approve-certificate"
                       ? "Справка согласована"
                       : action === "sign-certificate"
