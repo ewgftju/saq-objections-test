@@ -1081,14 +1081,27 @@ export function applyAction(
         point.final = outcome;
       }
       const protocolDate = String(form.get("protocolDate") || date);
+      const recommendationText = String(form.get("recommendations") || "").trim();
       dateObject(protocolDate);
       c.meeting = {
         date: protocolDate,
         number: text("number", "Номер протокола"),
         audio: "",
-        recommendations:
-          String(form.get("recommendations") || "").trim() || "—",
+        recommendations: recommendationText || "—",
       };
+      if (recommendationText) {
+        next.recommendations.push({
+          id: `recommendation-${c.id}-${next.recommendations.length + 1}`,
+          text: recommendationText,
+          recipient: c.issuer,
+          status: "sent",
+          answer: "",
+          caseId: c.id,
+          caseReference: c.appealNumber || c.id,
+          executor: c.assignee,
+          createdAt: protocolDate,
+        });
+      }
       c.status = "protocol";
       doc(
         "Проект протокола заседания",
