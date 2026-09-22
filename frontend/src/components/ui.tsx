@@ -108,6 +108,12 @@ export function Icon({ name }: { name: string }) {
         <path d="M12 3v2" />
       </>
     ),
+    recommendations: (
+      <>
+        <path d="M5 4h14v16H5z" />
+        <path d="m8 9 2 2 4-4M8 15h8" />
+      </>
+    ),
     processes: (
       <>
         <rect x="8" y="2" width="8" height="5" rx="1" />
