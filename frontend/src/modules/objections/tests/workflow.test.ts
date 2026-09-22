@@ -165,17 +165,17 @@ function deliver(h: Harness, role: Role = "work") {
 
 test("три исходных дела: разные сроки и перенос окончания месяца", () => {
   const state = initialState();
-  assert.deepEqual(state.cases.slice(0, 3).map(filingDeadline), [
+  assert.deepEqual(state.cases.map(filingDeadline), [
     "2026-09-10",
     "2026-09-16",
     "2026-11-30",
   ]);
-  assert.deepEqual(state.cases.slice(0, 3).map(reviewDeadline), [
+  assert.deepEqual(state.cases.map(reviewDeadline), [
     "2026-09-24",
     "2026-10-14",
     "2026-10-12",
   ]);
-  assert.deepEqual(state.cases.slice(0, 3).map(executionDeadline), [
+  assert.deepEqual(state.cases.map(executionDeadline), [
     "2026-09-11",
     "2026-09-11",
     "2026-09-11",
@@ -859,7 +859,7 @@ test("совместимость сохранения, прямые ссылки
   });
   const state = repository.load();
   repository.save(state);
-  assert.equal(repository.load().cases.length, 6);
+  assert.equal(repository.load().cases.length, 3);
   const path = pathForRoute({
     page: "detail",
     caseId: state.cases[0].id,
@@ -879,7 +879,7 @@ test("совместимость сохранения, прямые ссылки
       onExport() {},
     }),
   );
-  assert.match(registry, /ВОЗ-2026-101/);
+  assert.match(registry, /ВОЗ-2026-001/);
   state.cases[0].org = '<img src=x onerror="alert(1)">';
   for (const tab of ["overview", "review", "documents", "history"] as const) {
     const html = renderToStaticMarkup(
@@ -911,7 +911,7 @@ test("сохранённый выбор участников АК перевод
     getItem: (key) => storage.get(key) || null,
     setItem: (key, value) => storage.set(key, value),
   }).load();
-  assert.equal(state.version, 9);
+  assert.equal(state.version, 8);
   assert.deepEqual(state.agendas, []);
   assert.deepEqual(state.notifications, []);
   assert.deepEqual(state.attendancePolls, []);
@@ -1154,7 +1154,7 @@ test("дело открывает процесс, а одно действие �
     /Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан/,
   );
   assert.match(requestHtml, /10\.09\.2026/);
-  assert.match(requestHtml, /КГУ «Школа-лицей № 18»/);
+  assert.match(requestHtml, /ГУ «Управление образования»/);
   const appendixDocument = h.c.documents.find(
     (document) => document.kind === "request-appendix",
   )!;
@@ -1367,7 +1367,7 @@ test("справка формируется по новому шаблону и 
   assert.match(html, /Комментарий председателя/);
   assert.doesNotMatch(html, /ФИО члены АК/);
   assert.match(html, /certificate-members-table/);
-  assert.match(html, /КГУ «Школа-лицей № 18»/);
+  assert.match(html, /ГУ «Управление образования»/);
 });
 
 test("повестка дня формируется по шаблону возражения на аудиторский отчет", () => {
