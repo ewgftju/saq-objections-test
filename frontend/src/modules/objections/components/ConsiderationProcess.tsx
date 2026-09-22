@@ -83,8 +83,6 @@ const TASK_HELP: Partial<Record<Action, string>> = {
     "Проверьте сформированную справку и согласуйте её для направления членам апелляционной комиссии.",
   "sign-certificate":
     "Подпишите согласованную справку. После этого она будет готова к направлению вместе с материалами членам апелляционной комиссии.",
-  "send-certificate-to-commission":
-    "Направьте согласованную справку и все документы по обращению членам апелляционной комиссии для ознакомления.",
   "review-commission-documents":
     "Ознакомьтесь со справкой и материалами обращения. Состав участников заседания определяется подтверждёнными ответами «Да» в опросе о присутствии.",
   "commission-vote":
@@ -159,6 +157,7 @@ export default function ConsiderationProcess({
     ["request_approved", "response_approval", "response_signed"].includes(
       c.status,
     );
+  const awaitingAttendancePoll = c.status === "certificate_approved";
 
   return (
     <section
@@ -237,11 +236,28 @@ export default function ConsiderationProcess({
             {role !== next.role && (
               <small>Действие выполняет {taskOwner}.</small>
             )}
-            <small>
-              {c.status === "accepted"
-                ? "Сначала сформируйте обязательный запрос в ДВГА/КВГА, затем при необходимости добавьте запрос в другой орган и направьте документы на согласование."
-                : "Заполните форму и сохраните действие — откроется следующая задача."}
-            </small>
+            {c.status === "accepted" && (
+              <small>
+                Сначала сформируйте обязательный запрос в ДВГА/КВГА, затем при необходимости добавьте запрос в другой орган и направьте документы на согласование.
+              </small>
+            )}
+          </div>
+        </div>
+      ) : awaitingAttendancePoll ? (
+        <div className="consideration-task">
+          <div>
+            <span className="consideration-eyebrow">Текущая задача</span>
+            <h4>Готово к рассмотрению АК</h4>
+            <p>
+              Доступ на документы данного обращения откроются членам АК после
+              направления опроса о присутствии.
+            </p>
+            <p className="consideration-owner">
+              Исполнитель: <strong>Рабочий орган</strong>
+            </p>
+          </div>
+          <div className="consideration-task-action">
+            <small>Ожидается направление опроса о присутствии на заседании.</small>
           </div>
         </div>
       ) : awaitingAuthorityResponse ? (
