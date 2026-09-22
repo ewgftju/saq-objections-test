@@ -387,14 +387,27 @@ export function SessionsPage({
                   </label>
                 </th>
                 <th>Объект</th>
-                <th>Заседание</th>
+                <th>Статус</th>
+                <th>Дата заседания</th>
                 <th>Протокол</th>
                 <th>Статус</th>
                 <th />
               </tr>
             </thead>
             <tbody>
-              {visible.map((c) => (
+              {visible.map((c) => {
+                const attendancePoll = attendancePolls
+                  .filter((poll) => poll.caseIds.includes(c.id))
+                  .sort((a, b) => b.dateTime.localeCompare(a.dateTime))
+                  .at(0);
+                const meetingConducted = [
+                  "meeting",
+                  "protocol",
+                  "decided",
+                  "delivered",
+                  "completed",
+                ].includes(c.status);
+                return (
                 <tr key={c.id}>
                   <td>
                     <label className="session-case-selector">
@@ -409,17 +422,19 @@ export function SessionsPage({
                     </label>
                   </td>
                   <td>{c.org}</td>
-                  <td>{formatDate(c.meeting?.date)}</td>
+                  <td>{attendancePoll ? (meetingConducted ? "Проведен" : "Запланирован") : "—"}</td>
+                  <td>{attendancePoll ? formatDateTime(attendancePoll.dateTime) : "—"}</td>
                   <td>{c.meeting?.number || "Готовится"}</td>
                   <td>{STATUS[c.status]}</td>
                   <td>
                     <Button onClick={() => onOpen(c)}>Открыть</Button>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {!visible.length && (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <div className="empty-state">
                       <h3>Материалы к заседанию ещё не подготовлены</h3>
                       <p>
