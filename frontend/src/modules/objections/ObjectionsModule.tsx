@@ -310,7 +310,6 @@ export default function ObjectionsModule() {
         const updated = next.cases.find((item) => item.id === c.id)!;
         const poll = next.attendancePolls
           .filter((item) => item.caseIds.includes(c.id))
-          .sort((a, b) => a.dateTime.localeCompare(b.dateTime))
           .at(-1);
         if (!poll || !participantsFromPoll(poll).length)
           throw new Error("Для заседания нужен хотя бы один подтверждённый ответ «Да» в опросе о присутствии");
