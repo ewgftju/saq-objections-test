@@ -45,19 +45,6 @@ function isDvgaOrKvgaRequest(recipient: string) {
   return isDvgaRequest(recipient) || isKvgaRequest(recipient);
 }
 
-/** A member may vote differently on separate points. For the certificate we
- * show one concise overall position: mixed votes are treated as partial. */
-function memberVoteOutcome(c: ObjectionCase, memberId: string): Outcome | "" {
-  const choices = disputed(c)
-    .map((point) => normalizeVoteChoice(c.votes?.[point.id]?.votes?.[memberId]))
-    .filter(Boolean);
-  if (!choices.length) return "";
-  if (choices.every((choice) => choice === choices[0])) return choices[0] || "";
-  return choices.some((choice) => choice === "accept" || choice === "partial")
-    ? "partial"
-    : "reject";
-}
-
 function authorityRole(recipient: string): Role {
   return isKvgaRequest(recipient) ? "kvga" : "dvga";
 }
@@ -89,6 +76,19 @@ function pendingAuthorityConfirmation(c: ObjectionCase, role?: Role) {
 
 function directedToDvgaOrKvga(c: ObjectionCase) {
   return c.requests.some((request) => isDvgaOrKvgaRequest(request.recipient));
+}
+
+/** A member may vote differently on separate points. For the certificate we
+ * show one concise overall position: mixed votes are treated as partial. */
+function memberVoteOutcome(c: ObjectionCase, memberId: string): Outcome | "" {
+  const choices = disputed(c)
+    .map((point) => normalizeVoteChoice(c.votes?.[point.id]?.votes?.[memberId]))
+    .filter(Boolean);
+  if (!choices.length) return "";
+  if (choices.every((choice) => choice === choices[0])) return choices[0] || "";
+  return choices.some((choice) => choice === "accept" || choice === "partial")
+    ? "partial"
+    : "reject";
 }
 
 function authorityResponseAction(
@@ -686,13 +686,20 @@ export function applyAction(
         const comment = String(
           form.get(`meetingCertificateComment_${member.id}`) || "",
         ).trim();
+        // A manual result is only used when the member could not vote in the
+        // system. It deliberately applies to each disputed point, exactly as
+        // an individual electronic vote would.
         if (!manualResult) continue;
         for (const point of disputed(c)) {
           const result = c.votes[point.id] || {
-            yes: 0, no: 0, approved: false,
+            yes: 0,
+            no: 0,
+            approved: false,
             chair: c.members[0]?.id || member.id,
-            present: c.members.length, eligible: c.members.length,
-            votes: {}, voteReasons: {},
+            present: c.members.length,
+            eligible: c.members.length,
+            votes: {},
+            voteReasons: {},
           };
           result.votes ||= {};
           result.voteReasons ||= {};
@@ -982,26 +989,30 @@ export function applyAction(
       doc("Протокол заслушивания", "hearing", c.hearing.note);
       break;
     case "vote": {
-      const selectedMembers = Array.from(form.entries())
-        .filter(
-          ([name, value]) =>
-            name.startsWith("protocolMember_") &&
-            typeof value === "string" &&
-            value.trim().length > 0,
-        )
-        .map(([name, value]) => ({
-          id: `protocol-member-${name.replace("protocolMember_", "")}`,
-          name: String(value).trim(),
+      // New protocol forms use the participants of the latest attendance poll.
+      // The fallback supports cases that were created before attendance polls.
+      const legacyMembers = Array.from(form.entries())
+          .filter(
+            ([name, value]) =>
+              name.startsWith("protocolMember_") &&
+              typeof value === "string" &&
+              value.trim().length > 0,
+          )
+          .map(([name, value]) => ({
+            id: `protocol-member-${name.replace("protocolMember_", "")}`,
+            name: String(value).trim(),
+          }));
+      if (legacyMembers.length) {
+        c.members = legacyMembers.map((member) => ({
+          id: member.id,
+          name: member.name,
+          present: true,
+          recused: false,
+          reason: "",
         }));
-      if (!selectedMembers.length)
-        throw new Error("Добавьте хотя бы одного участника заседания");
-      c.members = selectedMembers.map((member) => ({
-        id: member.id,
-        name: member.name,
-        present: true,
-        recused: false,
-        reason: "",
-      }));
+      }
+      if (!c.members.length)
+        throw new Error("В последнем опросе о присутствии нет участников с ответом «Да»");
       c.votes = {};
       for (const point of disputed(c)) {
         const memberVotes = Object.fromEntries(
