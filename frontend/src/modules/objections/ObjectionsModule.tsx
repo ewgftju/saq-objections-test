@@ -135,7 +135,7 @@ export default function ObjectionsModule() {
     if (model.state.notifications.some((notification) => !notification.read)) {
       const next = structuredClone(model.state);
       next.notifications.forEach((notification) => {
-        notification.read = true;
+        if (notification.kind !== "attendance-poll") notification.read = true;
       });
       model.commit(next, "");
     }
@@ -212,6 +212,10 @@ export default function ObjectionsModule() {
     const poll = next.attendancePolls.find((item) => item.id === pollId);
     const member = COMMISSION_ATTENDANCE_MEMBERS.find((item) => item.id === memberId);
     if (!poll || !member) return;
+    if (notification.read || poll.responses[memberId] !== "pending") {
+      close();
+      return;
+    }
     poll.responses[memberId] = response;
     syncPollParticipants(next.cases, next.attendancePolls, poll);
     notification.read = true;
