@@ -690,18 +690,15 @@ export function applyAction(
         throw new Error("В последнем опросе о присутствии нет участников заседания");
 
       c.votes ||= {};
-      for (const member of c.members) {
-        const manualResult = normalizeVoteChoice(
-          String(form.get(`meetingCertificateResult_${member.id}`) || ""),
-        );
-        const comment = String(
-          form.get(`meetingCertificateComment_${member.id}`) || "",
-        ).trim();
-        // A manual result is only used when the member could not vote in the
-        // system. It deliberately applies to each disputed point, exactly as
-        // an individual electronic vote would.
-        if (!manualResult) continue;
-        for (const point of disputed(c)) {
+      for (const point of disputed(c)) {
+        for (const member of c.members) {
+          const manualResult = normalizeVoteChoice(
+            String(form.get(`meetingCertificateResult_${point.id}_${member.id}`) || form.get(`meetingCertificateResult_${member.id}`) || ""),
+          );
+          const comment = String(
+            form.get(`meetingCertificateComment_${point.id}_${member.id}`) || form.get(`meetingCertificateComment_${member.id}`) || "",
+          ).trim();
+          if (!manualResult) continue;
           const result = c.votes[point.id] || {
             yes: 0,
             no: 0,
@@ -740,18 +737,24 @@ export function applyAction(
       }
 
       const savedPositions = new Map(
-        c.certificate.memberPositions.map((position) => [position.id, position]),
+        c.certificate.memberPositions.map((position) => [`${position.pointId || "legacy"}_${position.id}`, position]),
       );
-      c.certificate.memberPositions = c.members.map((member) => ({
-        id: member.id,
-        name: member.name,
-        result: memberVoteOutcome(c, member.id),
-        comment: String(
-          form.get(`meetingCertificateComment_${member.id}`) ||
-            savedPositions.get(member.id)?.comment ||
-            "",
-        ).trim(),
-      }));
+      c.certificate.memberPositions = disputed(c).flatMap((point) =>
+        c.members.map((member) => ({
+          id: member.id,
+          name: member.name,
+          pointId: point.id,
+          pointNumber: point.number,
+          result: normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id]),
+          comment: String(
+            form.get(`meetingCertificateComment_${point.id}_${member.id}`) ||
+              form.get(`meetingCertificateComment_${member.id}`) ||
+              savedPositions.get(`${point.id}_${member.id}`)?.comment ||
+              savedPositions.get(`legacy_${member.id}`)?.comment ||
+              "",
+          ).trim(),
+        })),
+      );
 
       const allVotesRecorded = disputed(c).every((point) =>
         c.members.every((member) =>
