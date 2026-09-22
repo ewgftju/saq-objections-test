@@ -29,6 +29,11 @@ export type CaseStatus =
   | "hearing_ready"
   | "meeting"
   | "protocol"
+  | "decision_project"
+  | "decision_project_approval"
+  | "decision_project_signed"
+  | "decision_project_eotinish"
+  | "decision_project_hearing"
   | "decided"
   | "final_response_approval"
   | "final_response_signed"
@@ -320,6 +325,7 @@ export interface ObjectionCase {
   votes?: Record<string, VoteResult> | null;
   result?: CaseResult | null;
   delivery?: Delivery | null;
+  decisionProject?: Delivery | null;
   pause?: { date: string; recipient: string; text: string } | null;
   requestPauseStartedAt?: string;
   resumeStatus?: CaseStatus;
@@ -397,6 +403,11 @@ export type Action =
   | "hearing-held"
   | "vote"
   | "sign"
+  | "create-decision-project"
+  | "approve-decision-project"
+  | "sign-decision-project"
+  | "send-decision-project-eotinish"
+  | "hearing-after-decision-project"
   | "deliver"
   | "close-review"
   | "approve-final-response"
