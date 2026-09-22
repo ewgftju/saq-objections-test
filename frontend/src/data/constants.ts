@@ -25,7 +25,7 @@ export const STATUS = {
   materials: "Формирование справки",
   certificate_approval: "Согласование справки",
   certificate_signed: "Подписание справки",
-  certificate_approved: "Отправка документов членам АК",
+  certificate_approved: "Готово к рассмотрению АК",
   documents_review: "Ознакомление с документами",
   commission_members: "Выбор присутствующих на заседании",
   commission_voting: "Голосование",
