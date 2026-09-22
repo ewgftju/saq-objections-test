@@ -535,10 +535,11 @@
 .final-response-signature span { max-width: 320px; }
 .final-response-executor { font-size: 13px !important; line-height: 1.25; }
 .final-response-appendix { margin-top: 70px; padding-top: 20px; break-before: page; page-break-before: always; }
-.final-response-appendix h2 { font-size: 19px; font-family: "Times New Roman", Times, serif; }
-.final-response-appendix table { font-family: "Times New Roman", Times, serif; font-size: 14px; }
-.final-response-appendix th, .final-response-appendix td { padding: 8px; border: 1px solid #111; vertical-align: top; }
-.final-response-appendix th { text-align: center; }
+.final-response-appendix h2 { font-size: 19px; font-family: "Times New Roman", Times, serif; font-style: italic; }
+.final-response-appendix-point { margin: 26px 0; }
+.final-response-point-title { font-weight: 700; }
+.final-response-point-reason, .final-response-point-decision { text-align: justify; text-indent: 30px; }
+.final-response-point-decision { margin-top: 12px !important; }
 .protocol-template {
   box-sizing: border-box;
   font-family: "Times New Roman", Times, serif;
