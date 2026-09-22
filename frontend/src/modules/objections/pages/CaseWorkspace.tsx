@@ -303,55 +303,6 @@ export default function CaseWorkspace({
                 <h3 className="form-section">
                   Материалы и результаты рассмотрения
                 </h3>
-                {role === "commission" && (
-                  <section className="request-documents-section">
-                    <h4>Все документы обращения</h4>
-                    <div className="request-documents-list">
-                      {[
-                        {
-                          name: c.document.name,
-                          kind: "source",
-                          date: c.document.date,
-                        },
-                        {
-                          name: "Исходное обращение",
-                          kind: "original",
-                          date: c.filed,
-                        },
-                        ...c.documents,
-                      ].map((document, index) => (
-                        <div
-                          className="request-document-row"
-                          key={`${document.kind}-${document.name}-${index}`}
-                        >
-                          <span>{document.name}</span>
-                          {"dataUrl" in document && document.dataUrl ? (
-                            <a
-                              className="button"
-                              href={document.dataUrl}
-                              download={document.filename || document.name}
-                            >
-                              Скачать
-                            </a>
-                          ) : (
-                            <Button
-                              onClick={() =>
-                                onDocument(
-                                  document.kind,
-                                  "author" in document ? document : undefined,
-                                )
-                              }
-                            >
-                              Просмотр
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
-                {role !== "commission" && (
-                  <>
                 {(() => {
                   const conclusions = c.documents.filter(
                     (document) => document.kind === "conclusion",
@@ -450,7 +401,7 @@ export default function CaseWorkspace({
                     </section>
                   ) : null;
                 })()}
-                {role === "work" &&
+                {["work", "commission"].includes(role) &&
                   [
                     {
                       title: "Ответ ДВГА",
@@ -555,7 +506,7 @@ export default function CaseWorkspace({
                       );
                     },
                   )}
-                {!hideRequestBlocks && c.requests.length > 0 && (
+                {(!hideRequestBlocks || role === "commission") && c.requests.length > 0 && (
                   <>
                     {[
                       {
@@ -634,8 +585,6 @@ export default function CaseWorkspace({
                           </section>
                         ),
                     )}
-                  </>
-                )}
                   </>
                 )}
                 {c.issues
