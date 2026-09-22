@@ -1038,9 +1038,9 @@ test("голосование членов АК и формирование пр�
     }),
   );
   assert.match(process, /Проголосовать/);
-  assert.match(process, /Сформировать протокол заседания/);
+  assert.doesNotMatch(process, /Сформировать протокол заседания/);
   assert.match(process, /Заполнить справку/);
-  assert.match(process, /голосуют параллельно/);
+  assert.doesNotMatch(process, /голосуют параллельно/);
 
   h.run("vote", "work", {
     number: "ПР-18",
