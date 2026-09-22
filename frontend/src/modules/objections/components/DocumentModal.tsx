@@ -530,12 +530,12 @@ export function DocumentContent({
                           })()}
                     </td>
                     <td>
-                      {(
-                        votes?.[point.id] as
-                          | { voteReasons?: Record<string, string> }
-                          | undefined
-                      )?.voteReasons?.[member.id] ||
-                        protocolPreview?.voteReasons?.[point.id]?.[member.id] ||
+                      {protocolPreview?.voteReasons?.[point.id]?.[member.id] ||
+                        (
+                          votes?.[point.id] as
+                            | { voteReasons?: Record<string, string> }
+                            | undefined
+                        )?.voteReasons?.[member.id] ||
                         member.reason ||
                         "—"}
                     </td>
