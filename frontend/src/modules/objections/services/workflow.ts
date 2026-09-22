@@ -45,6 +45,19 @@ function isDvgaOrKvgaRequest(recipient: string) {
   return isDvgaRequest(recipient) || isKvgaRequest(recipient);
 }
 
+/** A member may vote differently on separate points. For the certificate we
+ * show one concise overall position: mixed votes are treated as partial. */
+function memberVoteOutcome(c: ObjectionCase, memberId: string): Outcome | "" {
+  const choices = disputed(c)
+    .map((point) => normalizeVoteChoice(c.votes?.[point.id]?.votes?.[memberId]))
+    .filter(Boolean);
+  if (!choices.length) return "";
+  if (choices.every((choice) => choice === choices[0])) return choices[0] || "";
+  return choices.some((choice) => choice === "accept" || choice === "partial")
+    ? "partial"
+    : "reject";
+}
+
 function authorityRole(recipient: string): Role {
   return isKvgaRequest(recipient) ? "kvga" : "dvga";
 }
@@ -298,6 +311,12 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       options.push({
         action: "vote",
         label: "Сформировать протокол заседания",
+        role: "work",
+      });
+    if (["commission_voting", "circulated"].includes(c.status))
+      options.push({
+        action: "fill-meeting-certificate",
+        label: "Заполнить справку",
         role: "work",
       });
     if (
@@ -651,6 +670,75 @@ export function applyAction(
         ? "Все участники АК проголосовали по оспариваемым пунктам. Обращение готово к проведению заседания."
         : "Ожидаются голоса остальных участников АК по каждому оспариваемому пункту.";
       doc("Голосование членов АК", "commission-vote", note);
+      break;
+    }
+    case "fill-meeting-certificate": {
+      if (!c.certificate)
+        throw new Error("Сначала сформируйте и направьте справку членам АК");
+      if (!c.members.length)
+        throw new Error("В последнем опросе о присутствии нет участников заседания");
+
+      c.votes ||= {};
+      for (const member of c.members) {
+        const manualResult = normalizeVoteChoice(
+          String(form.get(`meetingCertificateResult_${member.id}`) || ""),
+        );
+        const comment = String(
+          form.get(`meetingCertificateComment_${member.id}`) || "",
+        ).trim();
+        if (!manualResult) continue;
+        for (const point of disputed(c)) {
+          const result = c.votes[point.id] || {
+            yes: 0, no: 0, approved: false,
+            chair: c.members[0]?.id || member.id,
+            present: c.members.length, eligible: c.members.length,
+            votes: {}, voteReasons: {},
+          };
+          result.votes ||= {};
+          result.voteReasons ||= {};
+          result.votes[member.id] = manualResult;
+          result.voteReasons[member.id] = comment;
+          const recordedVotes = c.members.map((item) =>
+            normalizeVoteChoice(result.votes![item.id]),
+          );
+          result.yes = recordedVotes.filter((item) => item === "accept").length;
+          result.no = recordedVotes.filter((item) => item === "reject").length;
+          result.present = c.members.length;
+          result.eligible = c.members.length;
+          const allVoted = recordedVotes.every(Boolean);
+          const outcome = allVoted ? pointOutcomeFromVotes(result.votes) : "";
+          result.approved = outcome === "accept";
+          c.votes[point.id] = result;
+          if (allVoted && outcome) {
+            point.proposal = outcome;
+            point.final = outcome;
+          }
+        }
+      }
+
+      const savedPositions = new Map(
+        c.certificate.memberPositions.map((position) => [position.id, position]),
+      );
+      c.certificate.memberPositions = c.members.map((member) => ({
+        id: member.id,
+        name: member.name,
+        result: memberVoteOutcome(c, member.id),
+        comment: String(
+          form.get(`meetingCertificateComment_${member.id}`) ||
+            savedPositions.get(member.id)?.comment ||
+            "",
+        ).trim(),
+      }));
+
+      const allVotesRecorded = disputed(c).every((point) =>
+        c.members.every((member) =>
+          Boolean(normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id])),
+        ),
+      );
+      if (allVotesRecorded) c.status = "circulated";
+      title = "Справка заполнена результатами голосования";
+      note = "В справке зафиксированы голоса и комментарии участников заседания. Результаты, внесённые вручную, учитываются наравне с электронными голосами.";
+      doc("Справка: результаты голосования членов АК", "certificate", note);
       break;
     }
     case "fill-request-response": {
