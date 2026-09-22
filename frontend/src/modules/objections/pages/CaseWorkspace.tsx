@@ -298,6 +298,28 @@ export default function CaseWorkspace({
                   Материалы и результаты рассмотрения
                 </h3>
                 {(() => {
+                  const conclusions = c.documents.filter(
+                    (document) => document.kind === "conclusion",
+                  );
+                  return conclusions.length ? (
+                    <section className="request-documents-section">
+                      <h4>Заключение по обращению</h4>
+                      <div className="request-documents-list">
+                        {conclusions.map((document) => (
+                          <div className="request-document-row" key={`${document.name}-${document.date}`}>
+                            <span>{document.name}</span>
+                            {document.dataUrl ? (
+                              <a className="button" href={document.dataUrl} download={document.filename || document.name}>Скачать</a>
+                            ) : (
+                              <Button onClick={() => onDocument(document.kind, document)}>Просмотр</Button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null;
+                })()}
+                {(() => {
                   const certificate = c.documents.find(
                     (document) => document.kind === "certificate",
                   );
