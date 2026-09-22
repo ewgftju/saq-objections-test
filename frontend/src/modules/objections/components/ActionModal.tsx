@@ -387,7 +387,8 @@ export default function ActionModal({
         action === "analysis" ||
         action === "fill-meeting-certificate" ||
         action === "position" ||
-        action === "deliver"
+        action === "deliver" ||
+        action === "create-decision-project"
       }
     >
       <form
@@ -550,11 +551,11 @@ export default function ActionModal({
               )}
             </label>
           </>
-        ) : action === "deliver" ? (
+        ) : action === "deliver" || action === "create-decision-project" ? (
           <>
             <div className="request-modal-details">
               <div><span>Автор</span><b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b></div>
-              <div><span>Печатная форма</span><b>Окончательный ответ и приложение</b></div>
+              <div><span>Печатная форма</span><b>{action === "create-decision-project" ? "Проект решения и приложение" : "Окончательный ответ и приложение"}</b></div>
             </div>
             {definition.note && <Notice>{definition.note}</Notice>}
             <div className="request-modal-tabs" role="tablist">
