@@ -627,7 +627,7 @@ export function applyAction(
           yes: 0,
           no: 0,
           approved: false,
-          chair: c.members[0]?.id || voter.id,
+          chair: c.members.find((member) => member.isChair)?.id || voter.id,
           present: c.members.length,
           eligible: c.members.length,
           votes: {},
@@ -647,7 +647,10 @@ export function applyAction(
         result.eligible = c.members.length;
         const allVoted = recordedVotes.every(Boolean);
         const outcome = allVoted
-          ? pointOutcomeFromVotes(result.votes)
+          ? pointOutcomeFromVotes(
+              result.votes,
+              c.members.find((member) => member.isChair)?.id,
+            )
           : "";
         result.approved = outcome === "accept";
         c.votes[point.id] = result;
@@ -695,7 +698,7 @@ export function applyAction(
             yes: 0,
             no: 0,
             approved: false,
-            chair: c.members[0]?.id || member.id,
+            chair: c.members.find((item) => item.isChair)?.id || member.id,
             present: c.members.length,
             eligible: c.members.length,
             votes: {},
@@ -713,7 +716,12 @@ export function applyAction(
           result.present = c.members.length;
           result.eligible = c.members.length;
           const allVoted = recordedVotes.every(Boolean);
-          const outcome = allVoted ? pointOutcomeFromVotes(result.votes) : "";
+          const outcome = allVoted
+            ? pointOutcomeFromVotes(
+                result.votes,
+                c.members.find((item) => item.isChair)?.id,
+              )
+            : "";
           result.approved = outcome === "accept";
           c.votes[point.id] = result;
           if (allVoted && outcome) {
@@ -1033,13 +1041,14 @@ export function applyAction(
         const no = Object.values(memberVotes).filter(
           (vote) => vote === "reject",
         ).length;
-        const outcome = pointOutcomeFromVotes(memberVotes);
+        const chairId = c.members.find((member) => member.isChair)?.id;
+        const outcome = pointOutcomeFromVotes(memberVotes, chairId);
         if (!outcome) throw new Error("Не удалось определить результат голосования");
         c.votes[point.id] = {
           yes,
           no,
           approved: outcome === "accept",
-          chair: c.members[0].id,
+          chair: chairId || c.members[0].id,
           present: c.members.length,
           eligible: c.members.length,
           votes: memberVotes,
