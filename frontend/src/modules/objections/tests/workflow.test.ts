@@ -1712,3 +1712,42 @@ test("жалоба из E-Otinish проходит проект решения �
   assert.equal(h.c.status, "decided");
   assert.equal(nextAction(h.c)?.action, "deliver");
 });
+
+
+test("уведомления АК показывают новые опросы первыми и блокируют повторный ответ", () => {
+  const html = renderToStaticMarkup(
+    createElement(NotificationsPage, {
+      notifications: [
+        {
+          id: "attendance-100-member-1",
+          caseId: "ВОЗ-1",
+          recipient: "Член АК",
+          text: "Старый опрос",
+          date: "2026-09-08",
+          read: true,
+          kind: "attendance-poll",
+          attendancePollId: "attendance-100",
+          commissionMemberId: "member-1",
+        },
+        {
+          id: "attendance-200-member-1",
+          caseId: "ВОЗ-2",
+          recipient: "Член АК",
+          text: "Новый опрос",
+          date: "2026-09-08",
+          read: false,
+          kind: "attendance-poll",
+          attendancePollId: "attendance-200",
+          commissionMemberId: "member-1",
+        },
+      ],
+      role: "commission",
+      activeCommissionMemberId: "member-1",
+      onOpenCase() {},
+      onAnswerAttendancePoll() {},
+    }),
+  );
+  assert.ok(html.indexOf("Новый опрос") < html.indexOf("Старый опрос"));
+  assert.match(html, /Ответ направлен/);
+  assert.match(html, /disabled=""/);
+});
