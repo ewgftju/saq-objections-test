@@ -78,6 +78,17 @@ function directedToDvgaOrKvga(c: ObjectionCase) {
   return c.requests.some((request) => isDvgaOrKvgaRequest(request.recipient));
 }
 
+function requiresEotinishDecisionProject(c: ObjectionCase) {
+  return (
+    c.channel === "E-Otinish" &&
+    [
+      "Жалоба на решение КВГА/ДВГА",
+      "Жалоба на действие/бездействие",
+      "Жалоба на акт о результате профилактического контроля",
+    ].includes(c.appealType || "")
+  );
+}
+
 /** A member may vote differently on separate points. For the certificate we
  * show one concise overall position: mixed votes are treated as partial. */
 function memberVoteOutcome(c: ObjectionCase, memberId: string): Outcome | "" {
@@ -239,6 +250,31 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       action: "sign",
       label: "Подписать протокол",
       role: "commission",
+    },
+    decision_project: {
+      action: "create-decision-project",
+      label: "Сформировать проект решения",
+      role: "work",
+    },
+    decision_project_approval: {
+      action: "approve-decision-project",
+      label: "Согласовать проект решения",
+      role: "director",
+    },
+    decision_project_signed: {
+      action: "sign-decision-project",
+      label: "Подписать проект решения",
+      role: "director",
+    },
+    decision_project_eotinish: {
+      action: "send-decision-project-eotinish",
+      label: "Проект решения направлен через систему E-Otinish",
+      role: "work",
+    },
+    decision_project_hearing: {
+      action: "hearing-after-decision-project",
+      label: "Заслушивание проведено",
+      role: "work",
     },
     decided: {
       action:
@@ -1115,10 +1151,56 @@ export function applyAction(
         date,
         number: c.meeting.number,
       };
-      c.status = "decided";
+      c.status = requiresEotinishDecisionProject(c)
+        ? "decision_project"
+        : "decided";
       doc("Подписанный протокол заседания", "protocol", c.result.reason);
       break;
     }
+    case "create-decision-project": {
+      c.decisionProject = {
+        date,
+        number: text("number", "Исходящий номер"),
+        receipt: text("receipt", "Квитанция отправки"),
+        channel: text("channel", "Канал"),
+        appealCourt: String(form.get("appealCourt") || ""),
+        appealProcedure: String(form.get("appealProcedure") || ""),
+      };
+      c.status = "decision_project_approval";
+      doc(
+        "Проект решения по жалобе",
+        "decision-project",
+        c.result?.reason || "",
+      );
+      break;
+    }
+    case "approve-decision-project":
+      if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
+      c.status = "decision_project_signed";
+      title = "Проект решения согласован";
+      note = "Согласованный проект решения ожидает подписания.";
+      break;
+    case "sign-decision-project":
+      if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
+      c.status = "decision_project_eotinish";
+      title = "Проект решения подписан";
+      note = "Подписанный проект решения готов к направлению через E-Otinish.";
+      doc("Подписанный проект решения", "decision-project", note);
+      break;
+    case "send-decision-project-eotinish":
+      if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
+      c.status = "decision_project_hearing";
+      title = "Проект решения направлен через систему E-Otinish";
+      note = "Направление проекта решения через E-Otinish зафиксировано.";
+      doc("Проект решения направлен через E-Otinish", "decision-project", note);
+      break;
+    case "hearing-after-decision-project":
+      if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
+      c.status = "decided";
+      title = "Заслушивание проведено";
+      note = "Заслушивание после направления проекта решения проведено.";
+      doc("Заслушивание по проекту решения проведено", "hearing", note);
+      break;
     case "forward": {
       checked(form, "materials");
       note = text("reason", "Основание передачи или удовлетворения");
