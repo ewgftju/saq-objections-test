@@ -911,7 +911,7 @@ test("сохранённый выбор участников АК перевод
     getItem: (key) => storage.get(key) || null,
     setItem: (key, value) => storage.set(key, value),
   }).load();
-  assert.equal(state.version, 7);
+  assert.equal(state.version, 8);
   assert.deepEqual(state.agendas, []);
   assert.deepEqual(state.notifications, []);
   assert.deepEqual(state.attendancePolls, []);
@@ -1552,6 +1552,7 @@ test("протокол формируется с выбранными участ
   h.run("vote", "work", {
     number: "ПР-17",
     protocolDate: "2026-09-10",
+    recommendations: "Направить замечания в орган аудита.",
     protocolMember_1: "Председатель Апелляционной комиссии: ФИО",
     protocolMember_2: "Эксперт ОЮЛ «АЗК»: ФИО",
     ...Object.fromEntries(
@@ -1571,6 +1572,19 @@ test("протокол формируется с выбранными участ
     ],
   );
   assert.equal(h.c.meeting?.audio, "");
+  assert.deepEqual(h.state.recommendations, [
+    {
+      id: `recommendation-${h.c.id}-1`,
+      text: "Направить замечания в орган аудита.",
+      recipient: h.c.issuer,
+      status: "sent",
+      answer: "",
+      caseId: h.c.id,
+      caseReference: h.c.appealNumber || h.c.id,
+      executor: h.c.assignee,
+      createdAt: "2026-09-10",
+    },
+  ]);
   assert.equal(h.c.votes?.[h.c.issues.find((point) => point.disputed)!.id]?.yes, 1);
   const protocolHtml = renderToStaticMarkup(
     createElement(DocumentContent, {
