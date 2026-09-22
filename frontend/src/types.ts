@@ -171,6 +171,9 @@ export interface CaseRequest {
 export interface CertificateMemberPosition {
   id: string;
   name: string;
+  /** Оспариваемый пункт, к которому относится голос. */
+  pointId?: string;
+  pointNumber?: string;
   /** Итоговая позиция члена АК по обращению на этапе заседания. */
   result: Outcome | "";
   /** Комментарий члена АК либо исполнителя рабочего органа. */
