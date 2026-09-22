@@ -186,6 +186,8 @@ export default function ObjectionsModule() {
     });
     cases.forEach((item) => {
       const target = next.cases.find((caseItem) => caseItem.id === item.id);
+      if (target?.status === "certificate_approved")
+        target.status = "commission_voting";
       target?.history.push({
         date: next.date,
         actor: ROLES.work,
@@ -563,7 +565,6 @@ export default function ObjectionsModule() {
                 action === "sign-final-response" ||
                 action === "approve-certificate" ||
                 action === "sign-certificate" ||
-                action === "send-certificate-to-commission" ||
                 action === "review-commission-documents" ||
                 action === "members" ||
                 action === "sign"
@@ -636,9 +637,7 @@ export default function ObjectionsModule() {
                       ? "Справка согласована"
                       : action === "sign-certificate"
                         ? "Справка подписана"
-                      : action === "send-certificate-to-commission"
-                        ? "Справка и документы направлены членам АК"
-                        : action === "review-commission-documents"
+                      : action === "review-commission-documents"
                           ? "Члены АК ознакомились с документами"
                         : action === "members"
                           ? "Заседание по данному делу проведено"
