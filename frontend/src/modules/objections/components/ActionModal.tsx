@@ -238,6 +238,7 @@ export default function ActionModal({
   c,
   date,
   role,
+  commissionMemberId,
   onSubmit,
   onClose,
 }: {
@@ -245,6 +246,8 @@ export default function ActionModal({
   c: ObjectionCase;
   date: string;
   role: Role;
+  /** The AK member currently using the Appeals Commission cabinet. */
+  commissionMemberId?: string;
   onSubmit: (form: FormData) => void | Promise<void>;
   onClose: () => void;
 }) {
@@ -282,6 +285,9 @@ export default function ActionModal({
       : [1],
   );
   const definition = actionForm(action, c, date, values, role);
+  const activeCommissionVoter = commissionMemberId
+    ? c.members.find((member) => member.id === commissionMemberId)
+    : undefined;
   const isRequest = action === "request" || action === "request-other";
   const isOtherRequest = action === "request-other";
   const requestDeadline =
@@ -728,23 +734,23 @@ export default function ActionModal({
         ) : action === "commission-vote" ? (
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
-            <label className="field">
-              <span>Голосующий член АК <span className="required">*</span></span>
-              <select name="commissionMember" required defaultValue="">
-                <option value="">Выберите ФИО</option>
-                {c.members
-                  .filter((member) =>
-                    disputed(c).some(
-                      (point) => !c.votes?.[point.id]?.votes?.[member.id],
-                    ),
-                  )
-                  .map((member) => (
-                    <option key={member.id} value={member.id}>
-                      {member.name}
-                    </option>
+            {activeCommissionVoter ? (
+              <div className="field">
+                <span>Голосующий член АК</span>
+                <strong>{activeCommissionVoter.name}</strong>
+                <input type="hidden" name="commissionMember" value={activeCommissionVoter.id} />
+              </div>
+            ) : (
+              <label className="field">
+                <span>Голосующий член АК <span className="required">*</span></span>
+                <select name="commissionMember" required defaultValue="">
+                  <option value="">Выберите ФИО</option>
+                  {c.members.filter((member) => disputed(c).some((point) => !c.votes?.[point.id]?.votes?.[member.id])).map((member) => (
+                    <option key={member.id} value={member.id}>{member.name}</option>
                   ))}
-              </select>
-            </label>
+                </select>
+              </label>
+            )}
             <h3 className="form-section">Оспариваемые пункты</h3>
             <div className="table-scroll">
               <table className="data-table">
