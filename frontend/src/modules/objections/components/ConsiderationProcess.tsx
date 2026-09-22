@@ -145,7 +145,6 @@ export default function ConsiderationProcess({
       : next
         ? ROLES[next.role]
         : "";
-  const parallelProtocolAvailable = c.status === "commission_voting";
   const meetingCertificateAvailable =
     role === "work" &&
     ["commission_voting", "circulated"].includes(c.status);
@@ -197,11 +196,6 @@ export default function ConsiderationProcess({
                 {next.label}
               </Button>
             )}
-            {parallelProtocolAvailable && (
-              <Button primary onClick={() => onAction("vote", "work")}>
-                Сформировать протокол заседания
-              </Button>
-            )}
             {meetingCertificateAvailable && (
               <Button primary onClick={() => onAction("fill-meeting-certificate", "work")}>
                 Заполнить справку
@@ -240,8 +234,6 @@ export default function ConsiderationProcess({
             <small>
               {c.status === "accepted"
                 ? "Сначала сформируйте обязательный запрос в ДВГА/КВГА, затем при необходимости добавьте запрос в другой орган и направьте документы на согласование."
-                : parallelProtocolAvailable
-                  ? "Все выбранные члены АК голосуют параллельно. Исполнитель может заполнить справку с актуальными голосами и комментариями, а также сформировать протокол в любой момент."
                 : "Заполните форму и сохраните действие — откроется следующая задача."}
             </small>
           </div>
