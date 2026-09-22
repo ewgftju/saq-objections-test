@@ -389,6 +389,14 @@ export function actionForm(
         input("protocolDate", "Дата протокола", date, "date"),
         {
           ...input(
+            "chairperson",
+            "Выберите Председателя АК/И.О. Председателя А.К.",
+            c.members.find((member) => member.isChair)?.name || "",
+          ),
+          readOnly: true,
+        },
+        {
+          ...input(
             "secretary",
             "Секретарь АК",
             c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee,
