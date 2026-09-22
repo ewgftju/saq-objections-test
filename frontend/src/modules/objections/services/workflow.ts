@@ -258,10 +258,15 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
           : "Сформировать окончательный ответ",
       role: c.selfReview ? "dvga" : reviewer,
     },
-    delivered: {
-      action: "execute",
-      label: "Учесть исполнение решения",
-      role: "dvga",
+    final_response_approval: {
+      action: "approve-final-response",
+      label: "Согласовать ответ",
+      role: "director",
+    },
+    final_response_signed: {
+      action: "sign-final-response",
+      label: "Подписать ответ",
+      role: "director",
     },
     paused: {
       action: "resume",
@@ -1191,7 +1196,7 @@ export function applyAction(
         appealProcedure: String(form.get("appealProcedure") || ""),
         published: c.type === "notice" ? date : null,
       };
-      c.status = "delivered";
+      c.status = "final_response_approval";
       doc(
         c.type === "notice"
           ? "Заключение по результатам рассмотрения возражения"
@@ -1199,6 +1204,19 @@ export function applyAction(
         "result",
         c.result?.reason || "",
       );
+      break;
+    case "approve-final-response":
+      if (!c.delivery) throw new Error("Окончательный ответ ещё не сформирован");
+      c.status = "final_response_signed";
+      title = "Окончательный ответ согласован";
+      note = "Согласованный окончательный ответ ожидает подписания.";
+      break;
+    case "sign-final-response":
+      if (!c.delivery) throw new Error("Окончательный ответ ещё не сформирован");
+      c.status = "completed";
+      title = "Окончательный ответ подписан";
+      note = "Окончательный ответ подписан и направлен заявителю.";
+      doc("Подписанный окончательный ответ", "final-response", note);
       break;
     case "close-review":
       if (c.type !== "notice") throw new Error("Закрытие доступно только для возражения на уведомление");
@@ -1212,12 +1230,6 @@ export function applyAction(
       c.delivery.received = date;
       note = text("receipt", "Подтверждение вручения");
       doc("Подтверждение вручения результата", "receipt", note);
-      break;
-    case "execute":
-      checked(form, "checked");
-      note = text("note", "Как решение учтено в исходном деле");
-      c.status = "completed";
-      doc("Учёт исполнения решения", "execution", note);
       break;
     case "supplement":
       checked(form, "formal", "notified");
@@ -1306,7 +1318,7 @@ export function applyAction(
       note = text("note", "Судебный акт и последствия");
       c.court.result = note;
       c.result.effect = note;
-      c.status = "delivered";
+      c.status = "completed";
       doc("Судебный акт", "court", note);
       break;
     case "upload":
