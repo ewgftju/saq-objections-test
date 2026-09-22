@@ -609,10 +609,10 @@ export function SessionsPage({
                   <table className="registry-table attendance-status-table">
                     <thead>
                       <tr>
-                        <th>Выберите Председателя АК/И.О. Председателя АК</th>
                         <th>Член АК</th>
                         <th>Статус голосования</th>
                         <th>Изменено исполнителем</th>
+                        <th>Выберите Председателя АК/И.О. Председателя АК</th>
                         {role === "work" && <th>Отметить вручную</th>}
                       </tr>
                     </thead>
@@ -624,6 +624,13 @@ export function SessionsPage({
                           selectedAttendancePoll.manualResponseChanges?.[member.id]?.changedBy;
                         return (
                           <tr key={member.id}>
+                            <td>{member.name}</td>
+                            <td>
+                              <span className={`badge ${response === "yes" ? "green" : response === "no" ? "gray" : "amber"}`}>
+                                {response === "yes" ? "Да" : response === "no" ? "Нет" : "Нет ответа"}
+                              </span>
+                            </td>
+                            <td>{manuallyChangedBy ? `${manuallyChangedBy} изменил ответ` : "—"}</td>
                             <td>
                               {role === "work" ? (
                                 <input
@@ -641,13 +648,6 @@ export function SessionsPage({
                                 />
                               ) : isChair ? "Да" : "—"}
                             </td>
-                            <td>{member.name}</td>
-                            <td>
-                              <span className={`badge ${response === "yes" ? "green" : response === "no" ? "gray" : "amber"}`}>
-                                {response === "yes" ? "Да" : response === "no" ? "Нет" : "Нет ответа"}
-                              </span>
-                            </td>
-                            <td>{manuallyChangedBy ? `${manuallyChangedBy} изменил ответ` : "—"}</td>
                             {role === "work" && (
                               <td>
                                 <select
