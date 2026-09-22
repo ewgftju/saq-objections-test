@@ -115,7 +115,9 @@ export function DocumentContent({
     (document?.requestId
       ? c.requests.find((item) => item.id === document.requestId)
       : undefined);
-  const certificate = certificatePreview || snapshot.certificate || undefined;
+  // The certificate is amended during the meeting, so the current version is
+  // authoritative even when the document itself was created earlier.
+  const certificate = certificatePreview || c.certificate || snapshot.certificate || undefined;
   const appendixAuthority = (appendixRecipient || request?.recipient || "ДВГА")
     .toUpperCase()
     .includes("КВГА")
@@ -391,22 +393,29 @@ export function DocumentContent({
               <b>Доводы рабочего органа (ДАВГА МФ РК):</b>{" "}
               {certificate?.davgaArguments || "—"}
             </div>
-            <table className="certificate-members-table">
-              <tbody>
-                <tr>
-                  {Array.from({ length: 6 }, (_, index) => (
-                    <th key={index}>ФИО члены АК</th>
-                  ))}
-                </tr>
-                <tr>
-                  {Array.from({ length: 6 }, (_, index) => (
-                    <td key={index} />
-                  ))}
-                </tr>
-              </tbody>
-            </table>
           </section>
         ))}
+        <table className="certificate-members-table">
+          <tbody>
+            <tr>
+              {(certificate?.memberPositions || []).map((member) => (
+                <th key={member.id}>{member.name}</th>
+              ))}
+              {!certificate?.memberPositions?.length && (
+                <th>Участники заседания не определены</th>
+              )}
+            </tr>
+            <tr>
+              {(certificate?.memberPositions || []).map((member) => (
+                <td key={member.id}>
+                  <b>{member.result ? OUTCOMES[member.result] : "Нет голоса"}</b>
+                  {member.comment && <><br />{member.comment}</>}
+                </td>
+              ))}
+              {!certificate?.memberPositions?.length && <td>—</td>}
+            </tr>
+          </tbody>
+        </table>
       </article>
     );
   }
