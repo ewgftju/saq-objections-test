@@ -36,7 +36,7 @@ type DialogState =
   | { type: "agenda"; cases: ObjectionCase[] }
   | { type: "agenda-results"; agendaId: string }
   | { type: "attendance"; cases: ObjectionCase[] }
-  | { type: "attendance-answer"; pollId: string; memberId: string }
+  | { type: "attendance-answer"; notificationId: string }
   | { type: "new" | "clock" | "reset" | "upload" }
   | null;
 
@@ -117,7 +117,9 @@ export default function ObjectionsModule() {
   const sendAttendancePoll = (cases: ObjectionCase[], dateTime: string) => {
     if (!cases.length || !dateTime) return;
     const next = structuredClone(model.state);
-    const pollId = `attendance-${next.attendancePolls.length + 1}`;
+    // The notification is the source of truth for a member response. Unique ids
+    // prevent a repeated poll from being resolved to an earlier poll.
+    const pollId = `attendance-${Date.now()}-${next.attendancePolls.length + 1}`;
     const responses = Object.fromEntries(
       COMMISSION_ATTENDANCE_MEMBERS.map((member) => [member.id, "pending"]),
     ) as Record<string, "pending" | "yes" | "no">;
@@ -156,24 +158,22 @@ export default function ObjectionsModule() {
     close();
   };
   const answerAttendancePoll = (
-    pollId: string,
-    memberId: string,
+    notificationId: string,
     response: "yes" | "no",
   ) => {
     const next = structuredClone(model.state);
+    const notification = next.notifications.find(
+      (item) => item.id === notificationId && item.kind === "attendance-poll",
+    );
+    const pollId = notification?.attendancePollId;
+    const memberId = notification?.commissionMemberId;
+    if (!pollId || !memberId) return;
     const poll = next.attendancePolls.find((item) => item.id === pollId);
     const member = COMMISSION_ATTENDANCE_MEMBERS.find((item) => item.id === memberId);
     if (!poll || !member) return;
     poll.responses[memberId] = response;
     syncPollParticipants(next.cases, poll);
-    next.notifications.forEach((notification) => {
-      if (
-        notification.attendancePollId === pollId &&
-        notification.commissionMemberId === memberId
-      ) {
-        notification.read = true;
-      }
-    });
+    notification.read = true;
     poll.caseIds.forEach((caseId) => {
       const target = next.cases.find((item) => item.id === caseId);
       target?.history.push({
@@ -639,8 +639,8 @@ export default function ObjectionsModule() {
           notifications={model.state.notifications}
           role={model.role}
           activeCommissionMemberId={activeCommissionMember.id}
-          onAnswerAttendancePoll={(pollId, memberId) =>
-            setDialog({ type: "attendance-answer", pollId, memberId })
+          onAnswerAttendancePoll={(notificationId) =>
+            setDialog({ type: "attendance-answer", notificationId })
           }
           onOpenCase={(caseId) => {
             const target = model.state.cases.find((item) => item.id === caseId);
@@ -749,12 +749,16 @@ export default function ObjectionsModule() {
         </Modal>
       )}
       {dialog?.type === "attendance-answer" && (() => {
+        const notification = model.state.notifications.find(
+          (item) => item.id === dialog.notificationId && item.kind === "attendance-poll",
+        );
+        if (!notification?.attendancePollId || !notification.commissionMemberId) return null;
         const poll = model.state.attendancePolls.find(
-          (item) => item.id === dialog.pollId,
+          (item) => item.id === notification.attendancePollId,
         );
         if (!poll) return null;
         const member = COMMISSION_ATTENDANCE_MEMBERS.find(
-          (item) => item.id === dialog.memberId,
+          (item) => item.id === notification.commissionMemberId,
         );
         if (!member) return null;
         const answer = poll.responses[member.id];
@@ -768,14 +772,14 @@ export default function ObjectionsModule() {
               <Button onClick={close}>Отмена</Button>
               <Button
                 className={answer === "no" ? "attendance-choice-active" : ""}
-                onClick={() => answerAttendancePoll(poll.id, member.id, "no")}
+                onClick={() => answerAttendancePoll(notification.id, "no")}
               >
                 Нет
               </Button>
               <Button
                 primary
                 className={answer === "yes" ? "attendance-choice-active" : ""}
-                onClick={() => answerAttendancePoll(poll.id, member.id, "yes")}
+                onClick={() => answerAttendancePoll(notification.id, "yes")}
               >
                 Да
               </Button>
