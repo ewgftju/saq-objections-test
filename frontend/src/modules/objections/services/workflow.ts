@@ -200,11 +200,6 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       label: "Подписать справку",
       role: "work",
     },
-    certificate_approved: {
-      action: "send-certificate-to-commission",
-      label: "Направить справку и документы членам АК",
-      role: "work",
-    },
     commission_voting: {
       action: "commission-vote",
       label: "Проголосовать",
@@ -603,16 +598,7 @@ export function applyAction(
         throw new Error("Справка по доводам не сформирована");
       c.status = "certificate_approved";
       title = "Справка подписана";
-      note = "Справка подписана исполнителем ДАВГА и готова к направлению членам апелляционной комиссии.";
-      break;
-    }
-    case "send-certificate-to-commission": {
-      if (!c.certificate)
-        throw new Error("Справка по доводам не сформирована");
-      c.status = "commission_voting";
-      title = "Справка и материалы направлены членам АК";
-      note = "Справка и все документы по обращению направлены членам апелляционной комиссии. Участники, подтвердившие присутствие в последнем опросе, могут сразу перейти к голосованию.";
-      doc("Справка и материалы для членов АК", "circulation", note);
+      note = "Справка подписана. Доступ к документам обращения откроется членам АК после направления опроса о присутствии.";
       break;
     }
     case "review-commission-documents": {
