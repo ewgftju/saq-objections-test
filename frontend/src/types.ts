@@ -45,6 +45,7 @@ export type Page =
   | "detail"
   | "sessions"
   | "notifications"
+  | "recommendations"
   | "processes"
   | "sources";
 export type CaseTab = "overview" | "review" | "documents" | "history";
