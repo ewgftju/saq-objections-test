@@ -136,6 +136,21 @@ export function SourcesPage() {
   );
 }
 
+export function RecommendationsPage() {
+  return (
+    <>
+      <PageHeading
+        title="Рекомендации"
+        subtitle="Рекомендации по результатам рассмотрения обращений"
+      />
+      <Notice>
+        Рекомендаций пока нет. После определения состава и правил ведения
+        раздела здесь будут отображаться подготовленные рекомендации.
+      </Notice>
+    </>
+  );
+}
+
 export function ProcessesPage() {
   return (
     <>
