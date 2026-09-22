@@ -169,7 +169,10 @@ export interface CaseRequest {
 export interface CertificateMemberPosition {
   id: string;
   name: string;
-  argument: string;
+  /** Итоговая позиция члена АК по обращению на этапе заседания. */
+  result: Outcome | "";
+  /** Комментарий члена АК либо исполнителя рабочего органа. */
+  comment: string;
 }
 
 export interface CaseCertificate {
@@ -359,6 +362,7 @@ export type Action =
   | "approve-certificate"
   | "sign-certificate"
   | "send-certificate-to-commission"
+  | "fill-meeting-certificate"
   | "review-commission-documents"
   | "choose-commission-members"
   | "commission-vote"
