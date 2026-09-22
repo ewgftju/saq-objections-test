@@ -192,11 +192,6 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       label: "Направить справку и документы членам АК",
       role: "work",
     },
-    documents_review: {
-      action: "review-commission-documents",
-      label: "Ознакомиться с документами",
-      role: "commission",
-    },
     commission_voting: {
       action: "commission-vote",
       label: "Проголосовать",
@@ -582,9 +577,9 @@ export function applyAction(
     case "send-certificate-to-commission": {
       if (!c.certificate)
         throw new Error("Справка по доводам не сформирована");
-      c.status = "documents_review";
+      c.status = "commission_voting";
       title = "Справка и материалы направлены членам АК";
-      note = "Справка и все документы по обращению направлены членам апелляционной комиссии для ознакомления.";
+      note = "Справка и все документы по обращению направлены членам апелляционной комиссии. Участники, подтвердившие присутствие в последнем опросе, могут сразу перейти к голосованию.";
       doc("Справка и материалы для членов АК", "circulation", note);
       break;
     }
