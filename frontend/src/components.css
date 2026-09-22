@@ -547,7 +547,12 @@
 .final-response-signature { display: grid; grid-template-columns: 1fr auto; gap: 26px; align-items: end; margin: 60px 0 35px; }
 .final-response-signature span { max-width: 320px; }
 .final-response-executor { font-size: 13px !important; line-height: 1.25; }
-.final-response-appendix { margin-top: 70px; padding-top: 20px; break-before: page; page-break-before: always; }
+.request-print-preview .final-response-document { display: grid; gap: 28px; }
+.final-response-appendix { break-before: page; page-break-before: always; }
+
+@media print {
+  .final-response-document { display: block; }
+}
 .final-response-appendix h2 { font-size: 19px; font-family: "Times New Roman", Times, serif; font-style: italic; }
 .final-response-appendix-point { margin: 26px 0; }
 .final-response-point-title { font-weight: 700; }
