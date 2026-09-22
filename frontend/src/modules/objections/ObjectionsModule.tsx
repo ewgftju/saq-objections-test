@@ -22,6 +22,7 @@ import CaseWorkspace from "./pages/CaseWorkspace";
 import NotificationsPage from "./pages/NotificationsPage";
 import {
   ProcessesPage,
+  RecommendationsPage,
   SessionsPage,
   SourcesPage,
 } from "./pages/ReferencePages";
@@ -720,6 +721,7 @@ export default function ObjectionsModule() {
           }}
         />
       )}
+      {model.route.page === "recommendations" && <RecommendationsPage />}
       {model.route.page === "processes" && <ProcessesPage />}
       {model.route.page === "sources" && <SourcesPage />}
       {dialog?.type === "action" && c && (
