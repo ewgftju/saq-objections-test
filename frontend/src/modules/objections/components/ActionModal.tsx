@@ -158,17 +158,6 @@ function ProtocolVotesFields({
   );
 }
 
-function memberCertificateOutcome(c: ObjectionCase, memberId: string) {
-  const choices = disputed(c)
-    .map((point) => normalizeVoteChoice(c.votes?.[point.id]?.votes?.[memberId]))
-    .filter(Boolean);
-  if (!choices.length) return "";
-  if (choices.every((choice) => choice === choices[0])) return choices[0];
-  return choices.some((choice) => choice === "accept" || choice === "partial")
-    ? "partial"
-    : "reject";
-}
-
 function MeetingCertificateFields({
   c,
   values,
@@ -178,7 +167,7 @@ function MeetingCertificateFields({
 }) {
   const savedPositions = new Map(
     (c.certificate?.memberPositions || []).map((position) => [
-      position.id,
+      `${position.pointId || "legacy"}_${position.id}`,
       position,
     ]),
   );
@@ -193,14 +182,16 @@ function MeetingCertificateFields({
     <>
       <h3 className="form-section">Результаты голосования участников заседания</h3>
       <p className="small muted">
-        Электронные голоса отображаются автоматически. В колонке «Внести
-        вручную» укажите результат только если член АК не может проголосовать
-        самостоятельно в системе.
+        По каждому оспариваемому пункту отображаются электронные голоса. В
+        колонке «Внести вручную» укажите результат только если член АК не
+        может проголосовать самостоятельно в системе.
       </p>
       <div className="table-scroll">
         <table className="data-table meeting-certificate-table">
           <thead>
             <tr>
+              <th>№</th>
+              <th>Оспариваемый пункт</th>
               <th>Член АК</th>
               <th>Электронный результат</th>
               <th>Внести вручную</th>
@@ -208,38 +199,22 @@ function MeetingCertificateFields({
             </tr>
           </thead>
           <tbody>
-            {c.members.map((member) => {
-              const outcome = memberCertificateOutcome(c, member.id);
-              const saved = savedPositions.get(member.id);
-              const resultName = `meetingCertificateResult_${member.id}`;
-              const commentName = `meetingCertificateComment_${member.id}`;
+            {disputed(c).flatMap((point) => c.members.map((member, index) => {
+              const electronic = normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id]);
+              const saved = savedPositions.get(`${point.id}_${member.id}`) || savedPositions.get(`legacy_${member.id}`);
+              const resultName = `meetingCertificateResult_${point.id}_${member.id}`;
+              const commentName = `meetingCertificateComment_${point.id}_${member.id}`;
               return (
-                <tr key={member.id}>
+                <tr key={`${point.id}-${member.id}`}>
+                  <td>{index === 0 ? point.number : ""}</td>
+                  <td>{index === 0 ? point.title : ""}</td>
                   <td>{member.name}</td>
-                  <td>
-                    {outcome ? OUTCOMES[outcome] : <span className="muted">Нет голоса</span>}
-                  </td>
-                  <td>
-                    <select name={resultName} defaultValue={values[resultName] || ""}>
-                      <option value="">Не изменять</option>
-                      {Object.entries(OUTCOMES).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td>
-                    <textarea
-                      name={commentName}
-                      defaultValue={values[commentName] ?? saved?.comment ?? ""}
-                      rows={2}
-                      aria-label={`Комментарий ${member.name}`}
-                    />
-                  </td>
+                  <td>{electronic ? OUTCOMES[electronic] : <span className="muted">Нет голоса</span>}</td>
+                  <td><select name={resultName} defaultValue={values[resultName] || ""}><option value="">Не изменять</option>{Object.entries(OUTCOMES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td>
+                  <td><textarea name={commentName} defaultValue={values[commentName] ?? saved?.comment ?? ""} rows={2} aria-label={`Комментарий ${member.name} по пункту ${point.number}`} /></td>
                 </tr>
               );
-            })}
+            }))}
           </tbody>
         </table>
       </div>
@@ -269,15 +244,15 @@ export default function ActionModal({
     if (action === "fill-meeting-certificate") {
       const savedPositions = new Map(
         (c.certificate?.memberPositions || []).map((position) => [
-          position.id,
+          `${position.pointId || "legacy"}_${position.id}`,
           position,
         ]),
       );
       return Object.fromEntries(
-        c.members.map((member) => [
-          `meetingCertificateComment_${member.id}`,
-          savedPositions.get(member.id)?.comment || "",
-        ]),
+        disputed(c).flatMap((point) => c.members.map((member) => [
+          `meetingCertificateComment_${point.id}_${member.id}`,
+          savedPositions.get(`${point.id}_${member.id}`)?.comment || savedPositions.get(`legacy_${member.id}`)?.comment || "",
+        ])),
       );
     }
     if (action !== "vote") return {};
@@ -744,16 +719,18 @@ export default function ActionModal({
                 certificatePreview={{
                   davgaArguments: c.certificate?.davgaArguments || "",
                   memberPositions: c.members.map((member) => {
-                    const manualResult = normalizeVoteChoice(
-                      values[`meetingCertificateResult_${member.id}`],
-                    );
-                    return {
-                      id: member.id,
-                      name: member.name,
-                      result: manualResult || memberCertificateOutcome(c, member.id),
-                      comment: values[`meetingCertificateComment_${member.id}`] || "",
-                    };
-                  }),
+                    return disputed(c).map((point) => {
+                      const manualResult = normalizeVoteChoice(values[`meetingCertificateResult_${point.id}_${member.id}`]);
+                      return {
+                        id: member.id,
+                        name: member.name,
+                        pointId: point.id,
+                        pointNumber: point.number,
+                        result: manualResult || normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id]),
+                        comment: values[`meetingCertificateComment_${point.id}_${member.id}`] || "",
+                      };
+                    });
+                  }).flat(),
                 }}
               />
             </div>
