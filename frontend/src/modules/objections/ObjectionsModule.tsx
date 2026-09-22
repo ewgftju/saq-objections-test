@@ -125,8 +125,10 @@ export default function ObjectionsModule() {
   const sendAttendancePoll = (cases: ObjectionCase[], dateTime: string) => {
     if (!cases.length || !dateTime) return;
     const next = structuredClone(model.state);
-    // The notification is the source of truth for a member response. Unique ids
-    // prevent a repeated poll from being resolved to an earlier poll.
+    // The poll identifier is also used by notifications.  Do not derive it
+    // only from the array length: saved demo data from an earlier session can
+    // contain duplicate identifiers, causing a repeated poll to update the
+    // first card instead of the newly sent one.
     const pollId = `attendance-${Date.now()}-${next.attendancePolls.length + 1}`;
     const responses = Object.fromEntries(
       COMMISSION_ATTENDANCE_MEMBERS.map((member) => [member.id, "pending"]),
@@ -308,7 +310,8 @@ export default function ObjectionsModule() {
 
   async function submitAction(action: Action, form: FormData) {
     if (!c) return;
-    // A member of the Appeals Commission may vote only on their own behalf.
+    // In the Appeals Commission cabinet a member votes only on their own behalf.
+    // The selected demo cabinet member is also enforced here, not just in the UI.
     if (action === "commission-vote" && model.role === "commission") {
       form.set("commissionMember", activeCommissionMember.id);
     }
@@ -652,8 +655,8 @@ export default function ObjectionsModule() {
           notifications={model.state.notifications}
           role={model.role}
           activeCommissionMemberId={activeCommissionMember.id}
-          onAnswerAttendancePoll={(notificationId) =>
-            setDialog({ type: "attendance-answer", notificationId })
+            onAnswerAttendancePoll={(notificationId) =>
+              setDialog({ type: "attendance-answer", notificationId })
           }
           onOpenCase={(caseId) => {
             const target = model.state.cases.find((item) => item.id === caseId);
