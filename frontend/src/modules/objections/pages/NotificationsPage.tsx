@@ -16,7 +16,7 @@ export default function NotificationsPage({
   onOpenCase: (caseId: string) => void;
   role: Role;
   activeCommissionMemberId: string;
-  onAnswerAttendancePoll: (pollId: string) => void;
+  onAnswerAttendancePoll: (pollId: string, memberId: string) => void;
 }) {
   const visibleNotifications =
     role === "commission"
@@ -67,7 +67,11 @@ export default function NotificationsPage({
                           primary
                           onClick={() =>
                             notification.attendancePollId &&
-                            onAnswerAttendancePoll(notification.attendancePollId)
+                            notification.commissionMemberId &&
+                            onAnswerAttendancePoll(
+                              notification.attendancePollId,
+                              notification.commissionMemberId,
+                            )
                           }
                         >
                           Ответить
