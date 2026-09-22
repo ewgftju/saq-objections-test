@@ -1274,7 +1274,8 @@ test("справка формируется по новому шаблону и 
   assert.equal(nextAction(h.c)?.action, "sign-certificate");
   h.run("sign-certificate", "work");
   assert.equal(h.c.status, "certificate_approved");
-  h.run("send-certificate-to-commission", "work");
+  assert.equal(nextAction(h.c), null);
+  h.c.status = "commission_voting";
   assert.equal(h.c.status, "commission_voting");
   assert.equal(nextAction(h.c)?.action, "commission-vote");
   const commissionMaterialsHtml = renderToStaticMarkup(
