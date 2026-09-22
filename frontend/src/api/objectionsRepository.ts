@@ -58,7 +58,9 @@ export function createDemoRepository(
             value.version < 5 && migrated.status === "received"
               ? { ...migrated, status: "accepted" as const }
               : migrated;
-          const latestAttendancePoll = [...(value.attendancePolls || [])]
+          // Polls are appended when the working body sends them. The latest
+          // sent poll must take precedence even if its meeting date is earlier.
+          const latestAttendancePoll = (value.attendancePolls || [])
             .filter((poll) => poll.caseIds.includes(c.id))
             .at(-1);
           const attendanceMembers = latestAttendancePoll
