@@ -294,6 +294,10 @@ export default function ObjectionsModule() {
 
   async function submitAction(action: Action, form: FormData) {
     if (!c) return;
+    // A member of the Appeals Commission may vote only on their own behalf.
+    if (action === "commission-vote" && model.role === "commission") {
+      form.set("commissionMember", activeCommissionMember.id);
+    }
     if (
       !["position", "fill-request-response", "request", "request-other"].includes(
         action,
@@ -652,6 +656,11 @@ export default function ObjectionsModule() {
           c={c}
           date={model.state.date}
           role={model.role}
+          commissionMemberId={
+            dialog.action === "commission-vote" && model.role === "commission"
+              ? activeCommissionMember.id
+              : undefined
+          }
           onClose={close}
           onSubmit={(form) => submitAction(dialog.action, form)}
         />
