@@ -8,7 +8,7 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 9;
+const CURRENT_VERSION = 8;
 
 // Version 6 distinguishes incoming SAQ appeals from manually created appeals.
 
@@ -34,7 +34,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, 8, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -42,9 +42,6 @@ export function createDemoRepository(
           "Сохранённые данные имеют неподдерживаемый формат. Сбросьте демонстрацию.",
         );
       }
-      // Версия 9 заменяет все прежние демонстрационные обращения на набор
-      // из шести карточек — по одному на каждый вид обращения.
-      if (value.version === 8) return initialState();
       return {
         ...value,
         version: CURRENT_VERSION,
