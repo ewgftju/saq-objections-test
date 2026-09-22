@@ -83,6 +83,8 @@ const TASK_HELP: Partial<Record<Action, string>> = {
     "Ознакомьтесь со справкой и материалами обращения. Состав участников заседания определяется подтверждёнными ответами «Да» в опросе о присутствии.",
   "commission-vote":
     "Выберите вариант решения по каждому оспариваемому пункту и сохраните результаты голосования.",
+  "fill-meeting-certificate":
+    "Проверьте голоса участников заседания, при необходимости внесите результат вручную и добавьте комментарии. Печатная форма справки обновляется сразу.",
   members:
     "Подтвердите, что заседание по данному делу проведено. После этого обращение перейдёт на этап принятия решения.",
   hearing:
@@ -125,7 +127,10 @@ export default function ConsiderationProcess({
     currentStatus ?? c.status,
   );
   const availableExtras = additionalActions(c).filter(
-    (option) => option.action !== "upload" && option.action !== "vote",
+    (option) =>
+      option.action !== "upload" &&
+      option.action !== "vote" &&
+      option.action !== "fill-meeting-certificate",
   );
   const extras = inRequestFormationStage
     ? availableExtras.filter((option) => option.action === "supplement")
@@ -140,6 +145,9 @@ export default function ConsiderationProcess({
         ? ROLES[next.role]
         : "";
   const parallelProtocolAvailable = c.status === "commission_voting";
+  const meetingCertificateAvailable =
+    role === "work" &&
+    ["commission_voting", "circulated"].includes(c.status);
   const awaitingAuthorityResponse =
     role === "work" &&
     ["request_approved", "response_approval", "response_signed"].includes(
@@ -193,6 +201,11 @@ export default function ConsiderationProcess({
                 Сформировать протокол заседания
               </Button>
             )}
+            {meetingCertificateAvailable && (
+              <Button primary onClick={() => onAction("fill-meeting-certificate", "work")}>
+                Заполнить справку
+              </Button>
+            )}
             {c.status === "accepted" && (
               <Button
                 primary
@@ -223,7 +236,7 @@ export default function ConsiderationProcess({
               {c.status === "accepted"
                 ? "Сначала сформируйте обязательный запрос в ДВГА/КВГА, затем при необходимости добавьте запрос в другой орган и направьте документы на согласование."
                 : parallelProtocolAvailable
-                  ? "Все выбранные члены АК голосуют параллельно. Исполнитель может сформировать протокол в любой момент; после его сохранения незавершённые задания на голосование будут закрыты."
+                  ? "Все выбранные члены АК голосуют параллельно. Исполнитель может заполнить справку с актуальными голосами и комментариями, а также сформировать протокол в любой момент."
                 : "Заполните форму и сохраните действие — откроется следующая задача."}
             </small>
           </div>
