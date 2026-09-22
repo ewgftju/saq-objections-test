@@ -385,7 +385,6 @@ export type Action =
   | "sign-response"
   | "approve-certificate"
   | "sign-certificate"
-  | "send-certificate-to-commission"
   | "fill-meeting-certificate"
   | "review-commission-documents"
   | "choose-commission-members"
