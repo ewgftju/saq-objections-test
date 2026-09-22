@@ -405,6 +405,8 @@ export function SessionsPage({
                   "meeting",
                   "protocol",
                   "decided",
+                  "final_response_approval",
+                  "final_response_signed",
                   "delivered",
                   "completed",
                 ].includes(c.status);
