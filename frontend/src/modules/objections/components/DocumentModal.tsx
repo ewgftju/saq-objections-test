@@ -396,24 +396,19 @@ export function DocumentContent({
           </section>
         ))}
         <table className="certificate-members-table">
+          <thead>
+            <tr><th>Пункт</th><th>Член АК</th><th>Голос</th><th>Комментарий</th></tr>
+          </thead>
           <tbody>
-            <tr>
-              {(certificate?.memberPositions || []).map((member) => (
-                <th key={member.id}>{member.name}</th>
-              ))}
-              {!certificate?.memberPositions?.length && (
-                <th>Участники заседания не определены</th>
-              )}
-            </tr>
-            <tr>
-              {(certificate?.memberPositions || []).map((member) => (
-                <td key={member.id}>
-                  <b>{member.result ? OUTCOMES[member.result] : "Нет голоса"}</b>
-                  {member.comment && <><br />{member.comment}</>}
-                </td>
-              ))}
-              {!certificate?.memberPositions?.length && <td>—</td>}
-            </tr>
+            {(certificate?.memberPositions || []).map((member) => (
+              <tr key={`${member.pointId || "all"}-${member.id}`}>
+                <td>{member.pointNumber ? `Пункт ${member.pointNumber}` : "Все пункты"}</td>
+                <td>{member.name}</td>
+                <td><b>{member.result ? OUTCOMES[member.result] : "Нет голоса"}</b></td>
+                <td>{member.comment || "—"}</td>
+              </tr>
+            ))}
+            {!certificate?.memberPositions?.length && <tr><td colSpan={4}>Участники заседания не определены</td></tr>}
           </tbody>
         </table>
       </article>
