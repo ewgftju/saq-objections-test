@@ -1293,6 +1293,27 @@ test("справка формируется по новому шаблону и 
   assert.match(commissionMaterialsHtml, /<h4>Ответ ДВГА<\/h4>/);
   assert.doesNotMatch(commissionMaterialsHtml, /<h4>Запрос в ДВГА<\/h4>/);
   assert.doesNotMatch(commissionMaterialsHtml, /<h4>Запрос в другие органы<\/h4>/);
+  h.c.documents.push({
+    name: "Запрос в ДВГА для ознакомления",
+    kind: "request",
+    date: "2026-09-10",
+    author: "Рабочий орган",
+  });
+  const commissionCabinetHtml = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c: h.c,
+      tab: "review",
+      role: "commission",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  assert.doesNotMatch(commissionCabinetHtml, /<h3>Процесс рассмотрения<\/h3>/);
+  assert.match(commissionCabinetHtml, /<h4>Все документы обращения<\/h4>/);
+  assert.match(commissionCabinetHtml, /Запрос в ДВГА для ознакомления/);
   // Состав поступает из опроса о присутствии; в сценарии подтверждены два участника.
   h.c.members = h.c.members.slice(0, 2);
   h.run(
