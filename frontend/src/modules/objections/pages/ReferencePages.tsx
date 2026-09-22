@@ -263,7 +263,7 @@ export function SessionsPage({
   role: Role;
 }) {
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
-  const [section, setSection] = useState<"sessions" | "agendas" | "attendance">("sessions");
+  const [section, setSection] = useState<"sessions" | "reviewed" | "agendas" | "attendance">("sessions");
   const [selectedAttendancePollId, setSelectedAttendancePollId] = useState<string | null>(null);
   const pendingAgendaResults = agendas.filter((agenda) => !agenda.resultsHtml).length;
   const selectedAttendancePoll = attendancePolls.find(
@@ -274,15 +274,36 @@ export function SessionsPage({
         .map((caseId) => cases.find((item) => item.id === caseId))
         .filter((item): item is ObjectionCase => Boolean(item))
     : [];
-  const visible = cases.filter(
+  const meetingConductedStatuses = [
+    "meeting",
+    "protocol",
+    "decision_project",
+    "decision_project_approval",
+    "decision_project_signed",
+    "decision_project_eotinish",
+    "decision_project_hearing",
+    "decided",
+    "final_response_approval",
+    "final_response_signed",
+    "delivered",
+    "completed",
+  ];
+  const sessionCases = cases.filter(
     (c) =>
       c.meeting ||
         ["certificate_approved", "documents_review", "commission_members", "commission_voting", "circulated", "hearing", "hearing_ready", "meeting"].includes(
           c.status,
         ),
   );
+  const readyCases = sessionCases.filter(
+    (c) => !meetingConductedStatuses.includes(c.status),
+  );
+  const reviewedCases = sessionCases.filter((c) =>
+    meetingConductedStatuses.includes(c.status),
+  );
+  const displayedCases = section === "reviewed" ? reviewedCases : readyCases;
   const allSelected =
-    visible.length > 0 && visible.every((item) => selectedCaseIds.includes(item.id));
+    readyCases.length > 0 && readyCases.every((item) => selectedCaseIds.includes(item.id));
   const toggleCase = (caseId: string) =>
     setSelectedCaseIds((selected) =>
       selected.includes(caseId)
@@ -300,7 +321,7 @@ export function SessionsPage({
               disabled={!selectedCaseIds.length}
               onClick={() =>
                 onAttendancePoll(
-                  visible.filter((c) => selectedCaseIds.includes(c.id)),
+                  readyCases.filter((c) => selectedCaseIds.includes(c.id)),
                 )
               }
             >
@@ -310,7 +331,7 @@ export function SessionsPage({
               primary
               disabled={!selectedCaseIds.length}
               onClick={() =>
-                onAgenda(visible.filter((c) => selectedCaseIds.includes(c.id)))
+                onAgenda(readyCases.filter((c) => selectedCaseIds.includes(c.id)))
               }
             >
               Сформировать повестку дня
@@ -326,7 +347,16 @@ export function SessionsPage({
           className={section === "sessions" ? "active" : ""}
           onClick={() => setSection("sessions")}
         >
-          Заседания комиссии
+          Обращения готовые к заседанию
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={section === "reviewed"}
+          className={section === "reviewed" ? "active" : ""}
+          onClick={() => setSection("reviewed")}
+        >
+          Обращения рассмотренные на заседании
         </button>
         <button
           type="button"
@@ -360,7 +390,7 @@ export function SessionsPage({
           )}
         </button>
       </div>
-      {section === "sessions" ? (
+      {section === "sessions" || section === "reviewed" ? (
         <>
           <Notice>
             По Положению заседания проводятся по вторникам и четвергам; допускаются
@@ -374,17 +404,19 @@ export function SessionsPage({
               <tr>
                 <th>
                   <label className="session-case-selector">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      disabled={!visible.length || role !== "work"}
-                      aria-label="Выбрать все обращения"
-                      onChange={() =>
-                        setSelectedCaseIds(
-                          allSelected ? [] : visible.map((item) => item.id),
-                        )
-                      }
-                    />
+                    {section === "sessions" && (
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        disabled={!readyCases.length || role !== "work"}
+                        aria-label="Выбрать все обращения"
+                        onChange={() =>
+                          setSelectedCaseIds(
+                            allSelected ? [] : readyCases.map((item) => item.id),
+                          )
+                        }
+                      />
+                    )}
                     <span>Обращение</span>
                   </label>
                 </th>
@@ -397,30 +429,24 @@ export function SessionsPage({
               </tr>
             </thead>
             <tbody>
-              {visible.map((c) => {
+              {displayedCases.map((c) => {
                 const attendancePoll = attendancePolls
                   .filter((poll) => poll.caseIds.includes(c.id))
                   .at(-1);
-                const meetingConducted = [
-                  "meeting",
-                  "protocol",
-                  "decided",
-                  "final_response_approval",
-                  "final_response_signed",
-                  "delivered",
-                  "completed",
-                ].includes(c.status);
+                const meetingConducted = meetingConductedStatuses.includes(c.status);
                 return (
                 <tr key={c.id}>
                   <td>
                     <label className="session-case-selector">
-                      <input
-                        type="checkbox"
-                        checked={selectedCaseIds.includes(c.id)}
-                        disabled={role !== "work"}
-                        onChange={() => toggleCase(c.id)}
-                        aria-label={`Выбрать обращение ${c.id}`}
-                      />
+                      {section === "sessions" && (
+                        <input
+                          type="checkbox"
+                          checked={selectedCaseIds.includes(c.id)}
+                          disabled={role !== "work"}
+                          onChange={() => toggleCase(c.id)}
+                          aria-label={`Выбрать обращение ${c.id}`}
+                        />
+                      )}
                       <span>{c.id}</span>
                     </label>
                   </td>
@@ -435,14 +461,15 @@ export function SessionsPage({
                 </tr>
                 );
               })}
-              {!visible.length && (
+              {!displayedCases.length && (
                 <tr>
                   <td colSpan={7}>
                     <div className="empty-state">
-                      <h3>Материалы к заседанию ещё не подготовлены</h3>
+                      <h3>{section === "sessions" ? "Материалы к заседанию ещё не подготовлены" : "Рассмотренных на заседании обращений пока нет"}</h3>
                       <p>
-                        После подготовки справки обращение появится в этом
-                        разделе.
+                        {section === "sessions"
+                          ? "После подготовки справки обращение появится в этом разделе."
+                          : "После проведения заседания обращение появится в этом разделе."}
                       </p>
                     </div>
                   </td>
