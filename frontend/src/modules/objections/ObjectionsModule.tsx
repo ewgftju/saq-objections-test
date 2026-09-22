@@ -353,7 +353,7 @@ export default function ObjectionsModule() {
       form.set("commissionMember", activeCommissionMember.id);
     }
     if (
-      !["position", "fill-request-response", "request", "request-other"].includes(
+      !["position", "fill-request-response", "request", "request-other", "deliver"].includes(
         action,
       )
     ) {
@@ -376,6 +376,8 @@ export default function ObjectionsModule() {
       .getAll(
         ["request", "request-other"].includes(action)
           ? "requestAttachments"
+          : action === "deliver"
+            ? "conclusionFiles"
           : "responseFiles",
       )
       .filter(
@@ -383,6 +385,8 @@ export default function ObjectionsModule() {
       );
     if (action === "position" && !files.length)
       throw new Error("Вложите хотя бы один полученный файл");
+    if (action === "deliver" && c.type === "notice" && !files.length)
+      throw new Error("Вложите хотя бы один файл заключения");
     for (const file of files) {
       if (file.size > 2 * 1024 * 1024)
         throw new Error(`Файл «${file.name}» превышает 2 МБ`);
@@ -433,12 +437,16 @@ export default function ObjectionsModule() {
           kind:
             ["request", "request-other"].includes(action)
               ? "request-attachment"
+              : action === "deliver"
+                ? "conclusion"
               : action === "fill-request-response"
               ? "authority-response-attachment"
               : "response-attachment",
           text:
             ["request", "request-other"].includes(action)
               ? "Приложение исполнителя рабочего органа к запросу"
+              : action === "deliver"
+                ? "Заключение по обращению"
               : action === "fill-request-response"
               ? "Подтверждающий документ ДВГА/КВГА"
               : "Полученный ответ на запрос",
@@ -454,6 +462,8 @@ export default function ObjectionsModule() {
         title:
           ["request", "request-other"].includes(action)
             ? "Вложены приложения к запросу"
+            : action === "deliver"
+              ? "Вложено заключение по обращению"
             : action === "fill-request-response"
             ? "Вложены документы ДВГА/КВГА"
             : "Вложены полученные файлы",
@@ -468,6 +478,8 @@ export default function ObjectionsModule() {
           : "Запрос сохранён"
         : action === "fill-request-response"
         ? "Ответ ДВГА/КВГА и вложения сохранены"
+        : action === "deliver"
+          ? "Заключение по обращению вложено"
         : "Полученный ответ и вложения сохранены",
     );
   }
