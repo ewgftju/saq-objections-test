@@ -492,7 +492,8 @@ export default function ObjectionsModule() {
               if (
                 action === "assign-work-executor" ||
                 action === "commission-vote" ||
-                action === "vote"
+                action === "vote" ||
+                action === "fill-meeting-certificate"
               ) {
                 model.setRole(role);
                 setDialog({ type: "action", action });
