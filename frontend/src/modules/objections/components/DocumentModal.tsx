@@ -420,6 +420,42 @@ export function DocumentContent({
     );
   }
 
+  if (kind === "final-response") {
+    const outcome = overall(snapshot);
+    const decision = outcome
+      ? OUTCOMES[outcome].toLocaleLowerCase("ru-RU")
+      : snapshot.result?.label?.toLocaleLowerCase("ru-RU") || "—";
+    const disputedIssues = snapshot.issues.filter((point) => point.disputed);
+    return (
+      <article className="print-document final-response-template">
+        <div className="final-response-recipient">
+          <p>{snapshot.org}</p>
+          <p>{auditAuthorityFullName(snapshot.issuer)}</p>
+        </div>
+        <div className="final-response-body">
+          <p>Қазақстан Республикасы Қаржы министрлігінің (бұдан әрі – Министрлік) апелляциялық комиссиясының қарауына Ішкі мемлекеттік аудит комитетінен жүргізілген аудиторлық есепте көрсетілген бұзушылықтарға түскен қарсылықты қарап, келесіні хабарлайды.</p>
+          <p>Заңның 58-4-бабының 2-тармағына сәйкес, қарсылық мемлекеттік аудит объектісі даулайтын мәселелер шегінде қаралады.</p>
+          <p>Апелляциялық комиссия отырысында дауыс беру қорытындысы бойынша қарсылықты {decision} туралы шешім қабылдады.</p>
+          <p>Жауаппен келіспеген жағдайда, Сіз Қазақстан Республикасы Әкімшілік рәсімдік-процестік кодексінің 91-бабының 6-тармағына сәйкес шешімге шағым жасауға құқылысыз. Екінші мекенжайға мәлімет және жұмыс үшін жолданады.</p>
+          <p className="final-response-attachment-note">Қосымша: {Math.max(1, disputedIssues.length)} парақта.</p>
+        </div>
+        <div className="final-response-signature">
+          <span>Ішкі мемлекеттік аудит бойынша апелляция департаментінің директоры</span>
+          <b>Ш. Күреңбек тегі</b>
+        </div>
+        <p className="final-response-executor">Орын.: {snapshot.assignee === "Не назначен" ? DEMO_USER.fullName : snapshot.assignee}<br />Тел.: 70-13-08</p>
+        <section className="final-response-appendix">
+          <h2>Қосымша</h2>
+          <p>Қарсылықты қарау нәтижелері</p>
+          <table>
+            <thead><tr><th>№</th><th>Дауланатын мәселе</th><th>Шешім</th></tr></thead>
+            <tbody>{disputedIssues.map((point) => <tr key={point.id}><td>{point.number}</td><td>{point.title}</td><td>{point.final ? OUTCOMES[point.final] : decision}</td></tr>)}</tbody>
+          </table>
+        </section>
+      </article>
+    );
+  }
+
   if (kind === "protocol") {
     const meeting = protocolPreview || snapshot.meeting;
     const members = protocolPreview?.members || snapshot.members;
@@ -855,9 +891,11 @@ export default function DocumentModal(props: {
     ".request-template{box-sizing:border-box;min-height:900px;padding:52px 54px;font-family:'Times New Roman',Times,serif;font-size:14pt;line-height:1.35}.request-template-header{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center;color:#005c93;font-family:'Times New Roman',Times,serif;font-size:14pt;font-weight:700;line-height:1.25;text-align:center}.request-template-header span{display:grid;place-items:center;width:40px;height:40px;border:1px solid #111;border-radius:50%;color:#111}.request-template-line{height:1px;margin:15px 0 46px;background:#111}.request-template-recipient{width:52%;margin:0 0 42px auto;text-align:left}.request-template-body,.request-template-regulatory-notice{text-align:justify;text-indent:24px;overflow-wrap:anywhere;word-break:break-word}.request-template-body.standard{width:100%;max-width:none;white-space:normal}.request-template-body.custom{white-space:pre-wrap}.request-template-signature{display:grid;grid-template-columns:350px 1fr;gap:22px;align-items:center;margin-top:48px;font-size:14pt}.request-template-signature b:last-child{justify-self:end;white-space:nowrap}.request-template-executor{margin-top:28px;font-size:11pt;font-style:italic;line-height:1.25}";
   const appendixTemplateCss =
     ".appendix-template{box-sizing:border-box;min-height:680px;padding:52px 54px 96px;font-family:'Times New Roman',Times,serif;overflow:hidden}.appendix-template-number{margin:0 14px 14px 0;text-align:right;font-size:16px}.appendix-template-table-wrap{max-width:100%;overflow-x:auto}.appendix-template table{width:100%;min-width:700px;table-layout:fixed;font-size:14px;line-height:1.35}.appendix-template th,.appendix-template td{box-sizing:border-box;border:1px solid #111;padding:7px 9px;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:normal}.appendix-template th{text-align:center;font-size:14px;background:white}.appendix-template th:first-child,.appendix-template td:first-child{width:5%;text-align:center;font-weight:700}.appendix-template th:nth-child(2),.appendix-template td:nth-child(2){width:23%}.appendix-template th:nth-child(3),.appendix-template td:nth-child(3){width:31%}.appendix-template th:nth-child(4),.appendix-template td:nth-child(4){width:41%}";
+  const finalResponseCss =
+    ".final-response-template{box-sizing:border-box;min-height:950px;padding:56px 62px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.35}.final-response-template p{white-space:normal}.final-response-recipient{margin:0 0 46px auto;width:54%;text-align:left}.final-response-recipient p{margin:0 0 8px}.final-response-body p{text-align:justify;text-indent:30px;margin:0 0 10px}.final-response-attachment-note{margin-top:30px!important;text-indent:0!important}.final-response-signature{display:grid;grid-template-columns:1fr auto;gap:26px;align-items:end;margin:60px 0 35px}.final-response-signature span{max-width:320px}.final-response-executor{font-size:13px!important;line-height:1.25}.final-response-appendix{break-before:page;page-break-before:always;margin-top:70px;padding-top:20px}.final-response-appendix h2{font-family:'Times New Roman',Times,serif;font-size:19px}.final-response-appendix table{font-family:'Times New Roman',Times,serif;font-size:14px}.final-response-appendix th,.final-response-appendix td{border:1px solid #111;padding:8px;vertical-align:top}.final-response-appendix th{text-align:center}";
   const css =
     "body{font:14px Arial,sans-serif;line-height:1.6;color:#111;max-width:850px;margin:28px auto;padding:24px}h2{text-align:center}p{white-space:pre-wrap}table{width:100%;border-collapse:collapse}th,td{border:1px solid #bbb;padding:8px;text-align:left}.document-watermark{color:#555;text-align:center;font-size:11px}.document-footer{font-size:12px;border-top:1px solid #bbb;padding-top:16px}.appendix-template{box-sizing:border-box;min-height:680px;padding:52px 54px 96px;font-family:'Times New Roman',Times,serif}.appendix-template-number{margin:0 14px 14px 0!important;font-size:16px!important;text-align:right}.appendix-template table{table-layout:fixed;font-size:16px;line-height:1.35}.appendix-template th,.appendix-template td{border:1px solid #111;padding:7px 9px;vertical-align:top;word-break:break-word}.appendix-template th{text-align:center;font-size:17px;background:white}.appendix-template tbody tr{height:40px}.appendix-template th:first-child,.appendix-template td:first-child{width:5%;text-align:center;font-weight:bold}.appendix-template th:nth-child(2),.appendix-template td:nth-child(2){width:23%}.appendix-template th:nth-child(3),.appendix-template td:nth-child(3){width:31%}.appendix-template th:nth-child(4),.appendix-template td:nth-child(4){width:41%}.certificate-template{box-sizing:border-box;min-height:900px;padding:58px 68px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.45}.certificate-template h1,.certificate-template h2{text-align:center;font-size:22px;margin:0;font-weight:700}.certificate-template h2{font-size:20px;margin-bottom:34px}.certificate-template-intro{text-align:justify;text-indent:28px}.certificate-template-explanation{margin:4px 0 18px;text-align:center;font-style:italic}.certificate-template-point-list{margin:20px 46px 4px}.certificate-template-lead{margin-top:30px}.certificate-template-point{margin-top:28px;break-inside:avoid}.certificate-template-point h3{margin:0 0 14px;font-size:20px}.certificate-template-line{padding:0;margin:14px 0;white-space:pre-wrap}.certificate-template-line p{margin:6px 0 0}.certificate-members-table{table-layout:fixed}.certificate-members-table th,.certificate-members-table td{border:1px solid #111;padding:10px;vertical-align:top;white-space:pre-wrap}.certificate-members-table th{text-align:center;font-weight:700}.protocol-template{box-sizing:border-box;padding:56px 64px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.4}.protocol-template h1{margin:0 0 34px;text-align:center;font-size:21px;font-weight:400}.protocol-template-place-date{display:flex;justify-content:space-between;margin-bottom:28px}.protocol-template-intro,.protocol-template-result{text-align:justify;text-indent:28px}.protocol-votes-table{table-layout:fixed}.protocol-votes-table th,.protocol-votes-table td{border:1px solid #111;padding:7px 8px;vertical-align:top}.protocol-votes-table th{text-align:center;font-weight:400}.protocol-template-signatures{margin-top:46px}@page{size:A4;margin:18mm}";
-  const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>SAQ — документ</title><style>${css}${otherRequestCss}${requestTemplateCss}${appendixTemplateCss}</style></head><body>${renderToStaticMarkup(<DocumentContent {...props} />)}</body></html>`;
+  const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>SAQ — документ</title><style>${css}${otherRequestCss}${requestTemplateCss}${appendixTemplateCss}${finalResponseCss}</style></head><body>${renderToStaticMarkup(<DocumentContent {...props} />)}</body></html>`;
   return (
     <Modal title="Просмотр документа" onClose={props.onClose} wide>
       <div className="actions">
@@ -896,6 +934,7 @@ export default function DocumentModal(props: {
           {error}
         </p>
       )}
+      <style>{finalResponseCss}</style>
       <DocumentContent {...props} />
     </Modal>
   );
