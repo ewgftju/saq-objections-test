@@ -35,6 +35,8 @@ export const STATUS = {
   meeting: "Формирование протокола",
   protocol: "Подписание протокола",
   decided: "Решение принято",
+  final_response_approval: "Согласование окончательного ответа",
+  final_response_signed: "Подписание окончательного ответа",
   delivered: "Результат направлен",
   completed: "Завершено",
   refused: "Отказ в рассмотрении",
