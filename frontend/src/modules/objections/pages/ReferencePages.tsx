@@ -398,8 +398,7 @@ export function SessionsPage({
               {visible.map((c) => {
                 const attendancePoll = attendancePolls
                   .filter((poll) => poll.caseIds.includes(c.id))
-                  .sort((a, b) => b.dateTime.localeCompare(a.dateTime))
-                  .at(0);
+                  .at(-1);
                 const meetingConducted = [
                   "meeting",
                   "protocol",
@@ -641,7 +640,7 @@ export function SessionsPage({
                   </thead>
                   <tbody>
                     {[...attendancePolls]
-                      .sort((a, b) => b.dateTime.localeCompare(a.dateTime))
+                      .reverse()
                       .map((poll) => {
                         const responses = Object.values(poll.responses);
                         const yes = responses.filter((response) => response === "yes").length;
