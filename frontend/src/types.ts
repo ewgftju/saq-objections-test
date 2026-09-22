@@ -69,6 +69,8 @@ export interface CommissionMember {
   id: string;
   name: string;
   present: boolean;
+  /** Председательствующий на конкретном заседании. */
+  isChair?: boolean;
   recused: boolean;
   reason: string;
 }
@@ -231,6 +233,8 @@ export interface CommissionAttendancePoll {
   caseIds: string[];
   sentAt: string;
   responses: Record<string, "pending" | "yes" | "no">;
+  /** Председатель АК или исполняющий его обязанности на этом заседании. */
+  chairId?: string;
   manualResponseChanges?: Record<
     string,
     {
