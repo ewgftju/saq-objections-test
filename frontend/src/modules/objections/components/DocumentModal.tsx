@@ -442,7 +442,10 @@ export function DocumentContent({
                   normalizeVoteChoice(pointVotes[member.id]),
                 ]),
               );
-              return pointOutcomeFromVotes(normalizedVotes);
+              return pointOutcomeFromVotes(
+                normalizedVotes,
+                presentMembers.find((member) => member.isChair)?.id,
+              );
             });
           if (!pointResults.length || pointResults.some((item) => !item))
             return "";
