@@ -1675,3 +1675,40 @@ test("протокол формируется с выбранными участ
     /РЕШЕНИЕ отказать в удовлетворении /,
   );
 });
+
+
+test("жалоба из E-Otinish проходит проект решения перед окончательным ответом", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на решение КВГА/ДВГА";
+  h.c.channel = "E-Otinish";
+  h.c.status = "protocol";
+  h.c.meeting = { date: "2026-09-10", number: "ПР-ЭО-1", audio: "" };
+  h.c.issues.filter((point) => point.disputed).forEach((point) => {
+    point.final = "accept";
+  });
+
+  h.run("sign", "commission", {
+    secretary: "on",
+    reason: "Решение комиссии сформировано.",
+    ...Object.fromEntries(h.c.members.map((member) => [`signed_${member.id}`, "on"])),
+  });
+  assert.equal(h.c.status, "decision_project");
+  assert.equal(nextAction(h.c)?.action, "create-decision-project");
+  assert.equal(actionForm("create-decision-project", h.c, h.state.date, {}).title, "Сформировать проект решения");
+
+  h.run("create-decision-project", "work", {
+    number: "ПРЕО-1",
+    receipt: "КВ-ЭО-1",
+    channel: "eotinish",
+  });
+  assert.equal(h.c.status, "decision_project_approval");
+  h.run("approve-decision-project", "director");
+  assert.equal(h.c.status, "decision_project_signed");
+  h.run("sign-decision-project", "director");
+  assert.equal(h.c.status, "decision_project_eotinish");
+  h.run("send-decision-project-eotinish", "work");
+  assert.equal(h.c.status, "decision_project_hearing");
+  h.run("hearing-after-decision-project", "work");
+  assert.equal(h.c.status, "decided");
+  assert.equal(nextAction(h.c)?.action, "deliver");
+});
