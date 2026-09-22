@@ -8,7 +8,7 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 7;
+const CURRENT_VERSION = 8;
 
 // Version 6 distinguishes incoming SAQ appeals from manually created appeals.
 
@@ -19,6 +19,7 @@ export function initialState(): DemoState {
     cases: seed(),
     agendas: [],
     notifications: [],
+    recommendations: [],
     attendancePolls: [],
     activeCommissionMemberId: COMMISSION_ATTENDANCE_MEMBERS[0].id,
   };
@@ -33,7 +34,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -46,6 +47,7 @@ export function createDemoRepository(
         version: CURRENT_VERSION,
         agendas: value.agendas || [],
         notifications: value.notifications || [],
+        recommendations: value.recommendations || [],
         attendancePolls: value.attendancePolls || [],
         activeCommissionMemberId:
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
