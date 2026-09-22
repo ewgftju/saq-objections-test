@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Action, ObjectionCase, Role } from "../../../types";
 import { Button, Modal, Notice } from "../../../components/ui";
@@ -277,6 +277,8 @@ export default function ActionModal({
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [savedMessage, setSavedMessage] = useState("");
+  const formRef = useRef<HTMLFormElement>(null);
   const [requestAttachments, setRequestAttachments] = useState<File[]>([]);
   const [conclusionFiles, setConclusionFiles] = useState<File[]>([]);
   const [requestTab, setRequestTab] = useState<"form" | "print">("form");
@@ -389,6 +391,7 @@ export default function ActionModal({
       }
     >
       <form
+        ref={formRef}
         onChange={(event) => {
           const form = event.currentTarget;
           const next = Object.fromEntries(
@@ -1029,10 +1032,33 @@ export default function ActionModal({
             {error}
           </p>
         )}
+        {savedMessage && <Notice tone="green">{savedMessage}</Notice>}
         <div className="dialog-actions">
           <Button onClick={onClose} disabled={saving}>
             Отмена
           </Button>
+          {action === "fill-meeting-certificate" && (
+            <Button
+              type="button"
+              disabled={saving}
+              onClick={async () => {
+                const form = formRef.current;
+                if (!form || !form.reportValidity()) return;
+                try {
+                  setSaving(true);
+                  setError("");
+                  await onSubmit(new FormData(form));
+                  setSavedMessage("Промежуточный результат сохранён.");
+                } catch (cause) {
+                  setError(cause instanceof Error ? cause.message : "Не удалось сохранить результат");
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              Сохранить
+            </Button>
+          )}
           <Button type="submit" primary disabled={saving}>
             {saving
               ? "Сохранение..."
