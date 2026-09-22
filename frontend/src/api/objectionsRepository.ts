@@ -60,7 +60,6 @@ export function createDemoRepository(
               : migrated;
           const latestAttendancePoll = [...(value.attendancePolls || [])]
             .filter((poll) => poll.caseIds.includes(c.id))
-            .sort((a, b) => a.dateTime.localeCompare(b.dateTime))
             .at(-1);
           const attendanceMembers = latestAttendancePoll
             ? COMMISSION_ATTENDANCE_MEMBERS
