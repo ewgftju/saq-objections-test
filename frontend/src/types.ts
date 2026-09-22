@@ -379,6 +379,7 @@ export type Action =
   | "vote"
   | "sign"
   | "deliver"
+  | "close-review"
   | "execute"
   | "forward"
   | "control-analysis"
