@@ -320,6 +320,41 @@ export default function CaseWorkspace({
                   ) : null;
                 })()}
                 {(() => {
+                  const protocol = c.documents
+                    .filter((document) => document.kind === "protocol")
+                    .at(-1);
+                  return protocol ? (
+                    <section className="request-documents-section">
+                      <h4>Протокол заседания</h4>
+                      <div className="request-documents-list">
+                        <div className="request-document-row">
+                          <span>{protocol.name}</span>
+                          <div className="request-document-actions">
+                            <Button onClick={() => onDocument(protocol.kind, protocol)}>
+                              Просмотр
+                            </Button>
+                            <Button
+                              onClick={() =>
+                                downloadFile(
+                                  `${c.id}-протокол.doc`,
+                                  wordDocumentHtml({
+                                    c,
+                                    kind: protocol.kind,
+                                    document: protocol,
+                                  }),
+                                  "application/msword",
+                                )
+                              }
+                            >
+                              Скачать Word
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  ) : null;
+                })()}
+                {(() => {
                   // Each intermediate save creates a new certificate snapshot.
                   // Materials must always expose the latest saved version.
                   const certificate = c.documents
@@ -347,41 +382,6 @@ export default function CaseWorkspace({
                                     c,
                                     kind: certificate.kind,
                                     document: certificate,
-                                  }),
-                                  "application/msword",
-                                )
-                              }
-                            >
-                              Скачать Word
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </section>
-                  ) : null;
-                })()}
-                {(() => {
-                  const protocol = c.documents
-                    .filter((document) => document.kind === "protocol")
-                    .at(-1);
-                  return protocol ? (
-                    <section className="request-documents-section">
-                      <h4>Протокол заседания</h4>
-                      <div className="request-documents-list">
-                        <div className="request-document-row">
-                          <span>{protocol.name}</span>
-                          <div className="request-document-actions">
-                            <Button onClick={() => onDocument(protocol.kind, protocol)}>
-                              Просмотр
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                downloadFile(
-                                  `${c.id}-протокол.doc`,
-                                  wordDocumentHtml({
-                                    c,
-                                    kind: protocol.kind,
-                                    document: protocol,
                                   }),
                                   "application/msword",
                                 )
