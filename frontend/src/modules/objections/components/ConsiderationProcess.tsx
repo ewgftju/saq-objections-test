@@ -183,9 +183,11 @@ export default function ConsiderationProcess({
             </p>
           </div>
           <div className="consideration-task-action">
-            <Button primary onClick={() => onAction(next.action, next.role)}>
-              {next.label}
-            </Button>
+            {(next.action !== "commission-vote" || role === "commission") && (
+              <Button primary onClick={() => onAction(next.action, next.role)}>
+                {next.label}
+              </Button>
+            )}
             {parallelProtocolAvailable && (
               <Button primary onClick={() => onAction("vote", "work")}>
                 Сформировать протокол заседания
