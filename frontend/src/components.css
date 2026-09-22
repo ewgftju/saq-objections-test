@@ -506,6 +506,19 @@
   text-align: center;
   font-weight: 700;
 }
+.certificate-point-votes-table {
+  width: 100%;
+  margin: 24px 0 12px;
+  table-layout: fixed;
+}
+.certificate-point-votes-table td {
+  text-align: center;
+  white-space: pre-wrap;
+}
+.certificate-point-votes-table td b {
+  display: inline-block;
+  margin-bottom: 8px;
+}
 .request-print-preview .protocol-template {
   width: min(860px, 100%);
   min-height: 1080px;
