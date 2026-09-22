@@ -389,7 +389,7 @@ export function SessionsPage({
                   </label>
                 </th>
                 <th>Объект</th>
-                <th>Статус</th>
+                <th>Статус заседания</th>
                 <th>Дата заседания</th>
                 <th>Протокол</th>
                 <th>Статус</th>
