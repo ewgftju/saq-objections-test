@@ -117,6 +117,19 @@ export interface Meeting {
   signed?: string;
 }
 
+export interface CaseRecommendation {
+  id: string;
+  text: string;
+  recipient: string;
+  status: "sent" | "executed";
+  answer: string;
+  caseId: string;
+  caseReference: string;
+  executor: string;
+  createdAt: string;
+  executedAt?: string;
+}
+
 export interface Delivery {
   date: string;
   number: string;
@@ -350,6 +363,7 @@ export interface DemoState {
   cases: ObjectionCase[];
   agendas: AgendaRegistryEntry[];
   notifications: CaseNotification[];
+  recommendations: CaseRecommendation[];
   attendancePolls: CommissionAttendancePoll[];
   activeCommissionMemberId: string;
 }
