@@ -36,7 +36,7 @@ type DialogState =
   | { type: "agenda"; cases: ObjectionCase[] }
   | { type: "agenda-results"; agendaId: string }
   | { type: "attendance"; cases: ObjectionCase[] }
-  | { type: "attendance-answer"; pollId: string }
+  | { type: "attendance-answer"; pollId: string; memberId: string }
   | { type: "new" | "clock" | "reset" | "upload" }
   | null;
 
@@ -157,17 +157,19 @@ export default function ObjectionsModule() {
   };
   const answerAttendancePoll = (
     pollId: string,
+    memberId: string,
     response: "yes" | "no",
   ) => {
     const next = structuredClone(model.state);
     const poll = next.attendancePolls.find((item) => item.id === pollId);
-    if (!poll) return;
-    poll.responses[activeCommissionMember.id] = response;
+    const member = COMMISSION_ATTENDANCE_MEMBERS.find((item) => item.id === memberId);
+    if (!poll || !member) return;
+    poll.responses[memberId] = response;
     syncPollParticipants(next.cases, poll);
     next.notifications.forEach((notification) => {
       if (
         notification.attendancePollId === pollId &&
-        notification.commissionMemberId === activeCommissionMember.id
+        notification.commissionMemberId === memberId
       ) {
         notification.read = true;
       }
@@ -176,7 +178,7 @@ export default function ObjectionsModule() {
       const target = next.cases.find((item) => item.id === caseId);
       target?.history.push({
         date: next.date,
-        actor: activeCommissionMember.name,
+        actor: member.name,
         title: response === "yes" ? "Подтверждено присутствие" : "Отказ от участия в заседании",
         text: `Ответ на опрос о заседании ${formatDateTime(poll.dateTime)}: ${response === "yes" ? "Да" : "Нет"}.`,
       });
@@ -638,8 +640,8 @@ export default function ObjectionsModule() {
           notifications={model.state.notifications}
           role={model.role}
           activeCommissionMemberId={activeCommissionMember.id}
-          onAnswerAttendancePoll={(pollId) =>
-            setDialog({ type: "attendance-answer", pollId })
+          onAnswerAttendancePoll={(pollId, memberId) =>
+            setDialog({ type: "attendance-answer", pollId, memberId })
           }
           onOpenCase={(caseId) => {
             const target = model.state.cases.find((item) => item.id === caseId);
@@ -752,25 +754,29 @@ export default function ObjectionsModule() {
           (item) => item.id === dialog.pollId,
         );
         if (!poll) return null;
-        const answer = poll.responses[activeCommissionMember.id];
+        const member = COMMISSION_ATTENDANCE_MEMBERS.find(
+          (item) => item.id === dialog.memberId,
+        );
+        if (!member) return null;
+        const answer = poll.responses[member.id];
         return (
           <Modal title="Подтвердите присутствие" onClose={close}>
             <p>
               {`Укажите, будете ли присутствовать на заседании ${formatDateTime(poll.dateTime)}.`}
             </p>
-            <p className="muted">Член АК: {activeCommissionMember.name}</p>
+            <p className="muted">Член АК: {member.name}</p>
             <div className="dialog-actions">
               <Button onClick={close}>Отмена</Button>
               <Button
                 className={answer === "no" ? "attendance-choice-active" : ""}
-                onClick={() => answerAttendancePoll(poll.id, "no")}
+                onClick={() => answerAttendancePoll(poll.id, member.id, "no")}
               >
                 Нет
               </Button>
               <Button
                 primary
                 className={answer === "yes" ? "attendance-choice-active" : ""}
-                onClick={() => answerAttendancePoll(poll.id, "yes")}
+                onClick={() => answerAttendancePoll(poll.id, member.id, "yes")}
               >
                 Да
               </Button>
