@@ -121,7 +121,8 @@ export function actionForm(
     action === "vote" ||
     action === "analysis" ||
     action === "assign-work-executor" ||
-    action === "commission-vote"
+    action === "commission-vote" ||
+    action === "fill-meeting-certificate"
       ? []
       : [day];
   let title = "Действие по обращению";
@@ -404,6 +405,11 @@ export function actionForm(
       title = "Проголосовать";
       note =
         "Выберите результат голосования по каждому оспариваемому пункту.";
+      break;
+    case "fill-meeting-certificate":
+      title = "Заполнить справку";
+      note =
+        "В форме показаны электронные голоса участников заседания. При необходимости исполнитель рабочего органа может внести результат и комментарий вручную.";
       break;
     case "sign":
       title = "Подписание протокола";
