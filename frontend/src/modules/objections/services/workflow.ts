@@ -246,8 +246,16 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       role: "commission",
     },
     decided: {
-      action: "deliver",
-      label: "Оформить и направить результат",
+      action:
+        c.type === "notice" && c.documents.some((document) => document.kind === "conclusion")
+          ? "close-review"
+          : "deliver",
+      label:
+        c.type === "notice"
+          ? c.documents.some((document) => document.kind === "conclusion")
+            ? "Закрыть рассмотрение"
+            : "Вложить заключение"
+          : "Сформировать окончательный ответ",
       role: c.selfReview ? "dvga" : reviewer,
     },
     delivered: {
@@ -1162,6 +1170,13 @@ export function applyAction(
       break;
     }
     case "deliver":
+      // The upload screen for a notice sends no delivery requisites: it only
+      // stores the conclusion and leaves the case open for explicit closing.
+      // Keep the former requisites flow for saved/legacy actions.
+      if (c.type === "notice" && !form.get("sent")) {
+        note = "Заключение по обращению вложено";
+        break;
+      }
       checked(
         form,
         "sent",
@@ -1185,6 +1200,13 @@ export function applyAction(
         "result",
         c.result?.reason || "",
       );
+      break;
+    case "close-review":
+      if (c.type !== "notice") throw new Error("Закрытие доступно только для возражения на уведомление");
+      if (!c.documents.some((document) => document.kind === "conclusion"))
+        throw new Error("Сначала вложите заключение по обращению");
+      c.status = "completed";
+      note = "Рассмотрение закрыто после вложения заключения";
       break;
     case "receipt":
       if (!c.delivery) throw new Error("Результат ещё не направлен");
