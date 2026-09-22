@@ -303,6 +303,7 @@ export default function ActionModal({
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [requestAttachments, setRequestAttachments] = useState<File[]>([]);
+  const [conclusionFiles, setConclusionFiles] = useState<File[]>([]);
   const [requestTab, setRequestTab] = useState<"form" | "print">("form");
   const definition = actionForm(action, c, date, values, role);
   const activeCommissionVoter = commissionMemberId
@@ -408,7 +409,8 @@ export default function ActionModal({
         action === "fill-request-response" ||
         action === "analysis" ||
         action === "fill-meeting-certificate" ||
-        action === "position"
+        action === "position" ||
+        action === "deliver"
       }
     >
       <form
@@ -435,6 +437,7 @@ export default function ActionModal({
             requestAttachments.forEach((file) =>
               form.append("requestAttachments", file),
             );
+            conclusionFiles.forEach((file) => form.append("conclusionFiles", file));
             await onSubmit(form);
             onClose();
           } catch (cause) {
@@ -536,6 +539,55 @@ export default function ActionModal({
                   author: requestExecutor,
                 }}
               />
+            </div>
+          </>
+        ) : action === "deliver" && c.type === "notice" ? (
+          <>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            <label className="field request-attachments-field">
+              <span>Документ заключения <span className="required">*</span></span>
+              <input
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                multiple
+                required={!conclusionFiles.length}
+                onChange={(event) => {
+                  const files = Array.from(event.currentTarget.files || []);
+                  if (files.length) setConclusionFiles((current) => [...current, ...files]);
+                  event.currentTarget.value = "";
+                }}
+              />
+              <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
+              {conclusionFiles.length > 0 && (
+                <div className="request-attachments-list">
+                  {conclusionFiles.map((file, index) => (
+                    <div key={`${file.name}-${index}`}>
+                      <span>{file.name}</span>
+                      <Button type="button" onClick={() => setConclusionFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}>
+                        Удалить
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </label>
+          </>
+        ) : action === "deliver" ? (
+          <>
+            <div className="request-modal-details">
+              <div><span>Автор</span><b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b></div>
+              <div><span>Печатная форма</span><b>Окончательный ответ и приложение</b></div>
+            </div>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            <div className="request-modal-tabs" role="tablist">
+              <button type="button" className={requestTab === "form" ? "active" : ""} onClick={() => setRequestTab("form")}>Реквизиты</button>
+              <button type="button" className={requestTab === "print" ? "active" : ""} onClick={() => setRequestTab("print")}>Печатная форма</button>
+            </div>
+            <div hidden={requestTab !== "form"} className="form-grid">
+              {definition.fields.map((field) => <Field key={field.name} field={field} />)}
+            </div>
+            <div hidden={requestTab !== "print"} className="request-print-preview">
+              <DocumentContent c={c} kind="final-response" />
             </div>
           </>
         ) : action === "fill-request-response" ? (
