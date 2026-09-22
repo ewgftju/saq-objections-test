@@ -20,9 +20,9 @@ import NewCaseModal from "./components/NewCaseModal";
 import CasesList from "./pages/CasesList";
 import CaseWorkspace from "./pages/CaseWorkspace";
 import NotificationsPage from "./pages/NotificationsPage";
+import RecommendationsPage from "./pages/RecommendationsPage";
 import {
   ProcessesPage,
-  RecommendationsPage,
   SessionsPage,
   SourcesPage,
 } from "./pages/ReferencePages";
@@ -721,7 +721,26 @@ export default function ObjectionsModule() {
           }}
         />
       )}
-      {model.route.page === "recommendations" && <RecommendationsPage />}
+      {model.route.page === "recommendations" && (
+        <RecommendationsPage
+          recommendations={model.state.recommendations}
+          onOpenCase={(caseId) => {
+            const target = model.state.cases.find((item) => item.id === caseId);
+            if (target) openCase(target);
+          }}
+          onExecute={(recommendationId, answer) => {
+            const next = structuredClone(model.state);
+            const recommendation = next.recommendations.find(
+              (item) => item.id === recommendationId,
+            );
+            if (!recommendation) return;
+            recommendation.answer = answer;
+            recommendation.status = "executed";
+            recommendation.executedAt = next.date;
+            model.commit(next, "Исполнение рекомендации зафиксировано");
+          }}
+        />
+      )}
       {model.route.page === "processes" && <ProcessesPage />}
       {model.route.page === "sources" && <SourcesPage />}
       {dialog?.type === "action" && c && (
