@@ -17,6 +17,7 @@ const navigation: { page: Page; label: string }[] = [
   { page: "registry", label: "Реестр возражений" },
   { page: "sessions", label: "Заседания комиссии" },
   { page: "notifications", label: "Уведомления" },
+  { page: "recommendations", label: "Рекомендации" },
   { page: "processes", label: "Бизнес-процессы" },
 ];
 
