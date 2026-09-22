@@ -26,6 +26,16 @@ export default function NotificationsPage({
             notification.commissionMemberId === activeCommissionMemberId,
         )
       : notifications.filter((notification) => notification.kind !== "attendance-poll");
+  const orderedNotifications =
+    role === "commission"
+      ? [...visibleNotifications].sort((left, right) => {
+          if (left.read !== right.read) return Number(left.read) - Number(right.read);
+          return (
+            right.date.localeCompare(left.date) ||
+            right.id.localeCompare(left.id)
+          );
+        })
+      : visibleNotifications;
   return (
     <>
       <PageHeading
@@ -36,7 +46,7 @@ export default function NotificationsPage({
             : "Автоматические сообщения объектам аудита и заявителям"
         }
       />
-      {visibleNotifications.length === 0 ? (
+      {orderedNotifications.length === 0 ? (
         <Notice>Уведомлений пока нет.</Notice>
       ) : (
         <section className="card">
@@ -51,7 +61,7 @@ export default function NotificationsPage({
                 </tr>
               </thead>
               <tbody>
-                {visibleNotifications.map((notification) => (
+                {orderedNotifications.map((notification) => (
                   <tr key={notification.id}>
                     <td>{formatDate(notification.date)}</td>
                     <td>{notification.recipient}</td>
@@ -65,6 +75,7 @@ export default function NotificationsPage({
                       {notification.kind === "attendance-poll" ? (
                         <Button
                           primary
+                          disabled={notification.read}
                           onClick={() =>
                             notification.attendancePollId &&
                             notification.commissionMemberId &&
@@ -73,7 +84,7 @@ export default function NotificationsPage({
                             )
                           }
                         >
-                          Ответить
+                          {notification.read ? "Ответ направлен" : "Ответить"}
                         </Button>
                       ) : (
                         <Button onClick={() => onOpenCase(notification.caseId)}>
