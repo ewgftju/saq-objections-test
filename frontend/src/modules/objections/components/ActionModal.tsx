@@ -10,14 +10,6 @@ import { DEMO_USER } from "../../../config";
 import { OUTCOMES } from "../../../data/constants";
 import { downloadFile } from "../../../utils/download";
 
-const PROTOCOL_MEMBER_OPTIONS = [
-  "Председатель Апелляционной комиссии: ФИО",
-  "Заместитель Председателя Апелляционной комиссии: ФИО",
-  "Директор ДМБУА: ФИО",
-  "Эксперт ДЗМС НПП «АТАМЕКЕН»: ФИО",
-  "Эксперт ОЮЛ «АЗК»: ФИО",
-] as const;
-
 function appendixDocumentHtml(c: ObjectionCase, document: NonNullable<ObjectionCase["documents"][number]>) {
   const safeTitle = document.name.replace(/[&<>"']/g, (character) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]!,
@@ -95,69 +87,6 @@ export function Field({ field }: { field: FormField }) {
   );
 }
 
-function ProtocolParticipantsFields({
-  rows,
-  values,
-  onAdd,
-  onRemove,
-}: {
-  rows: number[];
-  values: FormValues;
-  onAdd: () => void;
-  onRemove: (row: number) => void;
-}) {
-  return (
-    <>
-      <h3 className="form-section">Участники заседания</h3>
-      <div className="table-scroll">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Член комиссии</th>
-              <th>Выберите ФИО</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, index) => (
-              <tr key={row}>
-                <td>
-                  {index === 0
-                    ? "Председатель комиссии/Заместитель председателя"
-                    : "Член АК"}
-                </td>
-                <td>
-                  <select
-                    name={`protocolMember_${row}`}
-                    defaultValue={values[`protocolMember_${row}`] || ""}
-                    required
-                    aria-label={`Участник заседания ${index + 1}`}
-                  >
-                    <option value="">Выберите ФИО</option>
-                    {PROTOCOL_MEMBER_OPTIONS.map((member) => (
-                      <option key={member} value={member}>
-                        {member}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <Button type="button" onClick={() => onRemove(row)}>
-                    Удалить строку
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <Button type="button" onClick={onAdd}>
-        Добавить члена АК
-      </Button>
-    </>
-  );
-}
-
 function ProtocolVotesFields({
   c,
   members,
@@ -170,14 +99,17 @@ function ProtocolVotesFields({
   if (!members.length)
     return (
       <Notice>
-        Выберите участников заседания — после этого появятся поля для
-        фиксации их голосов.
+        В последнем опросе о присутствии нет участников с ответом «Да».
       </Notice>
     );
 
   return (
     <>
-      <h3 className="form-section">Голоса членов АК по каждому пункту</h3>
+      <h3 className="form-section">Участники заседания и результаты голосования</h3>
+      <p className="small muted">
+        Участники и их голоса автоматически подтянуты из актуального заседания.
+        Заполните обязательное обоснование по каждому голосу.
+      </p>
       <div className="table-scroll">
         <table className="data-table protocol-vote-entry-table">
           <thead>
@@ -194,31 +126,24 @@ function ProtocolVotesFields({
               members.map((member, index) => {
                 const voteName = `protocolVote_${point.id}_${member.id}`;
                 const reasonName = `protocolReason_${point.id}_${member.id}`;
+                const vote = normalizeVoteChoice(values[voteName]);
                 return (
                   <tr key={`${point.id}-${member.id}`}>
                     <td>{index === 0 ? point.number : ""}</td>
                     <td>{index === 0 ? point.title : ""}</td>
                     <td>{member.name}</td>
                     <td>
-                      <select
-                        name={voteName}
-                        defaultValue={values[voteName] || ""}
-                        required
-                        aria-label={`Голос ${member.name} по пункту ${point.number}`}
-                      >
-                        <option value="">Выберите голос</option>
-                        {Object.entries(OUTCOMES).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
+                      <input type="hidden" name={voteName} value={values[voteName] || ""} />
+                      {vote
+                        ? OUTCOMES[vote]
+                        : <span className="muted">Нет голоса</span>}
                     </td>
                     <td>
                       <textarea
                         name={reasonName}
                         defaultValue={values[reasonName] || ""}
                         rows={2}
+                        required
                         aria-label={`Обоснование ${member.name} по пункту ${point.number}`}
                       />
                     </td>
@@ -263,6 +188,7 @@ function MeetingCertificateFields({
         В последнем опросе о присутствии нет участников с ответом «Да».
       </Notice>
     );
+
   return (
     <>
       <h3 className="form-section">Результаты голосования участников заседания</h3>
@@ -273,10 +199,14 @@ function MeetingCertificateFields({
       </p>
       <div className="table-scroll">
         <table className="data-table meeting-certificate-table">
-          <thead><tr>
-            <th>Член АК</th><th>Электронный результат</th>
-            <th>Внести вручную</th><th>Комментарий</th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th>Член АК</th>
+              <th>Электронный результат</th>
+              <th>Внести вручную</th>
+              <th>Комментарий</th>
+            </tr>
+          </thead>
           <tbody>
             {c.members.map((member) => {
               const outcome = memberCertificateOutcome(c, member.id);
@@ -286,19 +216,26 @@ function MeetingCertificateFields({
               return (
                 <tr key={member.id}>
                   <td>{member.name}</td>
-                  <td>{outcome ? OUTCOMES[outcome] : <span className="muted">Нет голоса</span>}</td>
+                  <td>
+                    {outcome ? OUTCOMES[outcome] : <span className="muted">Нет голоса</span>}
+                  </td>
                   <td>
                     <select name={resultName} defaultValue={values[resultName] || ""}>
                       <option value="">Не изменять</option>
                       {Object.entries(OUTCOMES).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
                       ))}
                     </select>
                   </td>
                   <td>
-                    <textarea name={commentName}
+                    <textarea
+                      name={commentName}
                       defaultValue={values[commentName] ?? saved?.comment ?? ""}
-                      rows={2} aria-label={`Комментарий ${member.name}`} />
+                      rows={2}
+                      aria-label={`Комментарий ${member.name}`}
+                    />
                   </td>
                 </tr>
               );
@@ -330,10 +267,16 @@ export default function ActionModal({
 }) {
   const [values, setValues] = useState<FormValues>(() => {
     if (action === "fill-meeting-certificate") {
+      const savedPositions = new Map(
+        (c.certificate?.memberPositions || []).map((position) => [
+          position.id,
+          position,
+        ]),
+      );
       return Object.fromEntries(
         c.members.map((member) => [
           `meetingCertificateComment_${member.id}`,
-          c.certificate?.memberPositions.find((item) => item.id === member.id)?.comment || "",
+          savedPositions.get(member.id)?.comment || "",
         ]),
       );
     }
@@ -361,14 +304,6 @@ export default function ActionModal({
   const [saving, setSaving] = useState(false);
   const [requestAttachments, setRequestAttachments] = useState<File[]>([]);
   const [requestTab, setRequestTab] = useState<"form" | "print">("form");
-  const [protocolMemberRows, setProtocolMemberRows] = useState(() =>
-    action === "vote" && c.members.length
-      ? c.members.map(
-          (member, index) =>
-            Number(member.id.replace("protocol-member-", "")) || index + 1,
-        )
-      : [1],
-  );
   const definition = actionForm(action, c, date, values, role);
   const activeCommissionVoter = commissionMemberId
     ? c.members.find((member) => member.id === commissionMemberId)
@@ -389,16 +324,7 @@ export default function ActionModal({
     DEMO_USER.fullName;
   const customRequestText =
     isOtherRequest ? values.customRequestText ?? "" : undefined;
-  const protocolMembers = protocolMemberRows
-    .map((row) => ({ row, name: values[`protocolMember_${row}`] }))
-    .filter((member): member is { row: number; name: string } => Boolean(member.name))
-    .map(({ row, name }) => ({
-      id: `protocol-member-${row}`,
-      name,
-      present: true,
-      recused: false,
-      reason: "",
-    }));
+  const protocolMembers = c.members;
   const authorityRequestForConfirmation = c.requests.find(
     (request) =>
       !!request.responded &&
@@ -730,29 +656,54 @@ export default function ActionModal({
         ) : action === "fill-meeting-certificate" ? (
           <>
             <div className="request-modal-details">
-              <div><span>Автор</span><b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b></div>
-              <div><span>Печатная форма</span><b>Справка с результатами голосования АК</b></div>
+              <div>
+                <span>Автор</span>
+                <b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b>
+              </div>
+              <div>
+                <span>Печатная форма</span>
+                <b>Справка с результатами голосования АК</b>
+              </div>
             </div>
             {definition.note && <Notice>{definition.note}</Notice>}
             <div className="request-modal-tabs" role="tablist">
-              <button type="button" className={requestTab === "form" ? "active" : ""} onClick={() => setRequestTab("form")}>Электронная форма</button>
-              <button type="button" className={requestTab === "print" ? "active" : ""} onClick={() => setRequestTab("print")}>Печатная форма</button>
+              <button
+                type="button"
+                className={requestTab === "form" ? "active" : ""}
+                onClick={() => setRequestTab("form")}
+              >
+                Электронная форма
+              </button>
+              <button
+                type="button"
+                className={requestTab === "print" ? "active" : ""}
+                onClick={() => setRequestTab("print")}
+              >
+                Печатная форма
+              </button>
             </div>
-            <div hidden={requestTab !== "form"}><MeetingCertificateFields c={c} values={values} /></div>
+            <div hidden={requestTab !== "form"}>
+              <MeetingCertificateFields c={c} values={values} />
+            </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
-              <DocumentContent c={c} kind="certificate" certificatePreview={{
-                davgaArguments: c.certificate?.davgaArguments || "",
-                memberPositions: c.members.map((member) => {
-                  const manualResult = normalizeVoteChoice(values[`meetingCertificateResult_${member.id}`]);
-                  const saved = c.certificate?.memberPositions.find((item) => item.id === member.id);
-                  return {
-                    id: member.id,
-                    name: member.name,
-                    result: manualResult || memberCertificateOutcome(c, member.id),
-                    comment: values[`meetingCertificateComment_${member.id}`] ?? saved?.comment ?? "",
-                  };
-                }),
-              }} />
+              <DocumentContent
+                c={c}
+                kind="certificate"
+                certificatePreview={{
+                  davgaArguments: c.certificate?.davgaArguments || "",
+                  memberPositions: c.members.map((member) => {
+                    const manualResult = normalizeVoteChoice(
+                      values[`meetingCertificateResult_${member.id}`],
+                    );
+                    return {
+                      id: member.id,
+                      name: member.name,
+                      result: manualResult || memberCertificateOutcome(c, member.id),
+                      comment: values[`meetingCertificateComment_${member.id}`] || "",
+                    };
+                  }),
+                }}
+              />
             </div>
           </>
         ) : action === "vote" ? (
@@ -788,21 +739,6 @@ export default function ActionModal({
               {definition.fields.map((field) => (
                 <Field key={field.name} field={field} />
               ))}
-              <ProtocolParticipantsFields
-                rows={protocolMemberRows}
-                values={values}
-                onAdd={() =>
-                  setProtocolMemberRows((rows) => [
-                    ...rows,
-                    Math.max(0, ...rows) + 1,
-                  ])
-                }
-                onRemove={(row) =>
-                  setProtocolMemberRows((rows) =>
-                    rows.filter((item) => item !== row),
-                  )
-                }
-              />
               <ProtocolVotesFields
                 c={c}
                 members={protocolMembers}
@@ -852,16 +788,28 @@ export default function ActionModal({
               <div className="field">
                 <span>Голосующий член АК</span>
                 <strong>{activeCommissionVoter.name}</strong>
-                <input type="hidden" name="commissionMember" value={activeCommissionVoter.id} />
+                <input
+                  type="hidden"
+                  name="commissionMember"
+                  value={activeCommissionVoter.id}
+                />
               </div>
             ) : (
               <label className="field">
                 <span>Голосующий член АК <span className="required">*</span></span>
                 <select name="commissionMember" required defaultValue="">
                   <option value="">Выберите ФИО</option>
-                  {c.members.filter((member) => disputed(c).some((point) => !c.votes?.[point.id]?.votes?.[member.id])).map((member) => (
-                    <option key={member.id} value={member.id}>{member.name}</option>
-                  ))}
+                  {c.members
+                    .filter((member) =>
+                      disputed(c).some(
+                        (point) => !c.votes?.[point.id]?.votes?.[member.id],
+                      ),
+                    )
+                    .map((member) => (
+                      <option key={member.id} value={member.id}>
+                        {member.name}
+                      </option>
+                    ))}
                 </select>
               </label>
             )}
