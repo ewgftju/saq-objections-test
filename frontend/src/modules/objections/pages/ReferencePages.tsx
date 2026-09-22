@@ -238,6 +238,7 @@ export function SessionsPage({
   attendancePolls = [],
   commissionMembers = [],
   onUpdateAttendanceResponse = () => {},
+  onSelectAttendanceChair = () => {},
   role,
 }: {
   cases: ObjectionCase[];
@@ -258,6 +259,7 @@ export function SessionsPage({
     memberId: string,
     response: "yes" | "no",
   ) => void;
+  onSelectAttendanceChair: (pollId: string, memberId: string) => void;
   role: Role;
 }) {
   const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
@@ -578,6 +580,7 @@ export function SessionsPage({
                   <table className="registry-table attendance-status-table">
                     <thead>
                       <tr>
+                        <th>Выберите Председателя АК/И.О. Председателя АК</th>
                         <th>Член АК</th>
                         <th>Статус голосования</th>
                         <th>Изменено исполнителем</th>
@@ -587,10 +590,28 @@ export function SessionsPage({
                     <tbody>
                       {commissionMembers.map((member) => {
                         const response = selectedAttendancePoll.responses[member.id] || "pending";
+                        const isChair = selectedAttendancePoll.chairId === member.id;
                         const manuallyChangedBy =
                           selectedAttendancePoll.manualResponseChanges?.[member.id]?.changedBy;
                         return (
                           <tr key={member.id}>
+                            <td>
+                              {role === "work" ? (
+                                <input
+                                  type="radio"
+                                  name={`attendanceChair_${selectedAttendancePoll.id}`}
+                                  checked={isChair}
+                                  disabled={response !== "yes"}
+                                  aria-label={`Председатель АК: ${member.name}`}
+                                  onChange={() =>
+                                    onSelectAttendanceChair(
+                                      selectedAttendancePoll.id,
+                                      member.id,
+                                    )
+                                  }
+                                />
+                              ) : isChair ? "Да" : "—"}
+                            </td>
                             <td>{member.name}</td>
                             <td>
                               <span className={`badge ${response === "yes" ? "green" : response === "no" ? "gray" : "amber"}`}>
