@@ -433,24 +433,26 @@ export function DocumentContent({
       : snapshot.result?.label?.toLocaleLowerCase("ru-RU") || "—";
     const disputedIssues = snapshot.issues.filter((point) => point.disputed);
     return (
-      <article className="print-document final-response-template">
-        <div className="final-response-recipient">
-          <p>{snapshot.org}</p>
-          <p>{auditAuthorityFullName(snapshot.issuer)}</p>
-        </div>
-        <div className="final-response-body">
-          <p>Қазақстан Республикасы Қаржы министрлігінің (бұдан әрі – Министрлік) апелляциялық комиссиясының қарауына Ішкі мемлекеттік аудит комитетінен жүргізілген аудиторлық есепте көрсетілген бұзушылықтарға түскен қарсылықты қарап, келесіні хабарлайды.</p>
-          <p>Заңның 58-4-бабының 2-тармағына сәйкес, қарсылық мемлекеттік аудит объектісі даулайтын мәселелер шегінде қаралады.</p>
-          <p>Апелляциялық комиссия отырысында дауыс беру қорытындысы бойынша қарсылықты {decision} туралы шешім қабылдады.</p>
-          <p>Жауаппен келіспеген жағдайда, Сіз Қазақстан Республикасы Әкімшілік рәсімдік-процестік кодексінің 91-бабының 6-тармағына сәйкес шешімге шағым жасауға құқылысыз. Екінші мекенжайға мәлімет және жұмыс үшін жолданады.</p>
-          <p className="final-response-attachment-note">Қосымша: {Math.max(1, disputedIssues.length)} парақта.</p>
-        </div>
-        <div className="final-response-signature">
-          <span>Ішкі мемлекеттік аудит бойынша апелляция департаментінің директоры</span>
-          <b>Ш. Күреңбек тегі</b>
-        </div>
-        <p className="final-response-executor">Орын.: {snapshot.assignee === "Не назначен" ? DEMO_USER.fullName : snapshot.assignee}<br />Тел.: 70-13-08</p>
-        <section className="final-response-appendix">
+      <div className="final-response-document">
+        <article className="print-document final-response-template">
+          <div className="final-response-recipient">
+            <p>{snapshot.org}</p>
+            <p>{auditAuthorityFullName(snapshot.issuer)}</p>
+          </div>
+          <div className="final-response-body">
+            <p>Қазақстан Республикасы Қаржы министрлігінің (бұдан әрі – Министрлік) апелляциялық комиссиясының қарауына Ішкі мемлекеттік аудит комитетінен жүргізілген аудиторлық есепте көрсетілген бұзушылықтарға түскен қарсылықты қарап, келесіні хабарлайды.</p>
+            <p>Заңның 58-4-бабының 2-тармағына сәйкес, қарсылық мемлекеттік аудит объектісі даулайтын мәселелер шегінде қаралады.</p>
+            <p>Апелляциялық комиссия отырысында дауыс беру қорытындысы бойынша қарсылықты {decision} туралы шешім қабылдады.</p>
+            <p>Жауаппен келіспеген жағдайда, Сіз Қазақстан Республикасы Әкімшілік рәсімдік-процестік кодексінің 91-бабының 6-тармағына сәйкес шешімге шағым жасауға құқылысыз. Екінші мекенжайға мәлімет және жұмыс үшін жолданады.</p>
+            <p className="final-response-attachment-note">Қосымша: {Math.max(1, disputedIssues.length)} парақта.</p>
+          </div>
+          <div className="final-response-signature">
+            <span>Ішкі мемлекеттік аудит бойынша апелляция департаментінің директоры</span>
+            <b>Ш. Күреңбек тегі</b>
+          </div>
+          <p className="final-response-executor">Орын.: {snapshot.assignee === "Не назначен" ? DEMO_USER.fullName : snapshot.assignee}<br />Тел.: 70-13-08</p>
+        </article>
+        <article className="print-document final-response-template final-response-appendix">
           <h2>Қосымша</h2>
           {disputedIssues.map((point) => {
             const voteReasons = Object.values(
@@ -471,8 +473,8 @@ export function DocumentContent({
               </section>
             );
           })}
-        </section>
-      </article>
+        </article>
+      </div>
     );
   }
 
@@ -912,7 +914,7 @@ export default function DocumentModal(props: {
   const appendixTemplateCss =
     ".appendix-template{box-sizing:border-box;min-height:680px;padding:52px 54px 96px;font-family:'Times New Roman',Times,serif;overflow:hidden}.appendix-template-number{margin:0 14px 14px 0;text-align:right;font-size:16px}.appendix-template-table-wrap{max-width:100%;overflow-x:auto}.appendix-template table{width:100%;min-width:700px;table-layout:fixed;font-size:14px;line-height:1.35}.appendix-template th,.appendix-template td{box-sizing:border-box;border:1px solid #111;padding:7px 9px;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:normal}.appendix-template th{text-align:center;font-size:14px;background:white}.appendix-template th:first-child,.appendix-template td:first-child{width:5%;text-align:center;font-weight:700}.appendix-template th:nth-child(2),.appendix-template td:nth-child(2){width:23%}.appendix-template th:nth-child(3),.appendix-template td:nth-child(3){width:31%}.appendix-template th:nth-child(4),.appendix-template td:nth-child(4){width:41%}";
   const finalResponseCss =
-    ".final-response-template{box-sizing:border-box;min-height:950px;padding:56px 62px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.35}.final-response-template p{white-space:normal}.final-response-recipient{margin:0 0 46px auto;width:54%;text-align:left}.final-response-recipient p{margin:0 0 8px}.final-response-body p{text-align:justify;text-indent:30px;margin:0 0 10px}.final-response-attachment-note{margin-top:30px!important;text-indent:0!important}.final-response-signature{display:grid;grid-template-columns:1fr auto;gap:26px;align-items:end;margin:60px 0 35px}.final-response-signature span{max-width:320px}.final-response-executor{font-size:13px!important;line-height:1.25}.final-response-appendix{break-before:page;page-break-before:always;margin-top:70px;padding-top:20px}.final-response-appendix h2{font-family:'Times New Roman',Times,serif;font-size:19px;font-style:italic}.final-response-appendix-point{margin:26px 0}.final-response-point-title{font-weight:700}.final-response-point-reason,.final-response-point-decision{text-align:justify;text-indent:30px}.final-response-point-decision{margin-top:12px!important}";
+    ".final-response-template{box-sizing:border-box;min-height:950px;padding:56px 62px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.35}.final-response-template p{white-space:normal}.final-response-recipient{margin:0 0 46px auto;width:54%;text-align:left}.final-response-recipient p{margin:0 0 8px}.final-response-body p{text-align:justify;text-indent:30px;margin:0 0 10px}.final-response-attachment-note{margin-top:30px!important;text-indent:0!important}.final-response-signature{display:grid;grid-template-columns:1fr auto;gap:26px;align-items:end;margin:60px 0 35px}.final-response-signature span{max-width:320px}.final-response-executor{font-size:13px!important;line-height:1.25}.final-response-appendix{break-before:page;page-break-before:always}.final-response-appendix h2{font-family:'Times New Roman',Times,serif;font-size:19px;font-style:italic}.final-response-appendix-point{margin:26px 0}.final-response-point-title{font-weight:700}.final-response-point-reason,.final-response-point-decision{text-align:justify;text-indent:30px}.final-response-point-decision{margin-top:12px!important}";
   const certificatePointVotesCss =
     ".certificate-point-votes-table{width:100%;margin:24px 0 12px;table-layout:fixed}.certificate-point-votes-table td{text-align:center;white-space:pre-wrap}.certificate-point-votes-table td b{display:inline-block;margin-bottom:8px}";
   const css =
