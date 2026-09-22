@@ -52,9 +52,19 @@ function participantsFromPoll(poll: CommissionAttendancePoll) {
     }));
 }
 
-function syncPollParticipants(cases: ObjectionCase[], poll: CommissionAttendancePoll) {
+function syncPollParticipants(
+  cases: ObjectionCase[],
+  attendancePolls: CommissionAttendancePoll[],
+  poll: CommissionAttendancePoll,
+) {
   const participants = participantsFromPoll(poll);
   poll.caseIds.forEach((caseId) => {
+    const latestPoll = attendancePolls
+      .filter((item) => item.caseIds.includes(caseId))
+      .at(-1);
+    // A late response to an older poll must not replace the participants of
+    // the newly scheduled meeting.
+    if (latestPoll?.id !== poll.id) return;
     const target = cases.find((item) => item.id === caseId);
     if (target) target.members = participants.map((member) => ({ ...member }));
   });
@@ -70,11 +80,9 @@ export default function ObjectionsModule() {
     (member) => member.id === model.state.activeCommissionMemberId,
   ) || COMMISSION_ATTENDANCE_MEMBERS[0];
   const commissionCanOpenCase = (caseId: string) =>
-    model.state.attendancePolls.some(
-      (poll) =>
-        poll.caseIds.includes(caseId) &&
-        poll.responses[activeCommissionMember.id] === "yes",
-    );
+    model.state.attendancePolls
+      .filter((poll) => poll.caseIds.includes(caseId))
+      .at(-1)?.responses[activeCommissionMember.id] === "yes";
   const close = () => {
     setDialog(null);
     setDialogError("");
@@ -131,7 +139,11 @@ export default function ObjectionsModule() {
       responses,
       manualResponseChanges: {},
     });
-    syncPollParticipants(next.cases, next.attendancePolls.at(-1)!);
+    syncPollParticipants(
+      next.cases,
+      next.attendancePolls,
+      next.attendancePolls.at(-1)!,
+    );
     COMMISSION_ATTENDANCE_MEMBERS.forEach((member) => {
       next.notifications.push({
         id: `${pollId}-${member.id}`,
@@ -172,7 +184,7 @@ export default function ObjectionsModule() {
     const member = COMMISSION_ATTENDANCE_MEMBERS.find((item) => item.id === memberId);
     if (!poll || !member) return;
     poll.responses[memberId] = response;
-    syncPollParticipants(next.cases, poll);
+    syncPollParticipants(next.cases, next.attendancePolls, poll);
     notification.read = true;
     poll.caseIds.forEach((caseId) => {
       const target = next.cases.find((item) => item.id === caseId);
@@ -208,7 +220,7 @@ export default function ObjectionsModule() {
       changedBy: DEMO_USER.fullName,
       changedAt: next.date,
     };
-    syncPollParticipants(next.cases, poll);
+    syncPollParticipants(next.cases, next.attendancePolls, poll);
     next.notifications.forEach((notification) => {
       if (
         notification.attendancePollId === pollId &&
