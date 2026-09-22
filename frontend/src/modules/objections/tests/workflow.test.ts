@@ -624,13 +624,11 @@ test("уведомление: сквозной маршрут сохраняет
   );
   deliver(h);
   assert.equal(h.c.delivery?.received, undefined);
+  h.run("approve-final-response", "director");
+  h.run("sign-final-response", "director");
   h.run("receipt", "subject", {
     date: "2026-09-09",
     receipt: "Подтверждение вручения",
-  });
-  h.run("execute", "dvga", {
-    checked: "on",
-    note: "Пункты 1 и 2 исключены, пункт 3 оставлен на исполнении",
   });
   assert.equal(h.c.status, "completed");
   assert.match(h.c.result!.effect, /пунктам 3/);
@@ -679,6 +677,8 @@ test("отчёт: частичный результат требует засл�
   });
   voteAndSign(h);
   deliver(h);
+  h.run("approve-final-response", "director");
+  h.run("sign-final-response", "director");
   assert.equal(h.c.issues[1].remainingAmount, 2200000);
   h.run("court", "subject", {
     date: "2026-09-14",
@@ -688,7 +688,7 @@ test("отчёт: частичный результат требует засл�
   assert.equal(h.c.status, "court");
   assert.match(h.c.court!.effect, /приостановлено/);
   h.run("court-result", "work", { note: "Судебный акт учтён (демо)" });
-  assert.equal(h.c.status, "delivered");
+  assert.equal(h.c.status, "completed");
 });
 
 test("профконтроль проходит те же этапы, что и возражение на уведомление", () => {
@@ -711,10 +711,8 @@ test("профконтроль проходит те же этапы, что и 
   });
   voteAndSign(h);
   deliver(h);
-  h.run("execute", "dvga", {
-    checked: "on",
-    note: "Акт отменён в исходном деле",
-  });
+  h.run("approve-final-response", "director");
+  h.run("sign-final-response", "director");
   assert.equal(h.c.status, "completed");
   assert.equal(h.c.meeting?.number, "ПР-1");
 });
