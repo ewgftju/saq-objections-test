@@ -15,10 +15,22 @@ export function normalizeVoteChoice(value: string | undefined): Outcome | "" {
 
 export function pointOutcomeFromVotes(
   votes: Record<string, string>,
+  chairId?: string,
 ): Outcome | "" {
   const choices = Object.values(votes).map(normalizeVoteChoice);
   if (!choices.length || choices.some((choice) => !choice)) return "";
   if (choices.every((choice) => choice === choices[0])) return choices[0] || "";
+  if (chairId) {
+    const totals = choices.reduce<Record<string, number>>((result, choice) => {
+      result[choice] = (result[choice] || 0) + 1;
+      return result;
+    }, {});
+    const highest = Math.max(...Object.values(totals));
+    const leaders = Object.keys(totals).filter((choice) => totals[choice] === highest);
+    const chairChoice = normalizeVoteChoice(votes[chairId]);
+    if (leaders.length > 1 && chairChoice && leaders.includes(chairChoice))
+      return chairChoice;
+  }
   return choices.some(
     (choice) => choice === "accept" || choice === "partial",
   )
