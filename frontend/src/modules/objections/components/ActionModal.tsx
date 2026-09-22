@@ -233,6 +233,83 @@ function ProtocolVotesFields({
   );
 }
 
+function memberCertificateOutcome(c: ObjectionCase, memberId: string) {
+  const choices = disputed(c)
+    .map((point) => normalizeVoteChoice(c.votes?.[point.id]?.votes?.[memberId]))
+    .filter(Boolean);
+  if (!choices.length) return "";
+  if (choices.every((choice) => choice === choices[0])) return choices[0];
+  return choices.some((choice) => choice === "accept" || choice === "partial")
+    ? "partial"
+    : "reject";
+}
+
+function MeetingCertificateFields({
+  c,
+  values,
+}: {
+  c: ObjectionCase;
+  values: FormValues;
+}) {
+  const savedPositions = new Map(
+    (c.certificate?.memberPositions || []).map((position) => [
+      position.id,
+      position,
+    ]),
+  );
+  if (!c.members.length)
+    return (
+      <Notice tone="amber">
+        В последнем опросе о присутствии нет участников с ответом «Да».
+      </Notice>
+    );
+  return (
+    <>
+      <h3 className="form-section">Результаты голосования участников заседания</h3>
+      <p className="small muted">
+        Электронные голоса отображаются автоматически. В колонке «Внести
+        вручную» укажите результат только если член АК не может проголосовать
+        самостоятельно в системе.
+      </p>
+      <div className="table-scroll">
+        <table className="data-table meeting-certificate-table">
+          <thead><tr>
+            <th>Член АК</th><th>Электронный результат</th>
+            <th>Внести вручную</th><th>Комментарий</th>
+          </tr></thead>
+          <tbody>
+            {c.members.map((member) => {
+              const outcome = memberCertificateOutcome(c, member.id);
+              const saved = savedPositions.get(member.id);
+              const resultName = `meetingCertificateResult_${member.id}`;
+              const commentName = `meetingCertificateComment_${member.id}`;
+              return (
+                <tr key={member.id}>
+                  <td>{member.name}</td>
+                  <td>{outcome ? OUTCOMES[outcome] : <span className="muted">Нет голоса</span>}</td>
+                  <td>
+                    <select name={resultName} defaultValue={values[resultName] || ""}>
+                      <option value="">Не изменять</option>
+                      {Object.entries(OUTCOMES).map(([value, label]) => (
+                        <option key={value} value={value}>{label}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <textarea name={commentName}
+                      defaultValue={values[commentName] ?? saved?.comment ?? ""}
+                      rows={2} aria-label={`Комментарий ${member.name}`} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 export default function ActionModal({
   action,
   c,
@@ -252,6 +329,14 @@ export default function ActionModal({
   onClose: () => void;
 }) {
   const [values, setValues] = useState<FormValues>(() => {
+    if (action === "fill-meeting-certificate") {
+      return Object.fromEntries(
+        c.members.map((member) => [
+          `meetingCertificateComment_${member.id}`,
+          c.certificate?.memberPositions.find((item) => item.id === member.id)?.comment || "",
+        ]),
+      );
+    }
     if (action !== "vote") return {};
     return Object.fromEntries([
       ...c.members.map((member, index) => [
@@ -396,6 +481,7 @@ export default function ActionModal({
         isRequest ||
         action === "fill-request-response" ||
         action === "analysis" ||
+        action === "fill-meeting-certificate" ||
         action === "position"
       }
     >
@@ -639,6 +725,34 @@ export default function ActionModal({
                   memberPositions: [],
                 }}
               />
+            </div>
+          </>
+        ) : action === "fill-meeting-certificate" ? (
+          <>
+            <div className="request-modal-details">
+              <div><span>Автор</span><b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b></div>
+              <div><span>Печатная форма</span><b>Справка с результатами голосования АК</b></div>
+            </div>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            <div className="request-modal-tabs" role="tablist">
+              <button type="button" className={requestTab === "form" ? "active" : ""} onClick={() => setRequestTab("form")}>Электронная форма</button>
+              <button type="button" className={requestTab === "print" ? "active" : ""} onClick={() => setRequestTab("print")}>Печатная форма</button>
+            </div>
+            <div hidden={requestTab !== "form"}><MeetingCertificateFields c={c} values={values} /></div>
+            <div hidden={requestTab !== "print"} className="request-print-preview">
+              <DocumentContent c={c} kind="certificate" certificatePreview={{
+                davgaArguments: c.certificate?.davgaArguments || "",
+                memberPositions: c.members.map((member) => {
+                  const manualResult = normalizeVoteChoice(values[`meetingCertificateResult_${member.id}`]);
+                  const saved = c.certificate?.memberPositions.find((item) => item.id === member.id);
+                  return {
+                    id: member.id,
+                    name: member.name,
+                    result: manualResult || memberCertificateOutcome(c, member.id),
+                    comment: values[`meetingCertificateComment_${member.id}`] ?? saved?.comment ?? "",
+                  };
+                }),
+              }} />
             </div>
           </>
         ) : action === "vote" ? (
