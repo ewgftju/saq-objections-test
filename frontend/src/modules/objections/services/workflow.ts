@@ -1180,19 +1180,15 @@ export function applyAction(
         note = "Заключение по обращению вложено";
         break;
       }
-      checked(
-        form,
-        "sent",
-        "copy",
-        ...(c.type === "notice" ? ["published"] : []),
-      );
       c.delivery = {
         date,
         number: text("number", "Исходящий номер"),
         receipt: text("receipt", "Квитанция отправки"),
         channel: text("channel", "Канал"),
-        appealCourt: text("appealCourt", "Суд для обжалования"),
-        appealProcedure: text("appealProcedure", "Порядок и срок обжалования"),
+        // These requisites are no longer filled in the final-response form.
+        // Keep optional legacy values so older saved actions continue to render.
+        appealCourt: String(form.get("appealCourt") || ""),
+        appealProcedure: String(form.get("appealProcedure") || ""),
         published: c.type === "notice" ? date : null,
       };
       c.status = "delivered";
