@@ -36,6 +36,20 @@ const MEETING_STATUSES = [
   "meeting_certificate_approved",
 ] as const;
 
+const HEARING_WAITING_STATUSES = [
+  "decision_project",
+  "decision_project_approval",
+  "decision_project_signed",
+  "decision_project_eotinish",
+  "decision_project_hearing",
+] as const;
+
+const FINAL_RESPONSE_STATUSES = [
+  "decided",
+  "final_response_approval",
+  "final_response_signed",
+] as const;
+
 export default function CasesList({
   cases,
   date,
@@ -62,6 +76,8 @@ export default function CasesList({
     | "meeting"
     | "protocol-formation"
     | "protocol-signing"
+    | "hearing-waiting"
+    | "final-response"
   >("all");
   const incomingCount = cases.filter(
     (c) => c.status === "received" && c.channel === "SAQ" && c.unread,
@@ -94,7 +110,15 @@ export default function CasesList({
               c.status as (typeof MEETING_STATUSES)[number],
             )) &&
           (tab !== "protocol-formation" || c.status === "meeting") &&
-          (tab !== "protocol-signing" || c.status === "protocol")
+          (tab !== "protocol-signing" || c.status === "protocol") &&
+          (tab !== "hearing-waiting" ||
+            HEARING_WAITING_STATUSES.includes(
+              c.status as (typeof HEARING_WAITING_STATUSES)[number],
+            )) &&
+          (tab !== "final-response" ||
+            FINAL_RESPONSE_STATUSES.includes(
+              c.status as (typeof FINAL_RESPONSE_STATUSES)[number],
+            ))
         );
       }),
     [cases, query, type, tab],
@@ -195,6 +219,20 @@ export default function CasesList({
                 onClick={() => setTab("protocol-signing")}
               >
                 Ожидают подписания протокола
+              </button>
+              <button
+                className={tab === "hearing-waiting" ? "active" : ""}
+                type="button"
+                onClick={() => setTab("hearing-waiting")}
+              >
+                Ожидают заслушивание
+              </button>
+              <button
+                className={tab === "final-response" ? "active" : ""}
+                type="button"
+                onClick={() => setTab("final-response")}
+              >
+                Ожидают формирования окончательного ответа
               </button>
             </>
           )}
