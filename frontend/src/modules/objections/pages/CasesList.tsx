@@ -22,6 +22,10 @@ export default function CasesList({
 }) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
+  const [tab, setTab] = useState<"all" | "incoming">("all");
+  const incomingCount = cases.filter(
+    (c) => c.status === "received" && c.channel === "SAQ" && c.unread,
+  ).length;
   const visible = useMemo(
     () =>
       cases.filter((c) => {
@@ -30,10 +34,12 @@ export default function CasesList({
           .includes(query.toLowerCase());
         return (
           matchesQuery &&
-          (type === "all" || c.type === type)
+          (type === "all" || c.type === type) &&
+          (tab !== "incoming" ||
+            (c.status === "received" && c.channel === "SAQ"))
         );
       }),
-    [cases, query, type],
+    [cases, query, type, tab],
   );
   const stats = [
     [cases.length, "Всего обращений"],
@@ -71,9 +77,23 @@ export default function CasesList({
       </div>
       <section className="card">
         <div className="tabs">
-          <button className="active" type="button" aria-current="page">
+          <button
+            className={tab === "all" ? "active" : ""}
+            type="button"
+            onClick={() => setTab("all")}
+          >
             Все обращения
           </button>
+          {role === "director" && (
+            <button
+              className={tab === "incoming" ? "active" : ""}
+              type="button"
+              onClick={() => setTab("incoming")}
+            >
+              Поступившие
+              {incomingCount > 0 && <span className="count">{incomingCount}</span>}
+            </button>
+          )}
         </div>
         <div className="registry-filters">
           <label className="field">
