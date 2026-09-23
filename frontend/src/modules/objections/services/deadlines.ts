@@ -93,8 +93,11 @@ export function executionDeadline(c: ObjectionCase): string | null {
       "commission_members",
       "commission_voting",
       "circulated",
+      "meeting_certificate_approval",
+      "meeting_certificate_signed",
+      "meeting_certificate_approved",
     ].includes(c.status)
   )
-    return c.agendaMeetingDate ?? null;
+    return c.attendanceMeetingDate ?? c.agendaMeetingDate ?? null;
   return null;
 }
