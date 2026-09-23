@@ -15,6 +15,7 @@ import {
 } from "../../../utils/dateFormat";
 import {
   addMonths,
+  executionDeadline,
   filingDeadline,
   reviewDeadline,
 } from "../services/deadlines";
@@ -167,6 +168,7 @@ export default function CaseWorkspace({
     c.status === "documents_review" ||
     c.status === "commission_members" ||
     c.status === "commission_voting";
+  const currentExecutionDeadline = executionDeadline(c);
   return (
     <>
       <div className="back-row">
@@ -822,6 +824,12 @@ export default function CaseWorkspace({
                     : formatDate(reviewDeadline(c))}
                 </strong>
               </div>
+              {role === "work" && currentExecutionDeadline && (
+                <div className="support-row">
+                  <span>Исполнить до</span>
+                  <strong>{formatDate(currentExecutionDeadline)}</strong>
+                </div>
+              )}
               {c.extensionDays > 0 && (
                 <div className="support-row">
                   <span>Продление</span>
