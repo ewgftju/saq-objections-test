@@ -89,6 +89,11 @@ const ANALYSIS_SUBSTEPS = [
   "Подписать справку",
 ] as const;
 
+const DECISION_SUBSTEPS = [
+  "Сформировать протокол заседания",
+  "Подписать протокол заседания",
+] as const;
+
 function requestSubstep(status: CaseStatus) {
   if (["accepted", "requested", "forwarded"].includes(status)) return 0;
   if (status === "request_approval") return 1;
@@ -109,6 +114,12 @@ function analysisSubstep(status: CaseStatus) {
   if (status === "materials") return 0;
   if (status === "certificate_approval") return 1;
   if (status === "certificate_signed") return 2;
+  return null;
+}
+
+function decisionSubstep(status: CaseStatus) {
+  if (status === "meeting") return 0;
+  if (status === "protocol") return 1;
   return null;
 }
 
@@ -231,6 +242,7 @@ export default function ConsiderationProcess({
     !!c.certificate?.memberPositions.length;
   const currentRequestSubstep = requestSubstep(c.status);
   const currentAnalysisSubstep = analysisSubstep(c.status);
+  const currentDecisionSubstep = decisionSubstep(c.status);
 
   return (
     <section
@@ -279,6 +291,19 @@ export default function ConsiderationProcess({
                 <li
                   key={label}
                   aria-current={index === currentAnalysisSubstep ? "step" : undefined}
+                >
+                  <span>{index + 1}</span>
+                  {label}
+                </li>
+              ))}
+            </ol>
+          )}
+          {currentDecisionSubstep !== null && (
+            <ol className="process-substeps" aria-label="Шаги этапа решения">
+              {DECISION_SUBSTEPS.map((label, index) => (
+                <li
+                  key={label}
+                  aria-current={index === currentDecisionSubstep ? "step" : undefined}
                 >
                   <span>{index + 1}</span>
                   {label}
