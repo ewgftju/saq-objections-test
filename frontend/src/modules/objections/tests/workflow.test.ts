@@ -206,8 +206,9 @@ test("три исходных дела: разные сроки и перено�
       ...requestStepCase,
       status: "commission_voting",
       agendaMeetingDate: "2026-09-24",
+      attendanceMeetingDate: "2026-09-25",
     }),
-    "2026-09-24",
+    "2026-09-25",
   );
   assert.equal(
     reviewDuration({ ...state.cases[1], appealType: "Заявление" }),
@@ -1492,6 +1493,11 @@ test("справка формируется по новому шаблону и 
     h.c.certificate?.memberPositions[0]?.comment,
     "Комментарий председателя",
   );
+  assert.equal(h.c.status, "meeting_certificate_approval");
+  h.run("approve-meeting-certificate", "director");
+  assert.equal(h.c.status, "meeting_certificate_signed");
+  h.run("sign-meeting-certificate", "work");
+  assert.equal(h.c.status, "meeting_certificate_approved");
   h.run("members", "work", { meetingConducted: "on" });
   assert.equal(h.c.status, "meeting");
   const certificate = h.c.documents.find(
