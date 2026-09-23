@@ -202,6 +202,14 @@ test("три исходных дела: разные сроки и перено�
     "2026-09-15",
   );
   assert.equal(
+    executionDeadline({
+      ...requestStepCase,
+      status: "commission_voting",
+      agendaMeetingDate: "2026-09-24",
+    }),
+    "2026-09-24",
+  );
+  assert.equal(
     reviewDuration({ ...state.cases[1], appealType: "Заявление" }),
     15,
   );
