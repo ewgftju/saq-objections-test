@@ -194,6 +194,14 @@ test("три исходных дела: разные сроки и перено�
     null,
   );
   assert.equal(
+    executionDeadline({
+      ...requestStepCase,
+      status: "materials",
+      pauseDays: 3,
+    }),
+    "2026-09-15",
+  );
+  assert.equal(
     reviewDuration({ ...state.cases[1], appealType: "Заявление" }),
     15,
   );
@@ -1331,6 +1339,18 @@ test("справка формируется по новому шаблону и 
     davgaArguments: "Доводы ДАВГА для справки",
   });
   assert.equal(h.c.status, "certificate_approval");
+  const analysisStepsHtml = renderToStaticMarkup(
+    createElement(ConsiderationProcess, {
+      c: h.c,
+      role: "work",
+      onAction() {},
+      onHistory() {},
+    }),
+  );
+  assert.match(analysisStepsHtml, /Шаги этапа анализа обращения/);
+  assert.match(analysisStepsHtml, /Сформировать справку/);
+  assert.match(analysisStepsHtml, /Согласовать справку/);
+  assert.match(analysisStepsHtml, /Подписать справку/);
   assert.deepEqual(
     actionForm("analysis", h.c, "2026-09-10").fields.map((field) => field.name),
     ["davgaArguments"],
