@@ -1360,6 +1360,17 @@ test("справка формируется по новому шаблону и 
   assert.match(analysisStepsHtml, /Сформировать справку/);
   assert.match(analysisStepsHtml, /Согласовать справку/);
   assert.match(analysisStepsHtml, /Подписать справку/);
+  const decisionStepsHtml = renderToStaticMarkup(
+    createElement(ConsiderationProcess, {
+      c: { ...h.c, status: "meeting" },
+      role: "work",
+      onAction() {},
+      onHistory() {},
+    }),
+  );
+  assert.match(decisionStepsHtml, /Шаги этапа решения/);
+  assert.match(decisionStepsHtml, /Сформировать протокол заседания/);
+  assert.match(decisionStepsHtml, /Подписать протокол заседания/);
   assert.deepEqual(
     actionForm("analysis", h.c, "2026-09-10").fields.map((field) => field.name),
     ["davgaArguments"],
