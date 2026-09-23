@@ -118,7 +118,13 @@ export function executionDeadline(c: ObjectionCase): string | null {
     return projectReceived ? addWorkdays(projectReceived, 1) : null;
   }
   if (
-    ["decision_project_eotinish", "decision_project_hearing"].includes(c.status)
+    [
+      "decision_project",
+      "decision_project_approval",
+      "decision_project_signed",
+      "decision_project_eotinish",
+      "decision_project_hearing",
+    ].includes(c.status)
   )
     return subtractWorkdays(reviewDeadline(c), 3);
   if (
