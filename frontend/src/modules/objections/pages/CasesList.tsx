@@ -5,6 +5,13 @@ import type { ObjectionCase, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import { executionDeadline, reviewDeadline } from "../services/deadlines";
 
+const REQUEST_DIRECTION_STATUSES = [
+  "accepted",
+  "requested",
+  "request_approval",
+  "request_signed",
+] as const;
+
 export default function CasesList({
   cases,
   date,
@@ -22,7 +29,9 @@ export default function CasesList({
 }) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
-  const [tab, setTab] = useState<"all" | "incoming">("all");
+  const [tab, setTab] = useState<"all" | "incoming" | "request-direction">(
+    "all",
+  );
   const incomingCount = cases.filter(
     (c) => c.status === "received" && c.channel === "SAQ" && c.unread,
   ).length;
@@ -36,7 +45,11 @@ export default function CasesList({
           matchesQuery &&
           (type === "all" || c.type === type) &&
           (tab !== "incoming" ||
-            (c.status === "received" && c.channel === "SAQ"))
+            (c.status === "received" && c.channel === "SAQ")) &&
+          (tab !== "request-direction" ||
+            REQUEST_DIRECTION_STATUSES.includes(
+              c.status as (typeof REQUEST_DIRECTION_STATUSES)[number],
+            ))
         );
       }),
     [cases, query, type, tab],
@@ -92,6 +105,15 @@ export default function CasesList({
             >
               Поступившие
               {incomingCount > 0 && <span className="count">{incomingCount}</span>}
+            </button>
+          )}
+          {(role === "work" || role === "director") && (
+            <button
+              className={tab === "request-direction" ? "active" : ""}
+              type="button"
+              onClick={() => setTab("request-direction")}
+            >
+              Ожидают направления запроса
             </button>
           )}
         </div>
