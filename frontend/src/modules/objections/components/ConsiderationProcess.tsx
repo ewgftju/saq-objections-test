@@ -16,7 +16,7 @@ const OBJECTION_STAGES: ProcessStage[] = [
     statuses: ["received"],
   },
   {
-    label: "Формирование запроса в ДВГА/КВГА и др",
+    label: "Запрос",
     description: "Подготовка и направление запросов, получение ответов",
     statuses: [
       "accepted",
