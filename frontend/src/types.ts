@@ -25,6 +25,9 @@ export type CaseStatus =
   | "commission_members"
   | "commission_voting"
   | "circulated"
+  | "meeting_certificate_approval"
+  | "meeting_certificate_signed"
+  | "meeting_certificate_approved"
   | "hearing"
   | "hearing_ready"
   | "meeting"
@@ -318,6 +321,8 @@ export interface ObjectionCase {
   /** Новое назначение, которое ещё не открыто исполнителем рабочего органа. */
   unreadForAssignee?: boolean;
   agendaMeetingDate?: string;
+  /** Дата последнего направленного опроса о присутствии по данному обращению. */
+  attendanceMeetingDate?: string;
   certificate?: CaseCertificate | null;
   hearing?: Hearing | null;
   meeting?: Meeting | null;
@@ -392,6 +397,8 @@ export type Action =
   | "approve-certificate"
   | "sign-certificate"
   | "fill-meeting-certificate"
+  | "approve-meeting-certificate"
+  | "sign-meeting-certificate"
   | "review-commission-documents"
   | "choose-commission-members"
   | "commission-vote"
