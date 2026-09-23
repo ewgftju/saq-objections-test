@@ -540,6 +540,12 @@ small,
   border-color: var(--blue);
   color: var(--blue);
 }
+.registry-tabs {
+  flex-wrap: wrap;
+  column-gap: 24px;
+  row-gap: 0;
+  overflow-x: visible;
+}
 .count {
   font-size: 12px;
   margin-left: 6px;
