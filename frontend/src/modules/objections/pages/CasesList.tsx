@@ -12,6 +12,19 @@ const REQUEST_DIRECTION_STATUSES = [
   "request_signed",
 ] as const;
 
+const RESPONSE_WAITING_STATUSES = [
+  "request_approved",
+  "response_approval",
+  "response_signed",
+  "response_ready",
+] as const;
+
+const ANALYSIS_STATUSES = [
+  "materials",
+  "certificate_approval",
+  "certificate_signed",
+] as const;
+
 export default function CasesList({
   cases,
   date,
@@ -29,9 +42,9 @@ export default function CasesList({
 }) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
-  const [tab, setTab] = useState<"all" | "incoming" | "request-direction">(
-    "all",
-  );
+  const [tab, setTab] = useState<
+    "all" | "incoming" | "request-direction" | "response-waiting" | "analysis"
+  >("all");
   const incomingCount = cases.filter(
     (c) => c.status === "received" && c.channel === "SAQ" && c.unread,
   ).length;
@@ -49,6 +62,14 @@ export default function CasesList({
           (tab !== "request-direction" ||
             REQUEST_DIRECTION_STATUSES.includes(
               c.status as (typeof REQUEST_DIRECTION_STATUSES)[number],
+            )) &&
+          (tab !== "response-waiting" ||
+            RESPONSE_WAITING_STATUSES.includes(
+              c.status as (typeof RESPONSE_WAITING_STATUSES)[number],
+            )) &&
+          (tab !== "analysis" ||
+            ANALYSIS_STATUSES.includes(
+              c.status as (typeof ANALYSIS_STATUSES)[number],
             ))
         );
       }),
@@ -108,13 +129,29 @@ export default function CasesList({
             </button>
           )}
           {(role === "work" || role === "director") && (
-            <button
-              className={tab === "request-direction" ? "active" : ""}
-              type="button"
-              onClick={() => setTab("request-direction")}
-            >
-              Ожидают направления запроса
-            </button>
+            <>
+              <button
+                className={tab === "request-direction" ? "active" : ""}
+                type="button"
+                onClick={() => setTab("request-direction")}
+              >
+                Ожидают направления запроса
+              </button>
+              <button
+                className={tab === "response-waiting" ? "active" : ""}
+                type="button"
+                onClick={() => setTab("response-waiting")}
+              >
+                Ожидают ответ на запрос
+              </button>
+              <button
+                className={tab === "analysis" ? "active" : ""}
+                type="button"
+                onClick={() => setTab("analysis")}
+              >
+                Анализ обращения
+              </button>
+            </>
           )}
         </div>
         <div className="registry-filters">
