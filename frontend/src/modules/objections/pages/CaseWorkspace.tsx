@@ -153,6 +153,15 @@ export default function CaseWorkspace({
   onDocument: (kind: string, document?: CaseDocument) => void;
   onUpload: () => void;
 }) {
+  const agendaDetails = c.agendaDetails;
+  const decisionKindLabel =
+    agendaDetails?.decisionKind === "prescription-audit"
+      ? "Предписание на аудиторский отчет"
+      : agendaDetails?.decisionKind === "prescription-preventive"
+        ? "Предписание по профилактическому контролю"
+        : agendaDetails?.decisionKind === "quality-control"
+          ? "Контроль качества"
+          : undefined;
   const hideRequestBlocks =
     role === "commission" ||
     c.status === "documents_review" ||
@@ -225,45 +234,110 @@ export default function CaseWorkspace({
                     label="Вид обращения"
                     value={c.appealType ?? TYPES[c.type]}
                   />
-                  <Fact label="Способ подачи" value={c.channel} />
-                  <Fact label="БИН" value={c.bin} />
-                  <Fact label="Заявитель" value={c.applicant} />
                   <Fact
-                    label="Орган, чей документ обжалуется"
+                    label="Наименование объекта аудита/заявителя"
+                    value={c.org}
+                  />
+                  <Fact label="БИН/ИИН" value={c.bin} />
+                  <Fact
+                    label="Номер возражения, жалобы, заявления"
+                    value={c.appealNumber}
+                  />
+                  <Fact
+                    label="Дата возражения, жалобы, заявления"
+                    value={formatDate(c.appealDate)}
+                  />
+                  <Fact label="Местонахождение" value={c.address} />
+                  <Fact label="Представитель" value={c.applicant} />
+                  <Fact
+                    label="Орган аудита (КВГА/ДВГА)"
                     value={c.issuer}
                     wide
                   />
-                  <Fact label="Орган рассмотрения" value={c.authority} wide />
                   <Fact
-                    label="Исходный документ"
-                    value={`${c.document.name} № ${c.document.number} от ${formatDate(c.document.date)}`}
-                    wide
-                  />
-                  <Fact
-                    label={
-                      c.type === "audit"
-                        ? "Подписанный отчёт представлен"
-                        : "Документ получен"
-                    }
+                    label="Дата получения документа"
                     value={formatDate(c.document.received)}
                   />
                   <Fact
-                    label="Дата подачи / регистрации"
-                    value={`${formatDate(c.filed)} / ${formatDate(c.registered)}`}
+                    label="Портал / цифровая система, по которой поступило уведомление"
+                    value={c.channel}
+                    wide
                   />
-                  <Fact label="Ответственный" value={c.assignee} />
+                  {c.document.number && (
+                    <Fact
+                      label={`Номер: ${c.document.name}`}
+                      value={c.document.number}
+                    />
+                  )}
+                  {c.document.number && (
+                    <Fact
+                      label={`Дата: ${c.document.name}`}
+                      value={formatDate(c.document.date)}
+                    />
+                  )}
+                  {agendaDetails?.cameraControlNumber && (
+                    <Fact
+                      label="Номер результата камерального контроля"
+                      value={agendaDetails.cameraControlNumber}
+                    />
+                  )}
+                  {agendaDetails?.cameraControlDate && (
+                    <Fact
+                      label="Дата результата камерального контроля"
+                      value={formatDate(agendaDetails.cameraControlDate)}
+                    />
+                  )}
+                  {agendaDetails?.procurementNumber && (
+                    <Fact
+                      label="Номер государственной закупки"
+                      value={agendaDetails.procurementNumber}
+                    />
+                  )}
+                  {agendaDetails?.lotNumber && (
+                    <Fact label="Номер лота" value={agendaDetails.lotNumber} />
+                  )}
+                  {agendaDetails?.procurementSubject && (
+                    <Fact
+                      label="Предмет государственной закупки"
+                      value={agendaDetails.procurementSubject}
+                      wide
+                    />
+                  )}
+                  {decisionKindLabel && (
+                    <Fact
+                      label="Вид обжалуемого решения"
+                      value={decisionKindLabel}
+                    />
+                  )}
+                  {agendaDetails?.relatedDocumentNumber && (
+                    <Fact
+                      label={
+                        agendaDetails.decisionKind === "prescription-audit"
+                          ? "Номер аудиторского отчета"
+                          : "Номер профилактического контроля"
+                      }
+                      value={agendaDetails.relatedDocumentNumber}
+                    />
+                  )}
+                  {agendaDetails?.relatedDocumentDate && (
+                    <Fact
+                      label={
+                        agendaDetails.decisionKind === "prescription-audit"
+                          ? "Дата подписания аудиторского отчета"
+                          : "Дата подписания профилактического контроля"
+                      }
+                      value={formatDate(agendaDetails.relatedDocumentDate)}
+                    />
+                  )}
                   <Fact
                     label={
-                      c.type === "notice"
-                        ? "Сумма закупки"
-                        : "Оспариваемая сумма"
+                      c.appealType === "Заявление"
+                        ? "О чем заявление"
+                        : "Краткое описание"
                     }
-                    value={formatMoney(c.amount)}
+                    value={c.request}
+                    wide
                   />
-                  {c.procurement && (
-                    <Fact label="Закупка" value={c.procurement} wide />
-                  )}
-                  <Fact label="Требования заявителя" value={c.request} wide />
                 </div>
                 {c.affectedParties && <Notice>{c.affectedParties}</Notice>}
                 <h3 className="form-section">Доводы и пункты документа</h3>
