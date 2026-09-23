@@ -176,10 +176,23 @@ test("три исходных дела: разные сроки и перено�
     "2026-10-12",
   ]);
   assert.deepEqual(state.cases.slice(0, 3).map(executionDeadline), [
-    "2026-09-11",
-    "2026-09-11",
-    "2026-09-11",
+    "2026-09-07",
+    "2026-09-04",
+    "2026-09-02",
   ]);
+  const requestStepCase = state.cases[0];
+  for (const status of [
+    "accepted",
+    "requested",
+    "request_approval",
+    "request_signed",
+  ] as const) {
+    assert.equal(executionDeadline({ ...requestStepCase, status }), "2026-09-07");
+  }
+  assert.equal(
+    executionDeadline({ ...requestStepCase, status: "request_approved" }),
+    null,
+  );
   assert.equal(
     reviewDuration({ ...state.cases[1], appealType: "Заявление" }),
     15,
