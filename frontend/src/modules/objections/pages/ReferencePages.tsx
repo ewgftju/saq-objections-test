@@ -291,7 +291,7 @@ export function SessionsPage({
   const sessionCases = cases.filter(
     (c) =>
       c.meeting ||
-        ["certificate_approved", "documents_review", "commission_members", "commission_voting", "circulated", "hearing", "hearing_ready", "meeting"].includes(
+        ["certificate_approved", "documents_review", "commission_members", "commission_voting", "circulated", "meeting_certificate_approval", "meeting_certificate_signed", "meeting_certificate_approved", "hearing", "hearing_ready", "meeting"].includes(
           c.status,
         ),
   );
