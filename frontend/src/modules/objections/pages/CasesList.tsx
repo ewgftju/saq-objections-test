@@ -25,6 +25,17 @@ const ANALYSIS_STATUSES = [
   "certificate_signed",
 ] as const;
 
+const MEETING_STATUSES = [
+  "certificate_approved",
+  "documents_review",
+  "commission_members",
+  "commission_voting",
+  "circulated",
+  "meeting_certificate_approval",
+  "meeting_certificate_signed",
+  "meeting_certificate_approved",
+] as const;
+
 export default function CasesList({
   cases,
   date,
@@ -43,7 +54,14 @@ export default function CasesList({
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
   const [tab, setTab] = useState<
-    "all" | "incoming" | "request-direction" | "response-waiting" | "analysis"
+    | "all"
+    | "incoming"
+    | "request-direction"
+    | "response-waiting"
+    | "analysis"
+    | "meeting"
+    | "protocol-formation"
+    | "protocol-signing"
   >("all");
   const incomingCount = cases.filter(
     (c) => c.status === "received" && c.channel === "SAQ" && c.unread,
@@ -70,7 +88,13 @@ export default function CasesList({
           (tab !== "analysis" ||
             ANALYSIS_STATUSES.includes(
               c.status as (typeof ANALYSIS_STATUSES)[number],
-            ))
+            )) &&
+          (tab !== "meeting" ||
+            MEETING_STATUSES.includes(
+              c.status as (typeof MEETING_STATUSES)[number],
+            )) &&
+          (tab !== "protocol-formation" || c.status === "meeting") &&
+          (tab !== "protocol-signing" || c.status === "protocol")
         );
       }),
     [cases, query, type, tab],
@@ -150,6 +174,27 @@ export default function CasesList({
                 onClick={() => setTab("analysis")}
               >
                 Анализ обращения
+              </button>
+              <button
+                className={tab === "meeting" ? "active" : ""}
+                type="button"
+                onClick={() => setTab("meeting")}
+              >
+                Заседание
+              </button>
+              <button
+                className={tab === "protocol-formation" ? "active" : ""}
+                type="button"
+                onClick={() => setTab("protocol-formation")}
+              >
+                Ожидают формирование протокола
+              </button>
+              <button
+                className={tab === "protocol-signing" ? "active" : ""}
+                type="button"
+                onClick={() => setTab("protocol-signing")}
+              >
+                Ожидают подписания протокола
               </button>
             </>
           )}
