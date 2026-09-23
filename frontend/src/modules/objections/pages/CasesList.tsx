@@ -166,7 +166,7 @@ export default function CasesList({
           >
             Все обращения
           </button>
-          {role === "director" && (
+          {(role === "director" || role === "work") && (
             <button
               className={tab === "incoming" ? "active" : ""}
               type="button"
