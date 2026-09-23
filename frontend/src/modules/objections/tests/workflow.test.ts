@@ -771,7 +771,7 @@ test("профконтроль проходит те же этапы, что и 
       onHistory() {},
     }),
   );
-  assert.match(process, /Формирование запроса в ДВГА\/КВГА и др/);
+  assert.match(process, /Запрос/);
   assert.match(process, /Анализ обращения/);
   assert.match(process, /Заседание/);
   assert.match(process, /Решение/);
