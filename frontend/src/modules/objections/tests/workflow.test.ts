@@ -165,17 +165,17 @@ function deliver(h: Harness, role: Role = "work") {
 
 test("три исходных дела: разные сроки и перенос окончания месяца", () => {
   const state = initialState();
-  assert.deepEqual(state.cases.map(filingDeadline), [
+  assert.deepEqual(state.cases.slice(0, 3).map(filingDeadline), [
     "2026-09-10",
     "2026-09-16",
     "2026-11-30",
   ]);
-  assert.deepEqual(state.cases.map(reviewDeadline), [
+  assert.deepEqual(state.cases.slice(0, 3).map(reviewDeadline), [
     "2026-09-24",
     "2026-10-14",
     "2026-10-12",
   ]);
-  assert.deepEqual(state.cases.map(executionDeadline), [
+  assert.deepEqual(state.cases.slice(0, 3).map(executionDeadline), [
     "2026-09-11",
     "2026-09-11",
     "2026-09-11",
@@ -314,6 +314,38 @@ test("печатная форма запроса использует полны
 
   h.c.appealType = "Жалоба на акт о результате профилактического контроля";
   assert.match(html(), /на акт о результате профилактического контроля .* от 30\.08\.2026 №Д-01/);
+});
+
+test("исходное обращение использует реквизиты формы заполнения", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на решение КВГА/ДВГА";
+  h.c.appealNumber = "ЖАЛ-77";
+  h.c.appealDate = "2026-09-07";
+  h.c.channel = "E-Otinish";
+  h.c.request = "Краткое описание обращения";
+  h.c.agendaDetails = {
+    decisionKind: "prescription-audit",
+    relatedDocumentNumber: "АО-77",
+    relatedDocumentDate: "2026-09-01",
+  };
+  h.c.documents.push({
+    name: "Требования.pdf",
+    filename: "Требования.pdf",
+    kind: "attachment",
+    text: "Требования заявителя",
+    date: h.state.date,
+    author: "Заявитель",
+  });
+  const html = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "original" }),
+  );
+  assert.match(html, /Вид обращения:/);
+  assert.match(html, /Номер возражения, жалобы, заявления:/);
+  assert.match(html, /Портал \/ цифровая система, по которой поступило уведомление:/);
+  assert.match(html, /Вид обжалуемого решения:/);
+  assert.match(html, /Требования\.pdf/);
+  assert.doesNotMatch(html, /Орган, чей документ обжалуется:/);
+  assert.doesNotMatch(html, /<b>Адресат:<\/b>/);
 });
 
 test("ответ ДВГА доступен после согласования, даже если создан запрос в другой орган", () => {
@@ -564,6 +596,43 @@ test("запросы в ДВГА и КВГА формируются, напра�
     [...dvgaResponseHtml.matchAll(/Ожидается поступление ответа\./g)].length,
     1,
   );
+  h.c.documents.push({
+    name: "Подтверждающий документ ДВГА.pdf",
+    filename: "Подтверждающий документ ДВГА.pdf",
+    kind: "authority-response-attachment",
+    text: "Вложение к ответу ДВГА",
+    date: h.state.date,
+    author: "ДВГА",
+    requestId: h.c.requests[0].id,
+  });
+  const dvgaCabinetHtml = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c: h.c,
+      tab: "review",
+      role: "dvga",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  assert.doesNotMatch(dvgaCabinetHtml, /<h3>Процесс рассмотрения<\/h3>/);
+  assert.match(dvgaCabinetHtml, /<h4>Ответ ДВГА<\/h4>/);
+  assert.match(dvgaCabinetHtml, /Подтверждающий документ ДВГА\.pdf/);
+  const dvgaDocumentsHtml = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c: h.c,
+      tab: "documents",
+      role: "dvga",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  assert.match(dvgaDocumentsHtml, /Подтверждающий документ ДВГА\.pdf/);
   const kvgaForm = actionForm("fill-request-response", h.c, h.state.date, {}, "kvga");
   assert.equal(
     kvgaForm.fields.find(
@@ -859,7 +928,7 @@ test("совместимость сохранения, прямые ссылки
   });
   const state = repository.load();
   repository.save(state);
-  assert.equal(repository.load().cases.length, 3);
+  assert.equal(repository.load().cases.length, 6);
   const path = pathForRoute({
     page: "detail",
     caseId: state.cases[0].id,
@@ -879,7 +948,7 @@ test("совместимость сохранения, прямые ссылки
       onExport() {},
     }),
   );
-  assert.match(registry, /ВОЗ-2026-001/);
+  assert.match(registry, /ВОЗ-2026-101/);
   state.cases[0].org = '<img src=x onerror="alert(1)">';
   for (const tab of ["overview", "review", "documents", "history"] as const) {
     const html = renderToStaticMarkup(
@@ -911,7 +980,7 @@ test("сохранённый выбор участников АК перевод
     getItem: (key) => storage.get(key) || null,
     setItem: (key, value) => storage.set(key, value),
   }).load();
-  assert.equal(state.version, 8);
+  assert.equal(state.version, 9);
   assert.deepEqual(state.agendas, []);
   assert.deepEqual(state.notifications, []);
   assert.deepEqual(state.attendancePolls, []);
@@ -1154,7 +1223,7 @@ test("дело открывает процесс, а одно действие �
     /Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан/,
   );
   assert.match(requestHtml, /10\.09\.2026/);
-  assert.match(requestHtml, /ГУ «Управление образования»/);
+  assert.match(requestHtml, /КГУ «Школа-лицей № 18»/);
   const appendixDocument = h.c.documents.find(
     (document) => document.kind === "request-appendix",
   )!;
@@ -1383,7 +1452,7 @@ test("справка формируется по новому шаблону и 
   assert.match(html, /Комментарий председателя/);
   assert.doesNotMatch(html, /ФИО члены АК/);
   assert.match(html, /certificate-members-table/);
-  assert.match(html, /ГУ «Управление образования»/);
+  assert.match(html, /КГУ «Школа-лицей № 18»/);
 });
 
 test("повестка дня формируется по шаблону возражения на аудиторский отчет", () => {
@@ -1692,7 +1761,6 @@ test("протокол формируется с выбранными участ
   );
 });
 
-
 test("жалоба из E-Otinish проходит проект решения перед окончательным ответом", () => {
   const h = harness(2);
   h.c.appealType = "Жалоба на решение КВГА/ДВГА";
@@ -1728,7 +1796,6 @@ test("жалоба из E-Otinish проходит проект решения �
   assert.equal(h.c.status, "decided");
   assert.equal(nextAction(h.c)?.action, "deliver");
 });
-
 
 test("уведомления АК показывают новые опросы первыми и блокируют повторный ответ", () => {
   const html = renderToStaticMarkup(
