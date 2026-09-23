@@ -25,6 +25,16 @@ export function addWorkdays(s: string, n: number) {
   }
   return iso(d);
 }
+export function subtractWorkdays(s: string, n: number) {
+  const d = dateObject(s);
+  if (n < 0 || !Number.isInteger(n)) throw Error("Неверный срок");
+  let left = n;
+  while (left) {
+    d.setUTCDate(d.getUTCDate() - 1);
+    if (isWorkday(iso(d))) left--;
+  }
+  return iso(d);
+}
 export function workdaysBetween(a: string, b: string): number {
   if (b < a) return -workdaysBetween(b, a);
   let n = 0;
@@ -107,5 +117,15 @@ export function executionDeadline(c: ObjectionCase): string | null {
     const projectReceived = c.meeting?.projectReceived;
     return projectReceived ? addWorkdays(projectReceived, 1) : null;
   }
+  if (
+    ["decision_project_eotinish", "decision_project_hearing"].includes(c.status)
+  )
+    return subtractWorkdays(reviewDeadline(c), 3);
+  if (
+    ["decided", "final_response_approval", "final_response_signed"].includes(
+      c.status,
+    )
+  )
+    return reviewDeadline(c);
   return null;
 }
