@@ -99,5 +99,13 @@ export function executionDeadline(c: ObjectionCase): string | null {
     ].includes(c.status)
   )
     return c.attendanceMeetingDate ?? c.agendaMeetingDate ?? null;
+  if (c.status === "meeting") {
+    const meetingDate = c.attendanceMeetingDate ?? c.agendaMeetingDate ?? c.hearing?.date;
+    return meetingDate ? addWorkdays(meetingDate, 1) : null;
+  }
+  if (c.status === "protocol") {
+    const projectReceived = c.meeting?.projectReceived;
+    return projectReceived ? addWorkdays(projectReceived, 1) : null;
+  }
   return null;
 }
