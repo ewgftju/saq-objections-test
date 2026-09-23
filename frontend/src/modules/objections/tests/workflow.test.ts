@@ -1007,16 +1007,25 @@ test("совместимость сохранения, прямые ссылки
     caseId: state.cases[0].id,
     tab: "history",
   });
+  const incomingForDirector = {
+    ...state.cases[0],
+    status: "received" as const,
+    channel: "SAQ",
+    unread: true,
+  };
   const registry = renderToStaticMarkup(
     createElement(CasesList, {
-      cases: state.cases,
+      cases: [incomingForDirector],
       date: state.date,
+      role: "director",
       onOpen() {},
       onCreate() {},
       onExport() {},
     }),
   );
   assert.match(registry, /ВОЗ-2026-101/);
+  assert.match(registry, /Поступившие/);
+  assert.match(registry, /class="count">1/);
   state.cases[0].org = '<img src=x onerror="alert(1)">';
   for (const tab of ["overview", "review", "documents", "history"] as const) {
     const html = renderToStaticMarkup(
