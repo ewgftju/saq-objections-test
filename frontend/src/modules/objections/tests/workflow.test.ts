@@ -1418,6 +1418,22 @@ test("справка формируется по новому шаблону и 
     ],
     "Обоснование председателя",
   );
+  assert.throws(
+    () => h.run("members", "work", { meetingConducted: "on" }),
+    /Сначала заполните и сохраните справку/,
+  );
+  const lockedMeetingHtml = renderToStaticMarkup(
+    createElement(ConsiderationProcess, {
+      c: h.c,
+      role: "work",
+      onAction() {},
+      onHistory() {},
+    }),
+  );
+  assert.match(
+    lockedMeetingHtml,
+    /disabled=""[^>]*>Заседание по данному делу проведено<\/button>/,
+  );
   h.run("fill-meeting-certificate", "work", {
     meetingCertificateComment_chair: "Комментарий председателя",
     meetingCertificateComment_deputy: "Комментарий заместителя",
