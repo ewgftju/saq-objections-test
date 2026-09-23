@@ -84,5 +84,7 @@ export function executionDeadline(c: ObjectionCase): string | null {
     )
   )
     return addWorkdays(c.document.received, 2);
+  if (["materials", "certificate_approval", "certificate_signed"].includes(c.status))
+    return addWorkdays(addWorkdays(c.document.received, 5), c.pauseDays);
   return null;
 }
