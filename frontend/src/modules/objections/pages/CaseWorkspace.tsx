@@ -16,7 +16,6 @@ import {
 import {
   addMonths,
   executionDeadline,
-  filingDeadline,
   reviewDeadline,
 } from "../services/deadlines";
 import ConsiderationProcess from "../components/ConsiderationProcess";
@@ -808,10 +807,6 @@ export default function CaseWorkspace({
               <h3>Сроки</h3>
             </div>
             <div className="card-body">
-              <div className="support-row">
-                <span>Подача до</span>
-                <strong>{formatDate(filingDeadline(c))}</strong>
-              </div>
               <div className="support-row">
                 <span>Поступило</span>
                 <strong>{formatDate(c.registered)}</strong>
