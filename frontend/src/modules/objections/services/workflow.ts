@@ -216,6 +216,21 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       label: "Проголосовать",
       role: "commission",
     },
+    meeting_certificate_approval: {
+      action: "approve-meeting-certificate",
+      label: "Согласовать справку",
+      role: "director",
+    },
+    meeting_certificate_signed: {
+      action: "sign-meeting-certificate",
+      label: "Подписать справку",
+      role: "work",
+    },
+    meeting_certificate_approved: {
+      action: "members",
+      label: "Заседание по данному делу проведено",
+      role: "work",
+    },
     materials: {
       action: "analysis",
       label: "Сформировать справку",
@@ -788,10 +803,26 @@ export function applyAction(
           Boolean(normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id])),
         ),
       );
-      if (allVotesRecorded) c.status = "circulated";
+      if (allVotesRecorded) c.status = "meeting_certificate_approval";
       title = "Справка заполнена результатами голосования";
       note = "В справке зафиксированы голоса и комментарии участников заседания. Результаты, внесённые вручную, учитываются наравне с электронными голосами.";
       doc("Справка: результаты голосования членов АК", "certificate", note);
+      break;
+    }
+    case "approve-meeting-certificate": {
+      if (!c.certificate?.memberPositions.length)
+        throw new Error("Сначала заполните и сохраните справку результатами голосования");
+      c.status = "meeting_certificate_signed";
+      title = "Справка согласована";
+      note = "Справка по результатам голосования согласована и ожидает подписи исполнителя рабочего органа.";
+      break;
+    }
+    case "sign-meeting-certificate": {
+      if (!c.certificate?.memberPositions.length)
+        throw new Error("Справка результатами голосования не заполнена");
+      c.status = "meeting_certificate_approved";
+      title = "Справка подписана";
+      note = "Справка по результатам голосования подписана. Можно зафиксировать проведение заседания.";
       break;
     }
     case "fill-request-response": {
