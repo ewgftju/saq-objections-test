@@ -819,7 +819,7 @@ export default function CaseWorkspace({
                     : formatDate(reviewDeadline(c))}
                 </strong>
               </div>
-              {role === "work" && currentExecutionDeadline && (
+              {currentExecutionDeadline && (
                 <div className="support-row">
                   <span>Исполнить до</span>
                   <strong>{formatDate(currentExecutionDeadline)}</strong>
