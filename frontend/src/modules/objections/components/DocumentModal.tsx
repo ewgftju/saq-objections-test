@@ -134,10 +134,20 @@ export function DocumentContent({
     (kind === "source"
       ? c.document.name
       : kind === "original"
-        ? c.type === "control"
-          ? "Жалоба"
-          : "Возражение"
+        ? c.appealType || (c.type === "control" ? "Жалоба" : "Возражение")
         : "Материал обращения");
+  const agendaDetails = c.agendaDetails;
+  const decisionKindLabel =
+    agendaDetails?.decisionKind === "prescription-audit"
+      ? "Предписание на аудиторский отчет"
+      : agendaDetails?.decisionKind === "prescription-preventive"
+        ? "Предписание по профилактическому контролю"
+        : agendaDetails?.decisionKind === "quality-control"
+          ? "Контроль качества"
+          : undefined;
+  const requirementFiles = c.documents.filter(
+    (item) => item.kind === "attachment" && item.text === "Требования заявителя",
+  );
   if (kind === "request" && request && request.template === "other")
     return (
       <article className="print-document other-request-template">
@@ -627,23 +637,100 @@ export function DocumentContent({
         ДЕМОНСТРАЦИОННЫЙ ДОКУМЕНТ · ДАННЫЕ ВЫМЫШЛЕНЫ · БЕЗ ЭЦП
       </p>
       <h2>{title}</h2>
-      <p>
-        <b>Объект:</b> {c.org}
-        <br />
-        <b>БИН:</b> {c.bin}
-        <br />
-        <b>Местонахождение:</b> {c.address}
-        <br />
-        <b>Заявитель:</b> {c.applicant}
-      </p>
-      <p>
-        <b>Орган, чей документ обжалуется:</b> {auditAuthorityFullName(c.issuer)}
-        <br />
-        <b>Исходный документ:</b> {c.document.name} № {c.document.number} от{" "}
-        {formatDate(c.document.date)}
-        <br />
-        <b>Обращение:</b> {c.id}
-      </p>
+      {kind === "original" ? (
+        <>
+          <p>
+            <b>Вид обращения:</b> {c.appealType || (c.type === "control" ? "Жалоба" : "Возражение")}
+            <br />
+            <b>Наименование объекта аудита/заявителя:</b> {c.org}
+            <br />
+            <b>БИН/ИИН:</b> {c.bin}
+            <br />
+            <b>Номер возражения, жалобы, заявления:</b> {c.appealNumber || "—"}
+            <br />
+            <b>Дата возражения, жалобы, заявления:</b> {formatDate(c.appealDate)}
+            <br />
+            <b>Местонахождение:</b> {c.address}
+            <br />
+            <b>Представитель:</b> {c.applicant}
+          </p>
+          <p>
+            <b>Орган аудита (КВГА/ДВГА):</b> {c.issuer}
+            <br />
+            <b>Дата получения документа:</b> {formatDate(c.document.received)}
+            <br />
+            <b>Портал / цифровая система, по которой поступило уведомление:</b> {c.channel}
+          </p>
+          {c.document.number && (
+            <p>
+              <b>Номер: {c.document.name}:</b> {c.document.number}
+              <br />
+              <b>Дата: {c.document.name}:</b> {formatDate(c.document.date)}
+            </p>
+          )}
+          {(agendaDetails?.cameraControlNumber || agendaDetails?.cameraControlDate) && (
+            <p>
+              <b>Номер результата камерального контроля:</b> {agendaDetails?.cameraControlNumber || "—"}
+              <br />
+              <b>Дата результата камерального контроля:</b> {formatDate(agendaDetails?.cameraControlDate)}
+            </p>
+          )}
+          {(agendaDetails?.procurementNumber || agendaDetails?.lotNumber || agendaDetails?.procurementSubject) && (
+            <p>
+              <b>Номер государственной закупки:</b> {agendaDetails?.procurementNumber || "—"}
+              <br />
+              <b>Номер лота:</b> {agendaDetails?.lotNumber || "—"}
+              <br />
+              <b>Предмет государственной закупки:</b> {agendaDetails?.procurementSubject || "—"}
+            </p>
+          )}
+          {decisionKindLabel && (
+            <p>
+              <b>Вид обжалуемого решения:</b> {decisionKindLabel}
+              {agendaDetails?.relatedDocumentNumber && (
+                <>
+                  <br />
+                  <b>{agendaDetails.decisionKind === "prescription-audit" ? "Номер аудиторского отчета" : "Номер профилактического контроля"}:</b> {agendaDetails.relatedDocumentNumber}
+                </>
+              )}
+              {agendaDetails?.relatedDocumentDate && (
+                <>
+                  <br />
+                  <b>{agendaDetails.decisionKind === "prescription-audit" ? "Дата подписания аудиторского отчета" : "Дата подписания профилактического контроля"}:</b> {formatDate(agendaDetails.relatedDocumentDate)}
+                </>
+              )}
+            </p>
+          )}
+          <p>
+            <b>{c.appealType === "Заявление" ? "О чем заявление" : "Краткое описание"}:</b> {c.request}
+            <br />
+            <b>Требования заявителя:</b>{" "}
+            {requirementFiles.length
+              ? requirementFiles.map((item) => item.filename || item.name).join(", ")
+              : "—"}
+          </p>
+        </>
+      ) : (
+        <>
+          <p>
+            <b>Объект:</b> {c.org}
+            <br />
+            <b>БИН:</b> {c.bin}
+            <br />
+            <b>Местонахождение:</b> {c.address}
+            <br />
+            <b>Заявитель:</b> {c.applicant}
+          </p>
+          <p>
+            <b>Орган, чей документ обжалуется:</b> {auditAuthorityFullName(c.issuer)}
+            <br />
+            <b>Исходный документ:</b> {c.document.name} № {c.document.number} от{" "}
+            {formatDate(c.document.date)}
+            <br />
+            <b>Обращение:</b> {c.id}
+          </p>
+        </>
+      )}
       {kind === "source" && (
         <>
           <p>
@@ -659,16 +746,6 @@ export function DocumentContent({
       )}
       {kind === "original" && (
         <>
-          <p>
-            <b>Адресат:</b> {c.authority}
-            <br />
-            <b>Копия:</b> {auditAuthorityFullName(c.issuer)}
-            <br />
-            <b>Подача:</b> {formatDate(c.filed)} · {c.channel}
-          </p>
-          <p>
-            <b>Требования:</b> {c.request}
-          </p>
           {c.issues
             .filter((point) => point.disputed)
             .map((point) => (
@@ -682,9 +759,6 @@ export function DocumentContent({
                 <b>Доказательства:</b> {point.evidence}
               </p>
             ))}
-          <p>
-            <b>Подписант:</b> {c.applicant}. Подпись имитируется.
-          </p>
         </>
       )}
       {kind === "protocol" && (
