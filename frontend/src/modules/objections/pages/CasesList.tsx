@@ -158,7 +158,7 @@ export default function CasesList({
         ))}
       </div>
       <section className="card">
-        <div className="tabs">
+        <div className="tabs registry-tabs">
           <button
             className={tab === "all" ? "active" : ""}
             type="button"
