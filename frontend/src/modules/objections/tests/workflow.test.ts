@@ -1172,7 +1172,13 @@ test("дело открывает процесс, а одно действие �
       },
       onHistory() {},
     });
-  assert.match(renderToStaticMarkup(process()), /Сформировать запрос в ДВГА\/КВГА/);
+  const requestFormationHtml = renderToStaticMarkup(process());
+  assert.match(requestFormationHtml, /Сформировать запрос в ДВГА\/КВГА/);
+  assert.match(requestFormationHtml, /Шаги этапа запроса/);
+  assert.match(requestFormationHtml, /Формирование запроса/);
+  assert.match(requestFormationHtml, /Согласование запроса/);
+  assert.match(requestFormationHtml, /Подписание запроса/);
+  assert.match(requestFormationHtml, /Ожидание ответа/);
   primaryAction(process())!();
   assert.deepEqual(selected, { action: "request", role: "work" });
   assert.match(
