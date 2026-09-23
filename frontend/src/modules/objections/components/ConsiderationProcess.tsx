@@ -80,6 +80,12 @@ const REQUEST_SUBSTEPS = [
   "Ожидание ответа",
 ] as const;
 
+const ANALYSIS_SUBSTEPS = [
+  "Сформировать справку",
+  "Согласовать справку",
+  "Подписать справку",
+] as const;
+
 function requestSubstep(status: CaseStatus) {
   if (["accepted", "requested", "forwarded"].includes(status)) return 0;
   if (status === "request_approval") return 1;
@@ -93,6 +99,13 @@ function requestSubstep(status: CaseStatus) {
     ].includes(status)
   )
     return 3;
+  return null;
+}
+
+function analysisSubstep(status: CaseStatus) {
+  if (status === "materials") return 0;
+  if (status === "certificate_approval") return 1;
+  if (status === "certificate_signed") return 2;
   return null;
 }
 
@@ -209,6 +222,7 @@ export default function ConsiderationProcess({
   const meetingCompletionAvailable =
     !!c.certificate?.memberPositions.length;
   const currentRequestSubstep = requestSubstep(c.status);
+  const currentAnalysisSubstep = analysisSubstep(c.status);
 
   return (
     <section
@@ -239,11 +253,24 @@ export default function ConsiderationProcess({
             })}
           </ol>
           {currentRequestSubstep !== null && (
-            <ol className="request-substeps" aria-label="Шаги этапа запроса">
+            <ol className="process-substeps" aria-label="Шаги этапа запроса">
               {REQUEST_SUBSTEPS.map((label, index) => (
                 <li
                   key={label}
                   aria-current={index === currentRequestSubstep ? "step" : undefined}
+                >
+                  <span>{index + 1}</span>
+                  {label}
+                </li>
+              ))}
+            </ol>
+          )}
+          {currentAnalysisSubstep !== null && (
+            <ol className="process-substeps" aria-label="Шаги этапа анализа обращения">
+              {ANALYSIS_SUBSTEPS.map((label, index) => (
+                <li
+                  key={label}
+                  aria-current={index === currentAnalysisSubstep ? "step" : undefined}
                 >
                   <span>{index + 1}</span>
                   {label}
