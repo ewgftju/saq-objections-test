@@ -73,6 +73,29 @@ const OBJECTION_STAGES: ProcessStage[] = [
   },
 ];
 
+const REQUEST_SUBSTEPS = [
+  "Формирование запроса",
+  "Согласование запроса",
+  "Подписание запроса",
+  "Ожидание ответа",
+] as const;
+
+function requestSubstep(status: CaseStatus) {
+  if (["accepted", "requested", "forwarded"].includes(status)) return 0;
+  if (status === "request_approval") return 1;
+  if (status === "request_signed") return 2;
+  if (
+    [
+      "request_approved",
+      "response_approval",
+      "response_signed",
+      "response_ready",
+    ].includes(status)
+  )
+    return 3;
+  return null;
+}
+
 const TASK_HELP: Partial<Record<Action, string>> = {
   "assign-work-executor":
     "Выберите исполнителя рабочего органа. После назначения обращение будет передано ему для формирования запроса.",
@@ -185,6 +208,7 @@ export default function ConsiderationProcess({
   const awaitingAttendancePoll = c.status === "certificate_approved";
   const meetingCompletionAvailable =
     !!c.certificate?.memberPositions.length;
+  const currentRequestSubstep = requestSubstep(c.status);
 
   return (
     <section
@@ -214,6 +238,19 @@ export default function ConsiderationProcess({
               );
             })}
           </ol>
+          {currentRequestSubstep !== null && (
+            <ol className="request-substeps" aria-label="Шаги этапа запроса">
+              {REQUEST_SUBSTEPS.map((label, index) => (
+                <li
+                  key={label}
+                  aria-current={index === currentRequestSubstep ? "step" : undefined}
+                >
+                  <span>{index + 1}</span>
+                  {label}
+                </li>
+              ))}
+            </ol>
+          )}
         </>
       )}
       {next ? (
