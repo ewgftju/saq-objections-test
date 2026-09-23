@@ -28,17 +28,27 @@ const OBJECTION_STAGES: ProcessStage[] = [
       "response_approval",
       "response_signed",
       "response_ready",
+    ],
+  },
+  {
+    label: "Анализ обращения",
+    description: "Формирование, согласование и подписание справки",
+    statuses: [
       "materials",
       "certificate_approval",
       "certificate_signed",
-      "certificate_approved",
-      "documents_review",
     ],
   },
   {
     label: "Заседание",
-    description: "Голосование и проведение заседания по делу",
-    statuses: ["commission_voting", "circulated"],
+    description: "Ознакомление, голосование и проведение заседания по делу",
+    statuses: [
+      "certificate_approved",
+      "documents_review",
+      "commission_members",
+      "commission_voting",
+      "circulated",
+    ],
   },
   {
     label: "Решение",
