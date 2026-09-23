@@ -1,6 +1,6 @@
 export const STEPS = [
   ["received", "Приём"],
-  ["accepted", "Формирование запроса в ДВГА/КВГА и др"],
+  ["accepted", "Запрос"],
   ["materials", "Анализ обращения"],
   ["commission_voting", "Заседание"],
   ["meeting", "Решение"],
