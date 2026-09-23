@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button, PageHeading } from "../../../components/ui";
 import { CLOSED, STATUS, TYPES } from "../../../data/constants";
-import type { ObjectionCase, Role } from "../../../types";
+import type { CaseStatus, ObjectionCase, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import { executionDeadline, reviewDeadline } from "../services/deadlines";
 
@@ -50,6 +50,13 @@ const FINAL_RESPONSE_STATUSES = [
   "final_response_signed",
 ] as const;
 
+function countCasesByStatus(
+  cases: ObjectionCase[],
+  statuses: readonly CaseStatus[],
+) {
+  return cases.filter((c) => statuses.includes(c.status)).length;
+}
+
 export default function CasesList({
   cases,
   date,
@@ -82,6 +89,23 @@ export default function CasesList({
   const incomingCount = cases.filter(
     (c) => c.status === "received" && c.channel === "SAQ" && c.unread,
   ).length;
+  const requestDirectionCount = countCasesByStatus(
+    cases,
+    REQUEST_DIRECTION_STATUSES,
+  );
+  const responseWaitingCount = countCasesByStatus(
+    cases,
+    RESPONSE_WAITING_STATUSES,
+  );
+  const analysisCount = countCasesByStatus(cases, ANALYSIS_STATUSES);
+  const meetingCount = countCasesByStatus(cases, MEETING_STATUSES);
+  const protocolFormationCount = cases.filter((c) => c.status === "meeting").length;
+  const protocolSigningCount = cases.filter((c) => c.status === "protocol").length;
+  const hearingWaitingCount = countCasesByStatus(
+    cases,
+    HEARING_WAITING_STATUSES,
+  );
+  const finalResponseCount = countCasesByStatus(cases, FINAL_RESPONSE_STATUSES);
   const visible = useMemo(
     () =>
       cases.filter((c) => {
@@ -184,6 +208,9 @@ export default function CasesList({
                 onClick={() => setTab("request-direction")}
               >
                 Ожидают направления запроса
+                {requestDirectionCount > 0 && (
+                  <span className="count">{requestDirectionCount}</span>
+                )}
               </button>
               <button
                 className={tab === "response-waiting" ? "active" : ""}
@@ -191,6 +218,9 @@ export default function CasesList({
                 onClick={() => setTab("response-waiting")}
               >
                 Ожидают ответ на запрос
+                {responseWaitingCount > 0 && (
+                  <span className="count">{responseWaitingCount}</span>
+                )}
               </button>
               <button
                 className={tab === "analysis" ? "active" : ""}
@@ -198,6 +228,7 @@ export default function CasesList({
                 onClick={() => setTab("analysis")}
               >
                 Анализ обращения
+                {analysisCount > 0 && <span className="count">{analysisCount}</span>}
               </button>
               <button
                 className={tab === "meeting" ? "active" : ""}
@@ -205,6 +236,7 @@ export default function CasesList({
                 onClick={() => setTab("meeting")}
               >
                 Заседание
+                {meetingCount > 0 && <span className="count">{meetingCount}</span>}
               </button>
               <button
                 className={tab === "protocol-formation" ? "active" : ""}
@@ -212,6 +244,9 @@ export default function CasesList({
                 onClick={() => setTab("protocol-formation")}
               >
                 Ожидают формирование протокола
+                {protocolFormationCount > 0 && (
+                  <span className="count">{protocolFormationCount}</span>
+                )}
               </button>
               <button
                 className={tab === "protocol-signing" ? "active" : ""}
@@ -219,6 +254,9 @@ export default function CasesList({
                 onClick={() => setTab("protocol-signing")}
               >
                 Ожидают подписания протокола
+                {protocolSigningCount > 0 && (
+                  <span className="count">{protocolSigningCount}</span>
+                )}
               </button>
               <button
                 className={tab === "hearing-waiting" ? "active" : ""}
@@ -226,6 +264,9 @@ export default function CasesList({
                 onClick={() => setTab("hearing-waiting")}
               >
                 Ожидают заслушивание
+                {hearingWaitingCount > 0 && (
+                  <span className="count">{hearingWaitingCount}</span>
+                )}
               </button>
               <button
                 className={tab === "final-response" ? "active" : ""}
@@ -233,6 +274,9 @@ export default function CasesList({
                 onClick={() => setTab("final-response")}
               >
                 Ожидают формирования окончательного ответа
+                {finalResponseCount > 0 && (
+                  <span className="count">{finalResponseCount}</span>
+                )}
               </button>
             </>
           )}
