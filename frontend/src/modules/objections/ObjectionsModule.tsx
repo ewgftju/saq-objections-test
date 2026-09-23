@@ -166,6 +166,11 @@ export default function ObjectionsModule() {
       responses,
       manualResponseChanges: {},
     });
+    const meetingDate = dateTime.slice(0, 10);
+    cases.forEach((item) => {
+      const target = next.cases.find((caseItem) => caseItem.id === item.id);
+      if (target) target.attendanceMeetingDate = meetingDate;
+    });
     syncPollParticipants(
       next.cases,
       next.attendancePolls,
