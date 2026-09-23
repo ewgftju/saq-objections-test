@@ -192,12 +192,12 @@ export default function CaseWorkspace({
             {(
               [
                 ["overview", "Обращение"],
-                [
-                  "review",
-                  role === "commission"
-                    ? "Материалы и результаты"
-                    : "Процесс рассмотрения",
-                ],
+              [
+                "review",
+                role === "commission"
+                  ? "Материалы и результаты"
+                  : "Процесс рассмотрения",
+              ],
                 ["documents", "Документы"],
                 ["history", "История"],
               ] as [CaseTab, string][]
@@ -372,7 +372,7 @@ export default function CaseWorkspace({
                   role={role}
                   onAction={onAction}
                   onHistory={() => onTab("history")}
-                  hideStages={role === "commission"}
+                  hideStages={["commission", "dvga", "kvga"].includes(role)}
                 />
                 <h3 className="form-section">
                   Материалы и результаты рассмотрения
@@ -475,7 +475,7 @@ export default function CaseWorkspace({
                     </section>
                   ) : null;
                 })()}
-                {["work", "commission"].includes(role) &&
+                {["work", "commission", "dvga", "kvga"].includes(role) &&
                   [
                     {
                       title: "Ответ ДВГА",
