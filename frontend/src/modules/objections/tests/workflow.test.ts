@@ -1029,6 +1029,9 @@ test("совместимость сохранения, прямые ссылки
   assert.match(registry, /Ожидают направления запроса/);
   assert.match(registry, /Ожидают ответ на запрос/);
   assert.match(registry, /Анализ обращения/);
+  assert.match(registry, /Заседание/);
+  assert.match(registry, /Ожидают формирование протокола/);
+  assert.match(registry, /Ожидают подписания протокола/);
   state.cases[0].org = '<img src=x onerror="alert(1)">';
   for (const tab of ["overview", "review", "documents", "history"] as const) {
     const html = renderToStaticMarkup(
