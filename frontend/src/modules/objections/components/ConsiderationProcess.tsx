@@ -149,7 +149,8 @@ export default function ConsiderationProcess({
     (option) =>
       option.action !== "upload" &&
       option.action !== "vote" &&
-      option.action !== "fill-meeting-certificate",
+      option.action !== "fill-meeting-certificate" &&
+      option.action !== "supplement",
   );
   const extras = inRequestFormationStage
     ? availableExtras.filter((option) => option.action === "supplement")
