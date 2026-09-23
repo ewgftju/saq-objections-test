@@ -48,6 +48,9 @@ const OBJECTION_STAGES: ProcessStage[] = [
       "commission_members",
       "commission_voting",
       "circulated",
+      "meeting_certificate_approval",
+      "meeting_certificate_signed",
+      "meeting_certificate_approved",
     ],
   },
   {
@@ -140,6 +143,10 @@ const TASK_HELP: Partial<Record<Action, string>> = {
     "Выберите вариант решения по каждому оспариваемому пункту и сохраните результаты голосования.",
   "fill-meeting-certificate":
     "Проверьте голоса участников заседания, при необходимости внесите результат вручную и добавьте комментарии. Печатная форма справки обновляется сразу.",
+  "approve-meeting-certificate":
+    "Проверьте справку, заполненную по результатам голосования, и согласуйте её.",
+  "sign-meeting-certificate":
+    "Подпишите согласованную справку. После этого можно зафиксировать проведение заседания.",
   members:
     "Подтвердите, что заседание по данному делу проведено. После этого обращение перейдёт на этап принятия решения.",
   hearing:
@@ -205,7 +212,8 @@ export default function ConsiderationProcess({
   const taskTitle =
     next?.action === "position" ? "Зафиксировать полученный ответ" : next?.label;
   const taskOwner =
-    next?.action === "approve-certificate"
+    next?.action === "approve-certificate" ||
+    next?.action === "approve-meeting-certificate"
       ? "Заместитель директора ДАВГА"
       : next
         ? ROLES[next.role]
