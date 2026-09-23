@@ -121,6 +121,8 @@ export interface Meeting {
   date: string;
   number: string;
   audio: string;
+  /** Дата направления проекта протокола членам АК для подписания. */
+  projectReceived?: string;
   recommendations?: string;
   signed?: string;
 }
