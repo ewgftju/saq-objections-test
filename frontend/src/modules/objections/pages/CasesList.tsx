@@ -22,28 +22,18 @@ export default function CasesList({
 }) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
-  const [tab, setTab] = useState("all");
-  const incomingCount = cases.filter((c) => c.status === "received").length;
-  const newlyAssignedCount = cases.filter(
-    (c) => c.status === "accepted" && c.unreadForAssignee,
-  ).length;
   const visible = useMemo(
     () =>
       cases.filter((c) => {
         const matchesQuery = `${c.id} ${c.org} ${c.bin}`
           .toLowerCase()
           .includes(query.toLowerCase());
-        const closed = CLOSED.includes(c.status);
         return (
           matchesQuery &&
-          (type === "all" || c.type === type) &&
-          (tab === "all" ||
-            (tab === "new" && c.status === "received") ||
-            (tab === "active" && !closed && c.status !== "received") ||
-            (tab === "closed" && closed))
+          (type === "all" || c.type === type)
         );
       }),
-    [cases, query, type, tab],
+    [cases, query, type],
   );
   const stats = [
     [cases.length, "Всего обращений"],
@@ -81,29 +71,9 @@ export default function CasesList({
       </div>
       <section className="card">
         <div className="tabs">
-          {[
-            ["all", "Все обращения"],
-            ["new", "Поступившие"],
-            ["active", "В работе"],
-            ["closed", "Завершённые"],
-          ].map(([value, label]) => {
-            const count =
-              value === "new" && role === "director"
-                ? incomingCount
-                : value === "active" && role === "work"
-                  ? newlyAssignedCount
-                  : 0;
-            return (
-            <button
-              key={value}
-              className={tab === value ? "active" : ""}
-              onClick={() => setTab(value)}
-            >
-              {label}
-              {count > 0 && <span className="count">{count}</span>}
-            </button>
-            );
-          })}
+          <button className="active" type="button" aria-current="page">
+            Все обращения
+          </button>
         </div>
         <div className="registry-filters">
           <label className="field">
