@@ -546,6 +546,10 @@ small,
   row-gap: 0;
   overflow-x: visible;
 }
+.registry-tabs .count {
+  background: #d94b4b;
+  color: #fff;
+}
 .count {
   font-size: 12px;
   margin-left: 6px;
