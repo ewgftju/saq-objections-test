@@ -960,6 +960,8 @@ export function applyAction(
     }
     case "members":
       if (form.has("meetingConducted")) {
+        if (!c.certificate?.memberPositions.length)
+          throw new Error("Сначала заполните и сохраните справку");
         c.memberPosition = "Заседание по данному делу проведено.";
         c.status = "meeting";
         note = "Заседание по данному делу проведено. Обращение переведено на этап принятия решения.";
