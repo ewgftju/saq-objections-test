@@ -1142,6 +1142,7 @@ export function applyAction(
         date: protocolDate,
         number: text("number", "Номер протокола"),
         audio: "",
+        projectReceived: date,
         recommendations: recommendationText || "—",
       };
       if (recommendationText) {
