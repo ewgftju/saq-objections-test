@@ -173,6 +173,8 @@ export default function ConsiderationProcess({
       c.status,
     );
   const awaitingAttendancePoll = c.status === "certificate_approved";
+  const meetingCompletionAvailable =
+    !!c.certificate?.memberPositions.length;
 
   return (
     <section
@@ -216,7 +218,16 @@ export default function ConsiderationProcess({
           </div>
           <div className="consideration-task-action">
             {(next.action !== "commission-vote" || role === "commission") && (
-              <Button primary onClick={() => onAction(next.action, next.role)}>
+              <Button
+                primary
+                disabled={next.action === "members" && !meetingCompletionAvailable}
+                title={
+                  next.action === "members" && !meetingCompletionAvailable
+                    ? "Сначала заполните и сохраните справку"
+                    : undefined
+                }
+                onClick={() => onAction(next.action, next.role)}
+              >
                 {next.label}
               </Button>
             )}
