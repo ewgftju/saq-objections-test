@@ -219,6 +219,9 @@ test("три исходных дела: разные сроки и перено�
     "2026-09-28",
   );
   for (const status of [
+    "decision_project",
+    "decision_project_approval",
+    "decision_project_signed",
     "decision_project_eotinish",
     "decision_project_hearing",
   ] as const) {
