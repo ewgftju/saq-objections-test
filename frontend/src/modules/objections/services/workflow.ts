@@ -217,13 +217,13 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       role: "commission",
     },
     meeting_certificate_approval: {
-      action: "approve-meeting-certificate",
-      label: "Согласовать справку",
-      role: "director",
+      action: "members",
+      label: "Заседание по данному делу проведено",
+      role: "work",
     },
     meeting_certificate_signed: {
-      action: "sign-meeting-certificate",
-      label: "Подписать справку",
+      action: "members",
+      label: "Заседание по данному делу проведено",
       role: "work",
     },
     meeting_certificate_approved: {
@@ -803,7 +803,7 @@ export function applyAction(
           Boolean(normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id])),
         ),
       );
-      if (allVotesRecorded) c.status = "meeting_certificate_approval";
+      if (allVotesRecorded) c.status = "meeting_certificate_approved";
       title = "Справка заполнена результатами голосования";
       note = "В справке зафиксированы голоса и комментарии участников заседания. Результаты, внесённые вручную, учитываются наравне с электронными голосами.";
       doc("Справка: результаты голосования членов АК", "certificate", note);
