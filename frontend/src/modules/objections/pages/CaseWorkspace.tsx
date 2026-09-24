@@ -168,6 +168,12 @@ export default function CaseWorkspace({
     c.status === "commission_members" ||
     c.status === "commission_voting";
   const currentExecutionDeadline = executionDeadline(c);
+  const subjectRequest = c.requests.find(
+    (request) =>
+      request.template === "other" &&
+      request.saqRecipient === "subject" &&
+      !request.responded,
+  );
   return (
     <>
       <div className="back-row">
@@ -202,7 +208,9 @@ export default function CaseWorkspace({
                 ["documents", "Документы"],
                 ["history", "История"],
               ] as [CaseTab, string][]
-            ).map(([value, label]) => (
+            )
+              .filter(([value]) => role !== "subject" || value !== "review")
+              .map(([value, label]) => (
               <button
                 key={value}
                 className={tab === value ? "active" : ""}
@@ -218,7 +226,7 @@ export default function CaseWorkspace({
           <div className="card-body">
             {tab === "overview" && (
               <>
-                <div className="consideration-entry">
+                {role !== "subject" && <div className="consideration-entry">
                   <div>
                     <strong>Рассмотрение обращения</strong>
                     <p>
@@ -229,7 +237,24 @@ export default function CaseWorkspace({
                   <Button primary onClick={() => onTab("review")}>
                     Открыть процесс рассмотрения
                   </Button>
-                </div>
+                </div>}
+                {role === "subject" && (
+                  <div className="consideration-entry">
+                    <div>
+                      <strong>Запрос рабочего органа</strong>
+                      <p>
+                        Ответ на запрос направляется в кабинет рабочего органа.
+                      </p>
+                    </div>
+                    <Button
+                      primary
+                      disabled={!subjectRequest}
+                      onClick={() => onAction("subject-response", role)}
+                    >
+                      {subjectRequest ? "Направить ответ" : "Ответ направлен"}
+                    </Button>
+                  </div>
+                )}
                 <div className="facts">
                   <Fact
                     label="Вид обращения"
@@ -366,7 +391,7 @@ export default function CaseWorkspace({
                 )}
               </>
             )}
-            {tab === "review" && (
+            {tab === "review" && role !== "subject" && (
               <>
                 <ConsiderationProcess
                   c={c}
