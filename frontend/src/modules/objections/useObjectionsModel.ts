@@ -4,10 +4,107 @@ import {
   createDemoRepository,
   initialState,
 } from "../../api/objectionsRepository";
-import type { Action, DemoState, ObjectionCase, Role, Route } from "../../types";
+import type {
+  Action,
+  CaseStatus,
+  DemoState,
+  ObjectionCase,
+  Role,
+  Route,
+} from "../../types";
 import { agendaDocumentHtml } from "./components/AgendaModal";
 import { applyAction } from "./services/workflow";
 import { pathForRoute, routeFromPath } from "./routing";
+
+const COMPLETED_MEETING_STATUSES: CaseStatus[] = [
+  "hearing",
+  "hearing_ready",
+  "meeting",
+  "protocol",
+  "decision_project",
+  "decision_project_approval",
+  "decision_project_signed",
+  "decision_project_eotinish",
+  "decision_project_hearing",
+  "decided",
+  "final_response_approval",
+  "final_response_signed",
+  "delivered",
+  "completed",
+];
+
+function meetingDate(meeting: { dateTime: string }) {
+  return meeting.dateTime.slice(0, 10);
+}
+
+function isMeetingCompleted(caseItem: ObjectionCase) {
+  return COMPLETED_MEETING_STATUSES.includes(caseItem.status);
+}
+
+function rescheduleSource(caseItem: ObjectionCase, state: DemoState) {
+  const meetings = state.meetings || [];
+  const excluded = new Set(caseItem.excludedFromMeetingIds || []);
+  return meetings
+    .filter(
+      (meeting) =>
+        excluded.has(meeting.id) ||
+        (meeting.caseIds.includes(caseItem.id) &&
+          meetingDate(meeting) < state.date &&
+          !isMeetingCompleted(caseItem)),
+    )
+    .sort((left, right) => right.dateTime.localeCompare(left.dateTime))[0];
+}
+
+function nextMeetingForCase(state: DemoState, caseItem: ObjectionCase) {
+  const meetings = state.meetings || [];
+  const source = rescheduleSource(caseItem, state);
+  const excluded = new Set(caseItem.excludedFromMeetingIds || []);
+  const sourceDate = source ? meetingDate(source) : "";
+  const alreadyScheduled = meetings.some(
+    (meeting) =>
+      meeting.caseIds.includes(caseItem.id) &&
+      !excluded.has(meeting.id) &&
+      (sourceDate ? meetingDate(meeting) > sourceDate : true),
+  );
+  if (alreadyScheduled) return undefined;
+
+  if (!source) {
+    if (caseItem.status !== "certificate_approved") return undefined;
+    const readyEvent = [...caseItem.history]
+      .reverse()
+      .find((event) => event.title === "Справка подписана");
+    if (!readyEvent) return undefined;
+    return meetings
+      .filter(
+        (meeting) =>
+          !meeting.agendaSigned &&
+          meetingDate(meeting) > readyEvent.date &&
+          meetingDate(meeting) > state.date,
+      )
+      .sort((left, right) => left.dateTime.localeCompare(right.dateTime))[0];
+  }
+
+  return meetings
+    .filter(
+      (meeting) =>
+        !meeting.agendaSigned &&
+        !excluded.has(meeting.id) &&
+        meetingDate(meeting) > sourceDate &&
+        meetingDate(meeting) > state.date,
+    )
+    .sort((left, right) => left.dateTime.localeCompare(right.dateTime))[0];
+}
+
+/** Обращения, которые должны быть включены именно в это новое заседание. */
+export function casesEligibleForMeeting(state: DemoState, dateTime: string) {
+  const meeting = (state.meetings || []).find(
+    (item) => item.dateTime === dateTime && !item.agendaSigned,
+  );
+  if (!meeting) return [];
+  return state.cases.filter(
+    (caseItem) => nextMeetingForCase(state, caseItem)?.id === meeting.id,
+  );
+}
 
 function synchronizeUpcomingMeetingCases(state: DemoState) {
   if (!state.meetings?.length) return state;
@@ -15,35 +112,23 @@ function synchronizeUpcomingMeetingCases(state: DemoState) {
   const changedMeetings = new Set<string>();
 
   next.cases.forEach((caseItem: ObjectionCase) => {
-    if (caseItem.status !== "certificate_approved") return;
-    if (next.meetings!.some((meeting) => meeting.caseIds.includes(caseItem.id)))
-      return;
-
-    const readyEvent = [...caseItem.history]
-      .reverse()
-      .find((event) => event.title === "Справка подписана");
-    const readyDate = readyEvent?.date;
-    if (!readyDate) return;
-
-    const meeting = [...next.meetings!]
-      .filter(
-        (item) =>
-          !item.agendaSigned &&
-          item.dateTime.slice(0, 10) > readyDate &&
-          item.dateTime.slice(0, 10) > next.date,
-      )
-      .sort((left, right) => left.dateTime.localeCompare(right.dateTime))[0];
+    const meeting = nextMeetingForCase(next, caseItem);
     if (!meeting) return;
 
     meeting.caseIds.push(caseItem.id);
     const poll = next.attendancePolls.find((item) => item.id === meeting.pollId);
     if (poll && !poll.caseIds.includes(caseItem.id)) poll.caseIds.push(caseItem.id);
     caseItem.attendanceMeetingDate = meeting.dateTime.slice(0, 10);
+    const source = rescheduleSource(caseItem, next);
     caseItem.history.push({
       date: next.date,
       actor: "Система",
-      title: "Обращение добавлено в ближайшее заседание",
-      text: "Заседание №" + meeting.number + ": " + meeting.dateTime + ".",
+      title: source
+        ? "Обращение перенесено в следующее заседание"
+        : "Обращение добавлено в ближайшее заседание",
+      text:
+        (source ? "После заседания №" + source.number + ". " : "") +
+        "Заседание №" + meeting.number + ": " + meeting.dateTime + ".",
     });
     changedMeetings.add(meeting.id);
   });
