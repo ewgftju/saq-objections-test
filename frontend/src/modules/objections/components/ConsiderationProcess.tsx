@@ -406,7 +406,7 @@ export default function ConsiderationProcess({
           </p>
         </Notice>
       ) : materialsAvailableForCommission ? (
-        <Notice tone="blue">
+        <Notice>
           <strong>Материалы доступны членам АК</strong>
           <p>
             Доступ к карточке обращения открыт членам комиссии, которые подтвердили присутствие на заседании.
