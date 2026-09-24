@@ -100,6 +100,10 @@ const REQUEST_RECIPIENT_OPTIONS = [
   ["ДВГА по области Абай", "ДВГА по области Абай"],
 ] as const satisfies FormField["options"];
 
+const SAQ_RECIPIENT_OPTIONS = [
+  ["subject", "Кабинет Объекта"],
+] as const satisfies FormField["options"];
+
 const WORK_EXECUTOR_OPTIONS = [
   ["", "Выберите исполнителя"],
   ["Исполнитель рабочего органа", "Исполнитель рабочего органа"],
@@ -206,6 +210,7 @@ export function actionForm(
       title = "Сформировать запрос в другой орган";
       fields.push(
         input("recipient", "Кому направить запрос"),
+        select("saqRecipient", "Получатель SAQ", SAQ_RECIPIENT_OPTIONS),
         area("customRequestText", "Текст запроса"),
       );
       note =
