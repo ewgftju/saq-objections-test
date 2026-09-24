@@ -1112,7 +1112,11 @@ export function applyAction(
         const no = Object.values(memberVotes).filter(
           (vote) => vote === "reject",
         ).length;
-        const chairId = c.members.find((member) => member.isChair)?.id;
+        // Председательствующий задаётся по ответам опроса: Вице-министр,
+        // а при его отсутствии — Директор ДАВГА. Для ранее созданных данных,
+        // в которых признак ещё не сохранён, используем первого участника.
+        const chairId =
+          c.members.find((member) => member.isChair)?.id || c.members[0]?.id;
         const outcome = pointOutcomeFromVotes(memberVotes, chairId);
         if (!outcome) throw new Error("Не удалось определить результат голосования");
         c.votes[point.id] = {
