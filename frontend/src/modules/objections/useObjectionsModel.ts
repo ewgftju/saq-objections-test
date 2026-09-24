@@ -4,9 +4,63 @@ import {
   createDemoRepository,
   initialState,
 } from "../../api/objectionsRepository";
-import type { Action, DemoState, Role, Route } from "../../types";
+import type { Action, DemoState, ObjectionCase, Role, Route } from "../../types";
+import { agendaDocumentHtml } from "./components/AgendaModal";
 import { applyAction } from "./services/workflow";
 import { pathForRoute, routeFromPath } from "./routing";
+
+function synchronizeUpcomingMeetingCases(state: DemoState) {
+  if (!state.meetings?.length) return state;
+  const next = structuredClone(state);
+  const changedMeetings = new Set<string>();
+
+  next.cases.forEach((caseItem: ObjectionCase) => {
+    if (caseItem.status !== "certificate_approved") return;
+    if (next.meetings!.some((meeting) => meeting.caseIds.includes(caseItem.id)))
+      return;
+
+    const readyEvent = [...caseItem.history]
+      .reverse()
+      .find((event) => event.title === "Справка подписана");
+    const readyDate = readyEvent?.date;
+    if (!readyDate) return;
+
+    const meeting = [...next.meetings!]
+      .filter(
+        (item) =>
+          !item.agendaSigned &&
+          item.dateTime.slice(0, 10) > readyDate &&
+          item.dateTime.slice(0, 10) > next.date,
+      )
+      .sort((left, right) => left.dateTime.localeCompare(right.dateTime))[0];
+    if (!meeting) return;
+
+    meeting.caseIds.push(caseItem.id);
+    const poll = next.attendancePolls.find((item) => item.id === meeting.pollId);
+    if (poll && !poll.caseIds.includes(caseItem.id)) poll.caseIds.push(caseItem.id);
+    caseItem.attendanceMeetingDate = meeting.dateTime.slice(0, 10);
+    caseItem.history.push({
+      date: next.date,
+      actor: "Система",
+      title: "Обращение добавлено в ближайшее заседание",
+      text: "Заседание №" + meeting.number + ": " + meeting.dateTime + ".",
+    });
+    changedMeetings.add(meeting.id);
+  });
+
+  changedMeetings.forEach((meetingId) => {
+    const meeting = next.meetings!.find((item) => item.id === meetingId)!;
+    const meetingCases = meeting.caseIds
+      .map((caseId) => next.cases.find((item) => item.id === caseId))
+      .filter((item): item is ObjectionCase => Boolean(item));
+    meeting.agendaHtml = agendaDocumentHtml(
+      meetingCases,
+      meeting.dateTime.slice(0, 10),
+    );
+  });
+
+  return changedMeetings.size ? next : state;
+}
 
 export function useObjectionsModel() {
   const [error, setError] = useState("");
@@ -48,8 +102,9 @@ export function useObjectionsModel() {
     setRoute(next);
   }
   function commit(next: DemoState, message: string) {
-    createDemoRepository(localStorage).save(next);
-    setState(next);
+    const synchronized = synchronizeUpcomingMeetingCases(next);
+    createDemoRepository(localStorage).save(synchronized);
+    setState(synchronized);
     setError("");
     setToast(message);
   }
