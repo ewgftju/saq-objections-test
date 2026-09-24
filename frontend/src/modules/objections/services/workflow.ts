@@ -211,6 +211,11 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       label: "Подписать справку",
       role: "work",
     },
+    documents_review: {
+      action: "review-commission-documents",
+      label: "Ознакомиться с документами",
+      role: "commission",
+    },
     commission_voting: {
       action: "commission-vote",
       label: "Проголосовать",
@@ -649,7 +654,7 @@ export function applyAction(
         throw new Error("Справка по доводам не сформирована");
       c.status = "certificate_approved";
       title = "Справка подписана";
-      note = "Справка подписана. Доступ к документам обращения откроется членам АК после направления опроса о присутствии.";
+      note = "Справка подписана. Опрос о присутствии направляется автоматически при создании заседания.";
       break;
     }
     case "review-commission-documents": {
