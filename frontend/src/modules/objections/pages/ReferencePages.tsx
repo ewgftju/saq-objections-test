@@ -1,4 +1,5 @@
 import { Button, Notice, PageHeading } from "../../../components/ui";
+import { agendaItemText } from "../components/AgendaModal";
 import { useState } from "react";
 import { STATUS } from "../../../data/constants";
 import { STEPS } from "../../../data/workflowDefinitions";
@@ -450,9 +451,7 @@ export function SessionsPage({
             <ol className="agenda-order-list">
               {meetingCases.map((caseItem, index) => (
                 <li key={caseItem.id}>
-                  <span>
-                    <strong>{caseItem.id}</strong> — {caseItem.org}
-                  </span>
+                  <span>{agendaItemText(caseItem)}</span>
                   {role === "director" && !selectedMeeting.agendaSigned && (
                     <span className="agenda-registry-actions">
                       <Button
