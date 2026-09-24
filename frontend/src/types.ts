@@ -211,6 +211,19 @@ export interface CaseCertificate {
   memberPositions: CertificateMemberPosition[];
 }
 
+export interface CommissionMeeting {
+  id: string;
+  number: number;
+  dateTime: string;
+  /** Обращения, включённые в данное заседание; порядок используется в повестке дня. */
+  caseIds: string[];
+  pollId: string;
+  agendaHtml: string;
+  agendaSigned?: boolean;
+  agendaSignedAt?: string;
+  created: string;
+}
+
 export interface AgendaRegistryEntry {
   id: string;
   number: number;
@@ -246,9 +259,11 @@ export interface CaseNotification {
   text: string;
   date: string;
   read: boolean;
-  kind?: "attendance-poll";
+  kind?: "attendance-poll" | "agenda-sign" | "agenda-signed";
   attendancePollId?: string;
   commissionMemberId?: string;
+  meetingId?: string;
+  recipientRole?: Role;
 }
 
 export interface CommissionAttendanceMember {
@@ -375,6 +390,7 @@ export interface DemoState {
   date: string;
   cases: ObjectionCase[];
   agendas: AgendaRegistryEntry[];
+  meetings?: CommissionMeeting[];
   notifications: CaseNotification[];
   recommendations: CaseRecommendation[];
   attendancePolls: CommissionAttendancePoll[];
