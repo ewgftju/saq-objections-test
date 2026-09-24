@@ -53,7 +53,7 @@ export function createDemoRepository(
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
         cases: value.cases.map((c) => {
           const migrated =
-            c.status === "commission_members" || c.status === "documents_review"
+            c.status === "commission_members"
               ? { ...c, status: "commission_voting" as const }
               : c;
           const normalized =
