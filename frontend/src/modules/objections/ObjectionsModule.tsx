@@ -9,6 +9,7 @@ import type {
   Action,
   CaseDocument,
   CommissionAttendancePoll,
+  CommissionMeeting,
   ObjectionCase,
 } from "../../types";
 import { caseCsv, downloadFile } from "../../utils/download";
@@ -39,6 +40,7 @@ type DialogState =
   | { type: "agenda-results"; agendaId: string }
   | { type: "attendance"; cases: ObjectionCase[] }
   | { type: "attendance-answer"; notificationId: string }
+  | { type: "meeting" }
   | { type: "new" | "clock" | "reset" | "upload" }
   | null;
 
@@ -53,6 +55,18 @@ function participantsFromPoll(poll: CommissionAttendancePoll) {
       recused: false,
       reason: "",
     }));
+}
+
+function applyDefaultAttendanceChair(poll: CommissionAttendancePoll) {
+  const viceMinisterId = "kenbeil-dm";
+  const davgaDirectorId = "kurenbek-shb";
+  if (poll.responses[viceMinisterId] === "yes") {
+    poll.chairId = viceMinisterId;
+  } else if (poll.responses[davgaDirectorId] === "yes") {
+    poll.chairId = davgaDirectorId;
+  } else {
+    delete poll.chairId;
+  }
 }
 
 function recalculateVotesForChair(c: ObjectionCase) {
@@ -222,6 +236,7 @@ export default function ObjectionsModule() {
       return;
     }
     poll.responses[memberId] = response;
+    applyDefaultAttendanceChair(poll);
     syncPollParticipants(next.cases, next.attendancePolls, poll);
     notification.read = true;
     poll.caseIds.forEach((caseId) => {
@@ -253,7 +268,7 @@ export default function ObjectionsModule() {
     const poll = next.attendancePolls.find((item) => item.id === pollId);
     if (!poll || !member) return;
     poll.responses[memberId] = response;
-    if (response !== "yes" && poll.chairId === memberId) delete poll.chairId;
+    applyDefaultAttendanceChair(poll);
     poll.manualResponseChanges ??= {};
     poll.manualResponseChanges[memberId] = {
       changedBy: DEMO_USER.fullName,
@@ -294,6 +309,195 @@ export default function ObjectionsModule() {
       `${member.name} отмечен как Председатель АК/И.О. Председателя АК.`,
     );
   };
+  const meetingNotificationDate = (dateTime: string) => {
+    const localDate = new Date(dateTime);
+    localDate.setDate(localDate.getDate() - 1);
+    return localDate.toISOString().slice(0, 10);
+  };
+
+  const createMeeting = (dateTime: string) => {
+    const next = structuredClone(model.state);
+    const meetingDate = dateTime.slice(0, 10);
+    const readyCases = next.cases.filter((item) => {
+      if (item.status !== "certificate_approved") return false;
+      const readyEvent = [...item.history]
+        .reverse()
+        .find((event) => event.title === "Справка подписана");
+      return readyEvent?.date !== meetingDate;
+    });
+    if (!readyCases.length) {
+      setDialogError(
+        "Нет обращений, готовых к рассмотрению АК до даты заседания.",
+      );
+      return;
+    }
+    next.meetings ??= [];
+    const number =
+      Math.max(0, ...next.meetings.map((meeting) => meeting.number)) + 1;
+    const pollId = "attendance-meeting-" + Date.now();
+    const responses = Object.fromEntries(
+      COMMISSION_ATTENDANCE_MEMBERS.map((member) => [member.id, "pending"]),
+    ) as Record<string, "pending" | "yes" | "no">;
+    next.attendancePolls.push({
+      id: pollId,
+      dateTime,
+      caseIds: readyCases.map((item) => item.id),
+      sentAt: next.date,
+      responses,
+      manualResponseChanges: {},
+    });
+    const meeting: CommissionMeeting = {
+      id: "meeting-" + Date.now(),
+      number,
+      dateTime,
+      caseIds: readyCases.map((item) => item.id),
+      pollId,
+      agendaHtml: agendaDocumentHtml(readyCases, meetingDate),
+      created: next.date,
+    };
+    next.meetings.push(meeting);
+    readyCases.forEach((item) => {
+      const target = next.cases.find((caseItem) => caseItem.id === item.id);
+      if (!target) return;
+      target.attendanceMeetingDate = meetingDate;
+      target.history.push({
+        date: next.date,
+        actor: ROLES.work,
+        title: "Обращение включено в заседание",
+        text: "Заседание №" + number + ": " + formatDateTime(dateTime) + ".",
+      });
+    });
+    COMMISSION_ATTENDANCE_MEMBERS.forEach((member) => {
+      next.notifications.push({
+        id: pollId + "-" + member.id,
+        caseId: readyCases[0].id,
+        recipient: member.name,
+        recipientRole: "commission",
+        text: "Укажите, будете ли присутствовать на заседании " + formatDateTime(dateTime) + ".",
+        date: next.date,
+        read: false,
+        kind: "attendance-poll",
+        attendancePollId: pollId,
+        commissionMemberId: member.id,
+        meetingId: meeting.id,
+      });
+    });
+    next.notifications.push({
+      id: "agenda-sign-" + meeting.id,
+      caseId: readyCases[0].id,
+      recipient: ROLES.director,
+      recipientRole: "director",
+      text: "Подпишите повестку дня заседания №" + number + " на " + formatDateTime(dateTime) + ".",
+      date: meetingNotificationDate(dateTime),
+      read: false,
+      kind: "agenda-sign",
+      meetingId: meeting.id,
+    });
+    model.commit(next, "Карточка заседания создана. Опрос направлен членам АК.");
+    close();
+  };
+
+  const excludeCaseFromMeeting = (meetingId: string, caseId: string) => {
+    const next = structuredClone(model.state);
+    const meeting = next.meetings?.find((item) => item.id === meetingId);
+    const poll = meeting
+      ? next.attendancePolls.find((item) => item.id === meeting.pollId)
+      : undefined;
+    if (!meeting || !poll || meeting.agendaSigned) return;
+    meeting.caseIds = meeting.caseIds.filter((id) => id !== caseId);
+    poll.caseIds = poll.caseIds.filter((id) => id !== caseId);
+    const selectedCases = meeting.caseIds
+      .map((id) => next.cases.find((item) => item.id === id))
+      .filter((item): item is ObjectionCase => Boolean(item));
+    meeting.agendaHtml = agendaDocumentHtml(
+      selectedCases,
+      meeting.dateTime.slice(0, 10),
+    );
+    const target = next.cases.find((item) => item.id === caseId);
+    if (target?.attendanceMeetingDate === meeting.dateTime.slice(0, 10)) {
+      delete target.attendanceMeetingDate;
+    }
+    target?.history.push({
+      date: next.date,
+      actor: ROLES.director,
+      title: "Обращение исключено из заседания",
+      text: "Заседание №" + meeting.number + ".",
+    });
+    syncPollParticipants(next.cases, next.attendancePolls, poll);
+    model.commit(next, "Обращение исключено из заседания.");
+  };
+
+  const moveMeetingCase = (
+    meetingId: string,
+    caseId: string,
+    direction: "up" | "down",
+  ) => {
+    const next = structuredClone(model.state);
+    const meeting = next.meetings?.find((item) => item.id === meetingId);
+    if (!meeting || meeting.agendaSigned) return;
+    const index = meeting.caseIds.indexOf(caseId);
+    const nextIndex = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || nextIndex < 0 || nextIndex >= meeting.caseIds.length) return;
+    [meeting.caseIds[index], meeting.caseIds[nextIndex]] = [
+      meeting.caseIds[nextIndex],
+      meeting.caseIds[index],
+    ];
+    const selectedCases = meeting.caseIds
+      .map((id) => next.cases.find((item) => item.id === id))
+      .filter((item): item is ObjectionCase => Boolean(item));
+    meeting.agendaHtml = agendaDocumentHtml(
+      selectedCases,
+      meeting.dateTime.slice(0, 10),
+    );
+    model.commit(next, "Порядок пунктов повестки дня изменён.");
+  };
+
+  const signMeetingAgenda = (meetingId: string) => {
+    const next = structuredClone(model.state);
+    const meeting = next.meetings?.find((item) => item.id === meetingId);
+    if (
+      !meeting ||
+      meeting.agendaSigned ||
+      next.date < meetingNotificationDate(meeting.dateTime)
+    ) {
+      return;
+    }
+    previewWordDocument("Повестка дня №" + meeting.number, meeting.agendaHtml);
+    meeting.agendaSigned = true;
+    meeting.agendaSignedAt = next.date;
+    const meetingCases = meeting.caseIds
+      .map((id) => next.cases.find((item) => item.id === id))
+      .filter((item): item is ObjectionCase => Boolean(item));
+    COMMISSION_ATTENDANCE_MEMBERS.forEach((member) => {
+      next.notifications.push({
+        id: "agenda-signed-" + meeting.id + "-" + member.id,
+        caseId: meeting.caseIds[0],
+        recipient: member.name,
+        recipientRole: "commission",
+        text: "Подписана повестка дня заседания №" + meeting.number + " на " + formatDateTime(meeting.dateTime) + ".",
+        date: next.date,
+        read: false,
+        kind: "agenda-signed",
+        commissionMemberId: member.id,
+        meetingId: meeting.id,
+      });
+    });
+    meetingCases.forEach((item) =>
+      item.history.push({
+        date: next.date,
+        actor: ROLES.director,
+        title: "Повестка дня подписана",
+        text: "Повестка заседания №" + meeting.number + " направлена членам АК.",
+      }),
+    );
+    next.notifications.forEach((notification) => {
+      if (notification.kind === "agenda-sign" && notification.meetingId === meeting.id) {
+        notification.read = true;
+      }
+    });
+    model.commit(next, "Повестка дня подписана и направлена в кабинеты членов АК.");
+  };
+
   const openAgendaCase = (caseId: string) => {
     const target = model.state.cases.find((item) => item.id === caseId);
     if (target) openCase(target);
@@ -691,40 +895,23 @@ export default function ObjectionsModule() {
       {model.route.page === "sessions" && (
         <SessionsPage
           cases={model.state.cases}
-          agendas={model.state.agendas}
-          onOpen={openCase}
-          onAgenda={(cases) => setDialog({ type: "agenda", cases })}
-          onOpenAgendaCase={openAgendaCase}
-          onPreviewAgenda={(agenda) =>
-            previewWordDocument(`Повестка дня №${agenda.number}`, agenda.documentHtml)
-          }
-          onDownloadAgenda={(agenda) =>
-            downloadWordDocument(
-              `Повестка-дня-${agenda.number}.doc`,
-              agenda.documentHtml,
-            )
-          }
-          onGenerateAgendaResults={(agenda) =>
-            setDialog({ type: "agenda-results", agendaId: agenda.id })
-          }
-          onPreviewAgendaResults={(agenda) =>
-            previewWordDocument(
-              `Итоги по повестке дня №${agenda.number}`,
-              agenda.resultsHtml!,
-            )
-          }
-          onDownloadAgendaResults={(agenda) =>
-            downloadWordDocument(
-              `Итоги-по-повестке-${agenda.number}.doc`,
-              agenda.resultsHtml!,
-            )
-          }
-          onAttendancePoll={(cases) => setDialog({ type: "attendance", cases })}
+          meetings={model.state.meetings ?? []}
           attendancePolls={model.state.attendancePolls}
           commissionMembers={COMMISSION_ATTENDANCE_MEMBERS}
-          onUpdateAttendanceResponse={updateAttendanceResponse}
-          onSelectAttendanceChair={selectAttendanceChair}
           role={model.role}
+          date={model.state.date}
+          onOpen={openCase}
+          onCreateMeeting={() => setDialog({ type: "meeting" })}
+          onUpdateAttendanceResponse={updateAttendanceResponse}
+          onExcludeCase={excludeCaseFromMeeting}
+          onMoveCase={moveMeetingCase}
+          onPreviewAgenda={(meeting) =>
+            previewWordDocument(
+              "Повестка дня №" + meeting.number,
+              meeting.agendaHtml,
+            )
+          }
+          onSignAgenda={signMeetingAgenda}
         />
       )}
       {model.route.page === "notifications" && (
@@ -786,6 +973,42 @@ export default function ObjectionsModule() {
           document={dialog.document}
           onClose={close}
         />
+      )}
+      {dialog?.type === "meeting" && (
+        <Modal title="Создать заседание" onClose={close}>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const dateTime = String(
+                new FormData(event.currentTarget).get("dateTime") || "",
+              );
+              if (!dateTime) {
+                setDialogError("Укажите дату и время заседания");
+                return;
+              }
+              createMeeting(dateTime);
+            }}
+          >
+            <Notice>
+              Будут включены обращения со статусом «Готово к рассмотрению АК»,
+              кроме обращений, перешедших в этот статус в день заседания.
+            </Notice>
+            <label className="field">
+              <span>Дата и время заседания <b className="required">*</b></span>
+              <input
+                name="dateTime"
+                type="datetime-local"
+                required
+                defaultValue={model.state.date + "T10:00"}
+              />
+            </label>
+            {dialogError && <p className="form-error">{dialogError}</p>}
+            <div className="dialog-actions">
+              <Button onClick={close}>Отмена</Button>
+              <Button primary type="submit">Создать заседание</Button>
+            </div>
+          </form>
+        </Modal>
       )}
       {dialog?.type === "agenda" && (
         <AgendaModal
