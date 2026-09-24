@@ -428,6 +428,7 @@ export type Action =
   | "choose-commission-members"
   | "commission-vote"
   | "fill-request-response"
+  | "subject-response"
   | "position"
   | "analysis"
   | "members"
