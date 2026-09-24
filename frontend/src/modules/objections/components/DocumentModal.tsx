@@ -69,6 +69,45 @@ function requestIntro(c: ObjectionCase, deadline: string) {
   return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан обращения ${c.org}${finish("жалобы")}`;
 }
 
+function certificateIntro(c: ObjectionCase) {
+  const details = c.agendaDetails;
+  const appealType = c.appealType ?? "";
+  const number = c.appealNumber || c.document.number || "—";
+  const date = formatDate(c.appealDate || c.filed);
+  const sourceDate = formatDate(c.document.date);
+  const sourceNumber = c.document.number || "—";
+  const authority = auditAuthorityFullName(c.issuer);
+  const applicant = `${c.org}, ИИН/БИН ${c.bin}`;
+
+  if (appealType === "Заявление")
+    return `В Министерство финансов Республики Казахстан поступило заявление № ${number} от ${date} ${applicant}: ${c.request || "—"}.`;
+
+  if (appealType === "Жалоба на акт о результате профилактического контроля")
+    return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на акт о результате профилактического контроля ${authority} от ${sourceDate} № ${sourceNumber}.`;
+
+  if (appealType === "Жалоба на действие/бездействие") {
+    if (details?.procurementNumber)
+      return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, касательно действия/бездействия ${authority} при рассмотрении обращения от ${sourceDate} № ${sourceNumber} по государственной закупке № ${details.procurementNumber}, лот № ${details.lotNumber || "—"}, предмет: ${details.procurementSubject || "—"}.`;
+    return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, касательно действия/бездействия ${authority} по аудиторскому отчёту от ${sourceDate} № ${sourceNumber}.`;
+  }
+
+  if (appealType === "Жалоба на решение КВГА/ДВГА") {
+    if (details?.decisionKind === "prescription-preventive")
+      return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на предписание ${authority} от ${sourceDate} № ${sourceNumber} по профилактическому контролю № ${details.relatedDocumentNumber || "—"} от ${formatDate(details.relatedDocumentDate)}.`;
+    if (details?.decisionKind === "quality-control" || details?.decisionKind === "inspection-act")
+      return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, по результатам контроля качества ${authority} от ${sourceDate} № ${sourceNumber}.`;
+    return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на предписание ${authority} от ${sourceDate} № ${sourceNumber} по аудиторскому отчёту № ${details?.relatedDocumentNumber || "—"} от ${formatDate(details?.relatedDocumentDate)}.`;
+  }
+
+  if (appealType === "Возражение на уведомления")
+    return `В Министерство финансов Республики Казахстан поступило возражение № ${number} от ${date} ${applicant}, к нарушению, указанному в уведомлении об устранении нарушений от ${sourceDate} № ${sourceNumber}, выявленному по результатам камерального контроля № ${details?.cameraControlNumber || "—"} от ${formatDate(details?.cameraControlDate)}.`;
+
+  if (appealType === "Возражение на аудиторский отчет")
+    return `В Министерство финансов Республики Казахстан поступило возражение № ${number} от ${date} ${applicant}, на аудиторский отчёт от ${sourceDate} № ${sourceNumber}, проведённый ${authority}. Исполнитель: ${c.assignee || DEMO_USER.fullName}.`;
+
+  return `В Министерство финансов Республики Казахстан поступило обращение № ${number} от ${date} ${applicant}.`;
+}
+
 const REQUEST_REGULATORY_NOTICE =
   "Также сообщаем, что в соответствии с пунктом 14 Положения об апелляционной комиссии по рассмотрению возражений к аудиторскому отчету или аудиторскому отчету по финансовой отчетности, уведомлению об устранении нарушений, выявленных по результатам камерального контроля уполномоченного органа по внутреннему государственному аудиту и обжалованию решений, действий (бездействия) уполномоченного органа по внутреннему государственному аудиту и (или) его должностных лиц, утвержденного приказом Первого заместителя Премьер-Министра Республики Казахстан — Министра финансов Республики Казахстан от 20 марта 2020 года № 302, ведомство уполномоченного органа, территориальное подразделение ведомства уполномоченного органа представляют ответ на запрос в Рабочий орган в срок не позднее 2 (двух) рабочих дней с даты получения такого запроса.";
 
@@ -316,11 +355,6 @@ export function DocumentContent({
     const authorityRequests = c.requests.filter((item) =>
       /ДВГА|КВГА/i.test(item.recipient),
     );
-    const appealNoun = /жалоб/i.test(snapshot.appealType || "")
-      ? "жалоба"
-      : /заявлен/i.test(snapshot.appealType || "")
-        ? "заявление"
-        : "возражение";
     const authorityText = (
       pointId: string,
       field: "finding" | "response",
@@ -349,20 +383,7 @@ export function DocumentContent({
         <h1>Справка</h1>
         <h2>по результатам изучения и анализа возражения</h2>
         <p className="certificate-template-intro">
-          В Министерство финансов Республики Казахстан поступило {appealNoun} от{" "}
-          {formatDate(snapshot.appealDate || snapshot.filed)} года №
-          {snapshot.appealNumber || snapshot.document.number} {snapshot.org}, БИН{" "}
-          {snapshot.bin} (далее – объект государственного аудита) к уведомлению{" "}
-          {auditAuthorityFullName(snapshot.issuer)} (далее – ДВГА)
-        </p>
-        <p className="certificate-template-explanation">
-          (наименование, БИН/ИИН лица, подавшего возражение, жалобу)
-        </p>
-        <p className="certificate-template-intro">
-          {auditAuthorityFullName(snapshot.issuer)} (далее – ДВГА).
-        </p>
-        <p className="certificate-template-explanation">
-          (наименование органа, чьи акты, действия (бездействие) обжалуются)
+          {certificateIntro(snapshot)}
         </p>
         <ol className="certificate-template-point-list">
           {points.map((point) => (
