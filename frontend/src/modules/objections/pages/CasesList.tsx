@@ -148,14 +148,26 @@ export default function CasesList({
     [cases, query, type, tab],
   );
   const stats = [
-    [cases.length, "Всего обращений"],
-    [cases.filter((c) => c.status === "received").length, "Поступило"],
+    [cases.length, "Всего обращений", "зарегистрировано в реестре", "blue"],
+    [
+      cases.filter((c) => c.status === "received").length,
+      "Поступило",
+      "новых обращений",
+      "green",
+    ],
     [
       cases.filter((c) => !CLOSED.includes(c.status) && c.status !== "received")
         .length,
       "На рассмотрении",
+      "обращений находится в работе",
+      "yellow",
     ],
-    [cases.filter((c) => CLOSED.includes(c.status)).length, "Завершено"],
+    [
+      cases.filter((c) => CLOSED.includes(c.status)).length,
+      "Завершено",
+      "рассмотрение завершено",
+      "violet",
+    ],
   ];
   return (
     <>
@@ -172,12 +184,11 @@ export default function CasesList({
         }
       />
       <div className="stats">
-        {stats.map(([number, label]) => (
-          <section className="stat" key={label}>
-            <div>
-              <strong className="stat-value">{number}</strong>
-              <span className="stat-label">{label}</span>
-            </div>
+        {stats.map(([number, label, description, accent]) => (
+          <section className={`stat stat-${accent}`} key={label}>
+            <strong className="stat-value">{number}</strong>
+            <span className="stat-label">{label}</span>
+            <span className="stat-description">{description}</span>
           </section>
         ))}
       </div>
@@ -196,7 +207,7 @@ export default function CasesList({
               type="button"
               onClick={() => setTab("incoming")}
             >
-              Новые
+              Поступило
               {incomingCount > 0 && <span className="count">{incomingCount}</span>}
             </button>
           )}
