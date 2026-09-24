@@ -49,7 +49,7 @@ function rescheduleSource(caseItem: ObjectionCase, state: DemoState) {
       (meeting) =>
         excluded.has(meeting.id) ||
         (meeting.caseIds.includes(caseItem.id) &&
-          meetingDate(meeting) < state.date &&
+          (meeting.completed || meetingDate(meeting) < state.date) &&
           !isMeetingCompleted(caseItem)),
     )
     .sort((left, right) => right.dateTime.localeCompare(left.dateTime))[0];
