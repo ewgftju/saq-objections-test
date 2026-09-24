@@ -68,6 +68,16 @@ function pendingOtherRequest(c: ObjectionCase) {
   );
 }
 
+function pendingOtherResponseConfirmation(c: ObjectionCase) {
+  return c.requests.find(
+    (request) =>
+      request.template === "other" &&
+      request.saqRecipient === "subject" &&
+      !!request.responded &&
+      !request.confirmed,
+  );
+}
+
 function pendingAuthorityConfirmation(c: ObjectionCase, role?: Role) {
   return authorityRequestsForRole(c, role).find(
     (request) => !!request.responseSigned && !request.confirmed,
@@ -898,11 +908,15 @@ export function applyAction(
     }
     case "position": {
       const authorityRequest = pendingAuthorityConfirmation(c);
-      const request = authorityRequest || pendingOtherRequest(c);
+      const subjectResponse = pendingOtherResponseConfirmation(c);
+      const request = authorityRequest || subjectResponse || pendingOtherRequest(c);
       if (!request) throw new Error("Нет ожидающего ответа от адресата");
       if (authorityRequest) {
         request.confirmed = date;
         note = "Ответ ДВГА/КВГА и подтверждающие документы зафиксированы инициатором.";
+      } else if (subjectResponse) {
+        request.confirmed = date;
+        note = "Ответ из кабинета Объекта и подтверждающие документы зафиксированы рабочим органом.";
       } else {
         request.responded = date;
         request.confirmed = date;
@@ -910,7 +924,8 @@ export function applyAction(
       }
       const hasPendingResponses =
         authorityRequestsForRole(c).some((item) => !item.confirmed) ||
-        pendingOtherRequest(c);
+        pendingOtherRequest(c) ||
+        pendingOtherResponseConfirmation(c);
       if (!hasPendingResponses && c.requestPauseStartedAt) {
         const pausedDays = workdaysBetween(c.requestPauseStartedAt, date);
         if (pausedDays > 0) {
@@ -921,6 +936,29 @@ export function applyAction(
       }
       c.status = authorityStatus(c) || (pendingOtherRequest(c) ? "request_approved" : "materials");
       doc("Полученные материалы по запросу", "position", note, request.id);
+      break;
+    }
+    case "subject-response": {
+      if (role !== "subject") throw new Error("Ответ может направить только Объект");
+      const request = c.requests.find(
+        (item) =>
+          item.template === "other" &&
+          item.saqRecipient === "subject" &&
+          !item.responded,
+      );
+      if (!request) throw new Error("Нет запроса, ожидающего ответа Объекта");
+      request.responded = date;
+      title = "Ответ направлен рабочему органу";
+      note = "Ответ Объекта направлен в кабинет рабочего органа.";
+      next.notifications.push({
+        id: `notification-${c.id}-${next.notifications.length + 1}`,
+        caseId: c.id,
+        recipient: ROLES.work,
+        recipientRole: "work",
+        date,
+        read: false,
+        text: `Из кабинета Объекта поступил ответ на запрос по обращению №${c.appealNumber || c.id}.`,
+      });
       break;
     }
     case "analysis": {
