@@ -544,6 +544,25 @@ export default function ObjectionsModule() {
     model.commit(next, "Повестка дня подписана и направлена в кабинеты членов АК.");
   };
 
+  const completeMeeting = (meetingId: string) => {
+    const next = structuredClone(model.state);
+    const meeting = next.meetings?.find((item) => item.id === meetingId);
+    if (
+      !meeting ||
+      meeting.completed ||
+      !meeting.agendaSigned ||
+      next.date < meeting.dateTime.slice(0, 10)
+    ) {
+      return;
+    }
+    meeting.completed = true;
+    meeting.completedAt = next.date;
+    model.commit(
+      next,
+      "Заседание проведено. Нерассмотренные обращения перенесены в следующее заседание.",
+    );
+  };
+
   const openAgendaCase = (caseId: string) => {
     const target = model.state.cases.find((item) => item.id === caseId);
     if (target) openCase(target);
@@ -958,6 +977,7 @@ export default function ObjectionsModule() {
             )
           }
           onSignAgenda={signMeetingAgenda}
+          onCompleteMeeting={completeMeeting}
         />
       )}
       {model.route.page === "notifications" && (
