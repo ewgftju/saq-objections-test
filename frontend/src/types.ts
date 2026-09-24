@@ -221,6 +221,9 @@ export interface CommissionMeeting {
   agendaHtml: string;
   agendaSigned?: boolean;
   agendaSignedAt?: string;
+  /** Рабочий орган зафиксировал завершение заседания. */
+  completed?: boolean;
+  completedAt?: string;
   created: string;
 }
 
