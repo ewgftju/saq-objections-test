@@ -138,6 +138,12 @@ export default function NewCaseModal({
           : isPreventiveComplaint
             ? "Акт о результате профилактического контроля"
             : "Оспариваемый документ";
+  const sourceDocumentNumberLabel = isActionComplaint
+    ? "Номер первичного обращения в ДВГА/КВГА"
+    : `Номер: ${sourceDocumentLabel}`;
+  const sourceDocumentDateLabel = isActionComplaint
+    ? "Дата первичного обращения в ДВГА/КВГА"
+    : `Дата: ${sourceDocumentLabel}`;
   return (
     <Modal title="Новое тестовое обращение" onClose={onClose}>
       <form
@@ -181,7 +187,7 @@ export default function NewCaseModal({
             const received = get("received", "Дата получения документа");
             const filed = state.date;
             const documentDate = needsAgendaTemplateFields
-              ? get("documentDate", `Дата: ${sourceDocumentLabel}`)
+              ? get("documentDate", sourceDocumentDateLabel)
               : appealDate;
             [appealDate, received, filed, documentDate].forEach(dateObject);
             const amount = 0;
@@ -214,7 +220,7 @@ export default function NewCaseModal({
                   : "Апелляционная комиссия при Министерстве финансов РК",
               document: {
                 number: needsAgendaTemplateFields
-                  ? get("documentNumber", `Номер: ${sourceDocumentLabel}`)
+                  ? get("documentNumber", sourceDocumentNumberLabel)
                   : "",
                 date: documentDate,
                 received,
@@ -427,7 +433,7 @@ export default function NewCaseModal({
               <Field
                 field={{
                   name: "documentNumber",
-                  label: `Номер: ${sourceDocumentLabel}`,
+                  label: sourceDocumentNumberLabel,
                   type: "text",
                   required: true,
                 }}
@@ -435,7 +441,7 @@ export default function NewCaseModal({
               <Field
                 field={{
                   name: "documentDate",
-                  label: `Дата: ${sourceDocumentLabel}`,
+                  label: sourceDocumentDateLabel,
                   type: "date",
                   value: state.date,
                   required: true,
