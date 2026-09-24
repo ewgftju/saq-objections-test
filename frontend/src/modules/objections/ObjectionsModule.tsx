@@ -348,7 +348,7 @@ export default function ObjectionsModule() {
       const readyEvent = [...item.history]
         .reverse()
         .find((event) => event.title === "Справка подписана");
-      return readyEvent?.date !== meetingDate;
+      return !readyEvent || readyEvent.date < meetingDate;
     });
     if (!readyCases.length) {
       setDialogError(
