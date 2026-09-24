@@ -226,6 +226,7 @@ export function ProcessesPage() {
 export function SessionsPage({
   cases,
   meetings = [],
+  attendancePolls,
   commissionMembers,
   role,
   date,
@@ -239,6 +240,7 @@ export function SessionsPage({
 }: {
   cases: ObjectionCase[];
   meetings?: CommissionMeeting[];
+  attendancePolls: CommissionAttendancePoll[];
   commissionMembers: CommissionAttendanceMember[];
   role: Role;
   date: string;
@@ -257,9 +259,7 @@ export function SessionsPage({
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
   const selectedMeeting = meetings.find((meeting) => meeting.id === selectedMeetingId);
   const selectedPoll = selectedMeeting
-    ? (window.__SAQ_STATE__?.attendancePolls || []).find(
-        (poll: CommissionAttendancePoll) => poll.id === selectedMeeting.pollId,
-      )
+    ? attendancePolls.find((poll) => poll.id === selectedMeeting.pollId)
     : undefined;
 
   const meetingCases = selectedMeeting
@@ -506,9 +506,7 @@ export function SessionsPage({
               {[...meetings]
                 .sort((left, right) => right.dateTime.localeCompare(left.dateTime))
                 .map((meeting) => {
-                  const poll = (window.__SAQ_STATE__?.attendancePolls || []).find(
-                    (item: CommissionAttendancePoll) => item.id === meeting.pollId,
-                  );
+                  const poll = attendancePolls.find((item) => item.id === meeting.pollId);
                   const answers = poll ? Object.values(poll.responses) : [];
                   const yes = answers.filter((answer) => answer === "yes").length;
                   return (
