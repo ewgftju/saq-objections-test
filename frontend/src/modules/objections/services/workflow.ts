@@ -342,6 +342,19 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   const options: ActionOption[] = [
     { action: "upload", label: "Добавить материал", role: "subject" },
   ];
+  if (
+    c.requests.some(
+      (request) =>
+        request.template === "other" &&
+        request.saqRecipient === "subject" &&
+        !request.responded,
+    )
+  )
+    options.push({
+      action: "subject-response",
+      label: "Направить ответ",
+      role: "subject",
+    });
   const active =
     !CLOSED.includes(c.status) &&
     !["protocol", "decided", "delivered", "court"].includes(c.status);
