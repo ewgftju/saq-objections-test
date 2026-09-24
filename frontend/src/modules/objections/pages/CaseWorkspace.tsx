@@ -208,9 +208,7 @@ export default function CaseWorkspace({
                 ["documents", "Документы"],
                 ["history", "История"],
               ] as [CaseTab, string][]
-            )
-              .filter(([value]) => role !== "subject" || value !== "review")
-              .map(([value, label]) => (
+            ).map(([value, label]) => (
               <button
                 key={value}
                 className={tab === value ? "active" : ""}
@@ -238,23 +236,6 @@ export default function CaseWorkspace({
                     Открыть процесс рассмотрения
                   </Button>
                 </div>}
-                {role === "subject" && (
-                  <div className="consideration-entry">
-                    <div>
-                      <strong>Запрос рабочего органа</strong>
-                      <p>
-                        Ответ на запрос направляется в кабинет рабочего органа.
-                      </p>
-                    </div>
-                    <Button
-                      primary
-                      disabled={!subjectRequest}
-                      onClick={() => onAction("subject-response", role)}
-                    >
-                      {subjectRequest ? "Направить ответ" : "Ответ направлен"}
-                    </Button>
-                  </div>
-                )}
                 <div className="facts">
                   <Fact
                     label="Вид обращения"
@@ -391,15 +372,36 @@ export default function CaseWorkspace({
                 )}
               </>
             )}
-            {tab === "review" && role !== "subject" && (
+            {tab === "review" && (
               <>
-                <ConsiderationProcess
-                  c={c}
-                  role={role}
-                  onAction={onAction}
-                  onHistory={() => onTab("history")}
-                  hideStages={["commission", "dvga", "kvga"].includes(role)}
-                />
+                {role === "subject" ? (
+                  <section className="consideration-process">
+                    <div className="consideration-task">
+                      <div>
+                        <span className="consideration-eyebrow">Текущая задача</span>
+                        <h4>Направить ответ на запрос</h4>
+                        <p>Вложите ответ и направьте его в кабинет рабочего органа.</p>
+                      </div>
+                      <div className="consideration-task-action">
+                        <Button
+                          primary
+                          disabled={!subjectRequest}
+                          onClick={() => onAction("subject-response", role)}
+                        >
+                          {subjectRequest ? "Направить ответ" : "Ответ направлен"}
+                        </Button>
+                      </div>
+                    </div>
+                  </section>
+                ) : (
+                  <ConsiderationProcess
+                    c={c}
+                    role={role}
+                    onAction={onAction}
+                    onHistory={() => onTab("history")}
+                    hideStages={["commission", "dvga", "kvga"].includes(role)}
+                  />
+                )}
                 <h3 className="form-section">
                   Материалы и результаты рассмотрения
                 </h3>
