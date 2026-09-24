@@ -39,7 +39,14 @@ export function disputed(c: ObjectionCase) {
   return c.issues.filter((i) => i.disputed);
 }
 export function overall(c: ObjectionCase) {
-  const xs = disputed(c).map((i) => i.final || i.proposal);
+  const xs = disputed(c).map((point) => {
+    const voteResult = c.votes?.[point.id];
+    return (
+      pointOutcomeFromVotes(voteResult?.votes || {}, voteResult?.chair) ||
+      point.final ||
+      point.proposal
+    );
+  });
   if (!xs.length || xs.some((x) => !x)) return "";
   if (xs.every((x) => x === xs[0])) return xs[0] || "";
   return xs.some((x) => x === "accept" || x === "partial")
