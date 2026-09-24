@@ -238,6 +238,7 @@ export function SessionsPage({
   onMoveCase,
   onPreviewAgenda,
   onSignAgenda,
+  onCompleteMeeting,
 }: {
   cases: ObjectionCase[];
   meetings?: CommissionMeeting[];
@@ -256,6 +257,7 @@ export function SessionsPage({
   onMoveCase: (meetingId: string, caseId: string, direction: "up" | "down") => void;
   onPreviewAgenda: (meeting: CommissionMeeting) => void;
   onSignAgenda: (meetingId: string) => void;
+  onCompleteMeeting: (meetingId: string) => void;
 }) {
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
   const selectedMeeting = meetings.find((meeting) => meeting.id === selectedMeetingId);
@@ -498,6 +500,7 @@ export function SessionsPage({
                 <th>Обращения</th>
                 <th>Опрос</th>
                 <th>Повестка дня</th>
+                <th>Заседание проведено</th>
                 <th />
               </tr>
             </thead>
@@ -519,13 +522,30 @@ export function SessionsPage({
                           {meeting.agendaSigned ? "Подписана" : "Ожидает подписания"}
                         </span>
                       </td>
+                      <td>
+                        {meeting.completed ? (
+                          <span className="badge green">Проведено</span>
+                        ) : role === "work" ? (
+                          <Button
+                            disabled={
+                              !meeting.agendaSigned ||
+                              date < meeting.dateTime.slice(0, 10)
+                            }
+                            onClick={() => onCompleteMeeting(meeting.id)}
+                          >
+                            Заседание проведено
+                          </Button>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td><Button onClick={() => setSelectedMeetingId(meeting.id)}>Открыть</Button></td>
                     </tr>
                   );
                 })}
               {!meetings.length && (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <div className="empty-state">
                       <h3>Заседания ещё не созданы</h3>
                       <p>Исполнитель рабочего органа создаёт карточку заседания и указывает дату и время.</p>
