@@ -919,9 +919,11 @@ export default function ObjectionsModule() {
           notifications={model.state.notifications}
           role={model.role}
           activeCommissionMemberId={activeCommissionMember.id}
-            onAnswerAttendancePoll={(notificationId) =>
-              setDialog({ type: "attendance-answer", notificationId })
+          date={model.state.date}
+          onAnswerAttendancePoll={(notificationId) =>
+            setDialog({ type: "attendance-answer", notificationId })
           }
+          onOpenSessions={() => model.navigate({ page: "sessions" })}
           onOpenCase={(caseId) => {
             const target = model.state.cases.find((item) => item.id === caseId);
             if (target) openCase(target);
