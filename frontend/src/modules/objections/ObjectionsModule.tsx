@@ -666,6 +666,8 @@ export default function ObjectionsModule() {
       );
     if (action === "position" && !files.length)
       throw new Error("Вложите хотя бы один полученный файл");
+    if (action === "subject-response" && !files.length)
+      throw new Error("Вложите хотя бы один файл ответа");
     if (action === "deliver" && c.type === "notice" && !files.length)
       throw new Error("Вложите хотя бы один файл заключения");
     for (const file of files) {
@@ -696,7 +698,7 @@ export default function ObjectionsModule() {
                   ? request.recipient.toUpperCase().includes("КВГА")
                   : request.recipient.toUpperCase().includes("ДВГА"))),
           )?.id
-        : action === "position"
+        : action === "position" || action === "subject-response"
           ? c.requests.find(
               (request) => request.responded && !request.confirmed,
             )?.id ||
@@ -722,6 +724,8 @@ export default function ObjectionsModule() {
                 ? "conclusion"
               : action === "fill-request-response"
               ? "authority-response-attachment"
+              : action === "subject-response"
+                ? "subject-response-attachment"
               : "response-attachment",
           text:
             ["request", "request-other"].includes(action)
@@ -730,6 +734,8 @@ export default function ObjectionsModule() {
                 ? "Заключение по обращению"
               : action === "fill-request-response"
               ? "Подтверждающий документ ДВГА/КВГА"
+              : action === "subject-response"
+                ? "Ответ Объекта на запрос"
               : "Полученный ответ на запрос",
           author: ROLES[model.role],
           date: next.date,
@@ -747,6 +753,8 @@ export default function ObjectionsModule() {
               ? "Вложено заключение по обращению"
             : action === "fill-request-response"
             ? "Вложены документы ДВГА/КВГА"
+            : action === "subject-response"
+              ? "Вложен ответ Объекта"
             : "Вложены полученные файлы",
         text: attached.map(({ file }) => file.name).join(", "),
       });
@@ -759,6 +767,8 @@ export default function ObjectionsModule() {
           : "Запрос сохранён"
         : action === "fill-request-response"
         ? "Ответ ДВГА/КВГА и вложения сохранены"
+        : action === "subject-response"
+          ? "Ответ Объекта направлен рабочему органу"
         : action === "deliver"
           ? "Заключение по обращению вложено"
         : "Полученный ответ и вложения сохранены",
