@@ -515,7 +515,7 @@ export default function CaseWorkspace({
                       ),
                     },
                     {
-                      title: "Ответ с других ГО",
+                      title: "Ответ других органов",
                       requests: c.requests.filter(
                         (request) =>
                           !!request.sent &&
@@ -554,7 +554,11 @@ export default function CaseWorkspace({
                                     ? []
                                     : ["request-appendix"]),
                                 ]
-                              : ["response-attachment", "position"]
+                              : [
+                                  "response-attachment",
+                                  "subject-response-attachment",
+                                  "position",
+                                ]
                             ).includes(document.kind),
                         );
                       });
