@@ -541,14 +541,42 @@ small,
   color: var(--blue);
 }
 .registry-tabs {
-  flex-wrap: wrap;
-  column-gap: 24px;
-  row-gap: 0;
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px 10px 0 0;
+  background: #f7f9fc;
   overflow-x: visible;
 }
+.registry-tabs button {
+  min-width: 0;
+  min-height: 52px;
+  padding: 7px 5px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  text-align: center;
+  white-space: normal;
+  font-size: clamp(10px, 0.78vw, 13px);
+  line-height: 1.2;
+}
+.registry-tabs button.active {
+  border-color: #b7d9ee;
+  border-bottom-color: #b7d9ee;
+  background: #eaf5fc;
+}
 .registry-tabs .count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  padding: 0 5px;
   background: #d94b4b;
   color: #fff;
+  border-radius: 999px;
 }
 .count {
   font-size: 12px;
