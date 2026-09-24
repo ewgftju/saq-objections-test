@@ -180,6 +180,8 @@ export interface CaseRequest {
   text: string;
   deadline: string;
   template?: "dvga" | "other";
+  /** Кабинет SAQ, в который направляется запрос в другой орган. */
+  saqRecipient?: Role;
   author?: string;
   customText?: string;
   sent?: string;
