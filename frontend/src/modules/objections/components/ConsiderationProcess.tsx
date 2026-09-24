@@ -228,7 +228,8 @@ export default function ConsiderationProcess({
         ? ROLES[next.role]
         : "";
   const meetingCertificateAvailable =
-    role === "work" && c.status === "circulated";
+    role === "work" &&
+    ["commission_voting", "circulated"].includes(c.status);
   const awaitingAuthorityResponse =
     role === "work" &&
     ["request_approved", "response_approval", "response_signed"].includes(
