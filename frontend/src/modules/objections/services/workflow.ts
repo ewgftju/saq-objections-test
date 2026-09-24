@@ -211,11 +211,6 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       label: "Подписать справку",
       role: "work",
     },
-    documents_review: {
-      action: "review-commission-documents",
-      label: "Ознакомиться с документами",
-      role: "commission",
-    },
     commission_voting: {
       action: "commission-vote",
       label: "Проголосовать",
