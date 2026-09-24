@@ -563,6 +563,9 @@ export function applyAction(
       const customText = otherOrgan
         ? text("customRequestText", "Текст запроса")
         : undefined;
+      const saqRecipient = otherOrgan
+        ? (String(form.get("saqRecipient") || "subject") as Role)
+        : undefined;
       const deadline = `${addWorkdays(date, 2)}T18:00`;
       const requestId = `request-${c.requests.length + 1}`;
       note = `Запрос сформирован для ${recipient}. Срок рассмотрения: ${deadline}.`;
@@ -573,6 +576,7 @@ export function applyAction(
         text: note,
         deadline,
         template: otherOrgan ? "other" : "dvga",
+        saqRecipient,
         author: otherOrgan
           ? DEMO_USER.fullName
           : String(form.get("executor") || DEMO_USER.fullName),
@@ -619,6 +623,16 @@ export function applyAction(
             date,
             read: false,
             text: `В ваш кабинет направлен запрос по обращению №${c.appealNumber || c.id} для подготовки мотивированного ответа.`,
+          });
+        if (request.template === "other" && request.saqRecipient === "subject")
+          next.notifications.push({
+            id: `notification-${c.id}-${next.notifications.length + 1}`,
+            caseId: c.id,
+            recipient: c.org,
+            recipientRole: "subject",
+            date,
+            read: false,
+            text: `В ваш кабинет направлен запрос по обращению №${c.appealNumber || c.id} для предоставления необходимых материалов.`,
           });
       });
       c.requestPauseStartedAt ||= date;
