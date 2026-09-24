@@ -101,6 +101,7 @@ const REQUEST_RECIPIENT_OPTIONS = [
 ] as const satisfies FormField["options"];
 
 const SAQ_RECIPIENT_OPTIONS = [
+  ["", "Выберите получателя SAQ"],
   ["subject", "Кабинет Объекта"],
 ] as const satisfies FormField["options"];
 
