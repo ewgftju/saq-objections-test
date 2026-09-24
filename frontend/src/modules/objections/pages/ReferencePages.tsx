@@ -1,7 +1,8 @@
 import { Button, Notice, PageHeading } from "../../../components/ui";
 import { agendaItemText } from "../components/AgendaModal";
+import { AgendaResultsTable } from "../components/AgendaResultsModal";
 import { useState } from "react";
-import { OUTCOMES, STATUS } from "../../../data/constants";
+import { STATUS } from "../../../data/constants";
 import { STEPS } from "../../../data/workflowDefinitions";
 import type {
   CommissionMeeting,
@@ -29,18 +30,6 @@ const REVIEWED_CASE_STATUSES = new Set([
   "completed",
   "refused",
 ]);
-
-function meetingResult(caseItem: ObjectionCase) {
-  if (caseItem.result?.label) return caseItem.result.label;
-
-  const outcomes = caseItem.issues
-    .filter((issue) => issue.disputed)
-    .map((issue) => issue.final ?? issue.proposal)
-    .filter((outcome): outcome is keyof typeof OUTCOMES => Boolean(outcome));
-  const labels = [...new Set(outcomes.map((outcome) => OUTCOMES[outcome]))];
-
-  return labels.length ? labels.join(", ") : "Не зафиксирован";
-}
 
 const sources = [
   [
@@ -466,43 +455,10 @@ export function SessionsPage({
 
         <section className="card">
           <div className="card-head">
-            <h3>Результаты заседания</h3>
-            <span className="muted">Итоги рассмотрения обращений на заседании</span>
+            <h3>Итоги по повестке дня</h3>
+            <span className="muted">Голоса членов АК и общий результат по каждому пункту</span>
           </div>
-          <div className="table-scroll">
-            <table className="registry-table">
-              <thead>
-                <tr>
-                  <th>№</th>
-                  <th>Обращение</th>
-                  <th>Рассмотрено</th>
-                  <th>Результат</th>
-                </tr>
-              </thead>
-              <tbody>
-                {meetingCases.map((caseItem, index) => {
-                  const reviewed = REVIEWED_CASE_STATUSES.has(caseItem.status);
-                  return (
-                    <tr key={caseItem.id}>
-                      <td>{index + 1}</td>
-                      <td>{caseItem.id}</td>
-                      <td>
-                        <span className={"badge " + (reviewed ? "green" : "gray")}>
-                          {reviewed ? "Да" : "Нет"}
-                        </span>
-                      </td>
-                      <td>{reviewed ? meetingResult(caseItem) : "—"}</td>
-                    </tr>
-                  );
-                })}
-                {!meetingCases.length && (
-                  <tr>
-                    <td colSpan={4}>В заседание не включены обращения.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <AgendaResultsTable cases={meetingCases} />
         </section>
 
         <section className="card">
