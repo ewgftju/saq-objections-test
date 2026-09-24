@@ -188,7 +188,7 @@ export default function CasesList({
             type="button"
             onClick={() => setTab("all")}
           >
-            Все обращения
+            Все
           </button>
           {(role === "director" || role === "work") && (
             <button
@@ -196,7 +196,7 @@ export default function CasesList({
               type="button"
               onClick={() => setTab("incoming")}
             >
-              Поступившие
+              Новые
               {incomingCount > 0 && <span className="count">{incomingCount}</span>}
             </button>
           )}
@@ -207,7 +207,7 @@ export default function CasesList({
                 type="button"
                 onClick={() => setTab("request-direction")}
               >
-                Ожидают направления запроса
+                Направление запроса
                 {requestDirectionCount > 0 && (
                   <span className="count">{requestDirectionCount}</span>
                 )}
@@ -217,7 +217,7 @@ export default function CasesList({
                 type="button"
                 onClick={() => setTab("response-waiting")}
               >
-                Ожидают ответ на запрос
+                Ответ на запрос
                 {responseWaitingCount > 0 && (
                   <span className="count">{responseWaitingCount}</span>
                 )}
@@ -227,7 +227,7 @@ export default function CasesList({
                 type="button"
                 onClick={() => setTab("analysis")}
               >
-                Анализ обращения
+                Анализ
                 {analysisCount > 0 && <span className="count">{analysisCount}</span>}
               </button>
               <button
@@ -243,7 +243,7 @@ export default function CasesList({
                 type="button"
                 onClick={() => setTab("protocol-formation")}
               >
-                Ожидают формирование протокола
+                Формирование протокола
                 {protocolFormationCount > 0 && (
                   <span className="count">{protocolFormationCount}</span>
                 )}
@@ -253,7 +253,7 @@ export default function CasesList({
                 type="button"
                 onClick={() => setTab("protocol-signing")}
               >
-                Ожидают подписания протокола
+                Подпись протокола
                 {protocolSigningCount > 0 && (
                   <span className="count">{protocolSigningCount}</span>
                 )}
@@ -263,7 +263,7 @@ export default function CasesList({
                 type="button"
                 onClick={() => setTab("hearing-waiting")}
               >
-                Ожидают заслушивание
+                Заслушивание
                 {hearingWaitingCount > 0 && (
                   <span className="count">{hearingWaitingCount}</span>
                 )}
@@ -273,7 +273,7 @@ export default function CasesList({
                 type="button"
                 onClick={() => setTab("final-response")}
               >
-                Ожидают формирования окончательного ответа
+                Окончательный ответ
                 {finalResponseCount > 0 && (
                   <span className="count">{finalResponseCount}</span>
                 )}
