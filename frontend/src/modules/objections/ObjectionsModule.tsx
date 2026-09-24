@@ -114,11 +114,8 @@ function advanceCasesAfterAttendancePoll(
   poll: CommissionAttendancePoll,
   date: string,
 ) {
-  const completed = Object.values(poll.responses).every(
-    (response) => response !== "pending",
-  );
   const participants = participantsFromPoll(poll);
-  if (!completed || !participants.length) return;
+  if (!participants.length) return;
   poll.caseIds.forEach((caseId) => {
     const target = cases.find((item) => item.id === caseId);
     if (target?.status !== "certificate_approved") return;
@@ -126,8 +123,8 @@ function advanceCasesAfterAttendancePoll(
     target.history.push({
       date,
       actor: "Система",
-      title: "Опрос о присутствии завершён",
-      text: "Подтверждённые участники получили доступ к материалам для ознакомления.",
+      title: "Подтверждено присутствие на заседании",
+      text: "Подтверждённым участникам открыт доступ к материалам для ознакомления.",
     });
   });
 }
