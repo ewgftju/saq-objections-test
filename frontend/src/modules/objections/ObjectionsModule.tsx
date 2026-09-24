@@ -468,7 +468,12 @@ export default function ObjectionsModule() {
     const meetingCases = meeting.caseIds
       .map((id) => next.cases.find((item) => item.id === id))
       .filter((item): item is ObjectionCase => Boolean(item));
-    COMMISSION_ATTENDANCE_MEMBERS.forEach((member) => {
+    const poll = next.attendancePolls.find(
+      (item) => item.id === meeting.pollId,
+    );
+    COMMISSION_ATTENDANCE_MEMBERS.filter(
+      (member) => poll?.responses[member.id] === "yes",
+    ).forEach((member) => {
       next.notifications.push({
         id: "agenda-signed-" + meeting.id + "-" + member.id,
         caseId: meeting.caseIds[0],
