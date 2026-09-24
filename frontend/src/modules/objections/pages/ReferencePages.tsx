@@ -12,6 +12,24 @@ import type {
 } from "../../../types";
 import { formatDate, formatDateTime } from "../../../utils/dateFormat";
 
+const REVIEWED_CASE_STATUSES = new Set([
+  "hearing",
+  "hearing_ready",
+  "meeting",
+  "protocol",
+  "decision_project",
+  "decision_project_approval",
+  "decision_project_signed",
+  "decision_project_eotinish",
+  "decision_project_hearing",
+  "decided",
+  "final_response_approval",
+  "final_response_signed",
+  "delivered",
+  "completed",
+  "refused",
+]);
+
 const sources = [
   [
     "Z1500000392",
@@ -381,6 +399,7 @@ export function SessionsPage({
                   <th>Обращение</th>
                   <th>Объект</th>
                   <th>Статус</th>
+                  <th>Рассмотрено</th>
                   <th />
                 </tr>
               </thead>
@@ -391,6 +410,20 @@ export function SessionsPage({
                     <td>{caseItem.id}</td>
                     <td>{caseItem.org}</td>
                     <td>{STATUS[caseItem.status]}</td>
+                    <td>
+                      <span
+                        className={
+                          "badge " +
+                          (REVIEWED_CASE_STATUSES.has(caseItem.status)
+                            ? "green"
+                            : "gray")
+                        }
+                      >
+                        {REVIEWED_CASE_STATUSES.has(caseItem.status)
+                          ? "Да"
+                          : "Нет"}
+                      </span>
+                    </td>
                     <td className="agenda-registry-actions">
                       <Button onClick={() => onOpen(caseItem)}>Открыть</Button>
                       {role === "director" && (
@@ -406,7 +439,7 @@ export function SessionsPage({
                 ))}
                 {!meetingCases.length && (
                   <tr>
-                    <td colSpan={5}>
+                    <td colSpan={6}>
                       <div className="empty-state">
                         <h3>В заседание не включены обращения</h3>
                         <p>Директор ДАВГА может исключить обращение до подписания повестки дня.</p>
