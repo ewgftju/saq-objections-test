@@ -340,6 +340,8 @@ export interface ObjectionCase {
   agendaMeetingDate?: string;
   /** Дата последнего направленного опроса о присутствии по данному обращению. */
   attendanceMeetingDate?: string;
+  /** Заседания, из которых обращение исключено директором ДАВГА. */
+  excludedFromMeetingIds?: string[];
   certificate?: CaseCertificate | null;
   hearing?: Hearing | null;
   meeting?: Meeting | null;
