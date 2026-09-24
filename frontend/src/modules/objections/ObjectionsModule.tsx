@@ -109,26 +109,6 @@ function syncPollParticipants(
   });
 }
 
-function advanceCasesAfterAttendancePoll(
-  cases: ObjectionCase[],
-  poll: CommissionAttendancePoll,
-  date: string,
-) {
-  const participants = participantsFromPoll(poll);
-  if (!participants.length) return;
-  poll.caseIds.forEach((caseId) => {
-    const target = cases.find((item) => item.id === caseId);
-    if (target?.status !== "certificate_approved") return;
-    target.status = "documents_review";
-    target.history.push({
-      date,
-      actor: "Система",
-      title: "Подтверждено присутствие на заседании",
-      text: "Подтверждённым участникам открыт доступ к материалам для ознакомления.",
-    });
-  });
-}
-
 export default function ObjectionsModule() {
   const model = useObjectionsModel();
   const [dialog, setDialog] = useState<DialogState>(null);
@@ -258,7 +238,6 @@ export default function ObjectionsModule() {
     poll.responses[memberId] = response;
     applyDefaultAttendanceChair(poll);
     syncPollParticipants(next.cases, next.attendancePolls, poll);
-    advanceCasesAfterAttendancePoll(next.cases, poll, next.date);
     notification.read = true;
     poll.caseIds.forEach((caseId) => {
       const target = next.cases.find((item) => item.id === caseId);
@@ -296,7 +275,6 @@ export default function ObjectionsModule() {
       changedAt: next.date,
     };
     syncPollParticipants(next.cases, next.attendancePolls, poll);
-    advanceCasesAfterAttendancePoll(next.cases, poll, next.date);
     next.notifications.forEach((notification) => {
       if (
         notification.attendancePollId === pollId &&
