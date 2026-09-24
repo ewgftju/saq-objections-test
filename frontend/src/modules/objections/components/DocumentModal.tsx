@@ -103,7 +103,7 @@ function certificateIntro(c: ObjectionCase) {
     return `В Министерство финансов Республики Казахстан поступило возражение № ${number} от ${date} ${applicant}, к нарушению, указанному в уведомлении об устранении нарушений от ${sourceDate} № ${sourceNumber}, выявленному по результатам камерального контроля № ${details?.cameraControlNumber || "—"} от ${formatDate(details?.cameraControlDate)}.`;
 
   if (appealType === "Возражение на аудиторский отчет")
-    return `В Министерство финансов Республики Казахстан поступило возражение № ${number} от ${date} ${applicant}, на аудиторский отчёт от ${sourceDate} № ${sourceNumber}, проведённый ${authority}. Исполнитель: ${c.assignee || DEMO_USER.fullName}.`;
+    return `В Министерство финансов Республики Казахстан поступило возражение № ${number} от ${date} ${applicant}, на аудиторский отчёт от ${sourceDate} № ${sourceNumber}, проведённый ${authority}.`;
 
   return `В Министерство финансов Республики Казахстан поступило обращение № ${number} от ${date} ${applicant}.`;
 }
