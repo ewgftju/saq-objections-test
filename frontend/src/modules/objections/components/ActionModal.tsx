@@ -36,13 +36,21 @@ function appendixDocumentHtml(c: ObjectionCase, document: NonNullable<ObjectionC
 </style></head><body>${content}</body></html>`;
 }
 
-export function Field({ field }: { field: FormField }) {
+export function Field({
+  field,
+  disabled = false,
+  required = field.required,
+}: {
+  field: FormField;
+  disabled?: boolean;
+  required?: boolean;
+}) {
   if (field.type === "heading")
     return <h3 className="form-section">{field.label}</h3>;
   if (field.type === "checkbox")
     return (
       <label className="checkbox-row">
-        <input type="checkbox" name={field.name} required={field.required} />
+        <input type="checkbox" name={field.name} required={required} disabled={disabled} />
         <span>{field.label}</span>
       </label>
     );
@@ -50,20 +58,22 @@ export function Field({ field }: { field: FormField }) {
     <label className="field">
       <span>
         {field.label}
-        {field.required && <span className="required"> *</span>}
+        {required && <span className="required"> *</span>}
       </span>
       {field.type === "textarea" ? (
         <textarea
           name={field.name}
           defaultValue={field.value}
-          required={field.required}
+          required={required}
+          disabled={disabled}
           rows={3}
         />
       ) : field.type === "select" ? (
         <select
           name={field.name}
           defaultValue={field.value}
-          required={field.required}
+          required={required}
+          disabled={disabled}
         >
           {field.options?.map(([value, label]) => (
             <option key={value} value={value}>
@@ -78,7 +88,8 @@ export function Field({ field }: { field: FormField }) {
           defaultValue={field.value}
           min={field.min}
           max={field.max}
-          required={field.required}
+          required={required}
+          disabled={disabled}
           readOnly={field.readOnly}
           step={field.type === "number" ? "any" : undefined}
         />
@@ -293,8 +304,10 @@ export default function ActionModal({
     definition.fields.find((field) => field.name === "deadline")?.value ||
     `${date}T18:00`;
   const requestRecipient =
-    values.recipient ??
-    definition.fields.find((field) => field.name === "recipient")?.value ??
+    values.recipient?.trim() ||
+    definition.fields
+      .find((field) => field.name === "saqRecipient")
+      ?.options?.find(([value]) => value === values.saqRecipient)?.[1] ||
     "";
   const requestExecutor =
     values.executor ||
@@ -468,9 +481,21 @@ export default function ActionModal({
               </button>
             </div>
             <div hidden={requestTab !== "form"} className="form-grid">
-              {definition.fields.map((field) => (
-                <Field key={field.name} field={field} />
-              ))}
+              {definition.fields.map((field) => {
+                const isOtherRecipient = isOtherRequest && field.name === "recipient";
+                const isSaqRecipient = isOtherRequest && field.name === "saqRecipient";
+                const disabled =
+                  (isOtherRecipient && Boolean(values.saqRecipient)) ||
+                  (isSaqRecipient && Boolean(values.recipient?.trim()));
+                return (
+                  <Field
+                    key={field.name}
+                    field={field}
+                    disabled={disabled}
+                    required={disabled ? false : field.required}
+                  />
+                );
+              })}
               <label className="field request-attachments-field">
                 <span>Вложить приложения</span>
                 <input
