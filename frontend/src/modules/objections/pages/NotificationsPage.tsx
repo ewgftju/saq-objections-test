@@ -10,22 +10,35 @@ export default function NotificationsPage({
   onOpenCase,
   role,
   activeCommissionMemberId,
+  date,
   onAnswerAttendancePoll,
+  onOpenSessions,
 }: {
   notifications: CaseNotification[];
   onOpenCase: (caseId: string) => void;
   role: Role;
   activeCommissionMemberId: string;
+  date: string;
   onAnswerAttendancePoll: (notificationId: string) => void;
+  onOpenSessions: () => void;
 }) {
+  const availableNotifications = notifications.filter(
+    (notification) => notification.date <= date,
+  );
   const visibleNotifications =
     role === "commission"
-      ? notifications.filter(
+      ? availableNotifications.filter(
           (notification) =>
-            notification.kind === "attendance-poll" &&
+            (notification.kind === "attendance-poll" ||
+              notification.kind === "agenda-signed") &&
             notification.commissionMemberId === activeCommissionMemberId,
         )
-      : notifications.filter((notification) => notification.kind !== "attendance-poll");
+      : availableNotifications.filter((notification) =>
+          notification.recipientRole
+            ? notification.recipientRole === role
+            : notification.kind !== "attendance-poll" &&
+              notification.kind !== "agenda-signed",
+        );
   const orderedNotifications =
     role === "commission"
       ? [...visibleNotifications].sort((left, right) => {
@@ -79,13 +92,17 @@ export default function NotificationsPage({
                           onClick={() =>
                             notification.attendancePollId &&
                             notification.commissionMemberId &&
-                            onAnswerAttendancePoll(
-                            notification.id,
-                            )
+                            onAnswerAttendancePoll(notification.id)
                           }
                         >
                           {notification.read ? "Ответ направлен" : "Ответить"}
                         </Button>
+                      ) : notification.kind === "agenda-sign" ? (
+                        <Button primary onClick={onOpenSessions}>
+                          Открыть заседания
+                        </Button>
+                      ) : notification.kind === "agenda-signed" ? (
+                        <Button onClick={onOpenSessions}>К заседаниям</Button>
                       ) : (
                         <Button onClick={() => onOpenCase(notification.caseId)}>
                           Открыть
