@@ -148,8 +148,6 @@ const TASK_HELP: Partial<Record<Action, string>> = {
     "Проверьте сформированную справку и согласуйте её для направления членам апелляционной комиссии.",
   "sign-certificate":
     "Подпишите согласованную справку. После этого она будет готова к направлению вместе с материалами членам апелляционной комиссии.",
-  "review-commission-documents":
-    "Ознакомьтесь со справкой и материалами обращения. Состав участников заседания определяется подтверждёнными ответами «Да» в опросе о присутствии.",
   "commission-vote":
     "Выберите вариант решения по каждому оспариваемому пункту и сохраните результаты голосования.",
   "fill-meeting-certificate":
@@ -238,6 +236,7 @@ export default function ConsiderationProcess({
       c.status,
     );
   const awaitingAttendancePoll = c.status === "certificate_approved";
+  const materialsAvailableForCommission = c.status === "documents_review";
   const meetingCompletionAvailable =
     !!c.certificate?.memberPositions.length;
   const currentRequestSubstep = requestSubstep(c.status);
@@ -404,6 +403,13 @@ export default function ConsiderationProcess({
           <p>
             Запрос направлен в ДВГА/КВГА. Рабочий орган ожидает заполненный,
             согласованный и подписанный ответ от адресата.
+          </p>
+        </Notice>
+      ) : materialsAvailableForCommission ? (
+        <Notice tone="blue">
+          <strong>Материалы доступны членам АК</strong>
+          <p>
+            Доступ к карточке обращения открыт членам комиссии, которые подтвердили присутствие на заседании.
           </p>
         </Notice>
       ) : (
