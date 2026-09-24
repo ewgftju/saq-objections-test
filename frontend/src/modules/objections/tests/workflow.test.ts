@@ -1024,7 +1024,7 @@ test("совместимость сохранения, прямые ссылки
     }),
   );
   assert.match(registry, /ВОЗ-2026-101/);
-  assert.match(registry, /Новые/);
+  assert.match(registry, /Поступило/);
   assert.match(registry, /class="count">1/);
   assert.match(registry, /Направление запроса/);
   assert.match(registry, /Ответ на запрос/);
