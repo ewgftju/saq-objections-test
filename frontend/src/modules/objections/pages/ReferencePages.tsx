@@ -3,7 +3,7 @@ import { useState } from "react";
 import { STATUS } from "../../../data/constants";
 import { STEPS } from "../../../data/workflowDefinitions";
 import type {
-  AgendaRegistryEntry,
+  CommissionMeeting,
   CommissionAttendanceMember,
   CommissionAttendancePoll,
   ObjectionCase,
@@ -225,332 +225,188 @@ export function ProcessesPage() {
 
 export function SessionsPage({
   cases,
-  agendas,
-  onOpen,
-  onAgenda,
-  onOpenAgendaCase,
-  onPreviewAgenda,
-  onDownloadAgenda,
-  onGenerateAgendaResults,
-  onPreviewAgendaResults,
-  onDownloadAgendaResults,
-  onAttendancePoll,
-  attendancePolls = [],
-  commissionMembers = [],
-  onUpdateAttendanceResponse = () => {},
-  onSelectAttendanceChair = () => {},
+  meetings = [],
+  commissionMembers,
   role,
+  date,
+  onOpen,
+  onCreateMeeting,
+  onUpdateAttendanceResponse,
+  onExcludeCase,
+  onMoveCase,
+  onPreviewAgenda,
+  onSignAgenda,
 }: {
   cases: ObjectionCase[];
-  agendas: AgendaRegistryEntry[];
-  onOpen: (c: ObjectionCase) => void;
-  onAgenda: (cases: ObjectionCase[]) => void;
-  onOpenAgendaCase: (caseId: string) => void;
-  onPreviewAgenda: (agenda: AgendaRegistryEntry) => void;
-  onDownloadAgenda: (agenda: AgendaRegistryEntry) => void;
-  onGenerateAgendaResults: (agenda: AgendaRegistryEntry) => void;
-  onPreviewAgendaResults: (agenda: AgendaRegistryEntry) => void;
-  onDownloadAgendaResults: (agenda: AgendaRegistryEntry) => void;
-  onAttendancePoll: (cases: ObjectionCase[]) => void;
-  attendancePolls: CommissionAttendancePoll[];
+  meetings?: CommissionMeeting[];
   commissionMembers: CommissionAttendanceMember[];
+  role: Role;
+  date: string;
+  onOpen: (c: ObjectionCase) => void;
+  onCreateMeeting: () => void;
   onUpdateAttendanceResponse: (
     pollId: string,
     memberId: string,
     response: "yes" | "no",
   ) => void;
-  onSelectAttendanceChair: (pollId: string, memberId: string) => void;
-  role: Role;
+  onExcludeCase: (meetingId: string, caseId: string) => void;
+  onMoveCase: (meetingId: string, caseId: string, direction: "up" | "down") => void;
+  onPreviewAgenda: (meeting: CommissionMeeting) => void;
+  onSignAgenda: (meetingId: string) => void;
 }) {
-  const [selectedCaseIds, setSelectedCaseIds] = useState<string[]>([]);
-  const [section, setSection] = useState<"sessions" | "reviewed" | "agendas" | "attendance">("sessions");
-  const [selectedAttendancePollId, setSelectedAttendancePollId] = useState<string | null>(null);
-  const pendingAgendaResults = agendas.filter((agenda) => !agenda.resultsHtml).length;
-  const selectedAttendancePoll = attendancePolls.find(
-    (poll) => poll.id === selectedAttendancePollId,
-  );
-  const selectedAttendancePollCases = selectedAttendancePoll
-    ? selectedAttendancePoll.caseIds
-        .map((caseId) => cases.find((item) => item.id === caseId))
-        .filter((item): item is ObjectionCase => Boolean(item))
+  const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+  const selectedMeeting = meetings.find((meeting) => meeting.id === selectedMeetingId);
+  const selectedPoll = selectedMeeting
+    ? (window.__SAQ_STATE__?.attendancePolls || []).find(
+        (poll: CommissionAttendancePoll) => poll.id === selectedMeeting.pollId,
+      )
+    : undefined;
+
+  const meetingCases = selectedMeeting
+    ? selectedMeeting.caseIds
+        .map((caseId) => cases.find((caseItem) => caseItem.id === caseId))
+        .filter((caseItem): caseItem is ObjectionCase => Boolean(caseItem))
     : [];
-  const meetingConductedStatuses = [
-    "meeting",
-    "protocol",
-    "decision_project",
-    "decision_project_approval",
-    "decision_project_signed",
-    "decision_project_eotinish",
-    "decision_project_hearing",
-    "decided",
-    "final_response_approval",
-    "final_response_signed",
-    "delivered",
-    "completed",
-  ];
-  const sessionCases = cases.filter(
-    (c) =>
-      c.meeting ||
-        ["certificate_approved", "documents_review", "commission_members", "commission_voting", "circulated", "meeting_certificate_approval", "meeting_certificate_signed", "meeting_certificate_approved", "hearing", "hearing_ready", "meeting"].includes(
-          c.status,
-        ),
-  );
-  const readyCases = sessionCases.filter(
-    (c) => !meetingConductedStatuses.includes(c.status),
-  );
-  const reviewedCases = sessionCases.filter((c) =>
-    meetingConductedStatuses.includes(c.status),
-  );
-  const displayedCases = section === "reviewed" ? reviewedCases : readyCases;
-  const allSelected =
-    readyCases.length > 0 && readyCases.every((item) => selectedCaseIds.includes(item.id));
-  const toggleCase = (caseId: string) =>
-    setSelectedCaseIds((selected) =>
-      selected.includes(caseId)
-        ? selected.filter((id) => id !== caseId)
-        : [...selected, caseId],
-    );
-  return (
-    <>
-      <PageHeading
-        title="Заседания комиссии"
-        subtitle="Подготовка, голосование и подписанные протоколы"
-        action={section === "sessions" && role === "work" ? (
-          <div className="session-heading-actions">
-            <Button
-              disabled={!selectedCaseIds.length}
-              onClick={() =>
-                onAttendancePoll(
-                  readyCases.filter((c) => selectedCaseIds.includes(c.id)),
-                )
-              }
-            >
-              Направить опрос о присутствии на заседании
-            </Button>
-            <Button
-              primary
-              disabled={!selectedCaseIds.length}
-              onClick={() =>
-                onAgenda(readyCases.filter((c) => selectedCaseIds.includes(c.id)))
-              }
-            >
-              Сформировать повестку дня
-            </Button>
-          </div>
-        ) : undefined}
-      />
-      <div className="session-tabs" role="tablist" aria-label="Разделы заседаний">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={section === "sessions"}
-          className={section === "sessions" ? "active" : ""}
-          onClick={() => setSection("sessions")}
-        >
-          Обращения готовые к заседанию
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={section === "reviewed"}
-          className={section === "reviewed" ? "active" : ""}
-          onClick={() => setSection("reviewed")}
-        >
-          Обращения рассмотренные на заседании
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={section === "agendas"}
-          className={section === "agendas" ? "active" : ""}
-          onClick={() => setSection("agendas")}
-        >
-          Реестр повесток
-          {pendingAgendaResults > 0 && (
-            <span
-              className="session-tab-badge"
-              aria-label={`Требуется сформировать итогов: ${pendingAgendaResults}`}
-            >
-              {pendingAgendaResults}
-            </span>
-          )}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={section === "attendance"}
-          className={section === "attendance" ? "active" : ""}
-          onClick={() => setSection("attendance")}
-        >
-          Опрос о присутствии
-          {attendancePolls.length > 0 && (
-            <span className="session-tab-badge" aria-label={`Направлено опросов: ${attendancePolls.length}`}>
-              {attendancePolls.length}
-            </span>
-          )}
-        </button>
-      </div>
-      {section === "sessions" || section === "reviewed" ? (
-        <>
-          <Notice>
-            По Положению заседания проводятся по вторникам и четвергам; допускаются
-            другие дни. При отсутствии председателя и заместителя заседание не
-            проводится. Секретарь не входит в голосующий состав.
-          </Notice>
-          <section className="card">
-            <div className="table-scroll">
-              <table className="registry-table">
-            <thead>
-              <tr>
-                <th>
-                  <label className="session-case-selector">
-                    {section === "sessions" && (
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        disabled={!readyCases.length || role !== "work"}
-                        aria-label="Выбрать все обращения"
-                        onChange={() =>
-                          setSelectedCaseIds(
-                            allSelected ? [] : readyCases.map((item) => item.id),
-                          )
-                        }
-                      />
-                    )}
-                    <span>Обращение</span>
-                  </label>
-                </th>
-                <th>Объект</th>
-                <th>Статус заседания</th>
-                <th>Дата заседания</th>
-                <th>Протокол</th>
-                <th>Статус</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {displayedCases.map((c) => {
-                const attendancePoll = attendancePolls
-                  .filter((poll) => poll.caseIds.includes(c.id))
-                  .at(-1);
-                const meetingConducted = meetingConductedStatuses.includes(c.status);
-                return (
-                <tr key={c.id}>
-                  <td>
-                    <label className="session-case-selector">
-                      {section === "sessions" && (
-                        <input
-                          type="checkbox"
-                          checked={selectedCaseIds.includes(c.id)}
-                          disabled={role !== "work"}
-                          onChange={() => toggleCase(c.id)}
-                          aria-label={`Выбрать обращение ${c.id}`}
-                        />
-                      )}
-                      <span>{c.id}</span>
-                    </label>
-                  </td>
-                  <td>{c.org}</td>
-                  <td>{attendancePoll ? (meetingConducted ? "Проведен" : "Запланирован") : "—"}</td>
-                  <td>{attendancePoll ? formatDateTime(attendancePoll.dateTime) : "—"}</td>
-                  <td>{c.meeting?.number || "Готовится"}</td>
-                  <td>{STATUS[c.status]}</td>
-                  <td>
-                    <Button onClick={() => onOpen(c)}>Открыть</Button>
-                  </td>
-                </tr>
-                );
-              })}
-              {!displayedCases.length && (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="empty-state">
-                      <h3>{section === "sessions" ? "Материалы к заседанию ещё не подготовлены" : "Рассмотренных на заседании обращений пока нет"}</h3>
-                      <p>
-                        {section === "sessions"
-                          ? "После подготовки справки обращение появится в этом разделе."
-                          : "После проведения заседания обращение появится в этом разделе."}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-              </table>
-            </div>
-          </section>
-        </>
-      ) : section === "agendas" ? (
+  const signatureDate = selectedMeeting
+    ? (() => {
+        const value = new Date(selectedMeeting.dateTime);
+        value.setDate(value.getDate() - 1);
+        return value.toISOString().slice(0, 10);
+      })()
+    : "";
+  const canSignAgenda =
+    Boolean(selectedMeeting) && date >= signatureDate && !selectedMeeting?.agendaSigned;
+
+  if (selectedMeeting) {
+    return (
+      <>
+        <PageHeading
+          title={"Заседание №" + selectedMeeting.number}
+          subtitle={"Дата и время: " + formatDateTime(selectedMeeting.dateTime)}
+          action={<Button onClick={() => setSelectedMeetingId(null)}>К реестру заседаний</Button>}
+        />
+        <Notice>
+          Опрос направляется автоматически при создании заседания. Председатель АК — Вице-министр; при его отсутствии председательствует Директор ДАВГА.
+        </Notice>
+
         <section className="card">
+          <div className="card-head">
+            <h3>Опрос</h3>
+            <span className="muted">Ответы членов Апелляционной комиссии</span>
+          </div>
           <div className="table-scroll">
-            <table className="registry-table agenda-registry-table">
+            <table className="registry-table attendance-status-table">
               <thead>
                 <tr>
-                  <th>Номер</th>
-                  <th>Дата заседания</th>
-                  <th>Сформированная повестка в Word</th>
-                  <th>Ссылки на карточки обращений</th>
-                  <th>Итоги по повестке</th>
+                  <th>Член АК</th>
+                  <th>Ответ</th>
+                  <th>Роль на заседании</th>
+                  <th>Изменение исполнителем рабочего органа</th>
+                  {role === "work" && <th>Отметить вручную</th>}
                 </tr>
               </thead>
               <tbody>
-                {[...agendas]
-                  .sort((a, b) => b.number - a.number)
-                  .map((agenda) => (
-                    <tr key={agenda.id}>
-                      <td>{agenda.number}</td>
-                      <td>{formatDate(agenda.meetingDate)}</td>
+                {commissionMembers.map((member) => {
+                  const response = selectedPoll?.responses[member.id] || "pending";
+                  const changed = selectedPoll?.manualResponseChanges?.[member.id];
+                  const isViceMinister = member.id === "kenbeil-dm";
+                  const isDavgaDirector = member.id === "kurenbek-shb";
+                  const isChair = selectedPoll?.chairId === member.id;
+                  const chairLabel = isChair
+                    ? isViceMinister
+                      ? "Председатель АК"
+                      : "И.О. Председателя АК"
+                    : isViceMinister
+                      ? "Председатель АК"
+                      : isDavgaDirector
+                        ? "Директор ДАВГА"
+                        : "—";
+                  return (
+                    <tr key={member.id}>
+                      <td>{member.name}</td>
                       <td>
-                        <div className="agenda-registry-actions">
-                          <Button onClick={() => onPreviewAgenda(agenda)}>
-                            Просмотр
-                          </Button>
-                          <Button onClick={() => onDownloadAgenda(agenda)}>
-                            Скачать Word
-                          </Button>
-                        </div>
+                        <span className={"badge " + (response === "yes" ? "green" : response === "no" ? "gray" : "amber")}>
+                          {response === "yes" ? "Будет присутствовать" : response === "no" ? "Не будет присутствовать" : "Нет ответа"}
+                        </span>
                       </td>
+                      <td>{chairLabel}</td>
                       <td>
-                        <div className="agenda-case-links">
-                          {agenda.caseIds.map((caseId) => (
-                            <button
-                              key={caseId}
-                              type="button"
-                              className="text-button"
-                              onClick={() => onOpenAgendaCase(caseId)}
-                            >
-                              {caseId}
-                            </button>
-                          ))}
-                        </div>
+                        {changed
+                          ? changed.changedBy + " изменил(а) ответ " + formatDate(changed.changedAt)
+                          : "—"}
                       </td>
-                      <td>
-                        {agenda.resultsHtml ? (
-                          <div className="agenda-registry-actions">
-                            <Button onClick={() => onPreviewAgendaResults(agenda)}>
-                              Просмотр
-                            </Button>
-                            <Button onClick={() => onDownloadAgendaResults(agenda)}>
-                              Скачать Word
-                            </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            primary
-                            onClick={() => onGenerateAgendaResults(agenda)}
+                      {role === "work" && (
+                        <td>
+                          <select
+                            value={response}
+                            aria-label={"Отметить присутствие: " + member.name}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              if (value === "yes" || value === "no") {
+                                onUpdateAttendanceResponse(
+                                  selectedMeeting.pollId,
+                                  member.id,
+                                  value,
+                                );
+                              }
+                            }}
                           >
-                            Сформировать итоги по повестке дня
-                          </Button>
-                        )}
-                      </td>
+                            <option value="pending">Нет ответа</option>
+                            <option value="yes">Будет присутствовать</option>
+                            <option value="no">Не будет присутствовать</option>
+                          </select>
+                        </td>
+                      )}
                     </tr>
-                  ))}
-                {!agendas.length && (
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="card">
+          <div className="card-head">
+            <h3>Обращения</h3>
+            <span className="muted">Готовые к рассмотрению АК обращения, включённые в заседание</span>
+          </div>
+          <div className="table-scroll">
+            <table className="registry-table">
+              <thead>
+                <tr>
+                  <th>№</th>
+                  <th>Обращение</th>
+                  <th>Объект</th>
+                  <th>Статус</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {meetingCases.map((caseItem, index) => (
+                  <tr key={caseItem.id}>
+                    <td>{index + 1}</td>
+                    <td>{caseItem.id}</td>
+                    <td>{caseItem.org}</td>
+                    <td>{STATUS[caseItem.status]}</td>
+                    <td className="agenda-registry-actions">
+                      <Button onClick={() => onOpen(caseItem)}>Открыть</Button>
+                      {role === "director" && (
+                        <Button
+                          disabled={Boolean(selectedMeeting.agendaSigned)}
+                          onClick={() => onExcludeCase(selectedMeeting.id, caseItem.id)}
+                        >
+                          Исключить из заседания
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {!meetingCases.length && (
                   <tr>
                     <td colSpan={5}>
                       <div className="empty-state">
-                        <h3>Направленных повесток пока нет</h3>
-                        <p>После направления повестки членам АК она появится в реестре.</p>
+                        <h3>В заседание не включены обращения</h3>
+                        <p>Директор ДАВГА может исключить обращение до подписания повестки дня.</p>
                       </div>
                     </td>
                   </tr>
@@ -559,172 +415,131 @@ export function SessionsPage({
             </table>
           </div>
         </section>
-      ) : (
+
         <section className="card">
-          <div className="card-body attendance-polls">
-            {selectedAttendancePoll ? (
-              <>
-                <div className="attendance-poll-heading">
-                  <div>
-                    <h3>Опрос о присутствии на заседании</h3>
-                    <p>
-                      Дата и время: <strong>{formatDateTime(selectedAttendancePoll.dateTime)}</strong>
-                    </p>
-                    <p className="muted">
-                      Связано обращений: {selectedAttendancePollCases.length}
-                    </p>
-                  </div>
-                  <Button onClick={() => setSelectedAttendancePollId(null)}>
-                    К списку опросов
-                  </Button>
-                </div>
-                <section className="attendance-linked-cases" aria-labelledby="linked-attendance-cases">
-                  <h4 id="linked-attendance-cases">Связанные обращения с заседанием</h4>
-                  <div className="table-scroll">
-                    <table className="registry-table">
-                      <thead>
-                        <tr>
-                          <th>Обращение</th>
-                          <th>Объект</th>
-                          <th>Статус</th>
-                          <th />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedAttendancePollCases.map((caseItem) => (
-                          <tr key={caseItem.id}>
-                            <td>{caseItem.id}</td>
-                            <td>{caseItem.org}</td>
-                            <td>{STATUS[caseItem.status]}</td>
-                            <td>
-                              <Button onClick={() => onOpen(caseItem)}>Открыть</Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-                <div className="table-scroll">
-                  <table className="registry-table attendance-status-table">
-                    <thead>
-                      <tr>
-                        <th>Член АК</th>
-                        <th>Статус голосования</th>
-                        <th>Изменено исполнителем</th>
-                        <th>Выберите Председателя АК/И.О. Председателя АК</th>
-                        {role === "work" && <th>Отметить вручную</th>}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {commissionMembers.map((member) => {
-                        const response = selectedAttendancePoll.responses[member.id] || "pending";
-                        const isChair = selectedAttendancePoll.chairId === member.id;
-                        const manuallyChangedBy =
-                          selectedAttendancePoll.manualResponseChanges?.[member.id]?.changedBy;
-                        return (
-                          <tr key={member.id}>
-                            <td>{member.name}</td>
-                            <td>
-                              <span className={`badge ${response === "yes" ? "green" : response === "no" ? "gray" : "amber"}`}>
-                                {response === "yes" ? "Да" : response === "no" ? "Нет" : "Нет ответа"}
-                              </span>
-                            </td>
-                            <td>{manuallyChangedBy ? `${manuallyChangedBy} изменил ответ` : "—"}</td>
-                            <td>
-                              {role === "work" ? (
-                                <input
-                                  type="radio"
-                                  name={`attendanceChair_${selectedAttendancePoll.id}`}
-                                  checked={isChair}
-                                  disabled={response !== "yes"}
-                                  aria-label={`Председатель АК: ${member.name}`}
-                                  onChange={() =>
-                                    onSelectAttendanceChair(
-                                      selectedAttendancePoll.id,
-                                      member.id,
-                                    )
-                                  }
-                                />
-                              ) : isChair ? "Да" : "—"}
-                            </td>
-                            {role === "work" && (
-                              <td>
-                                <select
-                                  aria-label={`Отметить участие: ${member.name}`}
-                                  value={response}
-                                  onChange={(event) => {
-                                    const nextResponse = event.target.value as "pending" | "yes" | "no";
-                                    if (nextResponse !== "pending") {
-                                      onUpdateAttendanceResponse(
-                                        selectedAttendancePoll.id,
-                                        member.id,
-                                        nextResponse,
-                                      );
-                                    }
-                                  }}
-                                >
-                                  <option value="pending">Нет ответа</option>
-                                  <option value="yes">Да</option>
-                                  <option value="no">Нет</option>
-                                </select>
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            ) : attendancePolls.length ? (
-              <div className="table-scroll">
-                <table className="registry-table">
-                  <thead>
-                    <tr>
-                      <th>Дата и время заседания</th>
-                      <th>Обращения</th>
-                      <th>Статус ответов</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...attendancePolls]
-                      .reverse()
-                      .map((poll) => {
-                        const responses = Object.values(poll.responses);
-                        const yes = responses.filter((response) => response === "yes").length;
-                        const no = responses.filter((response) => response === "no").length;
-                        const pending = commissionMembers.length - yes - no;
-                        return (
-                          <tr key={poll.id}>
-                            <td>{formatDateTime(poll.dateTime)}</td>
-                            <td>{poll.caseIds.join(", ")}</td>
-                            <td>
-                              <span className="attendance-poll-summary">
-                                Да: {yes} · Нет: {no} · Нет ответа: {pending}
-                              </span>
-                            </td>
-                            <td>
-                              <Button onClick={() => setSelectedAttendancePollId(poll.id)}>
-                                Открыть
-                              </Button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="empty-state">
-                <h3>Опросы о присутствии ещё не направлены</h3>
-                <p>После направления опроса рабочим органом он появится в этом разделе.</p>
-              </div>
-            )}
+          <div className="card-head">
+            <div>
+              <h3>Повестка дня</h3>
+              <p className="muted">
+                {selectedMeeting.agendaSigned
+                  ? "Повестка подписана и направлена в кабинеты членов АК."
+                  : "До подписания директор ДАВГА может изменить порядок пунктов."}
+              </p>
+            </div>
+            <div className="agenda-registry-actions">
+              <Button onClick={() => onPreviewAgenda(selectedMeeting)}>
+                Открыть печатную форму
+              </Button>
+              {role === "director" && (
+                <Button
+                  primary
+                  disabled={!canSignAgenda || !meetingCases.length}
+                  onClick={() => onSignAgenda(selectedMeeting.id)}
+                >
+                  {selectedMeeting.agendaSigned ? "Повестка подписана" : "Подписать повестку"}
+                </Button>
+              )}
+            </div>
+          </div>
+          {!selectedMeeting.agendaSigned && date < signatureDate && (
+            <Notice tone="amber">
+              Подписание повестки будет доступно {formatDate(signatureDate)} — за день до заседания.
+            </Notice>
+          )}
+          <div className="card-body">
+            <ol className="agenda-order-list">
+              {meetingCases.map((caseItem, index) => (
+                <li key={caseItem.id}>
+                  <span>
+                    <strong>{caseItem.id}</strong> — {caseItem.org}
+                  </span>
+                  {role === "director" && !selectedMeeting.agendaSigned && (
+                    <span className="agenda-registry-actions">
+                      <Button
+                        disabled={index === 0}
+                        onClick={() => onMoveCase(selectedMeeting.id, caseItem.id, "up")}
+                      >
+                        Выше
+                      </Button>
+                      <Button
+                        disabled={index === meetingCases.length - 1}
+                        onClick={() => onMoveCase(selectedMeeting.id, caseItem.id, "down")}
+                      >
+                        Ниже
+                      </Button>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
-      )}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <PageHeading
+        title="Заседания комиссии"
+        subtitle="Карточки заседаний, опрос членов АК и повестка дня"
+        action={
+          role === "work" ? (
+            <Button primary onClick={onCreateMeeting}>+ Создать заседание</Button>
+          ) : undefined
+        }
+      />
+      <section className="card">
+        <div className="table-scroll">
+          <table className="registry-table">
+            <thead>
+              <tr>
+                <th>Заседание</th>
+                <th>Дата и время</th>
+                <th>Обращения</th>
+                <th>Опрос</th>
+                <th>Повестка дня</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {[...meetings]
+                .sort((left, right) => right.dateTime.localeCompare(left.dateTime))
+                .map((meeting) => {
+                  const poll = (window.__SAQ_STATE__?.attendancePolls || []).find(
+                    (item: CommissionAttendancePoll) => item.id === meeting.pollId,
+                  );
+                  const answers = poll ? Object.values(poll.responses) : [];
+                  const yes = answers.filter((answer) => answer === "yes").length;
+                  return (
+                    <tr key={meeting.id}>
+                      <td>№ {meeting.number}</td>
+                      <td>{formatDateTime(meeting.dateTime)}</td>
+                      <td>{meeting.caseIds.length}</td>
+                      <td>{poll ? "Подтвердили: " + yes : "Не направлен"}</td>
+                      <td>
+                        <span className={"badge " + (meeting.agendaSigned ? "green" : "amber")}>
+                          {meeting.agendaSigned ? "Подписана" : "Ожидает подписания"}
+                        </span>
+                      </td>
+                      <td><Button onClick={() => setSelectedMeetingId(meeting.id)}>Открыть</Button></td>
+                    </tr>
+                  );
+                })}
+              {!meetings.length && (
+                <tr>
+                  <td colSpan={6}>
+                    <div className="empty-state">
+                      <h3>Заседания ещё не созданы</h3>
+                      <p>Исполнитель рабочего органа создаёт карточку заседания и указывает дату и время.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </>
   );
 }
