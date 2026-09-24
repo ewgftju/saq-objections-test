@@ -386,15 +386,16 @@ export default function ConsiderationProcess({
             <span className="consideration-eyebrow">Текущая задача</span>
             <h4>Готово к рассмотрению АК</h4>
             <p>
-              Доступ на документы данного обращения откроются членам АК после
-              направления опроса о присутствии.
+              Опрос о присутствии направлен автоматически при создании
+              заседания. После получения ответов система определит участников
+              и переведёт обращение на ознакомление с материалами.
             </p>
             <p className="consideration-owner">
-              Исполнитель: <strong>Рабочий орган</strong>
+              Исполнитель: <strong>Члены АК</strong>
             </p>
           </div>
           <div className="consideration-task-action">
-            <small>Ожидается направление опроса о присутствии на заседании.</small>
+            <small>Ожидаются ответы членов АК на опрос о присутствии.</small>
           </div>
         </div>
       ) : awaitingAuthorityResponse ? (
