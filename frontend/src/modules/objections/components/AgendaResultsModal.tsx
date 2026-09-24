@@ -3,7 +3,11 @@ import { Button, Modal, Notice } from "../../../components/ui";
 import type { ObjectionCase } from "../../../types";
 import { OUTCOMES } from "../../../data/constants";
 import { formatDate } from "../../../utils/dateFormat";
-import { normalizeVoteChoice, overall } from "../services/decisions";
+import {
+  normalizeVoteChoice,
+  overall,
+  pointOutcomeFromVotes,
+} from "../services/decisions";
 import { agendaItemText } from "./AgendaModal";
 
 function pointVotes(c: ObjectionCase) {
@@ -32,6 +36,20 @@ function overallResult(c: ObjectionCase) {
   return result ? OUTCOMES[result] : "Не определён";
 }
 
+function pointResults(c: ObjectionCase) {
+  const disputedPoints = c.issues.filter((point) => point.disputed);
+  if (!disputedPoints.length) return ["Результат не определён"];
+
+  return disputedPoints.map((point) => {
+    const voteResult = c.votes?.[point.id];
+    const result =
+      pointOutcomeFromVotes(voteResult?.votes || {}, voteResult?.chair) ||
+      point.final ||
+      point.proposal;
+    return `Пункт ${point.number}: ${result ? OUTCOMES[result] : "Не определён"}`;
+  });
+}
+
 export function AgendaResultsTable({ cases }: { cases: ObjectionCase[] }) {
   return (
     <>
@@ -43,7 +61,8 @@ export function AgendaResultsTable({ cases }: { cases: ObjectionCase[] }) {
                 <th>№</th>
                 <th>Пункт повестки дня</th>
                 <th>Голоса по каждому пункту</th>
-                <th>Общий результат</th>
+                <th>Итоговый результат по пункту</th>
+                <th>Итоговый результат по материалу</th>
               </tr>
             </thead>
             <tbody>
@@ -55,6 +74,16 @@ export function AgendaResultsTable({ cases }: { cases: ObjectionCase[] }) {
                     {pointVotes(c).map((summary, summaryIndex) => (
                       <p
                         key={`${c.id}-${summaryIndex}`}
+                        className="agenda-vote-summary"
+                      >
+                        {summary}
+                      </p>
+                    ))}
+                  </td>
+                  <td>
+                    {pointResults(c).map((summary, summaryIndex) => (
+                      <p
+                        key={`${c.id}-result-${summaryIndex}`}
                         className="agenda-vote-summary"
                       >
                         {summary}
