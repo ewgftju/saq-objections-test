@@ -400,6 +400,7 @@ export default function ActionModal({
         action === "analysis" ||
         action === "fill-meeting-certificate" ||
         action === "position" ||
+        action === "subject-response" ||
         action === "deliver" ||
         action === "create-decision-project"
       }
@@ -915,6 +916,23 @@ export default function ActionModal({
               </table>
             </div>
           </>
+        ) : action === "subject-response" ? (
+          <>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            <label className="field request-attachments-field">
+              <span>
+                Файл ответа <span className="required">*</span>
+              </span>
+              <input
+                type="file"
+                name="subjectResponseFiles"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                multiple
+                required
+              />
+              <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
+            </label>
+          </>
         ) : action === "position" ? (
           <>
             <Notice tone="amber">
@@ -1090,6 +1108,8 @@ export default function ActionModal({
               ? "Сохранение..."
               : action === "position"
                 ? "Сохранить полученный ответ"
+                : action === "subject-response"
+                  ? "Направить ответ"
                 : definition.submit}
           </Button>
         </div>
