@@ -30,7 +30,7 @@ import {
 import { dateObject } from "./services/deadlines";
 import { normalizeVoteChoice, pointOutcomeFromVotes } from "./services/decisions";
 import { applyAction } from "./services/workflow";
-import { useObjectionsModel } from "./useObjectionsModel";
+import { casesEligibleForMeeting, useObjectionsModel } from "./useObjectionsModel";
 import { formatDateTime } from "../../utils/dateFormat";
 
 type DialogState =
@@ -318,19 +318,6 @@ export default function ObjectionsModule() {
   const createMeeting = (dateTime: string) => {
     const next = structuredClone(model.state);
     const meetingDate = dateTime.slice(0, 10);
-    const readyCases = next.cases.filter((item) => {
-      if (item.status !== "certificate_approved") return false;
-      const readyEvent = [...item.history]
-        .reverse()
-        .find((event) => event.title === "Справка подписана");
-      return !readyEvent || readyEvent.date < meetingDate;
-    });
-    if (!readyCases.length) {
-      setDialogError(
-        "Нет обращений, готовых к рассмотрению АК до даты заседания.",
-      );
-      return;
-    }
     next.meetings ??= [];
     const number =
       Math.max(0, ...next.meetings.map((meeting) => meeting.number)) + 1;
@@ -341,7 +328,7 @@ export default function ObjectionsModule() {
     next.attendancePolls.push({
       id: pollId,
       dateTime,
-      caseIds: readyCases.map((item) => item.id),
+      caseIds: [],
       sentAt: next.date,
       responses,
       manualResponseChanges: {},
@@ -350,12 +337,25 @@ export default function ObjectionsModule() {
       id: "meeting-" + Date.now(),
       number,
       dateTime,
-      caseIds: readyCases.map((item) => item.id),
+      caseIds: [],
       pollId,
-      agendaHtml: agendaDocumentHtml(readyCases, meetingDate),
+      agendaHtml: agendaDocumentHtml([], meetingDate),
       created: next.date,
     };
     next.meetings.push(meeting);
+    const readyCases = casesEligibleForMeeting(next, dateTime);
+    if (!readyCases.length) {
+      next.meetings.pop();
+      next.attendancePolls.pop();
+      setDialogError(
+        "Нет обращений, готовых к рассмотрению АК до даты заседания.",
+      );
+      return;
+    }
+    meeting.caseIds = readyCases.map((item) => item.id);
+    meeting.agendaHtml = agendaDocumentHtml(readyCases, meetingDate);
+    const poll = next.attendancePolls.find((item) => item.id === pollId)!;
+    poll.caseIds = readyCases.map((item) => item.id);
     readyCases.forEach((item) => {
       const target = next.cases.find((caseItem) => caseItem.id === item.id);
       if (!target) return;
@@ -414,6 +414,11 @@ export default function ObjectionsModule() {
       meeting.dateTime.slice(0, 10),
     );
     const target = next.cases.find((item) => item.id === caseId);
+    if (target) {
+      target.excludedFromMeetingIds = [
+        ...new Set([...(target.excludedFromMeetingIds || []), meeting.id]),
+      ];
+    }
     if (target?.attendanceMeetingDate === meeting.dateTime.slice(0, 10)) {
       delete target.attendanceMeetingDate;
     }
@@ -424,7 +429,10 @@ export default function ObjectionsModule() {
       text: "Заседание №" + meeting.number + ".",
     });
     syncPollParticipants(next.cases, next.attendancePolls, poll);
-    model.commit(next, "Обращение исключено из заседания.");
+    model.commit(
+      next,
+      "Обращение исключено и будет включено в ближайшее следующее заседание.",
+    );
   };
 
   const moveMeetingCase = (
