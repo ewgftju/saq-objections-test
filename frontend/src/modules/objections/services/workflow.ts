@@ -559,13 +559,18 @@ export function applyAction(
     case "request":
     case "request-other": {
       const otherOrgan = action === "request-other";
-      const recipient = text("recipient", "Кому направить запрос");
+      const enteredRecipient = String(form.get("recipient") || "").trim();
       const customText = otherOrgan
         ? text("customRequestText", "Текст запроса")
         : undefined;
       const saqRecipient = otherOrgan
         ? (String(form.get("saqRecipient") || "subject") as Role)
         : undefined;
+      const saqRecipientLabel =
+        saqRecipient === "subject" ? "Кабинет Объекта" : "";
+      const recipient = enteredRecipient || saqRecipientLabel;
+      if (!recipient)
+        throw new Error("Заполните «Кому направить запрос» или «Получатель SAQ»");
       const deadline = `${addWorkdays(date, 2)}T18:00`;
       const requestId = `request-${c.requests.length + 1}`;
       note = `Запрос сформирован для ${recipient}. Срок рассмотрения: ${deadline}.`;
