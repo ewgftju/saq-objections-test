@@ -376,14 +376,6 @@ export default function ObjectionsModule() {
     };
     next.meetings.push(meeting);
     const readyCases = casesEligibleForMeeting(next, dateTime);
-    if (!readyCases.length) {
-      next.meetings.pop();
-      next.attendancePolls.pop();
-      setDialogError(
-        "Нет обращений, готовых к рассмотрению АК до даты заседания.",
-      );
-      return;
-    }
     meeting.caseIds = readyCases.map((item) => item.id);
     meeting.agendaHtml = agendaDocumentHtml(readyCases, meetingDate);
     const poll = next.attendancePolls.find((item) => item.id === pollId)!;
@@ -402,7 +394,7 @@ export default function ObjectionsModule() {
     COMMISSION_ATTENDANCE_MEMBERS.forEach((member) => {
       next.notifications.push({
         id: pollId + "-" + member.id,
-        caseId: readyCases[0].id,
+        caseId: readyCases[0]?.id || "",
         recipient: member.name,
         recipientRole: "commission",
         text: "Укажите, будете ли присутствовать на заседании " + formatDateTime(dateTime) + ".",
@@ -416,7 +408,7 @@ export default function ObjectionsModule() {
     });
     next.notifications.push({
       id: "agenda-sign-" + meeting.id,
-      caseId: readyCases[0].id,
+      caseId: readyCases[0]?.id || "",
       recipient: ROLES.director,
       recipientRole: "director",
       text: "Подпишите повестку дня заседания №" + number + " на " + formatDateTime(dateTime) + ".",
