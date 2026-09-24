@@ -519,14 +519,23 @@ export default function ObjectionsModule() {
         meetingId: meeting.id,
       });
     });
-    meetingCases.forEach((item) =>
+    meetingCases.forEach((item) => {
+      if (["certificate_approved", "documents_review"].includes(item.status)) {
+        item.status = "commission_voting";
+        item.history.push({
+          date: next.date,
+          actor: "Система",
+          title: "Открыто голосование членов АК",
+          text: "Повестка дня подписана. Члены АК, подтвердившие присутствие, могут голосовать по обращению.",
+        });
+      }
       item.history.push({
         date: next.date,
         actor: ROLES.director,
         title: "Повестка дня подписана",
         text: "Повестка заседания №" + meeting.number + " направлена членам АК.",
-      }),
-    );
+      });
+    });
     next.notifications.forEach((notification) => {
       if (notification.kind === "agenda-sign" && notification.meetingId === meeting.id) {
         notification.read = true;
