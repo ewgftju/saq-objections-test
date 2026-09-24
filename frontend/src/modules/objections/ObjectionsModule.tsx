@@ -109,6 +109,36 @@ function syncPollParticipants(
   });
 }
 
+function advanceCasesAfterAttendancePoll(
+  cases: ObjectionCase[],
+  poll: CommissionAttendancePoll,
+  date: string,
+) {
+  const hasParticipants = participantsFromPoll(poll).length > 0;
+  poll.caseIds.forEach((caseId) => {
+    const target = cases.find((item) => item.id === caseId);
+    if (!target) return;
+    if (hasParticipants && target.status === "certificate_approved") {
+      target.status = "documents_review";
+      target.history.push({
+        date,
+        actor: "Система",
+        title: "Открыт доступ к материалам обращения",
+        text: "Есть подтверждённый участник заседания. Обращение переведено на этап ознакомления.",
+      });
+    }
+    if (!hasParticipants && target.status === "documents_review") {
+      target.status = "certificate_approved";
+      target.history.push({
+        date,
+        actor: "Система",
+        title: "Ожидание подтверждения присутствия",
+        text: "Подтверждённых участников заседания нет.",
+      });
+    }
+  });
+}
+
 export default function ObjectionsModule() {
   const model = useObjectionsModel();
   const [dialog, setDialog] = useState<DialogState>(null);
@@ -238,6 +268,7 @@ export default function ObjectionsModule() {
     poll.responses[memberId] = response;
     applyDefaultAttendanceChair(poll);
     syncPollParticipants(next.cases, next.attendancePolls, poll);
+    advanceCasesAfterAttendancePoll(next.cases, poll, next.date);
     notification.read = true;
     poll.caseIds.forEach((caseId) => {
       const target = next.cases.find((item) => item.id === caseId);
@@ -275,6 +306,7 @@ export default function ObjectionsModule() {
       changedAt: next.date,
     };
     syncPollParticipants(next.cases, next.attendancePolls, poll);
+    advanceCasesAfterAttendancePoll(next.cases, poll, next.date);
     next.notifications.forEach((notification) => {
       if (
         notification.attendancePollId === pollId &&
