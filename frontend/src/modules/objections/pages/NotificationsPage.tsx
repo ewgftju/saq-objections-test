@@ -39,16 +39,10 @@ export default function NotificationsPage({
             : notification.kind !== "attendance-poll" &&
               notification.kind !== "agenda-signed",
         );
-  const orderedNotifications =
-    role === "commission"
-      ? [...visibleNotifications].sort((left, right) => {
-          if (left.read !== right.read) return Number(left.read) - Number(right.read);
-          return (
-            right.date.localeCompare(left.date) ||
-            right.id.localeCompare(left.id)
-          );
-        })
-      : visibleNotifications;
+  const orderedNotifications = [...visibleNotifications].sort((left, right) => {
+    if (left.read !== right.read) return Number(left.read) - Number(right.read);
+    return right.date.localeCompare(left.date) || right.id.localeCompare(left.id);
+  });
   return (
     <>
       <PageHeading
