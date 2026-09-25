@@ -385,6 +385,9 @@ export function DocumentContent({
         <p className="certificate-template-intro">
           {certificateIntro(snapshot)}
         </p>
+        <p className="certificate-template-explanation">
+          (наименование, БИН/ИИН лица, подавшего возражение, жалобу)
+        </p>
         <p className="certificate-template-authority">
           {auditAuthorityFullName(snapshot.issuer)} (далее – {snapshot.issuer === "КВГА" ? "КВГА" : "ДВГА"}).
         </p>
