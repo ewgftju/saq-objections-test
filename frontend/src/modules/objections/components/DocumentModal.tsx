@@ -421,10 +421,9 @@ export function DocumentContent({
               {point.argument || "—"}
             </div>
             <div className="certificate-template-line">
-              <b>Мотивированный ответ ДВГА/КВГА:</b>
               {authorityText(point.id, "response").map((item) => (
                 <p key={item.authority}>
-                  <b>{item.authority}:</b> {item.value}
+                  <b>Мотивированный ответ {item.authority}:</b> {item.value}
                 </p>
               ))}
             </div>
