@@ -410,10 +410,9 @@ export function DocumentContent({
           <section className="certificate-template-point" key={point.id}>
             <h3>Пункт {point.number}</h3>
             <div className="certificate-template-line">
-              <b>Доводы ДВГА/КВГА:</b>
               {authorityText(point.id, "finding").map((item) => (
                 <p key={item.authority}>
-                  <b>{item.authority}:</b> {item.value}
+                  <b>Доводы {item.authority}:</b> {item.value}
                 </p>
               ))}
             </div>
