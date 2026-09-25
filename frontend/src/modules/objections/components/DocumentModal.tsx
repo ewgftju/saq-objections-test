@@ -385,6 +385,12 @@ export function DocumentContent({
         <p className="certificate-template-intro">
           {certificateIntro(snapshot)}
         </p>
+        <p className="certificate-template-authority">
+          {auditAuthorityFullName(snapshot.issuer)} (далее – {snapshot.issuer === "КВГА" ? "КВГА" : "ДВГА"}).
+        </p>
+        <p className="certificate-template-explanation">
+          (наименование органа, чьи акты, действия (бездействие) обжалуются)
+        </p>
         <ol className="certificate-template-point-list">
           {points.map((point) => (
             <li key={point.id}>{point.title}</li>
