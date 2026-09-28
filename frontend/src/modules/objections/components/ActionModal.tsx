@@ -358,11 +358,6 @@ export default function ActionModal({
     request.template === "dvga" ||
     request.recipient.toUpperCase().includes("ДВГА") ||
     request.recipient.toUpperCase().includes("КВГА");
-  const otherRequestForConfirmation = c.requests.find(
-    (request) => !isAuthorityRequest(request) && !request.responded,
-  );
-  const receiptRequest =
-    authorityRequestForConfirmation || otherRequestForConfirmation;
   const responseStatus = (request: ObjectionCase["requests"][number]) => {
     if (request.confirmed) return "Получен и зафиксирован";
     if (isAuthorityRequest(request) && request.responseSigned)
@@ -943,14 +938,8 @@ export default function ActionModal({
         ) : action === "position" ? (
           <>
             <Notice tone="amber">
-              {receiptRequest ? (
-                <>
-                  Получен ответ от <strong>{receiptRequest.recipient}</strong>.
-                  Внесите дату поступления и вложите все полученные файлы.
-                </>
-              ) : (
-                "Ответ от адресата ещё не подтверждён. Внесите дату поступления и вложите все полученные файлы."
-              )}
+              Все ожидаемые ответы поступили. Одним действием зафиксируйте дату
+              их получения и вложите все полученные файлы.
             </Notice>
             <section className="response-receipt-statuses" aria-label="Статусы ответов по запросам">
               <b>Статус ответов по запросам</b>
@@ -979,19 +968,15 @@ export default function ActionModal({
                   <span aria-hidden="true">↓</span>
                   <div>
                     <b>
-                      {authorityRequestForConfirmation
-                        ? `Из кабинета ${authorityRequestForConfirmation.recipient}`
-                        : receiptRequest
-                          ? `Ответ от ${receiptRequest.recipient}`
-                          : "Из кабинета ДВГА/КВГА"}
+                      Ответы по направленным запросам
                     </b>
                     <small>
                       {authorityRequestForConfirmation
-                        ? "Электронное поступление"
-                        : "Ответ ожидается от адресата"}
+                        ? "Электронные ответы и приложенные документы"
+                        : "Ответы, полученные вне SAQ"}
                     </small>
                   </div>
-                  <em>{authorityRequestForConfirmation ? "ПОСТУПИЛ" : "НЕ ПОСТУПИЛО"}</em>
+                  <em>ПОСТУПИЛИ</em>
                 </div>
                 {authorityRequestForConfirmation ? (
                   <div className="response-receipt-materials">
