@@ -281,6 +281,9 @@ export function SessionsPage({
   onCompleteMeeting: (meetingId: string) => void;
 }) {
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+  const [sessionsTab, setSessionsTab] = useState<"meetings" | "excluded">(
+    "meetings",
+  );
   const [isAddingCase, setIsAddingCase] = useState(false);
   const [caseIdToAdd, setCaseIdToAdd] = useState("");
   const selectedMeeting = meetings.find((meeting) => meeting.id === selectedMeetingId);
@@ -300,6 +303,12 @@ export function SessionsPage({
           !selectedMeeting.caseIds.includes(caseItem.id),
       )
     : [];
+  const scheduledCaseIds = new Set(
+    meetings.flatMap((meeting) => meeting.caseIds),
+  );
+  const excludedCases = cases.filter(
+    (caseItem) => !scheduledCaseIds.has(caseItem.id),
+  );
   const signatureDate = selectedMeeting
     ? (() => {
         const value = new Date(selectedMeeting.dateTime);
@@ -597,78 +606,136 @@ export function SessionsPage({
         title="Заседания комиссии"
         subtitle="Карточки заседаний, опрос членов АК и повестка дня"
         action={
-          role === "work" ? (
+          role === "work" && sessionsTab === "meetings" ? (
             <Button primary onClick={onCreateMeeting}>+ Создать заседание</Button>
           ) : undefined
         }
       />
-      <section className="card">
-        <div className="table-scroll">
-          <table className="registry-table">
-            <thead>
-              <tr>
-                <th>Заседание</th>
-                <th>Дата и время</th>
-                <th>Обращения</th>
-                <th>Опрос</th>
-                <th>Повестка дня</th>
-                <th>Заседание проведено</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {[...meetings]
-                .sort((left, right) => right.dateTime.localeCompare(left.dateTime))
-                .map((meeting) => {
-                  const poll = attendancePolls.find((item) => item.id === meeting.pollId);
-                  const answers = poll ? Object.values(poll.responses) : [];
-                  const yes = answers.filter((answer) => answer === "yes").length;
-                  return (
-                    <tr key={meeting.id}>
-                      <td>№ {meeting.number}</td>
-                      <td>{formatDateTime(meeting.dateTime)}</td>
-                      <td>{meeting.caseIds.length}</td>
-                      <td>{poll ? "Подтвердили: " + yes : "Не направлен"}</td>
-                      <td>
-                        <span className={"badge " + (meeting.agendaSigned ? "green" : "amber")}>
-                          {meeting.agendaSigned ? "Подписана" : "Ожидает подписания"}
-                        </span>
-                      </td>
-                      <td>
-                        {meeting.completed ? (
-                          <span className="badge green">Проведено</span>
-                        ) : role === "work" ? (
-                          <Button
-                            disabled={
-                              !meeting.agendaSigned ||
-                              date < meeting.dateTime.slice(0, 10)
-                            }
-                            onClick={() => onCompleteMeeting(meeting.id)}
-                          >
-                            Заседание проведено
-                          </Button>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td><Button onClick={() => setSelectedMeetingId(meeting.id)}>Открыть</Button></td>
-                    </tr>
-                  );
-                })}
-              {!meetings.length && (
+      <div className="session-tabs" role="tablist" aria-label="Разделы заседаний">
+        <button
+          type="button"
+          className={sessionsTab === "meetings" ? "active" : ""}
+          onClick={() => setSessionsTab("meetings")}
+        >
+          Заседания
+        </button>
+        <button
+          type="button"
+          className={sessionsTab === "excluded" ? "active" : ""}
+          onClick={() => setSessionsTab("excluded")}
+        >
+          Исключенные обращения
+          {excludedCases.length > 0 && (
+            <span className="session-tab-badge">{excludedCases.length}</span>
+          )}
+        </button>
+      </div>
+      {sessionsTab === "meetings" ? (
+        <section className="card">
+          <div className="table-scroll">
+            <table className="registry-table">
+              <thead>
                 <tr>
-                  <td colSpan={7}>
-                    <div className="empty-state">
-                      <h3>Заседания ещё не созданы</h3>
-                      <p>Исполнитель рабочего органа создаёт карточку заседания и указывает дату и время.</p>
-                    </div>
-                  </td>
+                  <th>Заседание</th>
+                  <th>Дата и время</th>
+                  <th>Обращения</th>
+                  <th>Опрос</th>
+                  <th>Повестка дня</th>
+                  <th>Заседание проведено</th>
+                  <th />
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+              </thead>
+              <tbody>
+                {[...meetings]
+                  .sort((left, right) => right.dateTime.localeCompare(left.dateTime))
+                  .map((meeting) => {
+                    const poll = attendancePolls.find((item) => item.id === meeting.pollId);
+                    const answers = poll ? Object.values(poll.responses) : [];
+                    const yes = answers.filter((answer) => answer === "yes").length;
+                    return (
+                      <tr key={meeting.id}>
+                        <td>№ {meeting.number}</td>
+                        <td>{formatDateTime(meeting.dateTime)}</td>
+                        <td>{meeting.caseIds.length}</td>
+                        <td>{poll ? "Подтвердили: " + yes : "Не направлен"}</td>
+                        <td>
+                          <span className={"badge " + (meeting.agendaSigned ? "green" : "amber")}>
+                            {meeting.agendaSigned ? "Подписана" : "Ожидает подписания"}
+                          </span>
+                        </td>
+                        <td>
+                          {meeting.completed ? (
+                            <span className="badge green">Проведено</span>
+                          ) : role === "work" ? (
+                            <Button
+                              disabled={
+                                !meeting.agendaSigned ||
+                                date < meeting.dateTime.slice(0, 10)
+                              }
+                              onClick={() => onCompleteMeeting(meeting.id)}
+                            >
+                              Заседание проведено
+                            </Button>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td><Button onClick={() => setSelectedMeetingId(meeting.id)}>Открыть</Button></td>
+                      </tr>
+                    );
+                  })}
+                {!meetings.length && (
+                  <tr>
+                    <td colSpan={7}>
+                      <div className="empty-state">
+                        <h3>Заседания ещё не созданы</h3>
+                        <p>Исполнитель рабочего органа создаёт карточку заседания и указывает дату и время.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : (
+        <section className="card">
+          <div className="table-scroll">
+            <table className="registry-table">
+              <thead>
+                <tr>
+                  <th>№</th>
+                  <th>Обращение</th>
+                  <th>Объект</th>
+                  <th>Статус</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {excludedCases.map((caseItem, index) => (
+                  <tr key={caseItem.id}>
+                    <td>{index + 1}</td>
+                    <td>{caseItem.id}</td>
+                    <td>{caseItem.org}</td>
+                    <td>{STATUS[caseItem.status]}</td>
+                    <td><Button onClick={() => onOpen(caseItem)}>Открыть</Button></td>
+                  </tr>
+                ))}
+                {!excludedCases.length && (
+                  <tr>
+                    <td colSpan={5}>
+                      <div className="empty-state">
+                        <h3>Исключенных обращений нет</h3>
+                        <p>Все обращения включены в заседания.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </>
   );
 }
