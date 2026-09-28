@@ -131,7 +131,6 @@ function prepare(h: Harness, partial = false) {
 }
 function voteAndSign(h: Harness) {
   const values: Record<string, string> = {
-    number: "ПР-1",
     protocolDate: "2026-09-10",
     protocolMember_1: "Председатель Апелляционной комиссии: ФИО",
     protocolMember_2: "Директор ДМБУА: ФИО",
@@ -851,7 +850,7 @@ test("профконтроль проходит те же этапы, что и 
   h.run("approve-final-response", "director");
   h.run("sign-final-response", "director");
   assert.equal(h.c.status, "completed");
-  assert.equal(h.c.meeting?.number, "ПР-1");
+  assert.equal(h.c.meeting?.number, "ПЗ-09/2026-1");
 });
 
 test("кворум, отсутствие председательствующего, отвод и равенство голосов", () => {
@@ -1792,11 +1791,10 @@ test("протокол формируется с выбранными участ
   const definition = actionForm("vote", h.c, "2026-09-10", {});
   assert.deepEqual(
     definition.fields.map((field) => field.name),
-    ["number", "protocolDate", "chairperson", "secretary", "recommendations"],
+    ["protocolDate", "secretary", "recommendations"],
   );
   h.c.status = "meeting";
   h.run("vote", "work", {
-    number: "ПР-17",
     protocolDate: "2026-09-10",
     recommendations: "Направить замечания в орган аудита.",
     protocolMember_1: "Председатель Апелляционной комиссии: ФИО",
