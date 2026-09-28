@@ -98,15 +98,29 @@ export function createDemoRepository(
                   ]),
                 )
               : normalized.votes;
+          const requests = normalized.requests.map((request) =>
+            request.template === "other" &&
+            request.saqRecipient === "subject" &&
+            request.recipient !== "Кабинет Объекта"
+              ? { ...request, saqRecipient: undefined }
+              : request,
+          );
+          // Файлы, внесённые рабочим органом при единой фиксации ответов,
+          // относятся к ответу внешнего органа, а не к ответу ДВГА/КВГА.
+          const otherRequest = requests.find(
+            (request) => request.template === "other" && !request.saqRecipient,
+          );
+          const documents = otherRequest
+            ? normalized.documents.map((document) =>
+                document.kind === "response-attachment"
+                  ? { ...document, requestId: otherRequest.id }
+                  : document,
+              )
+            : normalized.documents;
           return {
             ...normalized,
-            requests: normalized.requests.map((request) =>
-              request.template === "other" &&
-              request.saqRecipient === "subject" &&
-              request.recipient !== "Кабинет Объекта"
-                ? { ...request, saqRecipient: undefined }
-                : request,
-            ),
+            requests,
+            documents,
             members: attendanceMembers,
             votes,
             unread:
