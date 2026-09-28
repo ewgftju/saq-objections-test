@@ -589,9 +589,12 @@ export function applyAction(
       const customText = otherOrgan
         ? text("customRequestText", "Текст запроса")
         : undefined;
-      const saqRecipient = otherOrgan
-        ? (String(form.get("saqRecipient") || "subject") as Role)
-        : undefined;
+      // Ручной адресат — это внешний орган, у него нет кабинета SAQ.
+      // Кабинет Объекта используется только если адресат вручную не указан.
+      const saqRecipient =
+        otherOrgan && !enteredRecipient && form.get("saqRecipient") === "subject"
+          ? "subject"
+          : undefined;
       const saqRecipientLabel =
         saqRecipient === "subject" ? "Кабинет Объекта" : "";
       const recipient = enteredRecipient || saqRecipientLabel;
