@@ -308,7 +308,7 @@ export function SessionsPage({
   );
   const excludedCases = cases.filter(
     (caseItem) =>
-      caseItem.status === "certificate_approved" &&
+      ["certificate_approved", "documents_review"].includes(caseItem.status) &&
       !scheduledCaseIds.has(caseItem.id),
   );
   const signatureDate = selectedMeeting
