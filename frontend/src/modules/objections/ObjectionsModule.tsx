@@ -28,7 +28,11 @@ import {
   SourcesPage,
 } from "./pages/ReferencePages";
 import { dateObject } from "./services/deadlines";
-import { normalizeVoteChoice, pointOutcomeFromVotes } from "./services/decisions";
+import {
+  normalizeVoteChoice,
+  pointOutcomeFromVotes,
+  presidingChairId,
+} from "./services/decisions";
 import { applyAction } from "./services/workflow";
 import { casesEligibleForMeeting, useObjectionsModel } from "./useObjectionsModel";
 import { formatDateTime } from "../../utils/dateFormat";
@@ -45,32 +49,38 @@ type DialogState =
   | null;
 
 function participantsFromPoll(poll: CommissionAttendancePoll) {
+  const chairId = presidingChairId(
+    COMMISSION_ATTENDANCE_MEMBERS
+      .filter((member) => poll.responses[member.id] === "yes")
+      .map((member) => ({ id: member.id, present: true })),
+  );
   return COMMISSION_ATTENDANCE_MEMBERS
     .filter((member) => poll.responses[member.id] === "yes")
     .map((member) => ({
       id: member.id,
       name: member.name,
       present: true,
-      isChair: member.id === poll.chairId,
+      isChair: member.id === chairId,
       recused: false,
       reason: "",
     }));
 }
 
 function applyDefaultAttendanceChair(poll: CommissionAttendancePoll) {
-  const viceMinisterId = "kenbeil-dm";
-  const davgaDirectorId = "kurenbek-shb";
-  if (poll.responses[viceMinisterId] === "yes") {
-    poll.chairId = viceMinisterId;
-  } else if (poll.responses[davgaDirectorId] === "yes") {
-    poll.chairId = davgaDirectorId;
+  const chairId = presidingChairId(
+    COMMISSION_ATTENDANCE_MEMBERS
+      .filter((member) => poll.responses[member.id] === "yes")
+      .map((member) => ({ id: member.id, present: true })),
+  );
+  if (chairId) {
+    poll.chairId = chairId;
   } else {
     delete poll.chairId;
   }
 }
 
 function recalculateVotesForChair(c: ObjectionCase) {
-  const chairId = c.members.find((member) => member.isChair)?.id;
+  const chairId = presidingChairId(c.members);
   if (!chairId || !c.votes) return;
   c.issues.filter((point) => point.disputed).forEach((point) => {
     const result = c.votes?.[point.id];
