@@ -398,7 +398,6 @@ export function actionForm(
     case "vote":
       title = "Сформировать протокол заседания";
       fields.push(
-        input("number", "Номер протокола", "ПР-" + c.id),
         input("protocolDate", "Дата протокола", date, "date"),
         {
           ...input(
