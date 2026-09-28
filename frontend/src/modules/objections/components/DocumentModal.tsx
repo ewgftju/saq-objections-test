@@ -103,7 +103,7 @@ function certificateIntro(c: ObjectionCase) {
     return `В Министерство финансов Республики Казахстан поступило возражение № ${number} от ${date} ${applicant}, к нарушению, указанному в уведомлении об устранении нарушений от ${sourceDate} № ${sourceNumber}, выявленному по результатам камерального контроля № ${details?.cameraControlNumber || "—"} от ${formatDate(details?.cameraControlDate)}.`;
 
   if (appealType === "Возражение на аудиторский отчет")
-    return `В Министерство финансов Республики Казахстан поступило возражение № ${number} от ${date} ${applicant}, на аудиторский отчёт от ${sourceDate} № ${sourceNumber}, проведённый ${authority}.`;
+    return `В Министерство финансов Республики Казахстан поступило возражение № ${number} от ${date} ${applicant}, на аудиторский отчёт от ${sourceDate} № ${sourceNumber}, проведённый ${authority}. Исполнитель: ${c.assignee || DEMO_USER.fullName}.`;
 
   return `В Министерство финансов Республики Казахстан поступило обращение № ${number} от ${date} ${applicant}.`;
 }
@@ -520,6 +520,24 @@ export function DocumentContent({
     const meeting = protocolPreview || snapshot.meeting;
     const members = protocolPreview?.members || snapshot.members;
     const presentMembers = members.filter((member) => member.present);
+    const viceMinister = presentMembers.find(
+      (member) => member.id === "kenbeil-dm",
+    );
+    const davgaDirector = presentMembers.find(
+      (member) => member.id === "kurenbek-shb",
+    );
+    const presidingMember =
+      viceMinister ||
+      davgaDirector ||
+      presentMembers.find((member) => member.isChair);
+    const commissionMembers = presentMembers.filter(
+      (member) => member.id !== presidingMember?.id,
+    );
+    const presidingLabel = viceMinister
+      ? "Председатель АК"
+      : davgaDirector
+        ? "Заместитель председателя АК"
+        : "Председатель АК";
     const votes = protocolPreview?.votes || snapshot.votes;
     const hasPreviewVotes = Object.values(protocolPreview?.votes || {}).some(
       (pointVotes) =>
@@ -571,14 +589,37 @@ export function DocumentContent({
         <p>
           <b>ПРИСУТСТВОВАЛИ (онлайн, Zoom):</b>
           <br />
-          {presentMembers.length
-            ? presentMembers.map((member) => (
+          {presidingMember ? (
+            <>
+              <b>{presidingLabel}:</b> {presidingMember.name}
+              <br />
+              {commissionMembers.length ? (
+                <>
+                  <b>Члены Апелляционной комиссии:</b>
+                  <br />
+                  {commissionMembers.map((member) => (
+                    <span key={member.id}>
+                      {member.name}
+                      <br />
+                    </span>
+                  ))}
+                </>
+              ) : null}
+            </>
+          ) : presentMembers.length ? (
+            <>
+              <b>Члены Апелляционной комиссии:</b>
+              <br />
+              {presentMembers.map((member) => (
                 <span key={member.id}>
                   {member.name}
                   <br />
                 </span>
-              ))
-            : "—"}
+              ))}
+            </>
+          ) : (
+            "—"
+          )}
         </p>
         <p className="protocol-template-intro">
           Возражение «{snapshot.org}», БИН {snapshot.bin} от{" "}
@@ -974,7 +1015,7 @@ export function wordDocumentHtml({
   document,
 }: Pick<Parameters<typeof DocumentContent>[0], "c" | "kind" | "document">) {
   const css =
-    "body{font:12pt 'Times New Roman',serif;line-height:1;color:#111}p{white-space:pre-wrap;text-align:justify}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #111;padding:8px;vertical-align:top}.certificate-template{padding:20mm 15mm;text-align:justify}.certificate-template h1,.certificate-template h2{text-align:center;font-size:12pt}.certificate-template-intro{text-align:justify;text-indent:12mm}.certificate-template-explanation{text-align:center;font-style:italic}.certificate-template-point{break-inside:avoid}.certificate-template-point h3{text-align:center}.certificate-template-line{padding:2px 0}.certificate-template-line p{margin:4px 0}.certificate-members-table th{text-align:center}.certificate-point-votes-table th,.certificate-point-votes-table td{min-width:0;padding:5px;overflow-wrap:anywhere;word-break:break-word;white-space:normal}.certificate-point-votes-table th{font-size:12pt;line-height:1;text-align:center}.certificate-point-votes-table td{font-size:12pt;line-height:1;text-align:justify}"
+    "body{font:12pt 'Times New Roman',serif;line-height:1;color:#111}p{white-space:pre-wrap;text-align:justify}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #111;padding:8px;vertical-align:top}.certificate-template{padding:20mm 15mm;text-align:justify}.certificate-template h1,.certificate-template h2{text-align:center;font-size:12pt}.certificate-template-intro{text-align:justify;text-indent:12mm}.certificate-template-explanation{text-align:center;font-style:italic}.certificate-template-point{break-inside:avoid}.certificate-template-point h3{text-align:center}.certificate-template-line{padding:2px 0}.certificate-template-line p{margin:4px 0}.certificate-members-table th{text-align:center}.certificate-point-votes-table th,.certificate-point-votes-table td{min-width:0;padding:5px;overflow-wrap:anywhere;word-break:break-word;white-space:normal;font-size:12pt;line-height:1}.certificate-point-votes-table th{text-align:center}.certificate-point-votes-table td{text-align:justify}"
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Справка</title><style>${css}</style></head><body>${renderToStaticMarkup(
     <DocumentContent c={c} kind={kind} document={document} />,
   )}</body></html>`;
