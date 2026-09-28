@@ -428,6 +428,45 @@ export default function CaseWorkspace({
                   ) : null;
                 })()}
                 {(() => {
+                  const finalResponse = c.documents
+                    .filter((document) => document.kind === "final-response")
+                    .at(-1);
+                  return finalResponse ? (
+                    <section className="request-documents-section">
+                      <h4>Окончательный ответ</h4>
+                      <div className="request-documents-list">
+                        <div className="request-document-row">
+                          <span>{finalResponse.name}</span>
+                          <div className="request-document-actions">
+                            <Button
+                              onClick={() =>
+                                onDocument(finalResponse.kind, finalResponse)
+                              }
+                            >
+                              Просмотр
+                            </Button>
+                            <Button
+                              onClick={() =>
+                                downloadFile(
+                                  `${c.id}-окончательный-ответ.doc`,
+                                  wordDocumentHtml({
+                                    c,
+                                    kind: finalResponse.kind,
+                                    document: finalResponse,
+                                  }),
+                                  "application/msword",
+                                )
+                              }
+                            >
+                              Скачать Word
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  ) : null;
+                })()}
+                {(() => {
                   const protocol = c.documents
                     .filter((document) => document.kind === "protocol")
                     .at(-1);
