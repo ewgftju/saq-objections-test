@@ -42,10 +42,12 @@ function pointResults(c: ObjectionCase) {
 
   return disputedPoints.map((point) => {
     const voteResult = c.votes?.[point.id];
-    const result =
-      pointOutcomeFromVotes(voteResult?.votes || {}, voteResult?.chair) ||
-      point.final ||
-      point.proposal;
+    // До завершения голосования результат по пункту не определяется:
+    // предварительные значения из справки не должны попадать в итоги заседания.
+    const result = pointOutcomeFromVotes(
+      voteResult?.votes || {},
+      voteResult?.chair,
+    );
     return `Пункт ${point.number}: ${result ? OUTCOMES[result] : "Не определён"}`;
   });
 }
