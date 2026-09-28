@@ -269,15 +269,18 @@ export function actionForm(
       break;
     case "analysis":
       title = "Сформировать справку";
-      fields.push(
-        area(
-          "davgaArguments",
-          "Доводы ДАВГА",
-          c.certificate?.davgaArguments || "",
-        ),
-      );
+      for (const point of disputed(c)) {
+        fields.push(
+          heading(`davgaArgumentsHeading_${point.id}`, `Оспариваемый пункт ${point.number}`),
+          area(
+            `davgaArguments_${point.id}`,
+            "Доводы ДАВГА",
+            c.certificate?.davgaArgumentsByPoint?.[point.id] || "",
+          ),
+        );
+      }
       note =
-        "Заполните доводы рабочего органа. Доводы ДВГА и КВГА будут подставлены в справку из ответов на запросы автоматически.";
+        "Заполните доводы рабочего органа по каждому оспариваемому пункту. Доводы ДВГА и КВГА будут подставлены в справку из ответов на запросы автоматически.";
       break;
     case "control-analysis":
       title = "Изучение административного дела";

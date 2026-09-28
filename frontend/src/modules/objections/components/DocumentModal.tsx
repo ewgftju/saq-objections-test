@@ -429,7 +429,7 @@ export function DocumentContent({
             </div>
             <div className="certificate-template-line">
               <b>Доводы рабочего органа (ДАВГА МФ РК):</b>{" "}
-              {certificate?.davgaArguments || "—"}
+              {certificate?.davgaArgumentsByPoint?.[point.id] || certificate?.davgaArguments || "—"}
             </div>
             {(() => {
               const positions = (certificate?.memberPositions || []).filter(

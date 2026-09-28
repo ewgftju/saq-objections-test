@@ -975,9 +975,17 @@ export function applyAction(
       break;
     }
     case "analysis": {
-      if (form.has("davgaArguments")) {
+      const points = disputed(c);
+      const argumentNames = points.map((point) => `davgaArguments_${point.id}`);
+      if (argumentNames.some((name) => form.has(name))) {
         c.certificate = {
-          davgaArguments: text("davgaArguments", "Доводы ДАВГА"),
+          davgaArguments: "",
+          davgaArgumentsByPoint: Object.fromEntries(
+            points.map((point) => [
+              point.id,
+              text(`davgaArguments_${point.id}`, `Доводы ДАВГА по пункту ${point.number}`),
+            ]),
+          ),
           memberPositions: [],
         };
         c.status = "certificate_approval";

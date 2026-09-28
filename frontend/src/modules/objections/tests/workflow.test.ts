@@ -1370,7 +1370,7 @@ test("дело открывает процесс, а одно действие �
   assert.doesNotMatch(controlHtml, /Позиции комиссии/);
 });
 
-test("справка формируется по новому шаблону и содержит только поле доводов ДАВГА", () => {
+test("справка формируется с отдельными доводами ДАВГА по каждому оспариваемому пункту", () => {
   const h = harness(0);
   screen(h);
   h.run("request", "work", {
@@ -1398,9 +1398,18 @@ test("справка формируется по новому шаблону и 
   h.run("approve-response", "dvga");
   h.run("sign-response", "dvga");
   h.run("position", "work");
-  h.run("analysis", "work", {
-    davgaArguments: "Доводы ДАВГА для справки",
-  });
+  h.run(
+    "analysis",
+    "work",
+    Object.fromEntries(
+      h.c.issues
+        .filter((point) => point.disputed)
+        .map((point) => [
+          `davgaArguments_${point.id}`,
+          `Доводы ДАВГА для пункта ${point.number}`,
+        ]),
+    ),
+  );
   assert.equal(h.c.status, "certificate_approval");
   const analysisStepsHtml = renderToStaticMarkup(
     createElement(ConsiderationProcess, {
@@ -1426,8 +1435,12 @@ test("справка формируется по новому шаблону и 
   assert.match(decisionStepsHtml, /Сформировать протокол заседания/);
   assert.match(decisionStepsHtml, /Подписать протокол заседания/);
   assert.deepEqual(
-    actionForm("analysis", h.c, "2026-09-10").fields.map((field) => field.name),
-    ["davgaArguments"],
+    actionForm("analysis", h.c, "2026-09-10").fields
+      .filter((field) => field.type === "textarea")
+      .map((field) => field.name),
+    h.c.issues
+      .filter((point) => point.disputed)
+      .map((point) => `davgaArguments_${point.id}`),
   );
   const certificateMaterialsHtml = renderToStaticMarkup(
     createElement(CaseWorkspace, {
@@ -1581,7 +1594,8 @@ test("справка формируется по новому шаблону и 
   assert.match(html, /Мотивированный ответ ДВГА\/КВГА:/);
   assert.match(html, /ДВГА:<\/b> Мотивированный ответ ДВГА/);
   assert.match(html, /Доводы объекта гос\. аудита \(заявителя\):/);
-  assert.match(html, /Доводы ДАВГА для справки/);
+  assert.match(html, /Доводы ДАВГА для пункта 1/);
+  assert.match(html, /Доводы ДАВГА для пункта 2/);
   assert.match(html, /Доводы рабочего органа \(ДАВГА МФ РК\):/);
   assert.match(html, /Председатель комиссии/);
   assert.match(html, /Комментарий председателя/);

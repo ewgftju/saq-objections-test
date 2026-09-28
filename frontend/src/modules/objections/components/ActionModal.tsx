@@ -704,7 +704,13 @@ export default function ActionModal({
                 c={c}
                 kind="certificate"
                 certificatePreview={{
-                  davgaArguments: values.davgaArguments || "",
+                  davgaArguments: "",
+                  davgaArgumentsByPoint: Object.fromEntries(
+                    disputed(c).map((point) => [
+                      point.id,
+                      values[`davgaArguments_${point.id}`] || "",
+                    ]),
+                  ),
                   memberPositions: [],
                 }}
               />
@@ -748,6 +754,7 @@ export default function ActionModal({
                 kind="certificate"
                 certificatePreview={{
                   davgaArguments: c.certificate?.davgaArguments || "",
+                  davgaArgumentsByPoint: c.certificate?.davgaArgumentsByPoint,
                   memberPositions: c.members.map((member) => {
                     return disputed(c).map((point) => {
                       const manualResult = normalizeVoteChoice(values[`meetingCertificateResult_${point.id}_${member.id}`]);
