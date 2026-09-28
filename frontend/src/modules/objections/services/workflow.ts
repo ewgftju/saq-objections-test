@@ -1238,7 +1238,8 @@ export function applyAction(
       dateObject(protocolDate);
       c.meeting = {
         date: protocolDate,
-        number: text("number", "Номер протокола"),
+        // Номер присваивается только после подписания протокола.
+        number: "",
         audio: "",
         projectReceived: date,
         recommendations: recommendationText || "—",
@@ -1274,6 +1275,11 @@ export function applyAction(
       );
       if (!c.meeting) throw new Error("Протокол не сформирован");
       c.meeting.signed = date;
+      const [year, month] = date.split("-");
+      const signedProtocolCount = next.cases.filter(
+        (item) => Boolean(item.meeting?.signed),
+      ).length;
+      c.meeting.number = `ПЗ-${month}/${year}-${signedProtocolCount}`;
       const result = overall(c);
       if (!result) throw new Error("Результат голосования не определён");
       c.result = {
