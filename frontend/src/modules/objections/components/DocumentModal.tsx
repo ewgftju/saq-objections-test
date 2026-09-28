@@ -493,17 +493,29 @@ export function DocumentContent({
         <article className="print-document final-response-template final-response-appendix">
           <h2>Қосымша</h2>
           {disputedIssues.map((point) => {
-            const voteReasons = Object.values(
-              snapshot.votes?.[point.id]?.voteReasons || {},
-            ).filter(Boolean);
-            const pointDecision = point.final
-              ? OUTCOMES[point.final].toLocaleLowerCase("ru-RU")
+            const pointVotes = snapshot.votes?.[point.id];
+            const winningOutcome =
+              pointOutcomeFromVotes(pointVotes?.votes || {}, pointVotes?.chair) ||
+              point.final ||
+              point.proposal;
+            const winningReasonMemberId = Object.entries(pointVotes?.votes || {}).find(
+              ([memberId, vote]) =>
+                normalizeVoteChoice(vote) === winningOutcome &&
+                Boolean(pointVotes?.voteReasons?.[memberId]?.trim()),
+            )?.[0];
+            const pointReason =
+              (winningReasonMemberId &&
+                pointVotes?.voteReasons?.[winningReasonMemberId]) ||
+              snapshot.result?.reason ||
+              "—";
+            const pointDecision = winningOutcome
+              ? OUTCOMES[winningOutcome].toLocaleLowerCase("ru-RU")
               : decision;
             return (
               <section className="final-response-appendix-point" key={point.id}>
                 <p className="final-response-point-title">- по п. {point.number}:</p>
                 <p className="final-response-point-reason">
-                  {voteReasons.length ? voteReasons.join(" ") : snapshot.result?.reason || "—"}.
+                  {pointReason}.
                 </p>
                 <p className="final-response-point-decision">
                   На основании вышеизложенного, Апелляционной комиссией принято решение {pointDecision}.
