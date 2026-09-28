@@ -538,6 +538,10 @@ export function DocumentContent({
       : davgaDirector
         ? "Заместитель председателя АК"
         : "Председатель АК";
+    const secretaryName =
+      snapshot.assignee && snapshot.assignee !== "Не назначен"
+        ? snapshot.assignee
+        : DEMO_USER.fullName;
     const votes = protocolPreview?.votes || snapshot.votes;
     const hasPreviewVotes = Object.values(protocolPreview?.votes || {}).some(
       (pointVotes) =>
@@ -619,6 +623,10 @@ export function DocumentContent({
           ) : (
             "—"
           )}
+          <div className="protocol-template-attendance-row">
+            <b>Секретарь Апелляционной комиссии:</b>
+            <span>{secretaryName}</span>
+          </div>
         </div>
         <p className="protocol-template-intro">
           Возражение «{snapshot.org}», БИН {snapshot.bin} от{" "}
