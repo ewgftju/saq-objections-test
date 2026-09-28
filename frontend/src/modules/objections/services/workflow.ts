@@ -69,19 +69,21 @@ function pendingOtherRequest(c: ObjectionCase) {
   );
 }
 
-function pendingOtherResponseConfirmation(c: ObjectionCase) {
-  return c.requests.find(
-    (request) =>
-      request.template === "other" &&
-      request.saqRecipient === "subject" &&
-      !!request.responded &&
-      !request.confirmed,
-  );
-}
-
-function pendingAuthorityConfirmation(c: ObjectionCase, role?: Role) {
-  return authorityRequestsForRole(c, role).find(
-    (request) => !!request.responseSigned && !request.confirmed,
+/**
+ * Рабочий орган фиксирует поступление один раз, только когда готовы ответы
+ * на все направленные запросы. Для внешнего органа без кабинета SAQ
+ * поступление подтверждается этим единым действием вручную.
+ */
+function allResponsesReadyForConfirmation(c: ObjectionCase) {
+  return (
+    c.requests.length > 0 &&
+    c.requests.every((request) => {
+      if (isDvgaOrKvgaRequest(request.recipient))
+        return Boolean(request.responseSigned);
+      if (request.template === "other" && request.saqRecipient === "subject")
+        return Boolean(request.responded);
+      return true;
+    })
   );
 }
 
@@ -165,10 +167,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
   ].includes(c.status);
   if (authorityInProgress) {
     if (role === "work") {
-      const receivedResponse = pendingAuthorityConfirmation(c);
-      if (receivedResponse)
-        return { action: "position", label: "Ответ получен", role: "work" };
-      if (pendingOtherRequest(c))
+      if (allResponsesReadyForConfirmation(c))
         return { action: "position", label: "Ответ получен", role: "work" };
       return null;
     }
@@ -180,7 +179,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
           : authorityResponseAction(c);
     if (authorityAction) return authorityAction;
     if (role === "dvga" || role === "kvga") return null;
-    if (pendingOtherRequest(c))
+    if (allResponsesReadyForConfirmation(c))
       return { action: "position", label: "Ответ получен", role: "work" };
   }
   const map: Partial<Record<ObjectionCase["status"], ActionOption>> = {
@@ -209,7 +208,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       label: "Подписать запрос",
       role: "director",
     },
-    request_approved: pendingOtherRequest(c)
+    request_approved: allResponsesReadyForConfirmation(c)
       ? { action: "position", label: "Ответ получен", role: "work" }
       : undefined,
     certificate_approval: {
@@ -931,26 +930,22 @@ export function applyAction(
       break;
     }
     case "position": {
-      const authorityRequest = pendingAuthorityConfirmation(c);
-      const subjectResponse = pendingOtherResponseConfirmation(c);
-      const request = authorityRequest || subjectResponse || pendingOtherRequest(c);
-      if (!request) throw new Error("Нет ожидающего ответа от адресата");
-      if (authorityRequest) {
+      if (!allResponsesReadyForConfirmation(c))
+        throw new Error(
+          "Зафиксировать получение можно после поступления ответов на все запросы",
+        );
+      const receivedRequests = c.requests.filter((request) => !request.confirmed);
+      if (!receivedRequests.length)
+        throw new Error("Все полученные ответы уже зафиксированы");
+      receivedRequests.forEach((request) => {
+        if (!isDvgaOrKvgaRequest(request.recipient) && !request.responded)
+          request.responded = date;
         request.confirmed = date;
-        note = "Ответ ДВГА/КВГА и подтверждающие документы зафиксированы инициатором.";
-      } else if (subjectResponse) {
-        request.confirmed = date;
-        note = "Ответ из кабинета Объекта и подтверждающие документы зафиксированы рабочим органом.";
-      } else {
-        request.responded = date;
-        request.confirmed = date;
-        note = "Получен ответ на направленный запрос.";
-      }
-      const hasPendingResponses =
-        authorityRequestsForRole(c).some((item) => !item.confirmed) ||
-        pendingOtherRequest(c) ||
-        pendingOtherResponseConfirmation(c);
-      if (!hasPendingResponses && c.requestPauseStartedAt) {
+      });
+      note = `Рабочий орган зафиксировал получение ответов: ${receivedRequests
+        .map((request) => request.recipient)
+        .join(", ")}.`;
+      if (c.requestPauseStartedAt) {
         const pausedDays = workdaysBetween(c.requestPauseStartedAt, date);
         if (pausedDays > 0) {
           c.pauseDays += pausedDays;
@@ -958,8 +953,8 @@ export function applyAction(
         }
         c.requestPauseStartedAt = undefined;
       }
-      c.status = authorityStatus(c) || (pendingOtherRequest(c) ? "request_approved" : "materials");
-      doc("Полученные материалы по запросу", "position", note, request.id);
+      c.status = "materials";
+      doc("Полученные материалы по запросам", "position", note);
       break;
     }
     case "subject-response": {
