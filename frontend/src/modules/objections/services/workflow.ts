@@ -153,7 +153,10 @@ function authorityStatus(c: ObjectionCase): ObjectionCase["status"] | null {
   if (requests.some((request) => !request.responded)) return "request_approved";
   if (requests.some((request) => !request.responseApproved)) return "response_approval";
   if (requests.some((request) => !request.responseSigned)) return "response_signed";
-  if (requests.some((request) => !request.confirmed)) return "response_ready";
+  if (requests.some((request) => !request.confirmed))
+    return allResponsesReadyForConfirmation(c)
+      ? "response_ready"
+      : "request_approved";
   return null;
 }
 
@@ -640,7 +643,9 @@ export function applyAction(
     }
     case "sign-request": {
       if (!c.requests.length) throw new Error("Запрос не сформирован");
-      c.status = "request_approved";
+      c.status = allResponsesReadyForConfirmation(c)
+        ? "response_ready"
+        : "request_approved";
       c.requests.forEach((request) => {
         request.sent ||= date;
         if (isDvgaOrKvgaRequest(request.recipient))
@@ -967,6 +972,7 @@ export function applyAction(
       );
       if (!request) throw new Error("Нет запроса, ожидающего ответа Объекта");
       request.responded = date;
+      if (allResponsesReadyForConfirmation(c)) c.status = "response_ready";
       title = "Ответ направлен рабочему органу";
       note = "Ответ Объекта направлен в кабинет рабочего органа.";
       next.notifications.push({
