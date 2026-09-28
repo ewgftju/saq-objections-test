@@ -1,4 +1,4 @@
-import { Button, Notice, PageHeading } from "../../../components/ui";
+import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import { agendaItemText } from "../components/AgendaModal";
 import { AgendaResultsTable } from "../components/AgendaResultsModal";
 import { useState } from "react";
@@ -253,6 +253,7 @@ export function SessionsPage({
   onOpen,
   onCreateMeeting,
   onUpdateAttendanceResponse,
+  onAddCase,
   onExcludeCase,
   onMoveCase,
   onPreviewAgenda,
@@ -272,6 +273,7 @@ export function SessionsPage({
     memberId: string,
     response: "yes" | "no",
   ) => void;
+  onAddCase: (meetingId: string, caseId: string) => void;
   onExcludeCase: (meetingId: string, caseId: string) => void;
   onMoveCase: (meetingId: string, caseId: string, direction: "up" | "down") => void;
   onPreviewAgenda: (meeting: CommissionMeeting) => void;
@@ -279,6 +281,8 @@ export function SessionsPage({
   onCompleteMeeting: (meetingId: string) => void;
 }) {
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+  const [isAddingCase, setIsAddingCase] = useState(false);
+  const [caseIdToAdd, setCaseIdToAdd] = useState("");
   const selectedMeeting = meetings.find((meeting) => meeting.id === selectedMeetingId);
   const selectedPoll = selectedMeeting
     ? attendancePolls.find((poll) => poll.id === selectedMeeting.pollId)
@@ -288,6 +292,13 @@ export function SessionsPage({
     ? selectedMeeting.caseIds
         .map((caseId) => cases.find((caseItem) => caseItem.id === caseId))
         .filter((caseItem): caseItem is ObjectionCase => Boolean(caseItem))
+    : [];
+  const addableCases = selectedMeeting && !selectedMeeting.agendaSigned
+    ? cases.filter(
+        (caseItem) =>
+          caseItem.status === "certificate_approved" &&
+          !selectedMeeting.caseIds.includes(caseItem.id),
+      )
     : [];
   const signatureDate = selectedMeeting
     ? (() => {
@@ -389,8 +400,29 @@ export function SessionsPage({
 
         <section className="card">
           <div className="card-head">
-            <h3>Обращения</h3>
-            <span className="muted">Готовые к рассмотрению АК обращения, включённые в заседание</span>
+            <h3>Итоги по повестке дня</h3>
+            <span className="muted">Голоса членов АК и общий результат по каждому пункту</span>
+          </div>
+          <AgendaResultsTable cases={meetingCases} />
+        </section>
+
+        <section className="card">
+          <div className="card-head">
+            <div>
+              <h3>Обращения</h3>
+              <span className="muted">Готовые к рассмотрению АК обращения, включённые в заседание</span>
+            </div>
+            {role === "director" && (
+              <Button
+                disabled={Boolean(selectedMeeting.agendaSigned)}
+                onClick={() => {
+                  setCaseIdToAdd("");
+                  setIsAddingCase(true);
+                }}
+              >
+                Добавить обращение
+              </Button>
+            )}
           </div>
           <div className="table-scroll">
             <table className="registry-table">
@@ -453,13 +485,51 @@ export function SessionsPage({
           </div>
         </section>
 
-        <section className="card">
-          <div className="card-head">
-            <h3>Итоги по повестке дня</h3>
-            <span className="muted">Голоса членов АК и общий результат по каждому пункту</span>
-          </div>
-          <AgendaResultsTable cases={meetingCases} />
-        </section>
+        {isAddingCase && role === "director" && (
+          <Modal
+            title="Добавить обращение в заседание"
+            onClose={() => setIsAddingCase(false)}
+          >
+            {addableCases.length ? (
+              <>
+                <p className="muted">
+                  Доступны только обращения со статусом «Готово к рассмотрению АК».
+                </p>
+                <label className="field">
+                  <span>Обращение</span>
+                  <select
+                    value={caseIdToAdd}
+                    onChange={(event) => setCaseIdToAdd(event.target.value)}
+                  >
+                    <option value="">Выберите обращение</option>
+                    {addableCases.map((caseItem) => (
+                      <option key={caseItem.id} value={caseItem.id}>
+                        {caseItem.id} — {caseItem.org}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="dialog-actions">
+                  <Button onClick={() => setIsAddingCase(false)}>Отмена</Button>
+                  <Button
+                    primary
+                    disabled={!caseIdToAdd}
+                    onClick={() => {
+                      onAddCase(selectedMeeting.id, caseIdToAdd);
+                      setIsAddingCase(false);
+                    }}
+                  >
+                    Добавить
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Notice>
+                Нет обращений со статусом «Готово к рассмотрению АК», доступных для добавления.
+              </Notice>
+            )}
+          </Modal>
+        )}
 
         <section className="card">
           <div className="card-head">
