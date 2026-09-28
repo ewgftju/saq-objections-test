@@ -21,6 +21,7 @@ import {
   normalizeVoteChoice,
   overall,
   pointOutcomeFromVotes,
+  presidingChairId,
   remainingIssues,
 } from "./decisions";
 
@@ -708,6 +709,11 @@ export function applyAction(
       const voterId = text("commissionMember", "Голосующий член АК");
       const voter = c.members.find((member) => member.id === voterId);
       if (!voter) throw new Error("Выберите участника АК из состава заседания");
+      const chairId = presidingChairId(c.members);
+      if (!chairId)
+        throw new Error(
+          "Для проведения голосования должен присутствовать Вице-министр или Директор ДАВГА",
+        );
       c.votes ||= {};
       for (const point of disputed(c)) {
         const vote = normalizeVoteChoice(
@@ -719,7 +725,7 @@ export function applyAction(
           yes: 0,
           no: 0,
           approved: false,
-          chair: c.members.find((member) => member.isChair)?.id || voter.id,
+          chair: chairId,
           present: c.members.length,
           eligible: c.members.length,
           votes: {},
@@ -741,7 +747,7 @@ export function applyAction(
         const outcome = allVoted
           ? pointOutcomeFromVotes(
               result.votes,
-              c.members.find((member) => member.isChair)?.id,
+              chairId,
             )
           : "";
         result.approved = outcome === "accept";
@@ -772,6 +778,11 @@ export function applyAction(
         throw new Error("Сначала сформируйте и направьте справку членам АК");
       if (!c.members.length)
         throw new Error("В последнем опросе о присутствии нет участников заседания");
+      const chairId = presidingChairId(c.members);
+      if (!chairId)
+        throw new Error(
+          "Для заполнения справки должен присутствовать Вице-министр или Директор ДАВГА",
+        );
 
       c.votes ||= {};
       for (const point of disputed(c)) {
@@ -787,7 +798,7 @@ export function applyAction(
             yes: 0,
             no: 0,
             approved: false,
-            chair: c.members.find((item) => item.isChair)?.id || member.id,
+            chair: chairId,
             present: c.members.length,
             eligible: c.members.length,
             votes: {},
@@ -808,7 +819,7 @@ export function applyAction(
           const outcome = allVoted
             ? pointOutcomeFromVotes(
                 result.votes,
-                c.members.find((item) => item.isChair)?.id,
+                chairId,
               )
             : "";
           result.approved = outcome === "accept";
@@ -1164,6 +1175,7 @@ export function applyAction(
           id: member.id,
           name: member.name,
           present: true,
+          isChair: member.id === legacyMembers[0]?.id,
           recused: false,
           reason: "",
         }));
@@ -1190,18 +1202,18 @@ export function applyAction(
         const no = Object.values(memberVotes).filter(
           (vote) => vote === "reject",
         ).length;
-        // Председательствующий задаётся по ответам опроса: Вице-министр,
-        // а при его отсутствии — Директор ДАВГА. Для ранее созданных данных,
-        // в которых признак ещё не сохранён, используем первого участника.
-        const chairId =
-          c.members.find((member) => member.isChair)?.id || c.members[0]?.id;
+        const chairId = presidingChairId(c.members);
+        if (!chairId)
+          throw new Error(
+            "Для проведения голосования должен присутствовать Вице-министр или Директор ДАВГА",
+          );
         const outcome = pointOutcomeFromVotes(memberVotes, chairId);
         if (!outcome) throw new Error("Не удалось определить результат голосования");
         c.votes[point.id] = {
           yes,
           no,
           approved: outcome === "accept",
-          chair: chairId || c.members[0].id,
+          chair: chairId,
           present: c.members.length,
           eligible: c.members.length,
           votes: memberVotes,
