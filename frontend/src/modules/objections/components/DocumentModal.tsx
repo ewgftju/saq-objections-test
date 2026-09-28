@@ -531,6 +531,8 @@ export function DocumentContent({
 
   if (kind === "protocol") {
     const meeting = protocolPreview || snapshot.meeting;
+    const protocolNumber =
+      !protocolPreview && snapshot.meeting?.signed ? meeting?.number : "";
     const members = protocolPreview?.members || snapshot.members;
     const presentMembers = members.filter((member) => member.present);
     const viceMinister = presentMembers.find(
@@ -595,7 +597,7 @@ export function DocumentContent({
     return (
       <article className="print-document protocol-template">
         <h1>
-          ПРОТОКОЛ{meeting?.number ? ` № ${meeting.number}` : ""}
+          ПРОТОКОЛ{protocolNumber ? ` № ${protocolNumber}` : ""}
           <br />
           заседания Апелляционной комиссии
         </h1>
