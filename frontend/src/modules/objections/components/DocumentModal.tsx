@@ -20,6 +20,7 @@ import {
   normalizeVoteChoice,
   overall,
   pointOutcomeFromVotes,
+  presidingChairId,
 } from "../services/decisions";
 
 function requestDeadlineDate(deadline: string) {
@@ -541,7 +542,7 @@ export function DocumentContent({
     const presidingMember =
       viceMinister ||
       davgaDirector ||
-      presentMembers.find((member) => member.isChair);
+      presentMembers.find((member) => member.id === presidingChairId(presentMembers));
     const commissionMembers = presentMembers.filter(
       (member) => member.id !== presidingMember?.id,
     );
@@ -574,7 +575,7 @@ export function DocumentContent({
               );
               return pointOutcomeFromVotes(
                 normalizedVotes,
-                presentMembers.find((member) => member.isChair)?.id,
+                presidingChairId(presentMembers),
               );
             });
           if (!pointResults.length || pointResults.some((item) => !item))
