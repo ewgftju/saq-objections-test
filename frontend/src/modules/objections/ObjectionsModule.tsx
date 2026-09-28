@@ -477,6 +477,35 @@ export default function ObjectionsModule() {
       return;
     }
 
+    // Обращение может состоять только в одном неподписанном заседании.
+    // Подписанные повестки не изменяются.
+    const previousMeetings = (next.meetings || []).filter(
+      (item) =>
+        item.id !== meeting.id &&
+        !item.agendaSigned &&
+        item.caseIds.includes(caseId),
+    );
+    previousMeetings.forEach((previousMeeting) => {
+      previousMeeting.caseIds = previousMeeting.caseIds.filter(
+        (id) => id !== caseId,
+      );
+      const previousPoll = next.attendancePolls.find(
+        (item) => item.id === previousMeeting.pollId,
+      );
+      if (previousPoll) {
+        previousPoll.caseIds = previousPoll.caseIds.filter(
+          (id) => id !== caseId,
+        );
+      }
+      const previousCases = previousMeeting.caseIds
+        .map((id) => next.cases.find((item) => item.id === id))
+        .filter((item): item is ObjectionCase => Boolean(item));
+      previousMeeting.agendaHtml = agendaDocumentHtml(
+        previousCases,
+        previousMeeting.dateTime.slice(0, 10),
+      );
+    });
+
     meeting.caseIds.push(caseId);
     poll.caseIds.push(caseId);
     const selectedCases = meeting.caseIds
@@ -494,7 +523,16 @@ export default function ObjectionsModule() {
       date: next.date,
       actor: ROLES.director,
       title: "Обращение добавлено в заседание",
-      text: "Заседание №" + meeting.number + ": " + formatDateTime(meeting.dateTime) + ".",
+      text:
+        "Заседание №" +
+        meeting.number +
+        ": " +
+        formatDateTime(meeting.dateTime) +
+        (previousMeetings.length
+          ? ". Исключено из другого заседания: " +
+            previousMeetings.map((item) => "№" + item.number).join(", ") +
+            "."
+          : "."),
     });
     syncPollParticipants(next.cases, next.attendancePolls, poll);
     model.commit(next, "Обращение добавлено в заседание.");
