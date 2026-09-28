@@ -933,6 +933,17 @@ test("результаты голосования по пунктам и обр�
     pointOutcomeFromVotes({ chair: "partial", member: "refuse" }),
     "partial",
   );
+  assert.equal(
+    pointOutcomeFromVotes(
+      {
+        "kenbeil-dm": "reject",
+        "abetova-ku": "partial",
+        "alieva-at": "accept",
+      },
+      "kenbeil-dm",
+    ),
+    "reject",
+  );
 
   const h = harness();
   const points = h.c.issues.filter((point) => point.disputed);
