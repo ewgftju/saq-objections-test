@@ -5,6 +5,27 @@ import type {
   VoteResult,
 } from "../../../types";
 
+const VICE_MINISTER_ID = "kenbeil-dm";
+const DAVGA_DIRECTOR_ID = "kurenbek-shb";
+
+/**
+ * Председательствует вице-министр, а при его отсутствии — директор ДАВГА.
+ * Признак isChair оставлен только для старых данных, где состав заседания
+ * был сохранён до введения опроса о присутствии.
+ */
+export function presidingChairId(
+  members: Pick<CommissionMember, "id" | "present" | "isChair">[],
+) {
+  return (
+    members.find((member) => member.id === VICE_MINISTER_ID && member.present)
+      ?.id ||
+    members.find((member) => member.id === DAVGA_DIRECTOR_ID && member.present)
+      ?.id ||
+    members.find((member) => member.id === "chair" && member.present)?.id ||
+    members.find((member) => member.isChair && member.present)?.id
+  );
+}
+
 export function normalizeVoteChoice(value: string | undefined): Outcome | "" {
   if (value === "yes") return "accept";
   if (value === "no") return "reject";
@@ -32,7 +53,12 @@ export function pointOutcomeFromVotes(
   // считается голос председательствующего на конкретном заседании.
   if (leaders.length === 1) return leaders[0];
   const chairChoice = chairId ? normalizeVoteChoice(votes[chairId]) : "";
-  return chairChoice && leaders.includes(chairChoice) ? chairChoice : "";
+  if (chairChoice && leaders.includes(chairChoice)) return chairChoice;
+
+  // Старые тестовые записи не содержат сведений о председательствующем.
+  // В таких данных нельзя выбрать произвольный голос, поэтому сохраняем
+  // нейтральный результат «частично удовлетворить».
+  return "partial";
 }
 
 export function disputed(c: ObjectionCase) {
