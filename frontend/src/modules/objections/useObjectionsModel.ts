@@ -101,8 +101,15 @@ export function casesEligibleForMeeting(state: DemoState, dateTime: string) {
     (item) => item.dateTime === dateTime && !item.agendaSigned,
   );
   if (!meeting) return [];
+  const assignedCaseIds = new Set(
+    (state.meetings || [])
+      .filter((item) => item.id !== meeting.id)
+      .flatMap((item) => item.caseIds),
+  );
   return state.cases.filter(
-    (caseItem) => nextMeetingForCase(state, caseItem)?.id === meeting.id,
+    (caseItem) =>
+      !assignedCaseIds.has(caseItem.id) &&
+      nextMeetingForCase(state, caseItem)?.id === meeting.id,
   );
 }
 
