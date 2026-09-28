@@ -307,7 +307,9 @@ export function SessionsPage({
     meetings.flatMap((meeting) => meeting.caseIds),
   );
   const excludedCases = cases.filter(
-    (caseItem) => !scheduledCaseIds.has(caseItem.id),
+    (caseItem) =>
+      caseItem.status === "certificate_approved" &&
+      !scheduledCaseIds.has(caseItem.id),
   );
   const signatureDate = selectedMeeting
     ? (() => {
