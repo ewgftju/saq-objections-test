@@ -100,6 +100,13 @@ export function createDemoRepository(
               : normalized.votes;
           return {
             ...normalized,
+            requests: normalized.requests.map((request) =>
+              request.template === "other" &&
+              request.saqRecipient === "subject" &&
+              request.recipient !== "Кабинет Объекта"
+                ? { ...request, saqRecipient: undefined }
+                : request,
+            ),
             members: attendanceMembers,
             votes,
             unread:
