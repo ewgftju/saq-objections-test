@@ -791,8 +791,12 @@ export default function ObjectionsModule() {
           )?.id
         : action === "position" || action === "subject-response"
           ? c.requests.find(
-            (request) => request.responded && !request.confirmed,
-          )?.id ||
+              (request) =>
+                request.template === "other" && !request.confirmed,
+            )?.id ||
+            c.requests.find(
+              (request) => request.responded && !request.confirmed,
+            )?.id ||
             c.requests.find(
               (request) => !request.responded && request.template === "other",
             )?.id
