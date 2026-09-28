@@ -636,9 +636,9 @@ export function DocumentContent({
           {snapshot.document.number}.
         </p>
         <p>
-          Количество присутствовавших членов Апелляционной комиссии: {presentMembers.length}.
+          <span style={{ display: "block", textAlign: "left" }}>Количество присутствовавших членов Апелляционной комиссии: {presentMembers.length}.</span>
           <br />
-          <b>Результаты голосования членов Апелляционной комиссии:</b>
+          <span style={{ display: "block", textAlign: "left" }}><b>Результаты голосования членов Апелляционной комиссии:</b></span>
         </p>
         <table className="protocol-votes-table">
           <thead>
@@ -698,10 +698,15 @@ export function DocumentContent({
           Рекомендации: {meeting?.recommendations || "—"}
         </p>
         <div className="protocol-template-signatures">
-          {presentMembers.map((member) => (
+          {presidingMember ? (
+            <p>
+              {presidingLabel}: __________________ {presidingMember.name}
+            </p>
+          ) : null}
+          {commissionMembers.map((member) => (
             <p key={member.id}>Член Апелляционной комиссии: __________________ {member.name}</p>
           ))}
-          <p>Секретарь Апелляционной комиссии: __________________ ФИО</p>
+          <p>Секретарь Апелляционной комиссии: __________________ {secretaryName}</p>
         </div>
       </article>
     );
