@@ -467,6 +467,45 @@ export default function CaseWorkspace({
                   ) : null;
                 })()}
                 {(() => {
+                  const decisionProject = c.documents
+                    .filter((document) => document.kind === "decision-project")
+                    .at(-1);
+                  return decisionProject ? (
+                    <section className="request-documents-section">
+                      <h4>Проект решения</h4>
+                      <div className="request-documents-list">
+                        <div className="request-document-row">
+                          <span>{decisionProject.name}</span>
+                          <div className="request-document-actions">
+                            <Button
+                              onClick={() =>
+                                onDocument(decisionProject.kind, decisionProject)
+                              }
+                            >
+                              Просмотр
+                            </Button>
+                            <Button
+                              onClick={() =>
+                                downloadFile(
+                                  `${c.id}-проект-решения.doc`,
+                                  wordDocumentHtml({
+                                    c,
+                                    kind: decisionProject.kind,
+                                    document: decisionProject,
+                                  }),
+                                  "application/msword",
+                                )
+                              }
+                            >
+                              Скачать Word
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  ) : null;
+                })()}
+                {(() => {
                   const protocol = c.documents
                     .filter((document) => document.kind === "protocol")
                     .at(-1);
