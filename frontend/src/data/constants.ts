@@ -21,7 +21,7 @@ export const STATUS = {
   request_approved: "Ожидание ответа на запрос",
   response_approval: "Согласование ответа",
   response_signed: "Подписание ответа",
-  response_ready: "Ожидание ответа на запрос",
+  response_ready: "Фиксация получения ответа",
   materials: "Формирование справки",
   certificate_approval: "Согласование справки",
   certificate_signed: "Подписание справки",
