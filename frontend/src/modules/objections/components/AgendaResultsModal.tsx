@@ -7,6 +7,7 @@ import {
   normalizeVoteChoice,
   overall,
   pointOutcomeFromVotes,
+  presidingChairId,
 } from "../services/decisions";
 import { agendaItemText } from "./AgendaModal";
 
@@ -46,7 +47,7 @@ function pointResults(c: ObjectionCase) {
     // предварительные значения из справки не должны попадать в итоги заседания.
     const result = pointOutcomeFromVotes(
       voteResult?.votes || {},
-      voteResult?.chair,
+      presidingChairId(c.members) || voteResult?.chair,
     );
     return `Пункт ${point.number}: ${result ? OUTCOMES[result] : "Не определён"}`;
   });
