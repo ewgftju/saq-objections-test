@@ -595,10 +595,9 @@ export function DocumentContent({
               <br />
               {commissionMembers.length ? (
                 <>
-                  <b>Члены Апелляционной комиссии:</b>{" "}
-                  {commissionMembers[0].name}
+                  <b>Члены Апелляционной комиссии:</b>
                   <br />
-                  {commissionMembers.slice(1).map((member) => (
+                  {commissionMembers.map((member) => (
                     <span key={member.id}>
                       {member.name}
                       <br />
@@ -609,10 +608,9 @@ export function DocumentContent({
             </>
           ) : presentMembers.length ? (
             <>
-              <b>Члены Апелляционной комиссии:</b>{" "}
-              {presentMembers[0].name}
+              <b>Члены Апелляционной комиссии:</b>
               <br />
-              {presentMembers.slice(1).map((member) => (
+              {presentMembers.map((member) => (
                 <span key={member.id}>
                   {member.name}
                   <br />
