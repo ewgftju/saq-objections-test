@@ -81,6 +81,7 @@ const REQUEST_SUBSTEPS = [
   "Согласование запроса",
   "Подписание запроса",
   "Ожидание ответа",
+  "Фиксация получения ответа",
 ] as const;
 
 const ANALYSIS_SUBSTEPS = [
@@ -98,15 +99,9 @@ function requestSubstep(status: CaseStatus) {
   if (["accepted", "requested", "forwarded"].includes(status)) return 0;
   if (status === "request_approval") return 1;
   if (status === "request_signed") return 2;
-  if (
-    [
-      "request_approved",
-      "response_approval",
-      "response_signed",
-      "response_ready",
-    ].includes(status)
-  )
+  if (["request_approved", "response_approval", "response_signed"].includes(status))
     return 3;
+  if (status === "response_ready") return 4;
   return null;
 }
 
@@ -401,8 +396,7 @@ export default function ConsiderationProcess({
         <Notice tone="amber">
           <strong>Ожидание ответа на запрос</strong>
           <p>
-            Запрос направлен в ДВГА/КВГА. Рабочий орган ожидает заполненный,
-            согласованный и подписанный ответ от адресата.
+            Рабочий орган ожидает ответы из ДВГА, КВГА или кабинета Объекта.
           </p>
         </Notice>
       ) : materialsAvailableForCommission ? (
