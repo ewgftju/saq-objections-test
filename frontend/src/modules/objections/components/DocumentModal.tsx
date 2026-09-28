@@ -595,7 +595,7 @@ export function DocumentContent({
     return (
       <article className="print-document protocol-template">
         <h1>
-          ПРОТОКОЛ № {meeting?.number || "<Номер протокола>"}
+          ПРОТОКОЛ{meeting?.number ? ` № ${meeting.number}` : ""}
           <br />
           заседания Апелляционной комиссии
         </h1>
