@@ -465,7 +465,7 @@ export function DocumentContent({
     );
   }
 
-  if (kind === "final-response") {
+  if (kind === "final-response" || kind === "decision-project") {
     const outcome = overall(snapshot);
     const decision = outcome
       ? OUTCOMES[outcome].toLocaleLowerCase("ru-RU")
