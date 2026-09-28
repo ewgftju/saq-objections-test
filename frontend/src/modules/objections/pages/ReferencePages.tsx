@@ -626,7 +626,7 @@ export function SessionsPage({
           className={sessionsTab === "excluded" ? "active" : ""}
           onClick={() => setSessionsTab("excluded")}
         >
-          Исключенные обращения
+          Не включённые в заседание
           {excludedCases.length > 0 && (
             <span className="session-tab-badge">{excludedCases.length}</span>
           )}
