@@ -812,7 +812,8 @@ export default function ActionModal({
                 kind="protocol"
                 protocolPreview={{
                   date: values.protocolDate || date,
-                  number: values.number || `ПР-${c.id}`,
+                  // Номер появляется только после подписания протокола.
+                  number: "",
                   audio: "",
                   recommendations: values.recommendations || "—",
                   members: protocolMembers,
