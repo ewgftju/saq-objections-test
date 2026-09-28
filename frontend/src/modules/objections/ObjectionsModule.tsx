@@ -459,6 +459,47 @@ export default function ObjectionsModule() {
     );
   };
 
+  const addCaseToMeeting = (meetingId: string, caseId: string) => {
+    const next = structuredClone(model.state);
+    const meeting = next.meetings?.find((item) => item.id === meetingId);
+    const poll = meeting
+      ? next.attendancePolls.find((item) => item.id === meeting.pollId)
+      : undefined;
+    const target = next.cases.find((item) => item.id === caseId);
+    if (
+      !meeting ||
+      !poll ||
+      meeting.agendaSigned ||
+      !target ||
+      target.status !== "certificate_approved" ||
+      meeting.caseIds.includes(caseId)
+    ) {
+      return;
+    }
+
+    meeting.caseIds.push(caseId);
+    poll.caseIds.push(caseId);
+    const selectedCases = meeting.caseIds
+      .map((id) => next.cases.find((item) => item.id === id))
+      .filter((item): item is ObjectionCase => Boolean(item));
+    meeting.agendaHtml = agendaDocumentHtml(
+      selectedCases,
+      meeting.dateTime.slice(0, 10),
+    );
+    target.excludedFromMeetingIds = (target.excludedFromMeetingIds || []).filter(
+      (id) => id !== meeting.id,
+    );
+    target.attendanceMeetingDate = meeting.dateTime.slice(0, 10);
+    target.history.push({
+      date: next.date,
+      actor: ROLES.director,
+      title: "Обращение добавлено в заседание",
+      text: "Заседание №" + meeting.number + ": " + formatDateTime(meeting.dateTime) + ".",
+    });
+    syncPollParticipants(next.cases, next.attendancePolls, poll);
+    model.commit(next, "Обращение добавлено в заседание.");
+  };
+
   const moveMeetingCase = (
     meetingId: string,
     caseId: string,
@@ -634,7 +675,7 @@ export default function ObjectionsModule() {
       form.set("commissionMember", activeCommissionMember.id);
     }
     if (
-      !["position", "fill-request-response", "request", "request-other", "deliver"].includes(
+        !["position", "fill-request-response", "request", "request-other", "deliver", "subject-response"].includes(
         action,
       )
     ) {
@@ -659,7 +700,9 @@ export default function ObjectionsModule() {
           ? "requestAttachments"
           : action === "deliver"
             ? "conclusionFiles"
-          : "responseFiles",
+            : action === "subject-response"
+              ? "subjectResponseFiles"
+            : "responseFiles",
       )
       .filter(
         (item): item is File => item instanceof File && item.name.length > 0,
@@ -700,8 +743,8 @@ export default function ObjectionsModule() {
           )?.id
         : action === "position" || action === "subject-response"
           ? c.requests.find(
-              (request) => request.responded && !request.confirmed,
-            )?.id ||
+            (request) => request.responded && !request.confirmed,
+          )?.id ||
             c.requests.find(
               (request) => !request.responded && request.template === "other",
             )?.id
@@ -978,6 +1021,7 @@ export default function ObjectionsModule() {
           onOpen={openCase}
           onCreateMeeting={() => setDialog({ type: "meeting" })}
           onUpdateAttendanceResponse={updateAttendanceResponse}
+          onAddCase={addCaseToMeeting}
           onExcludeCase={excludeCaseFromMeeting}
           onMoveCase={moveMeetingCase}
           onPreviewAgenda={(meeting) =>
