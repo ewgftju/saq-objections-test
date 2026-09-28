@@ -1,5 +1,6 @@
 import { COMMISSION_ATTENDANCE_MEMBERS, seed } from "../data/objections";
 import type { DemoState } from "../types";
+import { presidingChairId } from "../modules/objections/services/decisions";
 
 /** The demo adapter is the only module that reads or writes case storage. */
 export interface ObjectionsRepository {
@@ -68,17 +69,39 @@ export function createDemoRepository(
           const attendanceMembers = latestAttendancePoll
             ? COMMISSION_ATTENDANCE_MEMBERS
                 .filter((member) => latestAttendancePoll.responses[member.id] === "yes")
-                .map((member) => ({
-                  id: member.id,
-                  name: member.name,
-                  present: true,
-                  recused: false,
-                  reason: "",
-                }))
+                .map((member) => {
+                  const present = true;
+                  const chairId = presidingChairId(
+                    COMMISSION_ATTENDANCE_MEMBERS
+                      .filter(
+                        (item) => latestAttendancePoll.responses[item.id] === "yes",
+                      )
+                      .map((item) => ({ id: item.id, present })),
+                  );
+                  return {
+                    id: member.id,
+                    name: member.name,
+                    present,
+                    isChair: member.id === chairId,
+                    recused: false,
+                    reason: "",
+                  };
+                })
             : normalized.members;
+          const chairId = presidingChairId(attendanceMembers);
+          const votes =
+            latestAttendancePoll && normalized.votes && chairId
+              ? Object.fromEntries(
+                  Object.entries(normalized.votes).map(([pointId, vote]) => [
+                    pointId,
+                    { ...vote, chair: chairId },
+                  ]),
+                )
+              : normalized.votes;
           return {
             ...normalized,
             members: attendanceMembers,
+            votes,
             unread:
               normalized.unread ??
               (normalized.status === "received" && normalized.channel === "SAQ"),
