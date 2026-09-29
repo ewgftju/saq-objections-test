@@ -480,7 +480,14 @@ export default function CaseWorkspace({
                       <div className="request-documents-list">
                         {conclusions.map((document) => (
                           <div className="request-document-row" key={`${document.name}-${document.date}`}>
-                            <span>{document.name}</span>
+                            <span>
+                              {document.name}
+                              {c.conclusionRegistration && (
+                                <small>
+                                  {` №${c.conclusionRegistration.number} от ${formatDate(c.conclusionRegistration.date)}`}
+                                </small>
+                              )}
+                            </span>
                             {document.dataUrl ? (
                               <a className="button" href={document.dataUrl} download={document.filename || document.name}>Скачать</a>
                             ) : (
