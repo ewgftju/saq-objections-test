@@ -456,6 +456,13 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
         role: "commission",
       });
   }
+  if (c.documents.some((document) => document.kind === "final-response")) {
+    options.push({
+      action: "send-recommendations",
+      label: "Направить рекомендации",
+      role: "work",
+    });
+  }
   if (["delivered", "completed"].includes(c.status)) {
     options.push({
       action: "court",
@@ -1299,19 +1306,6 @@ export function applyAction(
         projectReceived: date,
         recommendations: recommendationText || "—",
       };
-      if (recommendationText) {
-        next.recommendations.push({
-          id: `recommendation-${c.id}-${next.recommendations.length + 1}`,
-          text: recommendationText,
-          recipient: c.issuer,
-          status: "sent",
-          answer: "",
-          caseId: c.id,
-          caseReference: c.appealNumber || c.id,
-          executor: c.assignee,
-          createdAt: protocolDate,
-        });
-      }
       c.status = "protocol";
       doc(
         "Проект протокола заседания",
@@ -1487,11 +1481,64 @@ export function applyAction(
       break;
     case "sign-final-response":
       if (!c.delivery) throw new Error("Окончательный ответ ещё не сформирован");
+      // Дата направления фиксируется в момент подписи и отправки ответа.
+      c.delivery.date = date;
       c.status = "completed";
       title = "Окончательный ответ подписан";
       note = "Окончательный ответ подписан и направлен заявителю.";
       doc("Подписанный окончательный ответ", "final-response", note);
       break;
+    case "send-recommendations": {
+      if (!c.documents.some((document) => document.kind === "final-response"))
+        throw new Error("Сначала направьте окончательный ответ");
+      const recommendationText = text("recommendationText", "Текст рекомендации");
+      const allowedRecipients: Role[] = ["dvga", "kvga", "subject", "higher"];
+      const recipientRoles = [...new Set(
+        form
+          .getAll("recommendationRecipients")
+          .map((value) => String(value))
+          .filter((value): value is Role => allowedRecipients.includes(value as Role)),
+      )];
+      if (!recipientRoles.length)
+        throw new Error("Выберите хотя бы один кабинет-получатель");
+      const sentAt = c.delivery?.date || date;
+      const dueDate = addWorkdays(sentAt, 30);
+      recipientRoles.forEach((recipientRole) => {
+        const recipient = ROLES[recipientRole];
+        next.recommendations.push({
+          id: `recommendation-${c.id}-${next.recommendations.length + 1}`,
+          text: recommendationText,
+          recipient,
+          recipientRole,
+          status: "sent",
+          answer: "",
+          caseId: c.id,
+          caseReference: c.appealNumber || c.id,
+          executor: c.assignee,
+          createdAt: sentAt,
+          sentAt,
+          dueDate,
+        });
+        doc(
+          `Рекомендация для ${recipient}`,
+          "recommendation",
+          `${recommendationText}\n\nКому направлена: ${recipient}.\nДата направления: ${formatDate(sentAt)}.\nСрок исполнения: ${formatDate(dueDate)}.`,
+        );
+        next.notifications.push({
+          id: `recommendation-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient,
+          recipientRole,
+          date: sentAt,
+          read: false,
+          kind: "recommendation",
+          text: `Направлена рекомендация по обращению №${c.appealNumber || c.id}. Срок исполнения — ${formatDate(dueDate)}.`,
+        });
+      });
+      title = "Рекомендации направлены";
+      note = `Рекомендации направлены: ${recipientRoles.map((recipientRole) => ROLES[recipientRole]).join(", ")}. Срок исполнения — ${formatDate(dueDate)}.`;
+      break;
+    }
     case "close-review":
       if (c.type !== "notice") throw new Error("Закрытие доступно только для возражения на уведомление");
       if (!c.documents.some((document) => document.kind === "conclusion"))
