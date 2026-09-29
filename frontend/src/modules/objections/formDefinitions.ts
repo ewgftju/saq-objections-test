@@ -21,6 +21,7 @@ export interface FormField {
   value?: string;
   required?: boolean;
   options?: readonly (readonly [string, string])[];
+  multiple?: boolean;
   min?: string;
   max?: string;
   readOnly?: boolean;
@@ -103,6 +104,13 @@ const REQUEST_RECIPIENT_OPTIONS = [
 const SAQ_RECIPIENT_OPTIONS = [
   ["", "Выберите получателя SAQ"],
   ["subject", "Кабинет Объекта"],
+] as const satisfies FormField["options"];
+
+const RECOMMENDATION_RECIPIENT_OPTIONS = [
+  ["dvga", "Кабинет ДВГА"],
+  ["kvga", "Кабинет КВГА"],
+  ["subject", "Кабинет Объекта"],
+  ["higher", "Кабинет вышестоящего органа"],
 ] as const satisfies FormField["options"];
 
 const WORK_EXECUTOR_OPTIONS = [
@@ -521,6 +529,26 @@ export function actionForm(
       title = "Подписать ответ";
       note = "Подпишите согласованный окончательный ответ.";
       break;
+    case "send-recommendations":
+      title = "Направить рекомендации";
+      fields.push(
+        {
+          name: "recommendationRecipients",
+          label: "Кому направить рекомендацию",
+          type: "select",
+          options: RECOMMENDATION_RECIPIENT_OPTIONS,
+          multiple: true,
+          required: true,
+        },
+        area(
+          "recommendationText",
+          "Текст рекомендации",
+          c.meeting?.recommendations === "—" ? "" : c.meeting?.recommendations || "",
+        ),
+      );
+      note =
+        "Выберите один или несколько кабинетов SAQ. Текст перенесён из протокола и при необходимости может быть изменён.";
+      break;
     case "receipt":
       title = "Подтверждение вручения результата";
       fields.push(
@@ -652,6 +680,8 @@ export function actionForm(
           : "Сформировать окончательный ответ"
         : action === "close-review"
           ? "Закрыть рассмотрение"
+          : action === "send-recommendations"
+            ? "Направить уведомление"
           : "Зафиксировать действие",
   };
 }
