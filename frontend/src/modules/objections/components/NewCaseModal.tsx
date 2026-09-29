@@ -110,7 +110,10 @@ export default function NewCaseModal({
   const [pointCount, setPointCount] = useState(1);
   const [hasProcurement, setHasProcurement] = useState(true);
   const [decisionKind, setDecisionKind] = useState<
-    "prescription-audit" | "prescription-preventive" | "quality-control"
+    | "prescription-audit"
+    | "prescription-preventive"
+    | "quality-control"
+    | "administrative-act"
   >("prescription-audit");
   const [error, setError] = useState("");
   const selectedAppealType =
@@ -140,7 +143,9 @@ export default function NewCaseModal({
         : isDecisionComplaint
           ? decisionKind === "quality-control"
             ? "Результат контроля качества"
-            : "Предписание"
+            : decisionKind === "administrative-act"
+              ? "Административный акт"
+              : "Предписание"
           : isPreventiveComplaint
             ? "Акт о результате профилактического контроля"
             : "Оспариваемый документ";
@@ -604,7 +609,8 @@ export default function NewCaseModal({
                     event.target.value as
                       | "prescription-audit"
                       | "prescription-preventive"
-                      | "quality-control",
+                      | "quality-control"
+                      | "administrative-act",
                   )
                 }
               >
@@ -615,6 +621,7 @@ export default function NewCaseModal({
                   Предписание по профилактическому контролю
                 </option>
                 <option value="quality-control">Контроль качества</option>
+                <option value="administrative-act">Административный акт</option>
               </select>
             </label>
             {(decisionKind === "prescription-audit" ||
