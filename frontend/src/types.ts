@@ -242,13 +242,16 @@ export interface AgendaRegistryEntry {
   created: string;
 }
 
-/** Реквизиты, используемые исключительно для текста пункта повестки дня. */
+/** Дополнительные реквизиты обращения для печатных форм. */
 export interface AgendaDetails {
   cameraControlNumber?: string;
   cameraControlDate?: string;
   procurementNumber?: string;
   lotNumber?: string;
   procurementSubject?: string;
+  procurementMethod?: string;
+  customerName?: string;
+  customerBin?: string;
   relatedDocumentNumber?: string;
   relatedDocumentDate?: string;
   decisionKind?:
