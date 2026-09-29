@@ -2,6 +2,14 @@ import { useState } from "react";
 import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import type { CaseRecommendation } from "../../../types";
 
+const EXECUTION_RESULT_OPTIONS = [
+  "Заключение КК второго уровня с указанием номера и даты",
+  "Признано соответствующим/не признано соответствующим",
+  "Дата и номер аудиторского отчета (перепроверки)",
+  "Дис. ответственность и иные меры реагирования",
+  "Изменения в НПА/др",
+] as const;
+
 export default function RecommendationsPage({
   recommendations,
   onOpenCase,
@@ -9,7 +17,11 @@ export default function RecommendationsPage({
 }: {
   recommendations: CaseRecommendation[];
   onOpenCase: (caseId: string) => void;
-  onExecute: (recommendationId: string, answer: string) => void;
+  onExecute: (
+    recommendationId: string,
+    answer: string,
+    executionResult: string,
+  ) => void;
 }) {
   const [selected, setSelected] = useState<CaseRecommendation | null>(null);
 
@@ -46,7 +58,15 @@ export default function RecommendationsPage({
                         {recommendation.status === "executed" ? "Исполнен" : "Направлен"}
                       </span>
                     </td>
-                    <td>{recommendation.answer || "—"}</td>
+                    <td>
+                      {recommendation.executionResult && (
+                        <>
+                          <b>{recommendation.executionResult}</b>
+                          {recommendation.answer && <br />}
+                        </>
+                      )}
+                      {recommendation.answer || "—"}
+                    </td>
                     <td>
                       <Button onClick={() => onOpenCase(recommendation.caseId)}>
                         {recommendation.caseReference}
@@ -76,11 +96,23 @@ export default function RecommendationsPage({
               const answer = String(
                 new FormData(event.currentTarget).get("answer") || "",
               ).trim();
-              if (!answer) return;
-              onExecute(selected.id, answer);
+              const executionResult = String(
+                new FormData(event.currentTarget).get("executionResult") || "",
+              ).trim();
+              if (!answer || !executionResult) return;
+              onExecute(selected.id, answer, executionResult);
               setSelected(null);
             }}
           >
+            <label className="field">
+              <span>Результат исполнения рекомендации <span className="required">*</span></span>
+              <select name="executionResult" required defaultValue="">
+                <option value="" disabled>Выберите результат</option>
+                {EXECUTION_RESULT_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
             <label className="field">
               <span>Ответ <span className="required">*</span></span>
               <textarea name="answer" required rows={5} />
