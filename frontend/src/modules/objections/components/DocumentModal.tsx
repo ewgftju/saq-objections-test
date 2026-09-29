@@ -333,7 +333,7 @@ export function DocumentContent({
                         : point.authorityFinding) ??
                       ""}
                   </td>
-                  <td>{point.title}</td>
+                  <td>{point.argument || "—"}</td>
                   <td aria-label={`Мотивированный ответ ${appendixAuthority}`}>
                     {appendixPreview?.[point.id] ??
                       (isResponseAppendix
@@ -396,9 +396,11 @@ export function DocumentContent({
           (наименование органа, чьи акты, действия (бездействие) обжалуются)
         </p>
         <ol className="certificate-template-point-list">
-          {points.map((point) => (
-            <li key={point.id}>{point.title}</li>
-          ))}
+          {snapshot.appealType === "Возражение на уведомления" ? (
+            <li>{snapshot.request || "—"}</li>
+          ) : (
+            points.map((point) => <li key={point.id}>{point.title}</li>)
+          )}
         </ol>
         <p className="certificate-template-explanation">
           (перечень обжалуемых вопросов)
