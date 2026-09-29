@@ -446,14 +446,6 @@ export default function ActionModal({
                 <span>Исполнитель</span>
                 <b>{requestExecutor}</b>
               </div>
-              <div>
-                <span>Печатная форма</span>
-                <b>
-                  {isOtherRequest
-                    ? "Формируется по шаблону запроса в другой орган"
-                    : "Формируется по шаблону"}
-                </b>
-              </div>
             </div>
             {definition.note && <Notice>{definition.note}</Notice>}
             <div
@@ -596,10 +588,6 @@ export default function ActionModal({
               <div>
                 <span>Автор</span>
                 <b>ДВГА/КВГА</b>
-              </div>
-              <div>
-                <span>Печатная форма</span>
-                <b>Приложение № 1 к запросу</b>
               </div>
             </div>
             {definition.note && <Notice>{definition.note}</Notice>}
