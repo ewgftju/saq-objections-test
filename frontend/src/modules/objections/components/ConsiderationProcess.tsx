@@ -347,9 +347,17 @@ export default function ConsiderationProcess({
             )}
             {role === "work" && c.status === "decided" && c.type === "notice" &&
               !c.documents.some((document) => document.kind === "conclusion") && (
-                <Button primary onClick={() => onAction("send-recommendations", "work")}>
-                  Направить рекомендации
-                </Button>
+                <>
+                  <Button primary onClick={() => onAction("send-recommendations", "work")}>
+                    Направить рекомендации
+                  </Button>
+                  <Button
+                    disabled
+                    title="Сначала вложите заключение по обращению"
+                  >
+                    Завершить рассмотрение
+                  </Button>
+                </>
               )}
             {c.status === "accepted" && (
               <Button
