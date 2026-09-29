@@ -176,7 +176,9 @@ export default function CaseWorkspace({
         ? "Предписание по профилактическому контролю"
         : agendaDetails?.decisionKind === "quality-control"
           ? "Контроль качества"
-          : undefined;
+          : agendaDetails?.decisionKind === "administrative-act"
+            ? "Административный акт"
+            : undefined;
   const hideRequestBlocks =
     role === "commission" ||
     c.status === "documents_review" ||
