@@ -1084,6 +1084,7 @@ export default function ObjectionsModule() {
           }
           onSignAgenda={signMeetingAgenda}
           onCompleteMeeting={completeMeeting}
+          initialMeetingId={model.route.meetingId}
         />
       )}
       {model.route.page === "notifications" && (
@@ -1095,7 +1096,9 @@ export default function ObjectionsModule() {
           onAnswerAttendancePoll={(notificationId) =>
             setDialog({ type: "attendance-answer", notificationId })
           }
-          onOpenSessions={() => model.navigate({ page: "sessions" })}
+          onOpenSessions={(meetingId) =>
+            model.navigate({ page: "sessions", meetingId })
+          }
           onOpenCase={(caseId) => {
             const target = model.state.cases.find((item) => item.id === caseId);
             if (target) openCase(target);
