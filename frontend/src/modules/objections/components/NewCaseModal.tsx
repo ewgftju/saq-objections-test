@@ -82,6 +82,11 @@ const APPEAL_TYPES = [
     caseType: "notice",
   },
   {
+    value: "notice-complaint",
+    label: "Жалоба на уведомление",
+    caseType: "notice",
+  },
+  {
     value: "audit-objection",
     label: "Возражение на аудиторский отчет",
     caseType: "audit",
@@ -111,7 +116,8 @@ export default function NewCaseModal({
   const selectedAppealType =
     APPEAL_TYPES.find((item) => item.value === appealType) ?? APPEAL_TYPES[0];
   const type = selectedAppealType.caseType;
-  const isNotice = appealType === "notice-objection";
+  const isNoticeComplaint = appealType === "notice-complaint";
+  const isNotice = appealType === "notice-objection" || isNoticeComplaint;
   const isAudit = appealType === "audit-objection";
   const isActionComplaint = appealType === "action-inaction-complaint";
   const isDecisionComplaint = appealType === "kvga-dvga-decision-complaint";
@@ -144,6 +150,10 @@ export default function NewCaseModal({
   const sourceDocumentDateLabel = isActionComplaint
     ? "Дата первичного обращения в ДВГА/КВГА"
     : `Дата: ${sourceDocumentLabel}`;
+  const applicantNameLabel = isNoticeComplaint
+    ? "Наименование объекта заявителя"
+    : "Наименование объекта аудита/заявителя";
+  const applicantBinLabel = isNoticeComplaint ? "БИН/ИИН заявителя" : "БИН/ИИН";
   return (
     <Modal title="Новое тестовое обращение" onClose={onClose}>
       <form
@@ -177,9 +187,9 @@ export default function NewCaseModal({
             validateFiles([...requirementFiles, ...pointEvidenceFiles.flat()]);
             const get = (name: string, label: string) =>
               required(data, name, label);
-            const bin = get("bin", "БИН");
+            const bin = get("bin", applicantBinLabel);
             if (!/^\d{12}$/.test(bin))
-              throw new Error("БИН должен содержать 12 цифр");
+              throw new Error(`${applicantBinLabel} должен содержать 12 цифр`);
             const appealDate = get(
               "appealDate",
               "Дата возражения, жалобы, заявления",
@@ -200,6 +210,11 @@ export default function NewCaseModal({
               : "";
             if (isNotice && !/^\d{12}$/.test(customerBin))
               throw new Error("БИН заказчика должен содержать 12 цифр");
+            const auditObjectBin = isNoticeComplaint
+              ? get("auditObjectBin", "БИН/ИИН объекта аудита")
+              : "";
+            if (isNoticeComplaint && !/^\d{12}$/.test(auditObjectBin))
+              throw new Error("БИН/ИИН объекта аудита должен содержать 12 цифр");
             const numberPrefix =
               selectedAppealType.label === "Заявление"
                 ? "З"
@@ -227,7 +242,7 @@ export default function NewCaseModal({
                 "Номер возражения, жалобы, заявления",
               ),
               appealDate,
-              org: get("org", "Объект"),
+              org: get("org", applicantNameLabel),
               bin,
               address: get("address", "Местонахождение"),
               applicant: get("applicant", "Заявитель"),
@@ -262,6 +277,13 @@ export default function NewCaseModal({
                         "Наименование заказчика",
                       ),
                       customerBin,
+                      ...(isNoticeComplaint && {
+                        auditObjectName: get(
+                          "auditObjectName",
+                          "Наименование объекта аудита",
+                        ),
+                        auditObjectBin,
+                      }),
                     }
                   : {}),
                 ...(isActionComplaint && hasProcurement
@@ -401,10 +423,10 @@ export default function NewCaseModal({
           {[
             {
               name: "org",
-              label: "Наименование объекта аудита/заявителя",
+              label: applicantNameLabel,
               type: "text" as const,
             },
-            { name: "bin", label: "БИН/ИИН", type: "text" as const },
+            { name: "bin", label: applicantBinLabel, type: "text" as const },
             {
               name: "appealNumber",
               label: "Номер возражения, жалобы, заявления",
@@ -418,6 +440,20 @@ export default function NewCaseModal({
             },
             { name: "address", label: "Местонахождение", type: "text" as const },
             { name: "applicant", label: "Представитель", type: "text" as const },
+            ...(isNoticeComplaint
+              ? [
+                  {
+                    name: "auditObjectName",
+                    label: "Наименование объекта аудита",
+                    type: "text" as const,
+                  },
+                  {
+                    name: "auditObjectBin",
+                    label: "БИН/ИИН",
+                    type: "text" as const,
+                  },
+                ]
+              : []),
           ].map((field) => (
             <Field
               field={{ ...field, required: true }}
