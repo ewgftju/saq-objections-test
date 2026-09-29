@@ -293,6 +293,8 @@ export default function ActionModal({
   const formRef = useRef<HTMLFormElement>(null);
   const [requestAttachments, setRequestAttachments] = useState<File[]>([]);
   const [conclusionFiles, setConclusionFiles] = useState<File[]>([]);
+  const [recommendationRecipients, setRecommendationRecipients] = useState<string[]>([]);
+  const [recipientQuery, setRecipientQuery] = useState("");
   const [requestTab, setRequestTab] = useState<"form" | "print">("form");
   const definition = actionForm(action, c, date, values, role);
   const activeCommissionVoter = commissionMemberId
@@ -317,6 +319,12 @@ export default function ActionModal({
   const customRequestText =
     isOtherRequest ? values.customRequestText ?? "" : undefined;
   const protocolMembers = c.members;
+  const recommendationRecipientField = definition.fields.find(
+    (field) => field.name === "recommendationRecipients",
+  );
+  const recommendationTextField = definition.fields.find(
+    (field) => field.name === "recommendationText",
+  );
   const authorityRequestForConfirmation = c.requests.find(
     (request) =>
       !!request.responded &&
@@ -537,6 +545,9 @@ export default function ActionModal({
         ) : action === "deliver" && c.type === "notice" ? (
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
+            <div className="form-grid">
+              {definition.fields.map((field) => <Field key={field.name} field={field} />)}
+            </div>
             <label className="field request-attachments-field">
               <span>Документ заключения <span className="required">*</span></span>
               <input
@@ -564,6 +575,71 @@ export default function ActionModal({
                 </div>
               )}
             </label>
+          </>
+        ) : action === "send-recommendations" ? (
+          <>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            <label className="field">
+              <span>
+                Кому направить рекомендацию <span className="required">*</span>
+              </span>
+              <input
+                type="search"
+                list={`recommendation-recipients-${c.id}`}
+                value={recipientQuery}
+                placeholder="Начните вводить наименование кабинета"
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
+                  const selected = recommendationRecipientField?.options?.find(
+                    ([optionValue, label]) => optionValue === value || label === value,
+                  );
+                  if (!selected) {
+                    setRecipientQuery(value);
+                    return;
+                  }
+                  setRecommendationRecipients((current) =>
+                    current.includes(selected[0]) ? current : [...current, selected[0]],
+                  );
+                  setRecipientQuery("");
+                }}
+              />
+              <datalist id={`recommendation-recipients-${c.id}`}>
+                {recommendationRecipientField?.options?.map(([value, label]) => (
+                  <option key={value} value={label} />
+                ))}
+              </datalist>
+              <small>Можно выбрать несколько кабинетов.</small>
+              {recommendationRecipients.map((recipient) => {
+                const label = recommendationRecipientField?.options?.find(
+                  ([value]) => value === recipient,
+                )?.[1] || recipient;
+                return (
+                  <span className="badge blue notification-new-badge" key={recipient}>
+                    {label}{" "}
+                    <button
+                      type="button"
+                      className="text-button"
+                      onClick={() =>
+                        setRecommendationRecipients((current) =>
+                          current.filter((item) => item !== recipient),
+                        )
+                      }
+                    >
+                      ×
+                    </button>
+                  </span>
+                );
+              })}
+              {recommendationRecipients.map((recipient) => (
+                <input
+                  key={`input-${recipient}`}
+                  type="hidden"
+                  name="recommendationRecipients"
+                  value={recipient}
+                />
+              ))}
+            </label>
+            {recommendationTextField && <Field field={recommendationTextField} />}
           </>
         ) : action === "deliver" || action === "create-decision-project" ? (
           <>
