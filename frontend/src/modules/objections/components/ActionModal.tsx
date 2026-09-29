@@ -655,10 +655,6 @@ export default function ActionModal({
                 <span>Автор</span>
                 <b>Исполнитель ДАВГА</b>
               </div>
-              <div>
-                <span>Печатная форма</span>
-                <b>Справка по шаблону</b>
-              </div>
             </div>
             {definition.note && <Notice>{definition.note}</Notice>}
             <div className="request-modal-tabs" role="tablist">
