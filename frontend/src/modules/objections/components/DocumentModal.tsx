@@ -149,6 +149,7 @@ export function DocumentContent({
     date: string;
     number: string;
     audio: string;
+    format?: "онлайн, Qosyl" | "офлайн";
     recommendations?: string;
     members: CommissionMember[];
     votes: Record<string, Record<string, string>>;
@@ -615,7 +616,9 @@ export function DocumentContent({
         </div>
         <div className="protocol-template-attendance">
           <p className="protocol-template-attendance-title">
-            <b>ПРИСУТСТВОВАЛИ (онлайн, Zoom):</b>
+            <b>
+              ПРИСУТСТВОВАЛИ ({meeting?.format || "онлайн, Qosyl"}):
+            </b>
           </p>
           {presidingMember ? (
             <>
