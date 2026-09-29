@@ -204,8 +204,6 @@ export function actionForm(
           readOnly: true,
         },
       );
-      note =
-        "Будут сформированы два документа: запрос и приложение к нему. Реквизиты обращения подставятся в шаблон автоматически.";
       break;
     case "request-other":
       title = "Сформировать запрос в другой орган";
@@ -214,8 +212,6 @@ export function actionForm(
         select("saqRecipient", "Получатель SAQ", SAQ_RECIPIENT_OPTIONS),
         area("customRequestText", "Текст запроса"),
       );
-      note =
-        "Печатная форма формируется по шаблону запроса в другой орган. Адресат и текст подставляются в неё автоматически.";
       break;
     case "send-request-approval":
       title = "Отправить запрос на согласование";
@@ -254,8 +250,6 @@ export function actionForm(
             authorityRequest?.authorityResponses?.[point.id]?.response,
           ),
         );
-      note =
-        "Заполните нарушение и мотивированный ответ по каждому пункту. Тексты появятся в первом и третьем столбцах приложения к запросу.";
       break;
     case "position":
       title = "Ответ получен";
