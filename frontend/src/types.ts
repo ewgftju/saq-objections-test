@@ -133,6 +133,7 @@ export interface CaseRecommendation {
   recipient: string;
   status: "sent" | "executed";
   answer: string;
+  executionResult?: string;
   caseId: string;
   caseReference: string;
   executor: string;
