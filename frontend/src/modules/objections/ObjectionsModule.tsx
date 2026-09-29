@@ -1099,6 +1099,7 @@ export default function ObjectionsModule() {
           onOpenSessions={(meetingId) =>
             model.navigate({ page: "sessions", meetingId })
           }
+          onOpenRecommendations={() => model.navigate({ page: "recommendations" })}
           onOpenCase={(caseId) => {
             const target = model.state.cases.find((item) => item.id === caseId);
             if (target) openCase(target);
@@ -1108,6 +1109,7 @@ export default function ObjectionsModule() {
       {model.route.page === "recommendations" && (
         <RecommendationsPage
           recommendations={model.state.recommendations}
+          role={model.role}
           onOpenCase={(caseId) => {
             const target = model.state.cases.find((item) => item.id === caseId);
             if (target) openCase(target);
