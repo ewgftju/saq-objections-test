@@ -200,12 +200,24 @@ export default function NewCaseModal({
               : "";
             if (isNotice && !/^\d{12}$/.test(customerBin))
               throw new Error("БИН заказчика должен содержать 12 цифр");
+            const numberPrefix =
+              selectedAppealType.label === "Заявление"
+                ? "З"
+                : selectedAppealType.label.startsWith("Возражение")
+                  ? "В"
+                  : "Ж";
+            const year = filed.slice(0, 4);
             const counter =
               Math.max(
-                3,
-                ...state.cases.map((c) => Number(c.id.split("-").at(-1)) || 0),
+                0,
+                ...state.cases.map((item) => {
+                  const match = item.id.match(
+                    new RegExp(`^${numberPrefix}-${year}-(\\d+)$`),
+                  );
+                  return match ? Number(match[1]) : 0;
+                }),
               ) + 1;
-            const id = `${type === "control" ? "ЖАЛ" : "ВОЗ"}-2026-${String(counter).padStart(3, "0")}`;
+            const id = `${numberPrefix}-${year}-${String(counter).padStart(3, "0")}`;
             const c = makeCase({
               id,
               type,
