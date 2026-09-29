@@ -190,7 +190,16 @@ export default function NewCaseModal({
               ? get("documentDate", sourceDocumentDateLabel)
               : appealDate;
             [appealDate, received, filed, documentDate].forEach(dateObject);
-            const amount = 0;
+            const amount = isNotice
+              ? Number(get("amount", "Сумма, тенге"))
+              : 0;
+            if (!Number.isFinite(amount) || amount < 0)
+              throw new Error("Сумма должна быть неотрицательным числом");
+            const customerBin = isNotice
+              ? get("customerBin", "БИН заказчика")
+              : "";
+            if (isNotice && !/^\d{12}$/.test(customerBin))
+              throw new Error("БИН заказчика должен содержать 12 цифр");
             const counter =
               Math.max(
                 3,
@@ -232,14 +241,15 @@ export default function NewCaseModal({
               agendaDetails: {
                 ...(isNotice
                   ? {
-                      cameraControlNumber: get(
-                        "cameraControlNumber",
-                        "Номер результата камерального контроля",
+                      procurementMethod: get(
+                        "procurementMethod",
+                        "Способ закупки",
                       ),
-                      cameraControlDate: get(
-                        "cameraControlDate",
-                        "Дата результата камерального контроля",
+                      customerName: get(
+                        "customerName",
+                        "Наименование заказчика",
                       ),
+                      customerBin,
                     }
                   : {}),
                 ...(isActionComplaint && hasProcurement
@@ -297,7 +307,7 @@ export default function NewCaseModal({
                     .map((file) => file.name)
                     .join(", "),
                   disputed: true,
-                  amount,
+                  amount: 0,
                 };
               }),
             });
@@ -451,18 +461,42 @@ export default function NewCaseModal({
                 <>
                   <Field
                     field={{
-                      name: "cameraControlNumber",
-                      label: "Номер результата камерального контроля",
+                      name: "amount",
+                      label: "Сумма, тенге",
+                      type: "number",
+                      min: "0",
+                      required: true,
+                    }}
+                  />
+                  <Field
+                    field={{
+                      name: "procurementMethod",
+                      label: "Способ закупки",
+                      type: "select",
+                      options: [
+                        ["конкурс", "конкурс"],
+                        ["аукцион", "аукцион"],
+                        ["запрос ценовых предложений", "запрос ценовых предложений"],
+                        ["рейтингово-балльная система", "рейтингово-балльная система"],
+                        ["из одного источника", "из одного источника"],
+                        ["товарная биржа", "товарная биржа"],
+                      ],
+                      required: true,
+                    }}
+                  />
+                  <Field
+                    field={{
+                      name: "customerName",
+                      label: "Наименование заказчика",
                       type: "text",
                       required: true,
                     }}
                   />
                   <Field
                     field={{
-                      name: "cameraControlDate",
-                      label: "Дата результата камерального контроля",
-                      type: "date",
-                      value: state.date,
+                      name: "customerBin",
+                      label: "БИН заказчика",
+                      type: "text",
                       required: true,
                     }}
                   />
