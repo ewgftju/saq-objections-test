@@ -391,6 +391,10 @@ export function actionForm(
       title = "Сформировать протокол заседания";
       fields.push(
         input("protocolDate", "Дата протокола", date, "date"),
+        select("meetingFormat", "Формат проведения заседания", [
+          ["онлайн, Qosyl", "онлайн, Qosyl"],
+          ["офлайн", "офлайн"],
+        ]),
         {
           ...input(
             "secretary",
