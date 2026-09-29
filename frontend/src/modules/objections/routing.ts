@@ -14,7 +14,17 @@ export function routeFromPath(path: string): Route {
       return { page: "registry" };
     }
   }
-  if (["sessions", "notifications", "recommendations", "sources", "processes"].includes(parts[0]))
+  if (parts[0] === "sessions") {
+    try {
+      return {
+        page: "sessions",
+        meetingId: parts[1] ? decodeURIComponent(parts[1]) : undefined,
+      };
+    } catch {
+      return { page: "sessions" };
+    }
+  }
+  if (["notifications", "recommendations", "sources", "processes"].includes(parts[0]))
     return { page: parts[0] as Route["page"] };
   return { page: "registry" };
 }
@@ -22,5 +32,7 @@ export function routeFromPath(path: string): Route {
 export function pathForRoute(route: Route): string {
   if (route.page === "detail")
     return `/cases/${encodeURIComponent(route.caseId || "")}/${route.tab || "review"}`;
+  if (route.page === "sessions" && route.meetingId)
+    return `/sessions/${encodeURIComponent(route.meetingId)}`;
   return route.page === "registry" ? "/cases" : `/${route.page}`;
 }
