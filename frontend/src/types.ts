@@ -252,6 +252,8 @@ export interface AgendaDetails {
   procurementMethod?: string;
   customerName?: string;
   customerBin?: string;
+  auditObjectName?: string;
+  auditObjectBin?: string;
   relatedDocumentNumber?: string;
   relatedDocumentDate?: string;
   decisionKind?:
