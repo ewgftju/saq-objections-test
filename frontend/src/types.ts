@@ -376,6 +376,8 @@ export interface ObjectionCase {
   votes?: Record<string, VoteResult> | null;
   result?: CaseResult | null;
   delivery?: Delivery | null;
+  /** Реквизиты регистрации заключения по возражению на уведомление. */
+  conclusionRegistration?: { date: string; number: string };
   decisionProject?: Delivery | null;
   pause?: { date: string; recipient: string; text: string } | null;
   requestPauseStartedAt?: string;
