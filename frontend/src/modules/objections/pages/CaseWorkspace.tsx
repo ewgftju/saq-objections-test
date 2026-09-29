@@ -525,7 +525,7 @@ export default function CaseWorkspace({
                             >
                               Скачать Word
                             </Button>
-                            {role === "work" && (
+                            {role === "work" && c.type !== "notice" && (
                               <Button
                                 primary
                                 onClick={() => onAction("send-recommendations", "work")}
