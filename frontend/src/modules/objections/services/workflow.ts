@@ -349,7 +349,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       label:
         c.type === "notice"
           ? c.documents.some((document) => document.kind === "conclusion")
-            ? "Закрыть рассмотрение"
+            ? "Завершить рассмотрение"
             : "Вложить заключение"
           : "Сформировать окончательный ответ",
       role: c.selfReview ? "dvga" : reviewer,
@@ -1453,7 +1453,20 @@ export function applyAction(
       // stores the conclusion and leaves the case open for explicit closing.
       // Keep the former requisites flow for saved/legacy actions.
       if (c.type === "notice" && !form.get("sent")) {
-        note = "Заключение по обращению вложено";
+        const registrationDate = text(
+          "conclusionRegistrationDate",
+          "Дата регистрации",
+        );
+        dateObject(registrationDate);
+        const registrationNumber = text(
+          "conclusionRegistrationNumber",
+          "Номер регистрации",
+        );
+        c.conclusionRegistration = {
+          date: registrationDate,
+          number: registrationNumber,
+        };
+        note = `Заключение по обращению вложено: №${registrationNumber} от ${formatDate(registrationDate)}.`;
         break;
       }
       c.delivery = {
