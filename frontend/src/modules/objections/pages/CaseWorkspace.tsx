@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button, Notice, PageHeading } from "../../../components/ui";
 import { OUTCOMES, STATUS, TYPES } from "../../../data/constants";
 import type {
@@ -153,6 +154,7 @@ export default function CaseWorkspace({
   onDocument: (kind: string, document?: CaseDocument) => void;
   onUpload: () => void;
 }) {
+  const [issuesExpanded, setIssuesExpanded] = useState(true);
   const agendaDetails = c.agendaDetails;
   const decisionKindLabel =
     agendaDetails?.decisionKind === "prescription-audit"
@@ -384,14 +386,25 @@ export default function CaseWorkspace({
                   />
                 </div>
                 {c.affectedParties && <Notice>{c.affectedParties}</Notice>}
-                <h3 className="form-section">Доводы и пункты документа</h3>
-                {c.issues.map((point) => (
-                  <PointCard
-                    key={point.id}
-                    point={point}
-                    documents={c.documents}
-                  />
-                ))}
+                <div className="issues-section-heading">
+                  <h3 className="form-section">Доводы и пункты документа</h3>
+                  <button
+                    type="button"
+                    className="text-button"
+                    onClick={() => setIssuesExpanded((expanded) => !expanded)}
+                    aria-expanded={issuesExpanded}
+                  >
+                    {issuesExpanded ? "Свернуть" : "Развернуть"}
+                  </button>
+                </div>
+                {issuesExpanded &&
+                  c.issues.map((point) => (
+                    <PointCard
+                      key={point.id}
+                      point={point}
+                      documents={c.documents}
+                    />
+                  ))}
                 {c.type === "notice" && (
                   <Notice>
                     На период рассмотрения возражения срок исполнения
