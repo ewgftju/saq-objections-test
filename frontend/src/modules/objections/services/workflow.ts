@@ -1223,6 +1223,10 @@ export function applyAction(
         point.final = outcome;
       }
       const protocolDate = String(form.get("protocolDate") || date);
+      const meetingFormat =
+        String(form.get("meetingFormat") || "онлайн, Qosyl") === "офлайн"
+          ? "офлайн"
+          : "онлайн, Qosyl";
       const recommendationText = String(form.get("recommendations") || "").trim();
       dateObject(protocolDate);
       c.meeting = {
@@ -1230,6 +1234,7 @@ export function applyAction(
         // Номер присваивается только после подписания протокола.
         number: "",
         audio: "",
+        format: meetingFormat,
         projectReceived: date,
         recommendations: recommendationText || "—",
       };
