@@ -242,10 +242,21 @@ export default function CaseWorkspace({
                     value={c.appealType ?? TYPES[c.type]}
                   />
                   <Fact
-                    label="Наименование объекта аудита/заявителя"
+                    label={
+                      c.appealType === "Жалоба на уведомление"
+                        ? "Наименование объекта заявителя"
+                        : "Наименование объекта аудита/заявителя"
+                    }
                     value={c.org}
                   />
-                  <Fact label="БИН/ИИН" value={c.bin} />
+                  <Fact
+                    label={
+                      c.appealType === "Жалоба на уведомление"
+                        ? "БИН/ИИН заявителя"
+                        : "БИН/ИИН"
+                    }
+                    value={c.bin}
+                  />
                   <Fact
                     label="Номер возражения, жалобы, заявления"
                     value={c.appealNumber}
@@ -305,6 +316,19 @@ export default function CaseWorkspace({
                     <Fact
                       label="БИН заказчика"
                       value={agendaDetails.customerBin}
+                    />
+                  )}
+                  {agendaDetails?.auditObjectName && (
+                    <Fact
+                      label="Наименование объекта аудита"
+                      value={agendaDetails.auditObjectName}
+                      wide
+                    />
+                  )}
+                  {agendaDetails?.auditObjectBin && (
+                    <Fact
+                      label="БИН/ИИН объекта аудита"
+                      value={agendaDetails.auditObjectBin}
                     />
                   )}
                   {agendaDetails?.procurementNumber && (
