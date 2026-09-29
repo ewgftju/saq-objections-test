@@ -47,15 +47,7 @@ const HEARING_WAITING_STATUSES = [
 const FINAL_RESPONSE_STATUSES = [
   "decided",
   "final_response_approval",
-  "final_response_signed",] as const;
-
-const APPEAL_TYPE_OPTIONS = [
-  "Заявление",
-  "Жалоба на акт о результате профилактического контроля",
-  "Жалоба на действие/бездействие",
-  "Жалоба на решение КВГА/ДВГА",
-  "Возражение на уведомление",
-  "Возражение на аудиторский отчет",
+  "final_response_signed",
 ] as const;
 
 function countCasesByStatus(
@@ -122,7 +114,7 @@ export default function CasesList({
           .includes(query.toLowerCase());
         return (
           matchesQuery &&
-          (type === "all" || (c.appealType === "Возражение на уведомления" ? "Возражение на уведомление" : c.appealType ?? TYPES[c.type]) === type) &&
+          (type === "all" || c.type === type) &&
           (tab !== "incoming" ||
             (c.status === "received" && c.channel === "SAQ")) &&
           (tab !== "request-direction" ||
@@ -186,7 +178,7 @@ export default function CasesList({
           <>
             <Button onClick={() => onExport(visible)}>Экспорт CSV</Button>
             <Button primary onClick={onCreate}>
-              + Новое обращение
+              + Новое возражение/обращение
             </Button>
           </>
         }
@@ -310,13 +302,13 @@ export default function CasesList({
             />
           </label>
           <label className="field">
-            <span>Вид обращения</span>
+            <span>Предмет обращения</span>
             <select
               value={type}
               onChange={(event) => setType(event.target.value)}
             >
               <option value="all">Все виды</option>
-              {APPEAL_TYPE_OPTIONS.map((appealType) => [appealType, appealType]).map(([value, label]) => (
+              {Object.entries(TYPES).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -335,7 +327,6 @@ export default function CasesList({
                 <th>Статус</th>
                 <th>Срок исполнения</th>
                 <th>Срок рассмотрения</th>
-                <th>Исполнитель</th>
                 <th />
               </tr>
             </thead>
@@ -398,7 +389,6 @@ export default function CasesList({
                         : formatDate(reviewDeadline(c))}
                     </strong>
                   </td>
-                                                     <td>{c.assignee || "Не назначен"}</td>
                   <td>
                     <Button onClick={() => onOpen(c)}>Открыть</Button>
                   </td>
@@ -407,7 +397,7 @@ export default function CasesList({
               })}
               {!visible.length && (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={7}>
                     <div className="empty-state">
                       <h3>Обращения не найдены</h3>
                       <p>Измените строку поиска или фильтры.</p>
