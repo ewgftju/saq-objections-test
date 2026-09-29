@@ -259,6 +259,7 @@ export function SessionsPage({
   onPreviewAgenda,
   onSignAgenda,
   onCompleteMeeting,
+  initialMeetingId,
 }: {
   cases: ObjectionCase[];
   meetings?: CommissionMeeting[];
@@ -279,8 +280,14 @@ export function SessionsPage({
   onPreviewAgenda: (meeting: CommissionMeeting) => void;
   onSignAgenda: (meetingId: string) => void;
   onCompleteMeeting: (meetingId: string) => void;
+  initialMeetingId?: string;
 }) {
-  const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null);
+  const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(
+    () =>
+      initialMeetingId && meetings.some((meeting) => meeting.id === initialMeetingId)
+        ? initialMeetingId
+        : null,
+  );
   const [sessionsTab, setSessionsTab] = useState<"meetings" | "excluded">(
     "meetings",
   );
