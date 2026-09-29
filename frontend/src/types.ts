@@ -140,6 +140,12 @@ export interface CaseRecommendation {
   caseReference: string;
   executor: string;
   createdAt: string;
+  /** Кабинет SAQ, в который направлена рекомендация. */
+  recipientRole?: Role;
+  /** Дата направления вместе с окончательным ответом. */
+  sentAt?: string;
+  /** Срок исполнения: 30 рабочих дней с даты направления. */
+  dueDate?: string;
   executedAt?: string;
 }
 
@@ -279,7 +285,8 @@ export interface CaseNotification {
     | "attendance-poll"
     | "agenda-sign"
     | "agenda-signed"
-    | "request-response";
+    | "request-response"
+    | "recommendation";
   attendancePollId?: string;
   commissionMemberId?: string;
   meetingId?: string;
@@ -462,6 +469,7 @@ export type Action =
   | "close-review"
   | "approve-final-response"
   | "sign-final-response"
+  | "send-recommendations"
   | "forward"
   | "control-analysis"
   | "control-decision"
