@@ -282,16 +282,29 @@ export default function CaseWorkspace({
                       value={formatDate(c.document.date)}
                     />
                   )}
-                  {agendaDetails?.cameraControlNumber && (
+                  {c.type === "notice" && (
                     <Fact
-                      label="Номер результата камерального контроля"
-                      value={agendaDetails.cameraControlNumber}
+                      label="Сумма, тенге"
+                      value={formatMoney(c.amount)}
                     />
                   )}
-                  {agendaDetails?.cameraControlDate && (
+                  {agendaDetails?.procurementMethod && (
                     <Fact
-                      label="Дата результата камерального контроля"
-                      value={formatDate(agendaDetails.cameraControlDate)}
+                      label="Способ закупки"
+                      value={agendaDetails.procurementMethod}
+                    />
+                  )}
+                  {agendaDetails?.customerName && (
+                    <Fact
+                      label="Наименование заказчика"
+                      value={agendaDetails.customerName}
+                      wide
+                    />
+                  )}
+                  {agendaDetails?.customerBin && (
+                    <Fact
+                      label="БИН заказчика"
+                      value={agendaDetails.customerBin}
                     />
                   )}
                   {agendaDetails?.procurementNumber && (
