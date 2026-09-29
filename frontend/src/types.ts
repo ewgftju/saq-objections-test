@@ -121,6 +121,8 @@ export interface Meeting {
   date: string;
   number: string;
   audio: string;
+  /** Формат проведения заседания, указанный при формировании протокола. */
+  format?: "онлайн, Qosyl" | "офлайн";
   /** Дата направления проекта протокола членам АК для подписания. */
   projectReceived?: string;
   recommendations?: string;
