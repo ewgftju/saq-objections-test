@@ -16,6 +16,7 @@ import {
   nextAction,
 } from "../services/workflow";
 import {
+  addWorkdays,
   addMonths,
   filingDeadline,
   executionDeadline,
@@ -1823,7 +1824,7 @@ test("протокол формируется с выбранными участ
   const definition = actionForm("vote", h.c, "2026-09-10", {});
   assert.deepEqual(
     definition.fields.map((field) => field.name),
-    ["protocolDate", "secretary", "recommendations"],
+    ["protocolDate", "meetingFormat", "secretary", "recommendations"],
   );
   h.c.status = "meeting";
   h.run("vote", "work", {
@@ -1848,19 +1849,7 @@ test("протокол формируется с выбранными участ
     ],
   );
   assert.equal(h.c.meeting?.audio, "");
-  assert.deepEqual(h.state.recommendations, [
-    {
-      id: `recommendation-${h.c.id}-1`,
-      text: "Направить замечания в орган аудита.",
-      recipient: h.c.issuer,
-      status: "sent",
-      answer: "",
-      caseId: h.c.id,
-      caseReference: h.c.appealNumber || h.c.id,
-      executor: h.c.assignee,
-      createdAt: "2026-09-10",
-    },
-  ]);
+  assert.deepEqual(h.state.recommendations, []);
   assert.equal(h.c.votes?.[h.c.issues.find((point) => point.disputed)!.id]?.yes, 1);
   const protocolHtml = renderToStaticMarkup(
     createElement(DocumentContent, {
@@ -1948,6 +1937,50 @@ test("протокол формируется с выбранными участ
   assert.match(
     rejectedProtocolHtml,
     /РЕШЕНИЕ отказать в удовлетворении /,
+  );
+});
+
+test("рекомендации направляются после окончательного ответа в выбранные кабинеты", () => {
+  const h = harness();
+  h.c.status = "completed";
+  h.c.delivery = {
+    date: "2026-09-08",
+    number: "ИСХ-1",
+    receipt: "КВ-1",
+    channel: "Кабинет SAQ",
+    appealCourt: "",
+    appealProcedure: "",
+  };
+  h.c.documents.push({
+    name: "Подписанный окончательный ответ",
+    kind: "final-response",
+    text: "",
+    date: "2026-09-08",
+    author: "Директор ДАВГА",
+  });
+  const form = new FormData();
+  form.append("recommendationRecipients", "dvga");
+  form.append("recommendationRecipients", "subject");
+  form.set("recommendationText", "Устранить выявленные нарушения.");
+  h.set(applyAction(h.state, h.c.id, "send-recommendations", "work", form));
+
+  assert.equal(h.state.recommendations.length, 2);
+  assert.deepEqual(
+    h.state.recommendations.map((recommendation) => recommendation.recipientRole),
+    ["dvga", "subject"],
+  );
+  assert.ok(
+    h.state.recommendations.every(
+      (recommendation) => recommendation.dueDate === addWorkdays("2026-09-08", 30),
+    ),
+  );
+  assert.equal(
+    h.c.documents.filter((document) => document.kind === "recommendation").length,
+    2,
+  );
+  assert.equal(
+    h.state.notifications.filter((notification) => notification.kind === "recommendation").length,
+    2,
   );
 });
 
