@@ -49,6 +49,7 @@ function PointCard({
   documents: CaseDocument[];
   review?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(true);
   const result = point.final || point.proposal;
   const evidenceDocuments = point.evidence
     ? documents.filter(
@@ -66,10 +67,21 @@ function PointCard({
         <strong>
           Пункт {point.number} · {point.title}
         </strong>
-        <span className={`badge ${point.disputed ? "blue" : "gray"}`}>
-          {point.disputed ? "Оспаривается" : "Не оспаривается"}
-        </span>
+        <div className="point-head-actions">
+          <span className={`badge ${point.disputed ? "blue" : "gray"}`}>
+            {point.disputed ? "Оспаривается" : "Не оспаривается"}
+          </span>
+          <button
+            type="button"
+            className="text-button"
+            onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
+          >
+            {expanded ? "Свернуть" : "Развернуть"}
+          </button>
+        </div>
       </div>
+      <div hidden={!expanded}>
       {point.finding && (
         <p>
           <b>Документы подтверждающие нарушение:</b> {point.finding}
@@ -131,6 +143,7 @@ function PointCard({
           )}
         </>
       )}
+      </div>
     </article>
   );
 }
