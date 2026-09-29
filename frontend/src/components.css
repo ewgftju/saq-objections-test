@@ -188,6 +188,12 @@
   gap: 12px;
   margin-bottom: 10px;
 }
+.point-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
 .point-card p {
   font-size: 14px;
   margin: 8px 0;
