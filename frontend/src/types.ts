@@ -275,7 +275,11 @@ export interface CaseNotification {
   text: string;
   date: string;
   read: boolean;
-  kind?: "attendance-poll" | "agenda-sign" | "agenda-signed";
+  kind?:
+    | "attendance-poll"
+    | "agenda-sign"
+    | "agenda-signed"
+    | "request-response";
   attendancePollId?: string;
   commissionMemberId?: string;
   meetingId?: string;
