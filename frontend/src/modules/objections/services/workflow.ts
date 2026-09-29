@@ -924,6 +924,16 @@ export function applyAction(
       c.status = authorityStatus(c) || "response_ready";
       title = "Ответ ДВГА/КВГА подписан";
       note = "Подписанный ответ готов к фиксации рабочим органом.";
+      next.notifications.push({
+        id: `notification-${c.id}-${next.notifications.length + 1}`,
+        caseId: c.id,
+        recipient: ROLES.work,
+        recipientRole: "work",
+        date,
+        read: false,
+        kind: "request-response",
+        text: `Поступил ответ ${request.recipient} на запрос по обращению №${c.appealNumber || c.id}. Откройте обращение для ознакомления.`,
+      });
       break;
     }
     case "position": {
@@ -974,7 +984,8 @@ export function applyAction(
         recipientRole: "work",
         date,
         read: false,
-        text: `Из кабинета Объекта поступил ответ на запрос по обращению №${c.appealNumber || c.id}.`,
+        kind: "request-response",
+        text: `Из кабинета Объекта поступил ответ на запрос по обращению №${c.appealNumber || c.id}. Откройте обращение для ознакомления.`,
       });
       break;
     }
