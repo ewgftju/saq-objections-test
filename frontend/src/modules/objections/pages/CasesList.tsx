@@ -47,7 +47,15 @@ const HEARING_WAITING_STATUSES = [
 const FINAL_RESPONSE_STATUSES = [
   "decided",
   "final_response_approval",
-  "final_response_signed",
+  "final_response_signed",] as const;
+
+const APPEAL_TYPE_OPTIONS = [
+  "Заявление",
+  "Жалоба на акт о результате профилактического контроля",
+  "Жалоба на действие/бездействие",
+  "Жалоба на решение КВГА/ДВГА",
+  "Возражение на уведомление",
+  "Возражение на аудиторский отчет",
 ] as const;
 
 function countCasesByStatus(
@@ -114,7 +122,7 @@ export default function CasesList({
           .includes(query.toLowerCase());
         return (
           matchesQuery &&
-          (type === "all" || c.type === type) &&
+          (type === "all" || (c.appealType === "Возражение на уведомления" ? "Возражение на уведомление" : c.appealType ?? TYPES[c.type]) === type) &&
           (tab !== "incoming" ||
             (c.status === "received" && c.channel === "SAQ")) &&
           (tab !== "request-direction" ||
@@ -302,13 +310,13 @@ export default function CasesList({
             />
           </label>
           <label className="field">
-            <span>Предмет обращения</span>
+            <span>Вид обращения</span>
             <select
               value={type}
               onChange={(event) => setType(event.target.value)}
             >
               <option value="all">Все виды</option>
-              {Object.entries(TYPES).map(([value, label]) => (
+              {APPEAL_TYPE_OPTIONS.map((appealType) => [appealType, appealType]).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
