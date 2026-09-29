@@ -799,6 +799,10 @@ export default function ActionModal({
                   // Номер появляется только после подписания протокола.
                   number: "",
                   audio: "",
+                  format:
+                    values.meetingFormat === "офлайн"
+                      ? "офлайн"
+                      : "онлайн, Qosyl",
                   recommendations: values.recommendations || "—",
                   members: protocolMembers,
                   votes: Object.fromEntries(
