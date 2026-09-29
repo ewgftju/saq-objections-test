@@ -486,6 +486,33 @@ test("ответ КВГА сначала фиксируется инициато
   assert.equal(h.c.status, "materials");
 });
 
+test("ответ КВГА без внешних запросов автоматически переводит обращение на материалы", () => {
+  const h = harness();
+  screen(h);
+  h.run("request", "work", { recipient: "КВГА" });
+  h.run("send-request-approval", "work");
+  h.run("approve-request", "director", { approved: "on" });
+  h.run("sign-request", "director");
+  h.run(
+    "fill-request-response",
+    "kvga",
+    Object.fromEntries(
+      h.c.issues
+        .filter((point) => point.disputed)
+        .flatMap((point) => [
+          [`authorityFinding_${point.id}`, "Нарушение КВГА"],
+          [`authorityResponse_${point.id}`, "Ответ КВГА"],
+        ]),
+    ),
+  );
+  h.run("approve-response", "kvga");
+  h.run("sign-response", "kvga");
+
+  assert.equal(h.c.status, "materials");
+  assert.equal(h.c.requests[0].confirmed, "2026-09-08");
+  assert.notEqual(nextAction(h.c)?.action, "position");
+});
+
 test("фиксация ответа продлевает срок на период приостановления по запросу", () => {
   const h = harness();
   screen(h);
@@ -1012,6 +1039,15 @@ test("совместимость сохранения, прямые ссылки
     page: "detail",
     caseId: state.cases[0].id,
     tab: "history",
+  });
+  const meetingPath = pathForRoute({
+    page: "sessions",
+    meetingId: "meeting-2",
+  });
+  assert.equal(meetingPath, "/sessions/meeting-2");
+  assert.deepEqual(routeFromPath(meetingPath), {
+    page: "sessions",
+    meetingId: "meeting-2",
   });
   const incomingForDirector = {
     ...state.cases[0],
