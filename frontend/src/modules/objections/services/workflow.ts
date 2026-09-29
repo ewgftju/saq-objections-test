@@ -87,6 +87,43 @@ function allResponsesReadyForConfirmation(c: ObjectionCase) {
   );
 }
 
+/** Запросы, ответы на которые поступают непосредственно в SAQ. Если среди
+ * адресатов есть внешний орган без кабинета SAQ, получение его ответа рабочий
+ * орган фиксирует одним отдельным действием. */
+function allRequestsHandledInSaq(c: ObjectionCase) {
+  return (
+    c.requests.length > 0 &&
+    c.requests.every(
+      (request) =>
+        isDvgaOrKvgaRequest(request.recipient) ||
+        (request.template === "other" && request.saqRecipient === "subject"),
+    )
+  );
+}
+
+/** Когда все ответы пришли в кабинеты SAQ, фиксировать их вручную не нужно:
+ * система сразу переводит обращение на следующий этап. */
+function advanceAfterSaqResponses(c: ObjectionCase, date: string) {
+  if (
+    !allRequestsHandledInSaq(c) ||
+    !allResponsesReadyForConfirmation(c)
+  )
+    return null;
+
+  c.requests.forEach((request) => {
+    request.confirmed ||= date;
+  });
+
+  let pausedDays = 0;
+  if (c.requestPauseStartedAt) {
+    pausedDays = workdaysBetween(c.requestPauseStartedAt, date);
+    if (pausedDays > 0) c.pauseDays += pausedDays;
+    c.requestPauseStartedAt = undefined;
+  }
+  c.status = "materials";
+  return pausedDays;
+}
+
 function directedToDvgaOrKvga(c: ObjectionCase) {
   return c.requests.some((request) => isDvgaOrKvgaRequest(request.recipient));
 }
@@ -921,9 +958,15 @@ export function applyAction(
       );
       if (!request) throw new Error("Нет согласованного ответа для подписания");
       request.responseSigned = date;
-      c.status = authorityStatus(c) || "response_ready";
+      const pausedDays = advanceAfterSaqResponses(c, date);
+      if (pausedDays === null) c.status = authorityStatus(c) || "response_ready";
       title = "Ответ ДВГА/КВГА подписан";
-      note = "Подписанный ответ готов к фиксации рабочим органом.";
+      note =
+        pausedDays === null
+          ? "Подписанный ответ готов к фиксации рабочим органом."
+          : "Все ответы поступили в SAQ. Обращение автоматически переведено на этап «Материалы».";
+      if (pausedDays && pausedDays > 0)
+        note += ` Срок рассмотрения продлён на ${pausedDays} раб. дн.`;
       next.notifications.push({
         id: `notification-${c.id}-${next.notifications.length + 1}`,
         caseId: c.id,
@@ -974,9 +1017,16 @@ export function applyAction(
       );
       if (!request) throw new Error("Нет запроса, ожидающего ответа Объекта");
       request.responded = date;
-      if (allResponsesReadyForConfirmation(c)) c.status = "response_ready";
+      const pausedDays = advanceAfterSaqResponses(c, date);
+      if (pausedDays === null && allResponsesReadyForConfirmation(c))
+        c.status = "response_ready";
       title = "Ответ направлен рабочему органу";
-      note = "Ответ Объекта направлен в кабинет рабочего органа.";
+      note =
+        pausedDays === null
+          ? "Ответ Объекта направлен в кабинет рабочего органа."
+          : "Все ответы поступили в SAQ. Обращение автоматически переведено на этап «Материалы».";
+      if (pausedDays && pausedDays > 0)
+        note += ` Срок рассмотрения продлён на ${pausedDays} раб. дн.`;
       next.notifications.push({
         id: `notification-${c.id}-${next.notifications.length + 1}`,
         caseId: c.id,
