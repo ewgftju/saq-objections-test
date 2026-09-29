@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
-import type { CaseRecommendation } from "../../../types";
+import { ROLES } from "../../../data/constants";
+import type { CaseRecommendation, Role } from "../../../types";
+import { formatDate } from "../../../utils/dateFormat";
+import { addWorkdays } from "../services/deadlines";
 
 const EXECUTION_RESULT_OPTIONS = [
   "Заключение КК второго уровня с указанием номера и даты",
@@ -12,10 +15,12 @@ const EXECUTION_RESULT_OPTIONS = [
 
 export default function RecommendationsPage({
   recommendations,
+  role,
   onOpenCase,
   onExecute,
 }: {
   recommendations: CaseRecommendation[];
+  role: Role;
   onOpenCase: (caseId: string) => void;
   onExecute: (
     recommendationId: string,
@@ -24,14 +29,26 @@ export default function RecommendationsPage({
   ) => void;
 }) {
   const [selected, setSelected] = useState<CaseRecommendation | null>(null);
+  const visibleRecommendations =
+    role === "work"
+      ? recommendations
+      : recommendations.filter(
+          (recommendation) =>
+            recommendation.recipientRole === role ||
+            (!recommendation.recipientRole && recommendation.recipient === ROLES[role]),
+        );
 
   return (
     <>
       <PageHeading
         title="Рекомендации"
-        subtitle="Рекомендации, сформированные в протоколах заседаний"
+        subtitle={
+          role === "work"
+            ? "Направленные рекомендации и контроль их исполнения"
+            : "Рекомендации, направленные в ваш кабинет для исполнения"
+        }
       />
-      {recommendations.length === 0 ? (
+      {visibleRecommendations.length === 0 ? (
         <Notice>Рекомендаций пока нет.</Notice>
       ) : (
         <section className="card">
@@ -39,42 +56,40 @@ export default function RecommendationsPage({
             <table>
               <thead>
                 <tr>
+                  <th>№</th>
                   <th>Текст рекомендации</th>
                   <th>Кому направлена рекомендация</th>
+                  <th>Дата направления</th>
+                  <th>Срок исполнения</th>
+                  <th>Вид исполнения</th>
                   <th>Статус</th>
-                  <th>Ответ</th>
-                  <th>Связка с обращением</th>
-                  <th>Исполнитель рабочего органа</th>
                   <th />
                 </tr>
               </thead>
               <tbody>
-                {recommendations.map((recommendation) => (
+                {visibleRecommendations.map((recommendation, index) => (
                   <tr key={recommendation.id}>
+                    <td>{index + 1}</td>
                     <td>{recommendation.text}</td>
                     <td>{recommendation.recipient}</td>
+                    <td>
+                      {formatDate(recommendation.sentAt || recommendation.createdAt)}
+                    </td>
+                    <td>
+                      {formatDate(
+                        recommendation.dueDate ||
+                          addWorkdays(recommendation.sentAt || recommendation.createdAt, 30),
+                      )}
+                    </td>
+                    <td>{recommendation.executionResult || "—"}</td>
                     <td>
                       <span className={`badge ${recommendation.status === "executed" ? "green" : "blue"}`}>
                         {recommendation.status === "executed" ? "Исполнен" : "Направлен"}
                       </span>
                     </td>
                     <td>
-                      {recommendation.executionResult && (
-                        <>
-                          <b>{recommendation.executionResult}</b>
-                          {recommendation.answer && <br />}
-                        </>
-                      )}
-                      {recommendation.answer || "—"}
-                    </td>
-                    <td>
-                      <Button onClick={() => onOpenCase(recommendation.caseId)}>
-                        {recommendation.caseReference}
-                      </Button>
-                    </td>
-                    <td>{recommendation.executor}</td>
-                    <td>
-                      {recommendation.status === "sent" && (
+                      {recommendation.status === "sent" &&
+                        role === recommendation.recipientRole && (
                         <Button primary onClick={() => setSelected(recommendation)}>
                           Внести ответ
                         </Button>
