@@ -456,7 +456,10 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
         role: "commission",
       });
   }
-  if (c.documents.some((document) => document.kind === "final-response")) {
+  if (
+    (c.type === "notice" && c.status === "decided") ||
+    c.documents.some((document) => document.kind === "final-response")
+  ) {
     options.push({
       action: "send-recommendations",
       label: "Направить рекомендации",
@@ -1489,7 +1492,10 @@ export function applyAction(
       doc("Подписанный окончательный ответ", "final-response", note);
       break;
     case "send-recommendations": {
-      if (!c.documents.some((document) => document.kind === "final-response"))
+      if (
+        c.type !== "notice" &&
+        !c.documents.some((document) => document.kind === "final-response")
+      )
         throw new Error("Сначала направьте окончательный ответ");
       const recommendationText = text("recommendationText", "Текст рекомендации");
       const allowedRecipients: Role[] = ["dvga", "kvga", "subject", "higher"];
