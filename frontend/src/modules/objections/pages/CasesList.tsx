@@ -327,6 +327,7 @@ export default function CasesList({
                 <th>Статус</th>
                 <th>Срок исполнения</th>
                 <th>Срок рассмотрения</th>
+                <th>Исполнитель</th>
                 <th />
               </tr>
             </thead>
@@ -389,6 +390,7 @@ export default function CasesList({
                         : formatDate(reviewDeadline(c))}
                     </strong>
                   </td>
+                                                     <td>{c.assignee || "Не назначен"}</td>
                   <td>
                     <Button onClick={() => onOpen(c)}>Открыть</Button>
                   </td>
@@ -397,7 +399,7 @@ export default function CasesList({
               })}
               {!visible.length && (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <div className="empty-state">
                       <h3>Обращения не найдены</h3>
                       <p>Измените строку поиска или фильтры.</p>
