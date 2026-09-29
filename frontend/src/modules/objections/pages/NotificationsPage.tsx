@@ -20,7 +20,7 @@ export default function NotificationsPage({
   activeCommissionMemberId: string;
   date: string;
   onAnswerAttendancePoll: (notificationId: string) => void;
-  onOpenSessions: () => void;
+  onOpenSessions: (meetingId?: string) => void;
 }) {
   const availableNotifications = notifications.filter(
     (notification) => notification.date <= date,
@@ -92,11 +92,16 @@ export default function NotificationsPage({
                           {notification.read ? "Ответ направлен" : "Ответить"}
                         </Button>
                       ) : notification.kind === "agenda-sign" ? (
-                        <Button primary onClick={onOpenSessions}>
-                          Открыть заседания
+                        <Button
+                          primary
+                          onClick={() => onOpenSessions(notification.meetingId)}
+                        >
+                          Открыть заседание
                         </Button>
                       ) : notification.kind === "agenda-signed" ? (
-                        <Button onClick={onOpenSessions}>К заседаниям</Button>
+                        <Button onClick={() => onOpenSessions(notification.meetingId)}>
+                          К заседанию
+                        </Button>
                       ) : (
                         <Button
                           primary={notification.kind === "request-response"}
