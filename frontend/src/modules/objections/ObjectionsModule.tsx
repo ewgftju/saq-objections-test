@@ -1342,18 +1342,6 @@ export default function ObjectionsModule() {
                   new FormData(event.currentTarget).get("date"),
                 );
                 dateObject(date);
-                const minimum = [
-                  model.state.date,
-                  ...model.state.cases.flatMap((item) =>
-                    item.history.map((event) => event.date),
-                  ),
-                ]
-                  .sort()
-                  .at(-1)!;
-                if (date < minimum || date > "2026-12-31")
-                  throw new Error(
-                    `Дата должна быть не раньше ${minimum} и не позже 31.12.2026`,
-                  );
                 model.commit({ ...model.state, date }, "Дата демо изменена");
                 close();
               } catch (cause) {
