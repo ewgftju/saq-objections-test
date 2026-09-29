@@ -43,6 +43,9 @@ function requestIntro(c: ObjectionCase, deadline: string) {
   if (appealType === "Возражение на уведомления")
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, направленного по результатам камерального контроля ${auditAuthorityFullName(c.issuer)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
 
+  if (appealType === "Жалоба на уведомление")
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, направленного по результатам камерального контроля ${auditAuthorityFullName(c.issuer)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
+
   if (appealType === "Возражение на аудиторский отчет")
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения ${c.org} к нарушениям, указанным в аудиторском отчете от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("возражения")}`;
 
@@ -102,6 +105,9 @@ function certificateIntro(c: ObjectionCase) {
 
   if (appealType === "Возражение на уведомления")
     return `В Министерство финансов Республики Казахстан поступило возражение от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${number} от ${date} года, к уведомлению об устранении нарушений от ${sourceDate} года № ${sourceNumber}, направленного по результатам камерального контроля ${authority}.`;
+
+  if (appealType === "Жалоба на уведомление")
+    return `В Министерство финансов Республики Казахстан поступила жалоба от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${number} от ${date} года, к уведомлению об устранении нарушений от ${sourceDate} года № ${sourceNumber}, направленного по результатам камерального контроля ${authority}.`;
 
   if (appealType === "Возражение на аудиторский отчет")
     return `В Министерство финансов Республики Казахстан поступило возражение № ${number} от ${date} ${applicant}, на аудиторский отчёт от ${sourceDate} № ${sourceNumber}, проведённый ${authority}. Исполнитель: ${c.assignee || DEMO_USER.fullName}.`;
@@ -396,7 +402,7 @@ export function DocumentContent({
           (наименование органа, чьи акты, действия (бездействие) обжалуются)
         </p>
         <ol className="certificate-template-point-list">
-          {snapshot.appealType === "Возражение на уведомления" ? (
+          {snapshot.type === "notice" ? (
             <li>{snapshot.request || "—"}</li>
           ) : (
             points.map((point) => <li key={point.id}>{point.title}</li>)
