@@ -345,9 +345,11 @@ export default function ConsiderationProcess({
                 Сформировать запрос в другой орган
               </Button>
             )}
-            {c.status === "decided" && c.type === "notice" &&
+            {role === "work" && c.status === "decided" && c.type === "notice" &&
               !c.documents.some((document) => document.kind === "conclusion") && (
-                <Button disabled>Закрыть рассмотрение</Button>
+                <Button primary onClick={() => onAction("send-recommendations", "work")}>
+                  Направить рекомендации
+                </Button>
               )}
             {c.status === "accepted" && (
               <Button
