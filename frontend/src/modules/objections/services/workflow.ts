@@ -469,17 +469,6 @@ export function actionDate(
 ): string {
   const date = String(form.get("date") || state.date);
   dateObject(date);
-  const minimum = [
-    state.date,
-    c.registered,
-    ...c.history.map((event) => event.date),
-  ]
-    .sort()
-    .at(-1)!;
-  if (date < minimum)
-    throw new Error(`Дата операции не может быть раньше ${minimum}`);
-  if (date > "2026-12-31")
-    throw new Error("Демонстрационный календарь настроен до 31.12.2026");
   return date;
 }
 
