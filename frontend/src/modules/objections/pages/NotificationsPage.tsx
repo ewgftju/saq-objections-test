@@ -98,8 +98,13 @@ export default function NotificationsPage({
                       ) : notification.kind === "agenda-signed" ? (
                         <Button onClick={onOpenSessions}>К заседаниям</Button>
                       ) : (
-                        <Button onClick={() => onOpenCase(notification.caseId)}>
-                          Открыть
+                        <Button
+                          primary={notification.kind === "request-response"}
+                          onClick={() => onOpenCase(notification.caseId)}
+                        >
+                          {notification.kind === "request-response"
+                            ? "Открыть обращение"
+                            : "Открыть"}
                         </Button>
                       )}
                     </td>
