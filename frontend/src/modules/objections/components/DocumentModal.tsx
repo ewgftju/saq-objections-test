@@ -55,6 +55,8 @@ function requestIntro(c: ObjectionCase, deadline: string) {
   if (appealType === "Жалоба на решение КВГА/ДВГА") {
     if (details?.decisionKind === "quality-control" || details?.decisionKind === "inspection-act")
       return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на решение контроля качества от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
+    if (details?.decisionKind === "administrative-act")
+      return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на административный акт от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
     if (details?.decisionKind === "prescription-preventive")
       return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на предписание на акт о результате профилактического контроля от ${formatDate(details.relatedDocumentDate)} №${details.relatedDocumentNumber || "—"}${finish("жалобы")}`;
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на предписание на аудиторский отчет от ${formatDate(details?.relatedDocumentDate)} №${details?.relatedDocumentNumber || "—"}${finish("жалобы")}`;
@@ -100,6 +102,8 @@ function certificateIntro(c: ObjectionCase) {
       return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на предписание ${authority} от ${sourceDate} № ${sourceNumber} по профилактическому контролю № ${details.relatedDocumentNumber || "—"} от ${formatDate(details.relatedDocumentDate)}.`;
     if (details?.decisionKind === "quality-control" || details?.decisionKind === "inspection-act")
       return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, по результатам контроля качества ${authority} от ${sourceDate} № ${sourceNumber}.`;
+    if (details?.decisionKind === "administrative-act")
+      return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на административный акт ${authority} от ${sourceDate} № ${sourceNumber}.`;
     return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на предписание ${authority} от ${sourceDate} № ${sourceNumber} по аудиторскому отчёту № ${details?.relatedDocumentNumber || "—"} от ${formatDate(details?.relatedDocumentDate)}.`;
   }
 
@@ -191,7 +195,9 @@ export function DocumentContent({
         ? "Предписание по профилактическому контролю"
         : agendaDetails?.decisionKind === "quality-control"
           ? "Контроль качества"
-          : undefined;
+          : agendaDetails?.decisionKind === "administrative-act"
+            ? "Административный акт"
+            : undefined;
   const requirementFiles = c.documents.filter(
     (item) => item.kind === "attachment" && item.text === "Требования заявителя",
   );
