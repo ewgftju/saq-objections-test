@@ -192,6 +192,17 @@
   font-size: 14px;
   margin: 8px 0;
   white-space: pre-wrap;
+  text-align: justify;
+  text-justify: inter-word;
+}
+.issues-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.issues-section-heading .form-section {
+  margin-bottom: 0;
 }
 .fact.full {
   grid-column: 1/-1;
