@@ -250,7 +250,7 @@ export default function NewCaseModal({
               org: get("org", applicantNameLabel),
               bin,
               address: get("address", "Местонахождение"),
-              applicant: get("applicant", "Заявитель"),
+              applicant: String(data.get("applicant") || "").trim(),
               registered: state.date,
               filed,
               channel: get("channel", "Портал / цифровая система"),
@@ -461,7 +461,7 @@ export default function NewCaseModal({
               : []),
           ].map((field) => (
             <Field
-              field={{ ...field, required: true }}
+              field={{ ...field, required: field.name !== "applicant" }}
               key={field.name}
             />
           ))}
