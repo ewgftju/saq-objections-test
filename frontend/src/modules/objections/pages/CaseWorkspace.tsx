@@ -525,8 +525,36 @@ export default function CaseWorkspace({
                             >
                               Скачать Word
                             </Button>
+                            {role === "work" && (
+                              <Button
+                                primary
+                                onClick={() => onAction("send-recommendations", "work")}
+                              >
+                                Направить рекомендации
+                              </Button>
+                            )}
                           </div>
                         </div>
+                      </div>
+                    </section>
+                  ) : null;
+                })()}
+                {(() => {
+                  const recommendations = c.documents.filter(
+                    (document) => document.kind === "recommendation",
+                  );
+                  return recommendations.length ? (
+                    <section className="request-documents-section">
+                      <h4>Рекомендации</h4>
+                      <div className="request-documents-list">
+                        {recommendations.map((document) => (
+                          <div className="request-document-row" key={`${document.name}-${document.date}`}>
+                            <span>{document.name}</span>
+                            <Button onClick={() => onDocument(document.kind, document)}>
+                              Просмотр
+                            </Button>
+                          </div>
+                        ))}
                       </div>
                     </section>
                   ) : null;
