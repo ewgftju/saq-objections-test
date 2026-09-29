@@ -13,6 +13,7 @@ export default function NotificationsPage({
   date,
   onAnswerAttendancePoll,
   onOpenSessions,
+  onOpenRecommendations,
 }: {
   notifications: CaseNotification[];
   onOpenCase: (caseId: string) => void;
@@ -21,6 +22,7 @@ export default function NotificationsPage({
   date: string;
   onAnswerAttendancePoll: (notificationId: string) => void;
   onOpenSessions: (meetingId?: string) => void;
+  onOpenRecommendations: () => void;
 }) {
   const availableNotifications = notifications.filter(
     (notification) => notification.date <= date,
@@ -90,6 +92,10 @@ export default function NotificationsPage({
                           }
                         >
                           {notification.read ? "Ответ направлен" : "Ответить"}
+                        </Button>
+                      ) : notification.kind === "recommendation" ? (
+                        <Button primary onClick={onOpenRecommendations}>
+                          Открыть рекомендации
                         </Button>
                       ) : notification.kind === "agenda-sign" ? (
                         <Button
