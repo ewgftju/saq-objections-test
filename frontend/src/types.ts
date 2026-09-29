@@ -421,6 +421,8 @@ export interface DemoState {
 export interface Route {
   page: Page;
   caseId?: string;
+  /** Открытая карточка заседания внутри раздела «Заседания комиссии». */
+  meetingId?: string;
   tab?: CaseTab;
 }
 
