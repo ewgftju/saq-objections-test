@@ -40,6 +40,10 @@ export function agendaItemText(c: ObjectionCase) {
     return `Возражение от ${value(c.org)}, ИИН/БИН ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${value(c.document.number)}, направленного по результатам камерального контроля ${issuer}.`;
   }
 
+  if (appealType === "Жалоба на уведомление") {
+    return `Жалоба от ${value(c.org)}, ИИН/БИН ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${value(c.document.number)}, направленного по результатам камерального контроля ${issuer}.`;
+  }
+
   if (appealType === "Возражение на аудиторский отчет") {
     return `Возражение ${appealReference(c)} ${common} на аудиторский отчет ${documentReference(c)}, проведенного ${issuer} (${executor})`;
   }
