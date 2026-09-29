@@ -1109,13 +1109,14 @@ export default function ObjectionsModule() {
             const target = model.state.cases.find((item) => item.id === caseId);
             if (target) openCase(target);
           }}
-          onExecute={(recommendationId, answer) => {
+          onExecute={(recommendationId, answer, executionResult) => {
             const next = structuredClone(model.state);
             const recommendation = next.recommendations.find(
               (item) => item.id === recommendationId,
             );
             if (!recommendation) return;
             recommendation.answer = answer;
+            recommendation.executionResult = executionResult;
             recommendation.status = "executed";
             recommendation.executedAt = next.date;
             model.commit(next, "Исполнение рекомендации зафиксировано");
