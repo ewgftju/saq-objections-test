@@ -263,6 +263,7 @@ export interface AgendaDetails {
     | "prescription-audit"
     | "prescription-preventive"
     | "quality-control"
+    | "administrative-act"
     /** Значения сохранённых до обновления карточек. */
     | "prescription"
     | "inspection-act";
