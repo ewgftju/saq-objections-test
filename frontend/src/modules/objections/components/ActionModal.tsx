@@ -71,7 +71,8 @@ export function Field({
       ) : field.type === "select" ? (
         <select
           name={field.name}
-          defaultValue={field.value}
+          defaultValue={field.multiple ? [] : field.value}
+          multiple={field.multiple}
           required={required}
           disabled={disabled}
         >
