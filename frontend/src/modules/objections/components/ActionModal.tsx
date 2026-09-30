@@ -64,6 +64,7 @@ export function Field({
         <textarea
           name={field.name}
           defaultValue={field.value}
+          placeholder={field.placeholder}
           required={required}
           disabled={disabled}
           rows={3}
@@ -87,6 +88,7 @@ export function Field({
           type={field.type}
           name={field.name}
           defaultValue={field.value}
+          placeholder={field.placeholder}
           min={field.min}
           max={field.max}
           required={required}
@@ -241,6 +243,7 @@ export default function ActionModal({
   role,
   commissionMemberId,
   onSubmit,
+  onSaveDraft,
   onClose,
 }: {
   action: Action;
@@ -250,9 +253,12 @@ export default function ActionModal({
   /** The AK member currently using the Appeals Commission cabinet. */
   commissionMemberId?: string;
   onSubmit: (form: FormData) => void | Promise<void>;
+  onSaveDraft?: (form: FormData) => void | Promise<void>;
   onClose: () => void;
 }) {
   const [values, setValues] = useState<FormValues>(() => {
+    if (action === "request" || action === "request-other")
+      return { ...(c.requestDrafts?.[action]?.values || {}) };
     if (action === "fill-meeting-certificate") {
       const savedPositions = new Map(
         (c.certificate?.memberPositions || []).map((position) => [
@@ -1137,8 +1143,34 @@ export default function ActionModal({
         {savedMessage && <Notice tone="green">{savedMessage}</Notice>}
         <div className="dialog-actions">
           <Button onClick={onClose} disabled={saving}>
-            Отмена
+            {isRequest ? "Свернуть" : "Отмена"}
           </Button>
+          {isRequest && onSaveDraft && (
+            <Button
+              type="button"
+              disabled={saving}
+              onClick={async () => {
+                const form = formRef.current;
+                if (!form) return;
+                try {
+                  setSaving(true);
+                  setError("");
+                  await onSaveDraft(new FormData(form));
+                  setSavedMessage("Проект запроса сохранён.");
+                } catch (cause) {
+                  setError(
+                    cause instanceof Error
+                      ? cause.message
+                      : "Не удалось сохранить проект запроса",
+                  );
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              Сохранить проект
+            </Button>
+          )}
           {action === "fill-meeting-certificate" && (
             <Button
               type="button"
