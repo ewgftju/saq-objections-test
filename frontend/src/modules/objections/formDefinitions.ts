@@ -25,6 +25,7 @@ export interface FormField {
   min?: string;
   max?: string;
   readOnly?: boolean;
+  placeholder?: string;
 }
 export interface FormDefinition {
   title: string;
@@ -196,7 +197,7 @@ export function actionForm(
       const deadline = input(
         "deadline",
         "Срок рассмотрения",
-        `${addWorkdays(date, 2)}T18:00`,
+        values.deadline || `${addWorkdays(date, 2)}T18:00`,
         "datetime-local",
       );
       deadline.readOnly = true;
@@ -205,10 +206,11 @@ export function actionForm(
           "recipient",
           "Кому направить запрос",
           REQUEST_RECIPIENT_OPTIONS,
+          values.recipient || "",
         ),
         deadline,
         {
-          ...input("executor", "Исполнитель", DEMO_USER.fullName),
+          ...input("executor", "Исполнитель", values.executor || DEMO_USER.fullName),
           readOnly: true,
         },
       );
@@ -216,9 +218,14 @@ export function actionForm(
     case "request-other":
       title = "Сформировать запрос в другой орган";
       fields.push(
-        input("recipient", "Кому направить запрос"),
-        select("saqRecipient", "Получатель SAQ", SAQ_RECIPIENT_OPTIONS),
-        area("customRequestText", "Текст запроса"),
+        input("recipient", "Кому направить запрос", values.recipient || ""),
+        select(
+          "saqRecipient",
+          "Получатель SAQ",
+          SAQ_RECIPIENT_OPTIONS,
+          values.saqRecipient || "",
+        ),
+        area("customRequestText", "Текст запроса", values.customRequestText || ""),
       );
       break;
     case "send-request-approval":

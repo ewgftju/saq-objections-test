@@ -11,6 +11,7 @@ import type {
   CommissionAttendancePoll,
   CommissionMeeting,
   ObjectionCase,
+  RequestDraftKind,
 } from "../../types";
 import { caseCsv, downloadFile } from "../../utils/download";
 import ActionModal, { Field } from "./components/ActionModal";
@@ -803,6 +804,8 @@ export default function ObjectionsModule() {
           : undefined;
     const next = applyAction(model.state, c.id, action, model.role, form);
     const updated = next.cases.find((item) => item.id === c.id)!;
+    if (action === "request" || action === "request-other")
+      delete updated.requestDrafts?.[action];
     const responseRequestId =
       ["request", "request-other"].includes(action)
         ? updated.requests.at(-1)?.id
@@ -868,6 +871,23 @@ export default function ObjectionsModule() {
           ? "Заключение по обращению вложено"
         : "Полученный ответ и вложения сохранены",
     );
+  }
+
+  function saveRequestDraft(
+    caseId: string,
+    action: RequestDraftKind,
+    form: FormData,
+  ) {
+    const values: Record<string, string> = {};
+    form.forEach((value, name) => {
+      if (typeof value === "string") values[name] = value;
+    });
+    const next = structuredClone(model.state);
+    const updated = next.cases.find((item) => item.id === caseId);
+    if (!updated) throw new Error("Обращение не найдено");
+    updated.requestDrafts ??= {};
+    updated.requestDrafts[action] = { values, savedAt: next.date };
+    model.commit(next, "Проект запроса сохранён");
   }
 
   return (
@@ -1144,6 +1164,12 @@ export default function ObjectionsModule() {
           }
           onClose={close}
           onSubmit={(form) => submitAction(dialog.action, form)}
+          onSaveDraft={
+            dialog.action === "request" || dialog.action === "request-other"
+              ? (form) =>
+                  saveRequestDraft(c.id, dialog.action as RequestDraftKind, form)
+              : undefined
+          }
         />
       )}
       {dialog?.type === "document" && c && (
