@@ -959,6 +959,202 @@ td .subline {
   color: var(--muted);
   margin-top: 5px;
 }
+.disputed-point-form-card {
+  margin: 22px 0;
+  border: 1px solid #d6dce2;
+  border-radius: 10px;
+  background: #f7f8fa;
+  overflow: hidden;
+}
+.disputed-points-hint {
+  margin: 20px 0 -6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.disputed-point-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 18px;
+  background: #f1f4f6;
+  border-bottom: 1px solid #d6dce2;
+}
+.disputed-point-form-head h3 {
+  color: var(--blue-dark);
+  font-size: 17px;
+}
+.point-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.point-card-icon-button {
+  display: grid;
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-color: transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--blue);
+  font-size: 20px;
+  line-height: 1;
+  place-items: center;
+}
+.point-card-icon-button:hover {
+  border-color: #c9d5dd;
+  background: white;
+}
+.point-delete-button {
+  color: #a93b3b;
+}
+.disputed-point-form-body {
+  padding: 20px 18px 4px;
+  background: white;
+}
+.disputed-point-form-card textarea[name^="pointTitle_"] {
+  min-height: 78px;
+  resize: vertical;
+}
+.disputed-point-form-card textarea[name^="argument_"] {
+  min-height: 142px;
+  resize: vertical;
+}
+.point-evidence-field {
+  display: block;
+  position: relative;
+  margin-bottom: 16px;
+}
+.point-evidence-field > span:first-child {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.point-evidence-dropzone {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 74px;
+  padding: 12px 14px;
+  border: 1px dashed #9fc7df;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--blue-dark);
+  cursor: pointer;
+}
+.point-evidence-dropzone:hover {
+  border-color: var(--blue);
+  background: #f3f9fc;
+}
+.point-evidence-field:focus-within .point-evidence-dropzone {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px #0061961f;
+}
+.point-evidence-icon {
+  flex: none;
+  color: var(--blue);
+  font-size: 23px;
+  line-height: 1;
+}
+.point-evidence-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  color: var(--blue-dark);
+  font-size: 14px;
+}
+.point-evidence-copy small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.point-evidence-button {
+  margin-left: auto;
+  flex: none;
+  padding: 7px 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: white;
+  color: var(--blue-dark);
+  font-size: 13px;
+  font-weight: 600;
+}
+.point-evidence-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.point-evidence-files {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.point-evidence-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid #dde5eb;
+  border-radius: 6px;
+  background: white;
+}
+.point-evidence-file-info {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+.point-evidence-file-info strong {
+  overflow: hidden;
+  color: var(--blue-dark);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.point-evidence-file-info small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.point-evidence-remove {
+  width: 26px;
+  min-height: 26px;
+  margin-left: auto;
+  padding: 0;
+  border-color: transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #a93b3b;
+  font-size: 19px;
+  line-height: 1;
+}
+.point-evidence-remove:hover {
+  border-color: #e5c5c5;
+  background: #fff5f5;
+}
+.point-evidence-field > small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+}
+.add-disputed-point-button {
+  margin-top: 2px;
+  border-color: #c4d5df;
+  background: #f7fbfe;
+  color: var(--blue);
+}
+.new-case-actions {
+  position: sticky;
+  bottom: -22px;
+  z-index: 1;
+  margin: 28px -22px -22px;
+  padding: 18px 22px;
+  background: white;
+  box-shadow: 0 -8px 18px #17394a14;
+}
 .check-line {
   display: flex;
   align-items: flex-start;
