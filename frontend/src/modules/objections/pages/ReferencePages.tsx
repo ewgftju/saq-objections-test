@@ -254,7 +254,8 @@ export function SessionsPage({
   onCreateMeeting,
   onUpdateAttendanceResponse,
   onAddCase,
-  onExcludeCase,
+  onExcludeCases,
+  onTransferCases,
   onMoveCase,
   onPreviewAgenda,
   onSignAgenda,
@@ -275,7 +276,12 @@ export function SessionsPage({
     response: "yes" | "no",
   ) => void;
   onAddCase: (meetingId: string, caseId: string) => void;
-  onExcludeCase: (meetingId: string, caseId: string) => void;
+  onExcludeCases: (meetingId: string, caseIds: string[]) => void;
+  onTransferCases: (
+    fromMeetingId: string,
+    toMeetingId: string,
+    caseIds: string[],
+  ) => void;
   onMoveCase: (meetingId: string, caseId: string, direction: "up" | "down") => void;
   onPreviewAgenda: (meeting: CommissionMeeting) => void;
   onSignAgenda: (meetingId: string) => void;
@@ -293,6 +299,11 @@ export function SessionsPage({
   );
   const [isAddingCase, setIsAddingCase] = useState(false);
   const [caseIdToAdd, setCaseIdToAdd] = useState("");
+  const [selectedCaseIds, setSelectedCaseIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [isTransferringCases, setIsTransferringCases] = useState(false);
+  const [transferMeetingId, setTransferMeetingId] = useState("");
   const selectedMeeting = meetings.find((meeting) => meeting.id === selectedMeetingId);
   const selectedPoll = selectedMeeting
     ? attendancePolls.find((poll) => poll.id === selectedMeeting.pollId)
@@ -306,8 +317,19 @@ export function SessionsPage({
   const addableCases = selectedMeeting && !selectedMeeting.agendaSigned
     ? cases.filter(
         (caseItem) =>
-          caseItem.status === "certificate_approved" &&
+          ["certificate_approved", "documents_review"].includes(caseItem.status) &&
           !selectedMeeting.caseIds.includes(caseItem.id),
+      )
+    : [];
+  const selectedMeetingCaseIds = meetingCases
+    .map((caseItem) => caseItem.id)
+    .filter((caseId) => selectedCaseIds.has(caseId));
+  const transferTargets = selectedMeeting
+    ? meetings.filter(
+        (meeting) =>
+          meeting.id !== selectedMeeting.id &&
+          !meeting.agendaSigned &&
+          !meeting.completed,
       )
     : [];
   const scheduledCaseIds = new Set(
@@ -431,21 +453,60 @@ export function SessionsPage({
               <span className="muted">Готовые к рассмотрению АК обращения, включённые в заседание</span>
             </div>
             {role === "director" && (
-              <Button
-                disabled={Boolean(selectedMeeting.agendaSigned)}
-                onClick={() => {
-                  setCaseIdToAdd("");
-                  setIsAddingCase(true);
-                }}
-              >
-                Добавить обращение
-              </Button>
+              <div className="agenda-registry-actions">
+                <Button
+                  disabled={Boolean(selectedMeeting.agendaSigned)}
+                  onClick={() => {
+                    setCaseIdToAdd("");
+                    setIsAddingCase(true);
+                  }}
+                >
+                  Добавить обращение
+                </Button>
+                <Button
+                  disabled={Boolean(selectedMeeting.agendaSigned) || !selectedMeetingCaseIds.length}
+                  onClick={() => {
+                    onExcludeCases(selectedMeeting.id, selectedMeetingCaseIds);
+                    setSelectedCaseIds(new Set());
+                  }}
+                >
+                  Исключить обращение
+                </Button>
+                <Button
+                  disabled={Boolean(selectedMeeting.agendaSigned) || !selectedMeetingCaseIds.length}
+                  onClick={() => {
+                    setTransferMeetingId("");
+                    setIsTransferringCases(true);
+                  }}
+                >
+                  Перенести
+                </Button>
+              </div>
             )}
           </div>
           <div className="table-scroll">
             <table className="registry-table">
               <thead>
                 <tr>
+                  <th>
+                    {role === "director" && !selectedMeeting.agendaSigned ? (
+                      <input
+                        type="checkbox"
+                        aria-label="Выбрать все обращения"
+                        checked={
+                          meetingCases.length > 0 &&
+                          meetingCases.every((caseItem) => selectedCaseIds.has(caseItem.id))
+                        }
+                        onChange={(event) =>
+                          setSelectedCaseIds(
+                            event.target.checked
+                              ? new Set(meetingCases.map((caseItem) => caseItem.id))
+                              : new Set(),
+                          )
+                        }
+                      />
+                    ) : null}
+                  </th>
                   <th>№</th>
                   <th>Обращение</th>
                   <th>Объект</th>
@@ -457,6 +518,23 @@ export function SessionsPage({
               <tbody>
                 {meetingCases.map((caseItem, index) => (
                   <tr key={caseItem.id}>
+                    <td>
+                      {role === "director" && !selectedMeeting.agendaSigned ? (
+                        <input
+                          type="checkbox"
+                          aria-label={`Выбрать обращение ${caseItem.id}`}
+                          checked={selectedCaseIds.has(caseItem.id)}
+                          onChange={(event) =>
+                            setSelectedCaseIds((current) => {
+                              const next = new Set(current);
+                              if (event.target.checked) next.add(caseItem.id);
+                              else next.delete(caseItem.id);
+                              return next;
+                            })
+                          }
+                        />
+                      ) : null}
+                    </td>
                     <td>{index + 1}</td>
                     <td>{caseItem.id}</td>
                     <td>{caseItem.org}</td>
@@ -470,27 +548,21 @@ export function SessionsPage({
                             : "gray")
                         }
                       >
-                        {REVIEWED_CASE_STATUSES.has(caseItem.status)
-                          ? "Да"
-                          : "Нет"}
+                        {caseItem.transferredFromMeetingIds?.includes(selectedMeeting.id)
+                          ? "Перенесено"
+                          : REVIEWED_CASE_STATUSES.has(caseItem.status)
+                            ? "Да"
+                            : "Нет"}
                       </span>
                     </td>
                     <td className="agenda-registry-actions">
                       <Button onClick={() => onOpen(caseItem)}>Открыть</Button>
-                      {role === "director" && (
-                        <Button
-                          disabled={Boolean(selectedMeeting.agendaSigned)}
-                          onClick={() => onExcludeCase(selectedMeeting.id, caseItem.id)}
-                        >
-                          Исключить из заседания
-                        </Button>
-                      )}
                     </td>
                   </tr>
                 ))}
                 {!meetingCases.length && (
                   <tr>
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <div className="empty-state">
                         <h3>В заседание не включены обращения</h3>
                         <p>Директор ДАВГА может исключить обращение до подписания повестки дня.</p>
@@ -511,7 +583,7 @@ export function SessionsPage({
             {addableCases.length ? (
               <>
                 <p className="muted">
-                  Доступны только обращения со статусом «Готово к рассмотрению АК».
+                  Доступны обращения со статусами «Готово к рассмотрению АК» и «Ознакомление с документами».
                 </p>
                 <label className="field">
                   <span>Обращение</span>
@@ -543,8 +615,57 @@ export function SessionsPage({
               </>
             ) : (
               <Notice>
-                Нет обращений со статусом «Готово к рассмотрению АК», доступных для добавления.
+                Нет обращений со статусами «Готово к рассмотрению АК» и «Ознакомление с документами», доступных для добавления.
               </Notice>
+            )}
+          </Modal>
+        )}
+
+        {isTransferringCases && role === "director" && (
+          <Modal
+            title="Перенести обращения в другое заседание"
+            onClose={() => setIsTransferringCases(false)}
+          >
+            {transferTargets.length ? (
+              <>
+                <p className="muted">
+                  Будет перенесено обращений: {selectedMeetingCaseIds.length}.
+                </p>
+                <label className="field">
+                  <span>Заседание</span>
+                  <select
+                    value={transferMeetingId}
+                    onChange={(event) => setTransferMeetingId(event.target.value)}
+                  >
+                    <option value="">Выберите заседание</option>
+                    {transferTargets.map((meeting) => (
+                      <option key={meeting.id} value={meeting.id}>
+                        Заседание №{meeting.number} — {formatDateTime(meeting.dateTime)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="dialog-actions">
+                  <Button onClick={() => setIsTransferringCases(false)}>Отмена</Button>
+                  <Button
+                    primary
+                    disabled={!transferMeetingId || !selectedMeetingCaseIds.length}
+                    onClick={() => {
+                      onTransferCases(
+                        selectedMeeting.id,
+                        transferMeetingId,
+                        selectedMeetingCaseIds,
+                      );
+                      setSelectedCaseIds(new Set());
+                      setIsTransferringCases(false);
+                    }}
+                  >
+                    Перенести
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <Notice>Нет другого неподписанного заседания для переноса.</Notice>
             )}
           </Modal>
         )}
