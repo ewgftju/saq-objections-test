@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button, Modal, Notice } from "../../../components/ui";
 import { makeCase } from "../../../data/objections";
 import type { CaseType, DemoState } from "../../../types";
@@ -59,6 +59,12 @@ function validateFiles(files: File[]) {
   });
 }
 
+function formatFileSize(bytes: number) {
+  if (bytes < 1024 * 1024)
+    return `${Math.max(1, Math.round(bytes / 1024))} КБ`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} МБ`;
+}
+
 const APPEAL_TYPES = [
   { value: "statement", label: "Заявление", caseType: "control" },
   {
@@ -107,7 +113,15 @@ export default function NewCaseModal({
   onClose: () => void;
 }) {
   const [appealType, setAppealType] = useState<string>(APPEAL_TYPES[0].value);
-  const [pointCount, setPointCount] = useState(1);
+  const [pointIds, setPointIds] = useState(["point1"]);
+  const nextPointId = useRef(2);
+  const [collapsedPoints, setCollapsedPoints] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [pointEvidenceFiles, setPointEvidenceFiles] = useState<
+    Record<string, File[]>
+  >({});
+  const evidenceInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const [hasProcurement, setHasProcurement] = useState(true);
   const [decisionKind, setDecisionKind] = useState<
     | "prescription-audit"
@@ -159,6 +173,27 @@ export default function NewCaseModal({
     ? "Наименование объекта заявителя"
     : "Наименование объекта аудита/заявителя";
   const applicantBinLabel = isNoticeComplaint ? "БИН/ИИН заявителя" : "БИН/ИИН";
+  const updatePointEvidenceFiles = (pointId: string, files: File[]) => {
+    setPointEvidenceFiles((current) => ({ ...current, [pointId]: files }));
+    const input = evidenceInputs.current[pointId];
+    if (!input) return;
+    const dataTransfer = new DataTransfer();
+    files.forEach((file) => dataTransfer.items.add(file));
+    input.files = dataTransfer.files;
+  };
+  const removePoint = (pointId: string) => {
+    setPointIds((current) => current.filter((id) => id !== pointId));
+    setCollapsedPoints((current) => {
+      const next = new Set(current);
+      next.delete(pointId);
+      return next;
+    });
+    setPointEvidenceFiles((current) => {
+      const { [pointId]: _, ...rest } = current;
+      return rest;
+    });
+    delete evidenceInputs.current[pointId];
+  };
   return (
     <Modal title="Новое тестовое обращение" onClose={onClose}>
       <form
@@ -172,10 +207,7 @@ export default function NewCaseModal({
                 (value): value is File =>
                   value instanceof File && value.name.length > 0,
               );
-            const pointEvidenceFiles = Array.from(
-              { length: pointCount },
-              (_, index) => {
-                const pointId = `point${index + 1}`;
+            const pointEvidenceFiles = pointIds.map((pointId, index) => {
                 const files = data
                   .getAll(`evidenceFiles_${pointId}`)
                   .filter(
@@ -187,8 +219,7 @@ export default function NewCaseModal({
                     `Вложите доказательства по пункту ${index + 1}`,
                   );
                 return files;
-              },
-            );
+              });
             validateFiles([...requirementFiles, ...pointEvidenceFiles.flat()]);
             const get = (name: string, label: string) =>
               required(data, name, label);
@@ -324,15 +355,11 @@ export default function NewCaseModal({
               },
               request: get("request", "Требования"),
               amount,
-              issues: Array.from({ length: pointCount }, (_, index) => {
-                const pointId = `point${index + 1}`;
+              issues: pointIds.map((pointId, index) => {
                 const pointNumber = index + 1;
                 return {
                   id: pointId,
-                  number: get(
-                    `pointNumber_${pointId}`,
-                    `Номер пункта ${pointNumber}`,
-                  ),
+                  number: String(pointNumber),
                   title: get(
                     `pointTitle_${pointId}`,
                     `Описание пункта ${pointNumber}`,
@@ -690,65 +717,169 @@ export default function NewCaseModal({
             Можно вложить несколько файлов до 2 МБ каждый.
           </small>
         </label>
-        {Array.from({ length: pointCount }, (_, index) => {
-          const pointId = `point${index + 1}`;
+        <p className="disputed-points-hint">
+          Добавьте все пункты, с которыми заявитель не согласен. Поля со *
+          обязательны.
+        </p>
+        {pointIds.map((pointId, index) => {
           const pointNumber = index + 1;
+          const isCollapsed = collapsedPoints.has(pointId);
           return (
-            <section key={pointId}>
-              <h3 className="form-section">Оспариваемый пункт {pointNumber}</h3>
-              <Field
-                field={{
-                  name: `pointNumber_${pointId}`,
-                  label: "Номер пункта",
-                  value: String(pointNumber),
-                  type: "text",
-                  required: true,
-                }}
-              />
-              <Field
-                field={{
-                  name: `pointTitle_${pointId}`,
-                  label: "Описание оспариваемого вопроса",
-                  type: "text",
-                  required: true,
-                }}
-              />
-              <Field
-                field={{
-                  name: `argument_${pointId}`,
-                  label: "Довод заявителя",
-                  type: "textarea",
-                  required: true,
-                }}
-              />
-              <label className="field">
-                <span>Доказательства</span>
-                <input
-                  type="file"
-                  name={`evidenceFiles_${pointId}`}
-                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
-                  multiple
-                  required
+            <section className="disputed-point-form-card" key={pointId}>
+              <div className="disputed-point-form-head">
+                <h3>Пункт № {pointNumber}</h3>
+                <div className="point-card-actions">
+                  <Button
+                    className="point-card-icon-button"
+                    type="button"
+                    aria-expanded={!isCollapsed}
+                    aria-label={
+                      isCollapsed
+                        ? `Развернуть пункт ${pointNumber}`
+                        : `Свернуть пункт ${pointNumber}`
+                    }
+                    onClick={() =>
+                      setCollapsedPoints((current) => {
+                        const next = new Set(current);
+                        if (next.has(pointId)) next.delete(pointId);
+                        else next.add(pointId);
+                        return next;
+                      })
+                    }
+                  >
+                    <span aria-hidden="true">{isCollapsed ? "⌄" : "⌃"}</span>
+                  </Button>
+                  {pointIds.length > 1 && (
+                    <Button
+                      className="point-card-icon-button point-delete-button"
+                      type="button"
+                      aria-label={`Удалить пункт ${pointNumber}`}
+                      onClick={() => removePoint(pointId)}
+                    >
+                      <span aria-hidden="true">×</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div
+                className="disputed-point-form-body"
+                hidden={isCollapsed}
+                aria-hidden={isCollapsed}
+              >
+                <Field
+                  field={{
+                    name: `pointTitle_${pointId}`,
+                    label: "Описание оспариваемого вопроса",
+                    type: "textarea",
+                    required: true,
+                  }}
                 />
-                <small className="muted">
-                  Можно вложить несколько файлов до 2 МБ каждый.
-                </small>
-              </label>
+                <Field
+                  field={{
+                    name: `argument_${pointId}`,
+                    label: "Довод заявителя",
+                    type: "textarea",
+                    placeholder:
+                      "Укажите, с чем заявитель не согласен и почему",
+                    required: true,
+                  }}
+                />
+                <div className="point-evidence-field">
+                  <span>Доказательства</span>
+                  <label
+                    className="point-evidence-dropzone"
+                    htmlFor={`evidenceFiles_${pointId}`}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      updatePointEvidenceFiles(
+                        pointId,
+                        Array.from(event.dataTransfer.files),
+                      );
+                    }}
+                  >
+                    <span className="point-evidence-icon" aria-hidden="true">
+                      📎
+                    </span>
+                    <span className="point-evidence-copy">
+                      Перетащите файлы сюда или выберите на компьютере
+                      <small>PDF, PNG, JPG, DOC(X), XLS(X), TXT</small>
+                    </span>
+                    <span className="point-evidence-button">Выбрать файлы</span>
+                  </label>
+                  <input
+                    ref={(element) => {
+                      evidenceInputs.current[pointId] = element;
+                    }}
+                    id={`evidenceFiles_${pointId}`}
+                    className="point-evidence-input"
+                    type="file"
+                    name={`evidenceFiles_${pointId}`}
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                    multiple
+                    required
+                    onChange={(event) =>
+                      updatePointEvidenceFiles(
+                        pointId,
+                        Array.from(event.target.files ?? []),
+                      )
+                    }
+                  />
+                  {pointEvidenceFiles[pointId]?.length ? (
+                    <span className="point-evidence-files">
+                      {pointEvidenceFiles[pointId].map((file, fileIndex) => (
+                        <span
+                          className="point-evidence-file"
+                          key={`${file.name}-${file.lastModified}-${fileIndex}`}
+                        >
+                          <span className="point-evidence-file-info">
+                            <strong>{file.name}</strong>
+                            <small>{formatFileSize(file.size)}</small>
+                          </span>
+                          <Button
+                            className="point-evidence-remove"
+                            type="button"
+                            aria-label={`Удалить файл ${file.name}`}
+                            onClick={() =>
+                              updatePointEvidenceFiles(
+                                pointId,
+                                pointEvidenceFiles[pointId].filter(
+                                  (_, index) => index !== fileIndex,
+                                ),
+                              )
+                            }
+                          >
+                            ×
+                          </Button>
+                        </span>
+                      ))}
+                    </span>
+                  ) : null}
+                  <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
+                </div>
+              </div>
             </section>
           );
         })}
         <Button
+          className="add-disputed-point-button"
           type="button"
-          onClick={() => setPointCount((count) => count + 1)}
+          onClick={() =>
+            setPointIds((current) => [
+              ...current,
+              `point${nextPointId.current++}`,
+            ])
+          }
         >
-          Добавить оспариваемый пункт
+          <span aria-hidden="true">＋</span>
+          Добавить пункт
         </Button>
         {error && (
           <p className="form-error" role="alert">
             {error}
           </p>
         )}
-        <div className="dialog-actions">
+        <div className="dialog-actions new-case-actions">
           <Button onClick={onClose}>Отмена</Button>
           <Button primary type="submit">
             Зарегистрировать
