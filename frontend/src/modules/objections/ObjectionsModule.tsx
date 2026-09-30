@@ -432,41 +432,48 @@ export default function ObjectionsModule() {
     close();
   };
 
-  const excludeCaseFromMeeting = (meetingId: string, caseId: string) => {
+  const excludeCasesFromMeeting = (meetingId: string, caseIds: string[]) => {
     const next = structuredClone(model.state);
     const meeting = next.meetings?.find((item) => item.id === meetingId);
     const poll = meeting
       ? next.attendancePolls.find((item) => item.id === meeting.pollId)
       : undefined;
     if (!meeting || !poll || meeting.agendaSigned) return;
-    meeting.caseIds = meeting.caseIds.filter((id) => id !== caseId);
-    poll.caseIds = poll.caseIds.filter((id) => id !== caseId);
-    const selectedCases = meeting.caseIds
+    const ids = new Set(caseIds.filter((caseId) => meeting.caseIds.includes(caseId)));
+    if (!ids.size) return;
+
+    meeting.caseIds = meeting.caseIds.filter((id) => !ids.has(id));
+    poll.caseIds = poll.caseIds.filter((id) => !ids.has(id));
+    const remainingCases = meeting.caseIds
       .map((id) => next.cases.find((item) => item.id === id))
       .filter((item): item is ObjectionCase => Boolean(item));
     meeting.agendaHtml = agendaDocumentHtml(
-      selectedCases,
+      remainingCases,
       meeting.dateTime.slice(0, 10),
     );
-    const target = next.cases.find((item) => item.id === caseId);
-    if (target) {
+
+    ids.forEach((caseId) => {
+      const target = next.cases.find((item) => item.id === caseId);
+      if (!target) return;
       target.excludedFromMeetingIds = [
         ...new Set([...(target.excludedFromMeetingIds || []), meeting.id]),
       ];
-    }
-    if (target?.attendanceMeetingDate === meeting.dateTime.slice(0, 10)) {
-      delete target.attendanceMeetingDate;
-    }
-    target?.history.push({
-      date: next.date,
-      actor: ROLES.director,
-      title: "Обращение исключено из заседания",
-      text: "Заседание №" + meeting.number + ".",
+      if (target.attendanceMeetingDate === meeting.dateTime.slice(0, 10)) {
+        delete target.attendanceMeetingDate;
+      }
+      target.history.push({
+        date: next.date,
+        actor: ROLES.director,
+        title: "Обращение исключено из заседания",
+        text: "Заседание №" + meeting.number + ".",
+      });
     });
     syncPollParticipants(next.cases, next.attendancePolls, poll);
     model.commit(
       next,
-      "Обращение исключено и будет включено в ближайшее следующее заседание.",
+      ids.size === 1
+        ? "Обращение исключено и будет включено в ближайшее следующее заседание."
+        : "Выбранные обращения исключены и будут включены в ближайшее следующее заседание.",
     );
   };
 
@@ -482,7 +489,7 @@ export default function ObjectionsModule() {
       !poll ||
       meeting.agendaSigned ||
       !target ||
-      target.status !== "certificate_approved" ||
+      !["certificate_approved", "documents_review"].includes(target.status) ||
       meeting.caseIds.includes(caseId)
     ) {
       return;
@@ -547,6 +554,79 @@ export default function ObjectionsModule() {
     });
     syncPollParticipants(next.cases, next.attendancePolls, poll);
     model.commit(next, "Обращение добавлено в заседание.");
+  };
+
+  const transferCasesToMeeting = (
+    fromMeetingId: string,
+    toMeetingId: string,
+    caseIds: string[],
+  ) => {
+    const next = structuredClone(model.state);
+    const fromMeeting = next.meetings?.find((item) => item.id === fromMeetingId);
+    const toMeeting = next.meetings?.find((item) => item.id === toMeetingId);
+    const fromPoll = fromMeeting
+      ? next.attendancePolls.find((item) => item.id === fromMeeting.pollId)
+      : undefined;
+    const toPoll = toMeeting
+      ? next.attendancePolls.find((item) => item.id === toMeeting.pollId)
+      : undefined;
+    if (
+      !fromMeeting ||
+      !toMeeting ||
+      !fromPoll ||
+      !toPoll ||
+      fromMeeting.agendaSigned ||
+      toMeeting.agendaSigned ||
+      toMeeting.completed
+    ) {
+      return;
+    }
+    const ids = caseIds.filter((caseId) => fromMeeting.caseIds.includes(caseId));
+    if (!ids.length) return;
+
+    const movedIds = new Set(ids);
+    fromMeeting.caseIds = fromMeeting.caseIds.filter((id) => !movedIds.has(id));
+    fromPoll.caseIds = fromPoll.caseIds.filter((id) => !movedIds.has(id));
+    ids.forEach((caseId) => {
+      if (!toMeeting.caseIds.includes(caseId)) toMeeting.caseIds.push(caseId);
+      if (!toPoll.caseIds.includes(caseId)) toPoll.caseIds.push(caseId);
+      const target = next.cases.find((item) => item.id === caseId);
+      if (!target) return;
+      target.transferredFromMeetingIds = [
+        ...new Set([...(target.transferredFromMeetingIds || []), fromMeeting.id]),
+      ];
+      target.attendanceMeetingDate = toMeeting.dateTime.slice(0, 10);
+      target.history.push({
+        date: next.date,
+        actor: ROLES.director,
+        title: "Обращение перенесено в другое заседание",
+        text:
+          "Из заседания №" +
+          fromMeeting.number +
+          " в заседание №" +
+          toMeeting.number +
+          ": " +
+          formatDateTime(toMeeting.dateTime) +
+          ".",
+      });
+    });
+    [fromMeeting, toMeeting].forEach((meeting) => {
+      const agendaCases = meeting.caseIds
+        .map((id) => next.cases.find((item) => item.id === id))
+        .filter((item): item is ObjectionCase => Boolean(item));
+      meeting.agendaHtml = agendaDocumentHtml(
+        agendaCases,
+        meeting.dateTime.slice(0, 10),
+      );
+    });
+    syncPollParticipants(next.cases, next.attendancePolls, fromPoll);
+    syncPollParticipants(next.cases, next.attendancePolls, toPoll);
+    model.commit(
+      next,
+      ids.length === 1
+        ? "Обращение перенесено в выбранное заседание."
+        : "Выбранные обращения перенесены в выбранное заседание.",
+    );
   };
 
   const moveMeetingCase = (
@@ -1094,7 +1174,8 @@ export default function ObjectionsModule() {
           onCreateMeeting={() => setDialog({ type: "meeting" })}
           onUpdateAttendanceResponse={updateAttendanceResponse}
           onAddCase={addCaseToMeeting}
-          onExcludeCase={excludeCaseFromMeeting}
+          onExcludeCases={excludeCasesFromMeeting}
+          onTransferCases={transferCasesToMeeting}
           onMoveCase={moveMeetingCase}
           onPreviewAgenda={(meeting) =>
             previewWordDocument(
