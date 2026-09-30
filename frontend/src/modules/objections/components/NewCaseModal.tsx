@@ -6,9 +6,6 @@ import { dateObject } from "../services/deadlines";
 import { required } from "../services/workflow";
 import { Field } from "./ActionModal";
 
-const FILE_EXTENSIONS = /\.(pdf|png|jpe?g|docx?|xlsx?|txt)$/i;
-const MAX_FILE_SIZE = 2 * 1024 * 1024;
-
 const AUDIT_ORGAN_OPTIONS = [
   "КВГА",
   "ДВГА по Акмолинской области",
@@ -47,15 +44,6 @@ function fileDataUrl(file: File) {
     reader.onload = () => resolve(String(reader.result));
     reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
     reader.readAsDataURL(file);
-  });
-}
-
-function validateFiles(files: File[]) {
-  files.forEach((file) => {
-    if (file.size > MAX_FILE_SIZE)
-      throw new Error(`Файл «${file.name}» превышает 2 МБ`);
-    if (!FILE_EXTENSIONS.test(file.name))
-      throw new Error("Поддерживаются PDF, PNG, JPG, DOC(X), XLS(X), TXT");
   });
 }
 
@@ -118,10 +106,12 @@ export default function NewCaseModal({
   const [collapsedPoints, setCollapsedPoints] = useState<Set<string>>(
     () => new Set(),
   );
-  const [pointEvidenceFiles, setPointEvidenceFiles] = useState<
+  const [pointEvidenceFilesByPoint, setPointEvidenceFiles] = useState<
     Record<string, File[]>
   >({});
+  const [requirementFiles, setRequirementFiles] = useState<File[]>([]);
   const evidenceInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const requirementsInput = useRef<HTMLInputElement | null>(null);
   const [hasProcurement, setHasProcurement] = useState(true);
   const [decisionKind, setDecisionKind] = useState<
     | "prescription-audit"
@@ -173,13 +163,31 @@ export default function NewCaseModal({
     ? "Наименование объекта заявителя"
     : "Наименование объекта аудита/заявителя";
   const applicantBinLabel = isNoticeComplaint ? "БИН/ИИН заявителя" : "БИН/ИИН";
+  const updateRequirementFiles = (files: File[]) => {
+    if (!files.length) return;
+    setRequirementFiles((current) => {
+      const next = [...current, ...files];
+      const input = requirementsInput.current;
+      if (input) {
+        const dataTransfer = new DataTransfer();
+        next.forEach((file) => dataTransfer.items.add(file));
+        input.files = dataTransfer.files;
+      }
+      return next;
+    });
+  };
   const updatePointEvidenceFiles = (pointId: string, files: File[]) => {
-    setPointEvidenceFiles((current) => ({ ...current, [pointId]: files }));
-    const input = evidenceInputs.current[pointId];
-    if (!input) return;
-    const dataTransfer = new DataTransfer();
-    files.forEach((file) => dataTransfer.items.add(file));
-    input.files = dataTransfer.files;
+    if (!files.length) return;
+    setPointEvidenceFiles((current) => {
+      const nextFiles = [...(current[pointId] || []), ...files];
+      const input = evidenceInputs.current[pointId];
+      if (input) {
+        const dataTransfer = new DataTransfer();
+        nextFiles.forEach((file) => dataTransfer.items.add(file));
+        input.files = dataTransfer.files;
+      }
+      return { ...current, [pointId]: nextFiles };
+    });
   };
   const removePoint = (pointId: string) => {
     setPointIds((current) => current.filter((id) => id !== pointId));
@@ -201,26 +209,14 @@ export default function NewCaseModal({
           event.preventDefault();
           try {
             const data = new FormData(event.currentTarget);
-            const requirementFiles = data
-              .getAll("requirementsFiles")
-              .filter(
-                (value): value is File =>
-                  value instanceof File && value.name.length > 0,
-              );
             const pointEvidenceFiles = pointIds.map((pointId, index) => {
-                const files = data
-                  .getAll(`evidenceFiles_${pointId}`)
-                  .filter(
-                    (value): value is File =>
-                      value instanceof File && value.name.length > 0,
-                  );
-                if (!files.length)
-                  throw new Error(
-                    `Вложите доказательства по пункту ${index + 1}`,
-                  );
-                return files;
-              });
-            validateFiles([...requirementFiles, ...pointEvidenceFiles.flat()]);
+              const files = pointEvidenceFilesByPoint[pointId] || [];
+              if (!files.length)
+                throw new Error(
+                  `Вложите доказательства по пункту ${index + 1}`,
+                );
+              return files;
+            });
             const get = (name: string, label: string) =>
               required(data, name, label);
             const bin = get("bin", applicantBinLabel);
@@ -704,19 +700,72 @@ export default function NewCaseModal({
             required: true,
           }}
         />
-        <label className="field">
+        <div className="point-evidence-field">
           <span>Требования заявителя</span>
+          <label
+            className="point-evidence-dropzone"
+            htmlFor="requirementsFiles"
+            onDragOver={(event) => event.preventDefault()}
+            onDrop={(event) => {
+              event.preventDefault();
+              updateRequirementFiles(Array.from(event.dataTransfer.files));
+            }}
+          >
+            <span className="point-evidence-icon" aria-hidden="true">📎</span>
+            <span className="point-evidence-copy">
+              Перетащите файлы сюда или выберите на компьютере
+            </span>
+            <span className="point-evidence-button">Выбрать файлы</span>
+          </label>
           <input
+            ref={requirementsInput}
+            id="requirementsFiles"
+            className="point-evidence-input"
             type="file"
             name="requirementsFiles"
-            accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
             multiple
             aria-label="Вложить файлы"
+            onClick={(event) => event.stopPropagation()}
+            onCancel={(event) => event.stopPropagation()}
+            onChange={(event) =>
+              updateRequirementFiles(Array.from(event.target.files ?? []))
+            }
           />
-          <small className="muted">
-            Можно вложить несколько файлов до 2 МБ каждый.
-          </small>
-        </label>
+          {requirementFiles.length ? (
+            <span className="point-evidence-files">
+              {requirementFiles.map((file, fileIndex) => (
+                <span
+                  className="point-evidence-file"
+                  key={`${file.name}-${file.lastModified}-${fileIndex}`}
+                >
+                  <span className="point-evidence-file-info">
+                    <strong>{file.name}</strong>
+                    <small>{formatFileSize(file.size)}</small>
+                  </span>
+                  <Button
+                    className="point-evidence-remove"
+                    type="button"
+                    aria-label={`Удалить файл ${file.name}`}
+                    onClick={() =>
+                      setRequirementFiles((current) => {
+                        const next = current.filter((_, index) => index !== fileIndex);
+                        const input = requirementsInput.current;
+                        if (input) {
+                          const dataTransfer = new DataTransfer();
+                          next.forEach((item) => dataTransfer.items.add(item));
+                          input.files = dataTransfer.files;
+                        }
+                        return next;
+                      })
+                    }
+                  >
+                    ×
+                  </Button>
+                </span>
+              ))}
+            </span>
+          ) : null}
+        </div>
         <p className="disputed-points-hint">
           Добавьте все пункты, с которыми заявитель не согласен. Поля со *
           обязательны.
@@ -803,7 +852,6 @@ export default function NewCaseModal({
                     </span>
                     <span className="point-evidence-copy">
                       Перетащите файлы сюда или выберите на компьютере
-                      <small>PDF, PNG, JPG, DOC(X), XLS(X), TXT</small>
                     </span>
                     <span className="point-evidence-button">Выбрать файлы</span>
                   </label>
@@ -815,9 +863,10 @@ export default function NewCaseModal({
                     className="point-evidence-input"
                     type="file"
                     name={`evidenceFiles_${pointId}`}
-                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
                     multiple
                     required
+                    onClick={(event) => event.stopPropagation()}
+                    onCancel={(event) => event.stopPropagation()}
                     onChange={(event) =>
                       updatePointEvidenceFiles(
                         pointId,
@@ -825,9 +874,9 @@ export default function NewCaseModal({
                       )
                     }
                   />
-                  {pointEvidenceFiles[pointId]?.length ? (
+                  {pointEvidenceFilesByPoint[pointId]?.length ? (
                     <span className="point-evidence-files">
-                      {pointEvidenceFiles[pointId].map((file, fileIndex) => (
+                      {pointEvidenceFilesByPoint[pointId].map((file, fileIndex) => (
                         <span
                           className="point-evidence-file"
                           key={`${file.name}-${file.lastModified}-${fileIndex}`}
@@ -843,7 +892,7 @@ export default function NewCaseModal({
                             onClick={() =>
                               updatePointEvidenceFiles(
                                 pointId,
-                                pointEvidenceFiles[pointId].filter(
+                                pointEvidenceFilesByPoint[pointId].filter(
                                   (_, index) => index !== fileIndex,
                                 ),
                               )
@@ -855,7 +904,6 @@ export default function NewCaseModal({
                       ))}
                     </span>
                   ) : null}
-                  <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
                 </div>
               </div>
             </section>
