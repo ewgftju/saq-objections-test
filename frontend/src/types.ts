@@ -205,6 +205,14 @@ export interface CaseRequest {
   confirmed?: string;
 }
 
+/** Черновик электронной формы запроса до фиксации действия. */
+export interface RequestDraft {
+  values: Record<string, string>;
+  savedAt: string;
+}
+
+export type RequestDraftKind = "request" | "request-other";
+
 export interface CertificateMemberPosition {
   id: string;
   name: string;
@@ -355,6 +363,8 @@ export interface ObjectionCase {
   pauseDays: number;
   documents: CaseDocument[];
   requests: CaseRequest[];
+  /** Сохранённые проекты запросов, которые ещё не зафиксированы. */
+  requestDrafts?: Partial<Record<RequestDraftKind, RequestDraft>>;
   members: CommissionMember[];
   history: HistoryEvent[];
   screening?: string;
