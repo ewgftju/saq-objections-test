@@ -379,6 +379,8 @@ export interface ObjectionCase {
   attendanceMeetingDate?: string;
   /** Заседания, из которых обращение исключено директором ДАВГА. */
   excludedFromMeetingIds?: string[];
+  /** Заседания, из которых обращение перенесено в другое заседание. */
+  transferredFromMeetingIds?: string[];
   certificate?: CaseCertificate | null;
   hearing?: Hearing | null;
   meeting?: Meeting | null;
