@@ -641,42 +641,48 @@ export default function CaseWorkspace({
                   ) : null;
                 })()}
                 {(() => {
-                  // Each intermediate save creates a new certificate snapshot.
-                  // Materials must always expose the latest saved version.
-                  const certificate = c.documents
+                  // Every certificate keeps an immutable snapshot.  The newest
+                  // version is listed first so it is the one the user sees first.
+                  const certificates = c.documents
                     .filter((document) => document.kind === "certificate")
-                    .at(-1);
-                  return certificate ? (
+                    .slice()
+                    .reverse();
+                  return certificates.length ? (
                     <section className="request-documents-section">
                       <h4>Справка</h4>
                       <div className="request-documents-list">
-                        <div className="request-document-row">
-                          <span>{certificate.name}</span>
-                          <div className="request-document-actions">
-                            <Button
-                              onClick={() =>
-                                onDocument(certificate.kind, certificate)
-                              }
-                            >
-                              Просмотр
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                downloadFile(
-                                  `${c.id}-справка.doc`,
-                                  wordDocumentHtml({
-                                    c,
-                                    kind: certificate.kind,
-                                    document: certificate,
-                                  }),
-                                  "application/msword",
-                                )
-                              }
-                            >
-                              Скачать Word
-                            </Button>
+                        {certificates.map((certificate, index) => (
+                          <div
+                            className="request-document-row"
+                            key={`${certificate.name}-${certificate.date}-${index}`}
+                          >
+                            <span>{certificate.name}</span>
+                            <div className="request-document-actions">
+                              <Button
+                                onClick={() =>
+                                  onDocument(certificate.kind, certificate)
+                                }
+                              >
+                                Просмотр
+                              </Button>
+                              <Button
+                                onClick={() =>
+                                  downloadFile(
+                                    `${c.id}-${certificate.name}.doc`,
+                                    wordDocumentHtml({
+                                      c,
+                                      kind: certificate.kind,
+                                      document: certificate,
+                                    }),
+                                    "application/msword",
+                                  )
+                                }
+                              >
+                                Скачать Word
+                              </Button>
+                            </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
                     </section>
                   ) : null;
