@@ -429,12 +429,19 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
         label: "Внешний запрос / приостановление",
         role: "work",
       });
-    if (c.status === "commission_voting")
+    if (c.status === "commission_voting") {
       options.push({
         action: "vote",
         label: "Сформировать протокол заседания",
         role: "work",
       });
+      if (c.certificate)
+        options.push({
+          action: "edit-certificate",
+          label: "Редактировать справку",
+          role: "work",
+        });
+    }
     if (["commission_voting", "circulated"].includes(c.status))
       options.push({
         action: "fill-meeting-certificate",
@@ -1103,6 +1110,37 @@ export function applyAction(
       c.votes = null;
       c.meeting = null;
       doc("Справка по доводам", "analysis", note);
+      break;
+    }
+    case "edit-certificate": {
+      if (!c.certificate)
+        throw new Error("Справка ещё не сформирована");
+      const points = disputed(c);
+      const davgaArgumentsByPoint = Object.fromEntries(
+        points.map((point) => [
+          point.id,
+          text(
+            `certificateDavga_${point.id}`,
+            `Доводы ДАВГА по пункту ${point.number}`,
+          ),
+        ]),
+      );
+      c.certificate = {
+        ...c.certificate,
+        davgaArguments:
+          points
+            .map((point) => davgaArgumentsByPoint[point.id])
+            .find(Boolean) ||
+          c.certificate.davgaArguments,
+        davgaArgumentsByPoint,
+      };
+      const version =
+        c.documents.filter((document) => document.kind === "certificate").length +
+        1;
+      title = `Создана версия ${version} справки`;
+      note =
+        "Доводы ДАВГА обновлены. Предыдущая версия справки сохранена без изменений.";
+      doc(`Версия ${version}`, "certificate", note);
       break;
     }
     case "control-analysis": {
