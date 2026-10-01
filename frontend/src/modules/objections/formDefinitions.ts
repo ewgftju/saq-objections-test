@@ -693,7 +693,9 @@ export function actionForm(
     fields,
     note,
     submit:
-      action === "create-decision-project"
+      action === "edit-certificate"
+        ? "Создать новую версию"
+        : action === "create-decision-project"
         ? "Сформировать проект решения"
         : action === "deliver"
         ? c.type === "notice"
