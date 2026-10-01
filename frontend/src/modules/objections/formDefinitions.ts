@@ -136,7 +136,8 @@ export function actionForm(
     action === "analysis" ||
     action === "assign-work-executor" ||
     action === "commission-vote" ||
-    action === "fill-meeting-certificate"
+    action === "fill-meeting-certificate" ||
+    action === "edit-certificate"
       ? []
       : [day];
   let title = "Действие по обращению";
@@ -288,6 +289,11 @@ export function actionForm(
           ),
         );
       }
+      break;
+    case "edit-certificate":
+      title = "Редактировать справку";
+      note =
+        "Изменяются только доводы ДАВГА. После сохранения будет создана новая версия справки, предыдущие версии сохранятся без изменений.";
       break;
     case "control-analysis":
       title = "Изучение административного дела";
