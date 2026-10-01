@@ -33,6 +33,108 @@ const COMPLETED_MEETING_STATUSES: CaseStatus[] = [
   "completed",
 ];
 
+
+/**
+ * A ready-made case keeps the protocol-stage functions observable immediately
+ * after opening the public demo. It mirrors a completed preliminary workflow
+ * and leaves the other seed cases available for walking through that workflow.
+ */
+function protocolStageDemo(): ObjectionCase {
+  const c = structuredClone(seed().find((item) => item.id === "ВОЗ-2026-002")!);
+  c.id = "ВОЗ-2026-004";
+  c.appealNumber = "ВОЗ-2026-004";
+  c.status = "commission_voting";
+  c.registered = "2026-09-08";
+  c.filed = "2026-09-08";
+  c.assignee = "Исполнитель рабочего органа";
+  c.members = [
+    {
+      id: "protocol-chair",
+      name: "Вице-министр Кенбеил Д.М.",
+      present: true,
+      isChair: true,
+      recused: false,
+      reason: "",
+    },
+    {
+      id: "protocol-member",
+      name: "Директор ДАВГА Күреңбек тегі Ш.Б.",
+      present: true,
+      recused: false,
+      reason: "",
+    },
+  ];
+  c.issues = c.issues.map((point) => ({
+    ...point,
+    authorityFinding: `Доводы ДВГА/КВГА по пункту ${point.number}: ${point.finding}`,
+    position: `Мотивированный ответ ДВГА/КВГА по пункту ${point.number}: выводы подтверждены материалами проверки.`,
+  }));
+  c.requests = [
+    {
+      id: "demo-dvga-request",
+      recipient: "ДВГА по Атырауской области",
+      date: "2026-09-09",
+      text: "Запрос о представлении мотивированной позиции.",
+      deadline: "2026-09-11T18:00",
+      template: "dvga",
+      responded: "2026-09-10",
+      confirmed: "2026-09-10",
+      authorityResponses: Object.fromEntries(
+        c.issues
+          .filter((point) => point.disputed)
+          .map((point) => [
+            point.id,
+            {
+              finding: point.authorityFinding || "",
+              response: point.position || "",
+            },
+          ]),
+      ),
+    },
+  ];
+  c.certificate = {
+    davgaArguments: "Доводы рабочего органа подготовлены по результатам анализа материалов.",
+    davgaArgumentsByPoint: Object.fromEntries(
+      c.issues
+        .filter((point) => point.disputed)
+        .map((point) => [
+          point.id,
+          `Доводы ДАВГА по пункту ${point.number}: рабочий орган предлагает учесть представленные материалы и позицию ДВГА/КВГА.`,
+        ]),
+    ),
+    memberPositions: [],
+  };
+  c.documents = [
+    {
+      name: "Справка по результатам изучения и анализа возражения",
+      kind: "certificate",
+      text: "Исходная версия справки",
+      date: "2026-09-10",
+      author: c.assignee,
+      snapshot: {
+        issues: structuredClone(c.issues),
+        result: null,
+        members: structuredClone(c.members),
+        votes: null,
+        meeting: null,
+        hearing: null,
+        delivery: null,
+        certificate: structuredClone(c.certificate),
+      },
+    },
+  ];
+  c.history = [
+    ...c.history,
+    {
+      date: "2026-09-10",
+      actor: "Система",
+      title: "Демонстрационный этап формирования протокола",
+      text: "Справка сформирована, члены АК определены. Доступно редактирование доводов ДАВГА и формирование протокола.",
+    },
+  ];
+  return c;
+}
+
 function meetingDate(meeting: { dateTime: string }) {
   return meeting.dateTime.slice(0, 10);
 }
@@ -174,9 +276,17 @@ export function useObjectionsModel() {
   });
   const [state, setState] = useState(() => {
     loaded.state = { ...loaded.state, cases: loaded.state.cases.map(c => ["ВОЗ-2026-001", "ВОЗ-2026-002", "ЖАЛ-2026-003"].includes(c.id) ? { ...c, org:c.org.replace(" — Демо", ""), applicant:c.applicant.replace(" (демо)", ""), address:c.address.replace(", демонстрационный адрес", "") } : c) };
-    if (loaded.state.cases.some(c => c.id === "ВОЗ-2026-004")) return loaded.state;
-    const prepared = { ...seed().find(c => c.id === "ВОЗ-2026-002")!, id: "ВОЗ-2026-004" };
-    return { ...loaded.state, cases: [prepared, ...loaded.state.cases] };
+    const protocolDemo = protocolStageDemo();
+    const index = loaded.state.cases.findIndex((c) => c.id === protocolDemo.id);
+    if (index < 0)
+      return { ...loaded.state, cases: [protocolDemo, ...loaded.state.cases] };
+    const current = loaded.state.cases[index];
+    // Upgrade only the untouched, initial demo case. User-progressed data is
+    // never replaced.
+    if (current.status !== "accepted" || current.certificate) return loaded.state;
+    const cases = [...loaded.state.cases];
+    cases[index] = protocolDemo;
+    return { ...loaded.state, cases };
   });
   useEffect(() => {
     const handler = () => setRoute(routeFromPath(window.location.pathname));
