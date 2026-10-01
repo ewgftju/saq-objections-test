@@ -726,7 +726,7 @@ export default function NewCaseModal({
             multiple
             aria-label="Вложить файлы"
             onClick={(event) => event.stopPropagation()}
-            onCancel={(event) => event.stopPropagation()}
+            
             onChange={(event) =>
               updateRequirementFiles(Array.from(event.target.files ?? []))
             }
@@ -866,7 +866,7 @@ export default function NewCaseModal({
                     multiple
                     required
                     onClick={(event) => event.stopPropagation()}
-                    onCancel={(event) => event.stopPropagation()}
+                    
                     onChange={(event) =>
                       updatePointEvidenceFiles(
                         pointId,
