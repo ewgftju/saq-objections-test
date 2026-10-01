@@ -101,6 +101,36 @@ export function Field({
   );
 }
 
+function certificateBasisForPoint(
+  c: ObjectionCase,
+  point: ReturnType<typeof disputed>[number],
+) {
+  const responses = c.requests
+    .map((request) => request.authorityResponses?.[point.id])
+    .filter(
+      (response): response is { finding: string; response: string } =>
+        Boolean(response),
+    );
+  const authorityArguments =
+    responses.map((response) => response.finding).filter(Boolean).join("\n") ||
+    point.authorityFinding ||
+    "—";
+  const authorityReply =
+    responses.map((response) => response.response).filter(Boolean).join("\n") ||
+    point.position ||
+    "—";
+  const davgaArguments =
+    c.certificate?.davgaArgumentsByPoint?.[point.id] ||
+    c.certificate?.davgaArguments ||
+    "—";
+  return [
+    `Доводы ДВГА/КВГА: ${authorityArguments}`,
+    `Доводы объекта государственного аудита (заявителя): ${point.argument || "—"}`,
+    `Мотивированный ответ ДВГА/КВГА: ${authorityReply}`,
+    `Доводы рабочего органа (ДАВГА МФ РК): ${davgaArguments}`,
+  ].join("\n\n");
+}
+
 function ProtocolVotesFields({
   c,
   members,
@@ -273,6 +303,15 @@ export default function ActionModal({
         ])),
       );
     }
+    if (action === "edit-certificate")
+      return Object.fromEntries(
+        disputed(c).map((point) => [
+          `certificateDavga_${point.id}`,
+          c.certificate?.davgaArgumentsByPoint?.[point.id] ||
+            c.certificate?.davgaArguments ||
+            "",
+        ]),
+      );
     if (action !== "vote") return {};
     return Object.fromEntries([
       ...c.members.map((member, index) => [
@@ -287,7 +326,8 @@ export default function ActionModal({
           ],
           [
             `protocolReason_${point.id}_${member.id}`,
-            c.votes?.[point.id]?.voteReasons?.[member.id] || "",
+            c.votes?.[point.id]?.voteReasons?.[member.id] ||
+              certificateBasisForPoint(c, point),
           ],
         ]),
       ),
@@ -408,6 +448,7 @@ export default function ActionModal({
         isRequest ||
         action === "fill-request-response" ||
         action === "analysis" ||
+        action === "edit-certificate" ||
         action === "fill-meeting-certificate" ||
         action === "position" ||
         action === "subject-response" ||
@@ -774,6 +815,70 @@ export default function ActionModal({
                     ]),
                   ),
                   memberPositions: [],
+                }}
+              />
+            </div>
+          </>
+        ) : action === "edit-certificate" ? (
+          <>
+            <div className="request-modal-details">
+              <div>
+                <span>Автор</span>
+                <b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b>
+              </div>
+              <div>
+                <span>Печатная форма</span>
+                <b>Новая версия справки</b>
+              </div>
+            </div>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            <div className="request-modal-tabs" role="tablist">
+              <button
+                type="button"
+                className={requestTab === "form" ? "active" : ""}
+                onClick={() => setRequestTab("form")}
+              >
+                Электронная форма
+              </button>
+              <button
+                type="button"
+                className={requestTab === "print" ? "active" : ""}
+                onClick={() => setRequestTab("print")}
+              >
+                Печатная форма
+              </button>
+            </div>
+            <div hidden={requestTab !== "form"}>
+              {disputed(c).map((point) => (
+                <label className="field" key={point.id}>
+                  <span>Доводы ДАВГА по пункту {point.number}<span className="required"> *</span></span>
+                  <textarea
+                    name={`certificateDavga_${point.id}`}
+                    defaultValue={values[`certificateDavga_${point.id}`] || ""}
+                    rows={5}
+                    required
+                  />
+                </label>
+              ))}
+            </div>
+            <div hidden={requestTab !== "print"} className="request-print-preview">
+              <DocumentContent
+                c={c}
+                kind="certificate"
+                certificatePreview={{
+                  davgaArguments:
+                    disputed(c)
+                      .map((point) => values[`certificateDavga_${point.id}`])
+                      .find(Boolean) ||
+                    c.certificate?.davgaArguments ||
+                    "",
+                  davgaArgumentsByPoint: Object.fromEntries(
+                    disputed(c).map((point) => [
+                      point.id,
+                      values[`certificateDavga_${point.id}`] || "",
+                    ]),
+                  ),
+                  memberPositions: c.certificate?.memberPositions || [],
                 }}
               />
             </div>
