@@ -469,6 +469,7 @@ export type Action =
   | "subject-response"
   | "position"
   | "analysis"
+  | "edit-certificate"
   | "members"
   | "hearing"
   | "hearing-held"
