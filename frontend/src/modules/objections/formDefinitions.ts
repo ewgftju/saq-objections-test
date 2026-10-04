@@ -692,6 +692,8 @@ export function actionForm(
     submit:
       action === "edit-certificate"
         ? "Сохранить"
+        : action === "analysis"
+          ? "Сформировать справку"
         : action === "create-decision-project"
         ? "Сформировать проект решения"
         : action === "deliver"
