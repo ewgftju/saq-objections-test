@@ -1309,7 +1309,7 @@ test("справка редактируется с созданием новой
     memberPositions: [],
   };
   h.c.documents.push({
-    name: "Справка по результатам изучения и анализа возражения",
+    name: "Справка: результаты голосования членов АК",
     kind: "certificate",
     text: "Первоначальная версия",
     date: "2026-09-04",
@@ -1344,11 +1344,23 @@ test("справка редактируется с созданием новой
   });
   const certificates = h.c.documents.filter((document) => document.kind === "certificate");
   assert.equal(certificates.length, 2);
-  assert.equal(certificates.at(-1)?.name, "Версия 2");
+  assert.equal(
+    certificates.at(-1)?.name,
+    "Справка: результаты голосования членов АК. Версия 2",
+  );
   assert.equal(
     certificates.at(-1)?.snapshot?.certificate?.davgaArgumentsByPoint?.[point.id],
     "Уточнённые доводы ДАВГА",
   );
+  const originalVersionHtml = renderToStaticMarkup(
+    createElement(DocumentContent, {
+      c: h.c,
+      kind: "certificate",
+      document: certificates[0],
+    }),
+  );
+  assert.match(originalVersionHtml, /Первоначальные доводы ДАВГА/);
+  assert.doesNotMatch(originalVersionHtml, /Уточнённые доводы ДАВГА/);
 });
 
 test("дело открывает процесс, а одно действие передаёт задачу вместе с ролью исполнителя", () => {
@@ -2033,6 +2045,14 @@ test("протокол формируется с выбранными участ
     rejectedProtocolHtml,
     /РЕШЕНИЕ отказать в удовлетворении /,
   );
+});
+
+test("номер регистрации заключения не заполняется автоматически", () => {
+  const h = harness();
+  const field = actionForm("deliver", h.c, "2026-09-10", {}).fields.find(
+    (item) => item.name === "conclusionRegistrationNumber",
+  );
+  assert.equal(field?.value, "");
 });
 
 test("рекомендации направляются после окончательного ответа в выбранные кабинеты", () => {
