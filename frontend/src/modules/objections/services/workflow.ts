@@ -1134,13 +1134,19 @@ export function applyAction(
           c.certificate.davgaArguments,
         davgaArgumentsByPoint,
       };
-      const version =
-        c.documents.filter((document) => document.kind === "certificate").length +
-        1;
+      const resultCertificateName = "Справка: результаты голосования членов АК";
+      const version = Math.max(
+        2,
+        c.documents.filter(
+          (document) =>
+            document.name === resultCertificateName ||
+            document.name.startsWith(`${resultCertificateName}. Версия `),
+        ).length + 1,
+      );
       title = `Создана версия ${version} справки`;
       note =
         "Доводы ДАВГА обновлены. Предыдущая версия справки сохранена без изменений.";
-      doc(`Версия ${version}`, "certificate", note);
+      doc(`${resultCertificateName}. Версия ${version}`, "certificate", note);
       break;
     }
     case "control-analysis": {
