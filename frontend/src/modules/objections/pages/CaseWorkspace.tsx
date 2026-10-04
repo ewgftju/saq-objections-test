@@ -16,6 +16,7 @@ import {
 } from "../../../utils/dateFormat";
 import {
   addMonths,
+  addWorkdays,
   executionDeadline,
   reviewDeadline,
 } from "../services/deadlines";
@@ -148,6 +149,65 @@ function PointCard({
   );
 }
 
+function isAuthorityRole(role: Role) {
+  return role === "dvga" || role === "kvga";
+}
+
+function isRequestForAuthority(
+  request: ObjectionCase["requests"][number],
+  role: Role,
+) {
+  if (!isAuthorityRole(role) || request.template === "other" || !request.sent)
+    return false;
+  const recipient = request.recipient.toUpperCase();
+  return role === "kvga"
+    ? recipient.includes("КВГА")
+    : recipient.includes("ДВГА");
+}
+
+function AuthorityRequestMaterials({
+  c,
+  role,
+  onDocument,
+}: {
+  c: ObjectionCase;
+  role: Role;
+  onDocument: (kind: string, document?: CaseDocument) => void;
+}) {
+  const requests = c.requests.filter((request) =>
+    isRequestForAuthority(request, role),
+  );
+  const authorityLabel = role === "kvga" ? "КВГА" : "ДВГА";
+
+  return (
+    <>
+      <h3 className="form-section">Материалы и результаты рассмотрения</h3>
+      {requests.map((request) => {
+        const documents = c.documents.filter(
+          (document) =>
+            document.requestId === request.id &&
+            ["request", "request-appendix"].includes(document.kind),
+        );
+        return (
+          <section className="request-documents-section" key={request.id}>
+            <h4>Запрос в {authorityLabel}</h4>
+            <div className="request-documents-list">
+              {documents.map((document) => (
+                <div className="request-document-row" key={document.name}>
+                  <span>{document.name}</span>
+                  <Button onClick={() => onDocument(document.kind, document)}>
+                    Просмотр
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })}
+    </>
+  );
+}
+
 export default function CaseWorkspace({
   c,
   tab,
@@ -225,7 +285,11 @@ export default function CaseWorkspace({
                 ["documents", "Документы"],
                 ["history", "История"],
               ] as [CaseTab, string][]
-            ).map(([value, label]) => (
+            )
+              .filter(
+                ([value]) => !isAuthorityRole(role) || value !== "documents",
+              )
+              .map(([value, label]) => (
               <button
                 key={value}
                 className={tab === value ? "active" : ""}
@@ -438,6 +502,13 @@ export default function CaseWorkspace({
               </>
             )}
             {tab === "review" && (
+              isAuthorityRole(role) ? (
+                <AuthorityRequestMaterials
+                  c={c}
+                  role={role}
+                  onDocument={onDocument}
+                />
+              ) : (
               <>
                 {role === "subject" ? (
                   <section className="consideration-process">
@@ -933,8 +1004,9 @@ export default function CaseWorkspace({
                   </Notice>
                 )}
               </>
+              )
             )}
-            {tab === "documents" && (
+            {tab === "documents" && !isAuthorityRole(role) && (
               <>
                 <div className="section-heading">
                   <h3>Материалы обращения</h3>
@@ -1022,37 +1094,59 @@ export default function CaseWorkspace({
               <h3>Сроки</h3>
             </div>
             <div className="card-body">
-              <div className="support-row">
-                <span>Поступило</span>
-                <strong>{formatDate(c.registered)}</strong>
-              </div>
-              {currentExecutionDeadline && (
-                <div className="support-row">
-                  <span>Исполнить до</span>
-                  <strong>{formatDate(currentExecutionDeadline)}</strong>
-                </div>
+              {isAuthorityRole(role) ? (
+                (() => {
+                  const request = c.requests.find((item) =>
+                    isRequestForAuthority(item, role),
+                  );
+                  return request?.sent ? (
+                    <>
+                      <div className="support-row">
+                        <span>Поступило</span>
+                        <strong>{formatDate(request.sent)}</strong>
+                      </div>
+                      <div className="support-row">
+                        <span>Исполнить до</span>
+                        <strong>{formatDate(addWorkdays(request.sent, 2))}</strong>
+                      </div>
+                    </>
+                  ) : null;
+                })()
+              ) : (
+                <>
+                  <div className="support-row">
+                    <span>Поступило</span>
+                    <strong>{formatDate(c.registered)}</strong>
+                  </div>
+                  {currentExecutionDeadline && (
+                    <div className="support-row">
+                      <span>Исполнить до</span>
+                      <strong>{formatDate(currentExecutionDeadline)}</strong>
+                    </div>
+                  )}
+                  <div className="support-row">
+                    <span>Срок рассмотрения</span>
+                    <strong>
+                      {c.status === "paused"
+                        ? "Приостановлен"
+                        : formatDate(reviewDeadline(c))}
+                    </strong>
+                  </div>
+                </>
               )}
-              <div className="support-row">
-                <span>Срок рассмотрения</span>
-                <strong>
-                  {c.status === "paused"
-                    ? "Приостановлен"
-                    : formatDate(reviewDeadline(c))}
-                </strong>
-              </div>
-              {c.extensionDays > 0 && (
+              {!isAuthorityRole(role) && c.extensionDays > 0 && (
                 <div className="support-row">
                   <span>Продление</span>
                   <strong>+{c.extensionDays} раб. дн.</strong>
                 </div>
               )}
-              {c.pauseDays > 0 && (
+              {!isAuthorityRole(role) && c.pauseDays > 0 && (
                 <div className="support-row">
                   <span>Приостановление</span>
                   <strong>{c.pauseDays} раб. дн.</strong>
                 </div>
               )}
-              {c.hearing?.date && (
+              {!isAuthorityRole(role) && c.hearing?.date && (
                 <div className="support-row">
                   <span>Заслушивание</span>
                   <strong>{formatDate(c.hearing.date)}</strong>
