@@ -1290,9 +1290,9 @@ test("рабочий орган видит статусы ответов по н
       onHistory() {},
     }),
   );
-  assert.match(html, /Направленные запросы/);
+  assert.match(html, /Ожидание ответов/);
   assert.match(html, /ДВГА по Атырауской области/);
-  assert.match(html, /Ответ не получен/);
+  assert.match(html, /Ответ ожидается/);
   assert.match(html, /Кабинет Объекта/);
   assert.match(html, /Ответ получен/);
 });
