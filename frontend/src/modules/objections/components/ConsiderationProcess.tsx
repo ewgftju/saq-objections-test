@@ -207,7 +207,9 @@ export default function ConsiderationProcess({
       option.action !== "upload" &&
       option.action !== "vote" &&
       option.action !== "fill-meeting-certificate" &&
-      option.action !== "supplement",
+      option.action !== "supplement" &&
+      option.action !== "court" &&
+      option.action !== "receipt",
   );
   const extras = inRequestFormationStage
     ? availableExtras.filter((option) => option.action === "supplement")
@@ -230,6 +232,7 @@ export default function ConsiderationProcess({
     ["request_approved", "response_approval", "response_signed"].includes(
       c.status,
     );
+  const sentRequests = c.requests.filter((request) => Boolean(request.sent));
   const awaitingAttendancePoll = c.status === "certificate_approved";
   const materialsAvailableForCommission = c.status === "documents_review";
   const meetingCompletionAvailable =
@@ -405,9 +408,24 @@ export default function ConsiderationProcess({
       ) : awaitingAuthorityResponse ? (
         <Notice tone="amber">
           <strong>Ожидание ответа на запрос</strong>
-          <p>
-            Рабочий орган ожидает ответы из ДВГА, КВГА или кабинета Объекта.
-          </p>
+          <p>Направленные запросы:</p>
+          <ul className="request-response-status-list">
+            {sentRequests.map((request) => {
+              const recipient =
+                request.recipient ||
+                (request.saqRecipient === "subject"
+                  ? "Кабинет Объекта"
+                  : "Адресат запроса");
+              return (
+                <li key={request.id}>
+                  <span>{recipient}</span>
+                  <span className={request.responded ? "response-received" : "response-pending"}>
+                    {request.responded ? "Ответ получен" : "Ответ не получен"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </Notice>
       ) : materialsAvailableForCommission ? (
         <Notice>
