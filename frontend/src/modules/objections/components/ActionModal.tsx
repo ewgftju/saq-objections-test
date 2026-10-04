@@ -150,10 +150,6 @@ function ProtocolVotesFields({
   return (
     <>
       <h3 className="form-section">Участники заседания и результаты голосования</h3>
-      <p className="small muted">
-        Участники и их голоса автоматически подтянуты из актуального заседания.
-        Заполните обязательное обоснование по каждому голосу.
-      </p>
       <div className="table-scroll">
         <table className="data-table protocol-vote-entry-table">
           <thead>
@@ -608,7 +604,6 @@ export default function ActionModal({
                   event.currentTarget.value = "";
                 }}
               />
-              <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
               {conclusionFiles.length > 0 && (
                 <div className="request-attachments-list">
                   {conclusionFiles.map((file, index) => (
@@ -945,10 +940,6 @@ export default function ActionModal({
               <div>
                 <span>Автор</span>
                 <b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b>
-              </div>
-              <div>
-                <span>Печатная форма</span>
-                <b>Протокол по шаблону</b>
               </div>
             </div>
             {definition.note && <Notice>{definition.note}</Notice>}
