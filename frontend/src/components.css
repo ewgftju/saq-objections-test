@@ -1399,29 +1399,100 @@
 }
 .request-response-status-list {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   padding: 0;
-  margin: 10px 0 0;
+  margin: 14px 0 0;
   list-style: none;
+}
+.request-response-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.request-response-eyebrow {
+  display: block;
+  margin-bottom: 3px;
+  color: #896100;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.request-response-heading > div > strong {
+  display: block;
+  font-size: 16px;
+}
+.request-response-summary {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border: 1px solid #efd89f;
+  border-radius: 999px;
+  color: #765500;
+  background: #fffdf7;
+  font-size: 12px;
+  line-height: 1.2;
 }
 .request-response-status-list li {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 10px;
+  gap: 10px;
+  padding: 12px 14px;
   border: 1px solid var(--line-soft);
-  border-radius: 4px;
+  border-left: 3px solid #d9a13a;
+  border-radius: 6px;
   background: #fff;
+}
+.request-response-status-list li.is-received { border-left-color: var(--green); }
+.request-response-marker {
+  display: grid;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border-radius: 50%;
+  color: #9a6500;
+  background: #fff4d8;
+  font-weight: 700;
+}
+.request-response-status-list li.is-received .request-response-marker {
+  color: #177846;
+  background: #e8f6ec;
+}
+.request-response-recipient {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.request-response-recipient strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.request-response-recipient small {
+  color: var(--muted);
+  font-size: 12px;
 }
 .response-received,
 .response-pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
   flex: 0 0 auto;
+  padding: 5px 8px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
 }
-.response-received { color: var(--green); }
-.response-pending { color: #a46a00; }
+.response-received { color: #177846; background: #e8f6ec; }
+.response-pending { color: #8f5d00; background: #fff4d8; }
+.response-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
 .consideration-last-event {
   display: flex;
   align-items: baseline;
@@ -1474,6 +1545,11 @@
   }
 }
 @media (max-width: 600px) {
+  .request-response-heading { flex-direction: column; gap: 8px; }
+  .request-response-status-list li { align-items: flex-start; flex-wrap: wrap; }
+  .request-response-recipient { flex: 1 1 calc(100% - 36px); }
+  .response-received,
+  .response-pending { margin-left: 36px; }
   .consideration-stages {
     grid-template-columns: 1fr;
     gap: 5px;
