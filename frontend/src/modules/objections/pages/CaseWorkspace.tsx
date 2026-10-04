@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, Notice, PageHeading } from "../../../components/ui";
-import { OUTCOMES, STATUS, TYPES } from "../../../data/constants";
+import { CLOSED, OUTCOMES, STATUS, TYPES } from "../../../data/constants";
 import type {
   Action,
   CaseDocument,
@@ -244,6 +244,7 @@ export default function CaseWorkspace({
     c.status === "documents_review" ||
     c.status === "commission_members" ||
     c.status === "commission_voting";
+  const isClosed = CLOSED.includes(c.status);
   const currentExecutionDeadline = executionDeadline(c);
   const subjectRequest = c.requests.find(
     (request) =>
@@ -967,7 +968,7 @@ export default function CaseWorkspace({
                       review
                     />
                   ))}
-                {c.memberPosition && (
+                {c.memberPosition && !isClosed && (
                   <Notice>
                     <strong>Позиции членов комиссии</strong>
                     <p>{c.memberPosition}</p>
@@ -986,7 +987,7 @@ export default function CaseWorkspace({
                     <p>{c.hearing.note}</p>
                   </Notice>
                 )}
-                {c.result && (
+                {c.result && !isClosed && (
                   <Notice tone="green">
                     <strong>{c.result.label}</strong>
                     <p>{c.result.reason}</p>
