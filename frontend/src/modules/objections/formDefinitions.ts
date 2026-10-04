@@ -424,11 +424,8 @@ export function actionForm(
           ),
           readOnly: true,
         },
-        // Рекомендации относятся к протоколу и выводятся в печатной форме.
-        area("recommendations", "Рекомендации"),
+        { ...area("recommendations", "Рекомендации"), required: false },
       );
-      note =
-        "Участники и их голоса подтягиваются автоматически из последнего опроса о присутствии. Заполните обоснование по каждому голосу. Печатная форма обновляется в реальном времени.";
       break;
     case "commission-vote":
       title = "Проголосовать";
@@ -694,7 +691,7 @@ export function actionForm(
     note,
     submit:
       action === "edit-certificate"
-        ? "Создать новую версию"
+        ? "Сохранить"
         : action === "create-decision-project"
         ? "Сформировать проект решения"
         : action === "deliver"
