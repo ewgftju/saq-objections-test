@@ -57,6 +57,22 @@ function countCasesByStatus(
   return cases.filter((c) => statuses.includes(c.status)).length;
 }
 
+function isAuthorityRole(role: Role) {
+  return role === "dvga" || role === "kvga";
+}
+
+function isRequestForAuthority(
+  request: ObjectionCase["requests"][number],
+  role: Role,
+) {
+  if (!isAuthorityRole(role) || request.template === "other" || !request.sent)
+    return false;
+  const recipient = request.recipient.toUpperCase();
+  return role === "kvga"
+    ? recipient.includes("КВГА")
+    : recipient.includes("ДВГА");
+}
+
 export default function CasesList({
   cases,
   date,
@@ -72,6 +88,15 @@ export default function CasesList({
   onCreate: () => void;
   onExport: (cases: ObjectionCase[]) => void;
 }) {
+  const authorityRole = isAuthorityRole(role);
+  const registryCases = authorityRole
+    ? cases.filter((c) =>
+        c.requests.some((request) => isRequestForAuthority(request, role)),
+      )
+    : cases;
+  const authorityRequests = registryCases.flatMap((c) =>
+    c.requests.filter((request) => isRequestForAuthority(request, role)),
+  );
   const [query, setQuery] = useState("");
   const [type, setType] = useState("all");
   const [tab, setTab] = useState<
@@ -108,7 +133,7 @@ export default function CasesList({
   const finalResponseCount = countCasesByStatus(cases, FINAL_RESPONSE_STATUSES);
   const visible = useMemo(
     () =>
-      cases.filter((c) => {
+      registryCases.filter((c) => {
         const matchesQuery = `${c.id} ${c.org} ${c.bin}`
           .toLowerCase()
           .includes(query.toLowerCase());
@@ -145,41 +170,57 @@ export default function CasesList({
             ))
         );
       }),
-    [cases, query, type, tab],
+    [registryCases, query, type, tab],
   );
-  const stats = [
-    [cases.length, "Всего обращений", "зарегистрировано в реестре", "blue"],
-    [
-      cases.filter((c) => c.status === "received").length,
-      "Поступило",
-      "новых обращений",
-      "green",
-    ],
-    [
-      cases.filter((c) => !CLOSED.includes(c.status) && c.status !== "received")
-        .length,
-      "На рассмотрении",
-      "обращений находится в работе",
-      "yellow",
-    ],
-    [
-      cases.filter((c) => CLOSED.includes(c.status)).length,
-      "Завершено",
-      "рассмотрение завершено",
-      "violet",
-    ],
-  ];
+  const stats = authorityRole
+    ? [
+        [authorityRequests.length, "Всего запросов", "поступило в кабинет", "blue"],
+        [
+          authorityRequests.filter((request) => request.responseSigned).length,
+          "Направлено ответов",
+          "ответов подписано и направлено",
+          "green",
+        ],
+      ]
+    : [
+        [cases.length, "Всего обращений", "зарегистрировано в реестре", "blue"],
+        [
+          cases.filter((c) => c.status === "received").length,
+          "Поступило",
+          "новых обращений",
+          "green",
+        ],
+        [
+          cases.filter((c) => !CLOSED.includes(c.status) && c.status !== "received")
+            .length,
+          "На рассмотрении",
+          "обращений находится в работе",
+          "yellow",
+        ],
+        [
+          cases.filter((c) => CLOSED.includes(c.status)).length,
+          "Завершено",
+          "рассмотрение завершено",
+          "violet",
+        ],
+      ];
   return (
     <>
       <PageHeading
         title="Реестр обращений"
-        subtitle="Возражения объектов аудита и жалобы субъектов контроля"
+        subtitle={
+          authorityRole
+            ? "Запросы, поступившие в кабинет"
+            : "Возражения объектов аудита и жалобы субъектов контроля"
+        }
         action={
           <>
             <Button onClick={() => onExport(visible)}>Экспорт CSV</Button>
-            <Button primary onClick={onCreate}>
-              + Новое возражение/обращение
-            </Button>
+            {!authorityRole && (
+              <Button primary onClick={onCreate}>
+                + Новое возражение/обращение
+              </Button>
+            )}
           </>
         }
       />
