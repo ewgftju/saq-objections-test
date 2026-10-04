@@ -1026,20 +1026,20 @@ export default function CaseWorkspace({
                 <span>Поступило</span>
                 <strong>{formatDate(c.registered)}</strong>
               </div>
-              <div className="support-row">
-                <span>Рассмотреть до</span>
-                <strong>
-                  {c.status === "paused"
-                    ? "Приостановлен"
-                    : formatDate(reviewDeadline(c))}
-                </strong>
-              </div>
               {currentExecutionDeadline && (
                 <div className="support-row">
                   <span>Исполнить до</span>
                   <strong>{formatDate(currentExecutionDeadline)}</strong>
                 </div>
               )}
+              <div className="support-row">
+                <span>Срок рассмотрения</span>
+                <strong>
+                  {c.status === "paused"
+                    ? "Приостановлен"
+                    : formatDate(reviewDeadline(c))}
+                </strong>
+              </div>
               {c.extensionDays > 0 && (
                 <div className="support-row">
                   <span>Продление</span>
