@@ -547,6 +547,7 @@ export function DocumentContent({
 
   if (kind === "protocol") {
     const meeting = protocolPreview || snapshot.meeting;
+    const recommendations = meeting?.recommendations?.trim();
     const protocolNumber =
       !protocolPreview && snapshot.meeting?.signed ? meeting?.number : "";
     const members = protocolPreview?.members || snapshot.members;
@@ -727,9 +728,11 @@ export function DocumentContent({
         <p className="protocol-template-result">
           На основании результатов голосования членов Апелляционной комиссии принято РЕШЕНИЕ {decision} {snapshot.appealType} {snapshot.org} от {formatDate(snapshot.appealDate || snapshot.filed)} года №{snapshot.appealNumber || snapshot.document.number}.
         </p>
-        <p className="protocol-template-recommendations">
-          Рекомендации: {meeting?.recommendations || "—"}
-        </p>
+        {recommendations && recommendations !== "—" && (
+          <p className="protocol-template-recommendations">
+            Рекомендации: {recommendations}
+          </p>
+        )}
         <div className="protocol-template-signatures">
           {presidingMember ? (
             <p>
