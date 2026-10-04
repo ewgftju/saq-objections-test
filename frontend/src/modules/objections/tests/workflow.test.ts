@@ -1329,6 +1329,11 @@ test("справка редактируется с созданием новой
     additionalActions(h.c).find((action) => action.action === "edit-certificate"),
     { action: "edit-certificate", label: "Редактировать справку", role: "work" },
   );
+  assert.ok(
+    !additionalActions(h.c).some((action) =>
+      ["pause", "postpone", "return-analysis"].includes(action.action),
+    ),
+  );
 
   h.run("edit-certificate", "work", {
     ...Object.fromEntries(
@@ -1977,7 +1982,12 @@ test("протокол формируется с выбранными участ
     protocolHtml,
     /Заместитель Председателя Апелляционной комиссии: Директор ДАВГА/,
   );
+  assert.doesNotMatch(protocolHtml, /Рекомендации:/);
   assert.match(protocolHtml, /РЕШЕНИЕ частично удовлетворить /);
+  const savedProtocolHtml = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "protocol" }),
+  );
+  assert.match(savedProtocolHtml, /Рекомендации: Направить замечания в орган аудита/);
 
   const changedPreviewHtml = renderToStaticMarkup(
     createElement(DocumentContent, {
