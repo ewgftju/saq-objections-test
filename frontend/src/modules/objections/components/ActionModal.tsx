@@ -285,6 +285,7 @@ export default function ActionModal({
   const [values, setValues] = useState<FormValues>(() => {
     if (action === "request" || action === "request-other")
       return { ...(c.requestDrafts?.[action]?.values || {}) };
+    if (action === "analysis") return { ...(c.analysisDraft?.values || {}) };
     if (action === "fill-meeting-certificate") {
       const savedPositions = new Map(
         (c.certificate?.memberPositions || []).map((position) => [
@@ -343,6 +344,7 @@ export default function ActionModal({
     ? c.members.find((member) => member.id === commissionMemberId)
     : undefined;
   const isRequest = action === "request" || action === "request-other";
+  const isAnalysis = action === "analysis";
   const isOtherRequest = action === "request-other";
   const requestDeadline =
     values.deadline ||
@@ -1235,9 +1237,9 @@ export default function ActionModal({
         {savedMessage && <Notice tone="green">{savedMessage}</Notice>}
         <div className="dialog-actions">
           <Button onClick={onClose} disabled={saving}>
-            {isRequest ? "Свернуть" : "Отмена"}
+            {isRequest || isAnalysis ? "Свернуть" : "Отмена"}
           </Button>
-          {isRequest && onSaveDraft && (
+          {(isRequest || isAnalysis) && onSaveDraft && (
             <Button
               type="button"
               disabled={saving}
@@ -1248,41 +1250,25 @@ export default function ActionModal({
                   setSaving(true);
                   setError("");
                   await onSaveDraft(new FormData(form));
-                  setSavedMessage("Проект запроса сохранён.");
+                  setSavedMessage(
+                    isAnalysis
+                      ? "Черновик справки сохранён."
+                      : "Проект запроса сохранён.",
+                  );
                 } catch (cause) {
                   setError(
                     cause instanceof Error
                       ? cause.message
-                      : "Не удалось сохранить проект запроса",
+                      : isAnalysis
+                        ? "Не удалось сохранить черновик справки"
+                        : "Не удалось сохранить проект запроса",
                   );
                 } finally {
                   setSaving(false);
                 }
               }}
             >
-              Сохранить проект
-            </Button>
-          )}
-          {action === "fill-meeting-certificate" && (
-            <Button
-              type="button"
-              disabled={saving}
-              onClick={async () => {
-                const form = formRef.current;
-                if (!form || !form.reportValidity()) return;
-                try {
-                  setSaving(true);
-                  setError("");
-                  await onSubmit(new FormData(form));
-                  setSavedMessage("Промежуточный результат сохранён.");
-                } catch (cause) {
-                  setError(cause instanceof Error ? cause.message : "Не удалось сохранить результат");
-                } finally {
-                  setSaving(false);
-                }
-              }}
-            >
-              Сохранить
+              {isAnalysis ? "Сохранить" : "Сохранить проект"}
             </Button>
           )}
           <Button type="submit" primary disabled={saving}>
