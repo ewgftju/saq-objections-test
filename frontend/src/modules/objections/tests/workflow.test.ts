@@ -1260,6 +1260,95 @@ test("голосование членов АК и формирование пр�
   );
 });
 
+test("рабочий орган видит статусы ответов по направленным запросам", () => {
+  const h = harness();
+  screen(h);
+  h.run("request", "work", {
+    recipient: "ДВГА по Атырауской области",
+    deadline: "2026-09-10T18:00",
+  });
+  h.run("send-request-approval", "work");
+  h.run("approve-request", "director", { approved: "on" });
+  h.run("sign-request", "director");
+  h.c.requests.push({
+    id: "subject-request",
+    recipient: "Кабинет Объекта",
+    date: "2026-09-04",
+    text: "Предоставить пояснения",
+    deadline: "2026-09-10T18:00",
+    sent: "2026-09-04",
+    responded: "2026-09-05",
+    template: "other",
+    saqRecipient: "subject",
+  });
+
+  const html = renderToStaticMarkup(
+    createElement(ConsiderationProcess, {
+      c: h.c,
+      role: "work",
+      onAction() {},
+      onHistory() {},
+    }),
+  );
+  assert.match(html, /Направленные запросы/);
+  assert.match(html, /ДВГА по Атырауской области/);
+  assert.match(html, /Ответ не получен/);
+  assert.match(html, /Кабинет Объекта/);
+  assert.match(html, /Ответ получен/);
+});
+
+test("справка редактируется с созданием новой версии перед формированием протокола", () => {
+  const h = harness();
+  const point = h.c.issues.find((item) => item.disputed)!;
+  h.c.status = "commission_voting";
+  h.c.certificate = {
+    davgaArguments: "Первоначальные доводы ДАВГА",
+    davgaArgumentsByPoint: { [point.id]: "Первоначальные доводы ДАВГА" },
+    memberPositions: [],
+  };
+  h.c.documents.push({
+    name: "Справка по результатам изучения и анализа возражения",
+    kind: "certificate",
+    text: "Первоначальная версия",
+    date: "2026-09-04",
+    author: "Рабочий орган ДАВГА",
+    snapshot: structuredClone({
+      issues: h.c.issues,
+      result: null,
+      members: h.c.members,
+      votes: null,
+      meeting: null,
+      hearing: null,
+      delivery: null,
+      certificate: h.c.certificate,
+    }),
+  });
+  assert.deepEqual(
+    additionalActions(h.c).find((action) => action.action === "edit-certificate"),
+    { action: "edit-certificate", label: "Редактировать справку", role: "work" },
+  );
+
+  h.run("edit-certificate", "work", {
+    ...Object.fromEntries(
+      h.c.issues
+        .filter((item) => item.disputed)
+        .map((item) => [
+          `certificateDavga_${item.id}`,
+          item.id === point.id
+            ? "Уточнённые доводы ДАВГА"
+            : `Доводы ДАВГА по пункту ${item.number}`,
+        ]),
+    ),
+  });
+  const certificates = h.c.documents.filter((document) => document.kind === "certificate");
+  assert.equal(certificates.length, 2);
+  assert.equal(certificates.at(-1)?.name, "Версия 2");
+  assert.equal(
+    certificates.at(-1)?.snapshot?.certificate?.davgaArgumentsByPoint?.[point.id],
+    "Уточнённые доводы ДАВГА",
+  );
+});
+
 test("дело открывает процесс, а одно действие передаёт задачу вместе с ролью исполнителя", () => {
   const h = harness();
   const path = pathForRoute({ page: "detail", caseId: h.c.id });
@@ -1825,6 +1914,10 @@ test("протокол формируется с выбранными участ
   assert.deepEqual(
     definition.fields.map((field) => field.name),
     ["protocolDate", "meetingFormat", "secretary", "recommendations"],
+  );
+  assert.equal(
+    definition.fields.find((field) => field.name === "recommendations")?.required,
+    false,
   );
   h.c.status = "meeting";
   h.run("vote", "work", {
