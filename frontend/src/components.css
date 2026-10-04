@@ -1397,6 +1397,31 @@
   line-height: 1.5;
   margin-top: 10px;
 }
+.request-response-status-list {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 10px 0 0;
+  list-style: none;
+}
+.request-response-status-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  background: #fff;
+}
+.response-received,
+.response-pending {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+}
+.response-received { color: var(--green); }
+.response-pending { color: #a46a00; }
 .consideration-last-event {
   display: flex;
   align-items: baseline;
