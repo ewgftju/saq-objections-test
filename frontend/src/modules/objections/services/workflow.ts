@@ -423,13 +423,13 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       label: "Дополнение к возражению",
       role: "work",
     });
-    if (c.status !== "paused")
+    if (!["paused", "materials"].includes(c.status))
       options.push({
         action: "pause",
         label: "Внешний запрос / приостановление",
         role: "work",
       });
-    if (c.status === "commission_voting") {
+    if (["commission_voting", "meeting"].includes(c.status)) {
       options.push({
         action: "vote",
         label: "Сформировать протокол заседания",
