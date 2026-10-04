@@ -818,6 +818,11 @@ export default function ObjectionsModule() {
           throw new Error("Для заседания нужен хотя бы один подтверждённый ответ «Да» в опросе о присутствии");
         updated.members = participantsFromPoll(poll);
         model.commit(next, "Материалы изучены. Состав участников определён по опросу о присутствии.");
+      } else if (action === "analysis") {
+        const next = applyAction(model.state, c.id, action, model.role, form);
+        const updated = next.cases.find((item) => item.id === c.id)!;
+        delete updated.analysisDraft;
+        model.commit(next, "Справка сформирована");
       } else {
         model.perform(c.id, action, form);
       }
@@ -968,6 +973,18 @@ export default function ObjectionsModule() {
     updated.requestDrafts ??= {};
     updated.requestDrafts[action] = { values, savedAt: next.date };
     model.commit(next, "Проект запроса сохранён");
+  }
+
+  function saveAnalysisDraft(caseId: string, form: FormData) {
+    const values: Record<string, string> = {};
+    form.forEach((value, name) => {
+      if (typeof value === "string") values[name] = value;
+    });
+    const next = structuredClone(model.state);
+    const updated = next.cases.find((item) => item.id === caseId);
+    if (!updated) throw new Error("Обращение не найдено");
+    updated.analysisDraft = { values, savedAt: next.date };
+    model.commit(next, "Черновик справки сохранён");
   }
 
   return (
@@ -1250,7 +1267,9 @@ export default function ObjectionsModule() {
             dialog.action === "request" || dialog.action === "request-other"
               ? (form) =>
                   saveRequestDraft(c.id, dialog.action as RequestDraftKind, form)
-              : undefined
+              : dialog.action === "analysis"
+                ? (form) => saveAnalysisDraft(c.id, form)
+                : undefined
           }
         />
       )}
