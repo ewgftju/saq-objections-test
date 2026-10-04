@@ -1493,6 +1493,17 @@
   border-radius: 50%;
   background: currentColor;
 }
+.recommendation-recipient-select {
+  min-height: 42px;
+  padding-right: 38px;
+  border-color: #bdd7e8;
+  background-color: #fff;
+  cursor: pointer;
+}
+.recommendation-recipient-select:focus {
+  border-color: var(--blue);
+  outline: 3px solid #006da822;
+}
 .consideration-last-event {
   display: flex;
   align-items: baseline;
