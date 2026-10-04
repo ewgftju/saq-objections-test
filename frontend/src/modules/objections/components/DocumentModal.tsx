@@ -166,9 +166,10 @@ export function DocumentContent({
     (document?.requestId
       ? c.requests.find((item) => item.id === document.requestId)
       : undefined);
-  // The certificate is amended during the meeting, so the current version is
-  // authoritative even when the document itself was created earlier.
-  const certificate = certificatePreview || c.certificate || snapshot.certificate || undefined;
+  const certificate =
+    certificatePreview ||
+    (document?.snapshot?.certificate ?? c.certificate) ||
+    undefined;
   const appendixAuthority = (appendixRecipient || request?.recipient || "ДВГА")
     .toUpperCase()
     .includes("КВГА")
