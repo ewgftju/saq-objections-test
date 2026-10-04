@@ -978,7 +978,7 @@ export default function ActionModal({
                     values.meetingFormat === "офлайн"
                       ? "офлайн"
                       : "онлайн, Qosyl",
-                  recommendations: values.recommendations || "—",
+                  recommendations: values.recommendations || undefined,
                   members: protocolMembers,
                   votes: Object.fromEntries(
                     disputed(c).map((point) => [
