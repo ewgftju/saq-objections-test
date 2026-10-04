@@ -365,6 +365,8 @@ export interface ObjectionCase {
   requests: CaseRequest[];
   /** Сохранённые проекты запросов, которые ещё не зафиксированы. */
   requestDrafts?: Partial<Record<RequestDraftKind, RequestDraft>>;
+  /** Черновик справки до её формирования и направления на согласование. */
+  analysisDraft?: RequestDraft;
   members: CommissionMember[];
   history: HistoryEvent[];
   screening?: string;
