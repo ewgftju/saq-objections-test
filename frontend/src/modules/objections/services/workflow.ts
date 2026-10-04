@@ -423,7 +423,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       label: "Дополнение к возражению",
       role: "work",
     });
-    if (!["paused", "materials"].includes(c.status))
+    if (!["paused", "materials", "meeting"].includes(c.status))
       options.push({
         action: "pause",
         label: "Внешний запрос / приостановление",
@@ -448,19 +448,11 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
         label: "Заполнить справку",
         role: "work",
       });
-    if (
-      ["circulated", "hearing", "hearing_ready", "meeting"].includes(c.status)
-    )
+    if (["circulated", "hearing", "hearing_ready"].includes(c.status))
       options.push({
         action: "return-analysis",
         label: "Вернуть на анализ",
         role: "work",
-      });
-    if (c.status === "meeting")
-      options.push({
-        action: "postpone",
-        label: "Перенести заседание",
-        role: "commission",
       });
   }
   if (
@@ -1351,7 +1343,7 @@ export function applyAction(
         audio: "",
         format: meetingFormat,
         projectReceived: date,
-        recommendations: recommendationText || "—",
+        recommendations: recommendationText || undefined,
       };
       c.status = "protocol";
       doc(
