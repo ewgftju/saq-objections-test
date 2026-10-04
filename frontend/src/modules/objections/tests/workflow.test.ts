@@ -1184,6 +1184,8 @@ test("в других действиях нет отказа или оставл
     assert.ok(!actions.includes("refuse"));
     assert.ok(!actions.includes("withdraw"));
   }
+  h.c.status = "materials";
+  assert.ok(!additionalActions(h.c).some((action) => action.action === "pause"));
 });
 
 test("голосование членов АК и формирование протокола доступны параллельно", () => {
@@ -1300,7 +1302,7 @@ test("рабочий орган видит статусы ответов по н
 test("справка редактируется с созданием новой версии перед формированием протокола", () => {
   const h = harness();
   const point = h.c.issues.find((item) => item.disputed)!;
-  h.c.status = "commission_voting";
+  h.c.status = "meeting";
   h.c.certificate = {
     davgaArguments: "Первоначальные доводы ДАВГА",
     davgaArgumentsByPoint: { [point.id]: "Первоначальные доводы ДАВГА" },
