@@ -1,6 +1,7 @@
 import { Button, Notice } from "../../../components/ui";
 import { ROLES, STATUS } from "../../../data/constants";
 import type { Action, CaseStatus, ObjectionCase, Role } from "../../../types";
+import { formatDate } from "../../../utils/dateFormat";
 import { additionalActions, nextAction } from "../services/workflow";
 
 type ProcessStage = {
@@ -233,6 +234,8 @@ export default function ConsiderationProcess({
       c.status,
     );
   const sentRequests = c.requests.filter((request) => Boolean(request.sent));
+  const pendingResponses = sentRequests.filter((request) => !request.responded)
+    .length;
   const awaitingAttendancePoll = c.status === "certificate_approved";
   const materialsAvailableForCommission = c.status === "documents_review";
   const meetingCompletionAvailable =
@@ -407,8 +410,15 @@ export default function ConsiderationProcess({
         </div>
       ) : awaitingAuthorityResponse ? (
         <Notice tone="amber">
-          <strong>Ожидание ответа на запрос</strong>
-          <p>Направленные запросы:</p>
+          <div className="request-response-heading">
+            <div>
+              <span className="request-response-eyebrow">Запросы направлены</span>
+              <strong>Ожидание ответов</strong>
+            </div>
+            <span className="request-response-summary">
+              Ожидают ответа: <b>{pendingResponses}</b>
+            </span>
+          </div>
           <ul className="request-response-status-list">
             {sentRequests.map((request) => {
               const recipient =
@@ -417,10 +427,22 @@ export default function ConsiderationProcess({
                   ? "Кабинет Объекта"
                   : "Адресат запроса");
               return (
-                <li key={request.id}>
-                  <span>{recipient}</span>
+                <li
+                  className={request.responded ? "is-received" : "is-pending"}
+                  key={request.id}
+                >
+                  <span className="request-response-marker" aria-hidden="true">
+                    {request.responded ? "✓" : "…"}
+                  </span>
+                  <span className="request-response-recipient">
+                    <strong>{recipient}</strong>
+                    <small>Направлен {formatDate(request.sent)}</small>
+                  </span>
                   <span className={request.responded ? "response-received" : "response-pending"}>
-                    {request.responded ? "Ответ получен" : "Ответ не получен"}
+                    <span className="response-status-dot" aria-hidden="true" />
+                    {request.responded
+                      ? `Ответ получен ${formatDate(request.responded)}`
+                      : "Ответ ожидается"}
                   </span>
                 </li>
               );
