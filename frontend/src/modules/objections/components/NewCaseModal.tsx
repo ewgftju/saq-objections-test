@@ -514,7 +514,6 @@ export default function NewCaseModal({
         </div>
         {needsAgendaTemplateFields && (
           <>
-            <h3 className="form-section">Реквизиты для повестки дня</h3>
             <div className="form-grid">
               <Field
                 field={{
