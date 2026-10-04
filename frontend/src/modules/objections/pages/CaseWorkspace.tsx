@@ -503,11 +503,20 @@ export default function CaseWorkspace({
             )}
             {tab === "review" && (
               isAuthorityRole(role) ? (
-                <AuthorityRequestMaterials
-                  c={c}
-                  role={role}
-                  onDocument={onDocument}
-                />
+                <>
+                  <ConsiderationProcess
+                    c={c}
+                    role={role}
+                    onAction={onAction}
+                    onHistory={() => onTab("history")}
+                    hideStages
+                  />
+                  <AuthorityRequestMaterials
+                    c={c}
+                    role={role}
+                    onDocument={onDocument}
+                  />
+                </>
               ) : (
               <>
                 {role === "subject" ? (
