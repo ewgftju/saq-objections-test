@@ -21,6 +21,10 @@ const navigation: { page: Page; label: string }[] = [
   { page: "processes", label: "Бизнес-процессы" },
 ];
 
+function isAuthorityRole(role: Role) {
+  return role === "dvga" || role === "kvga";
+}
+
 export default function AppShell({
   children,
   route,
@@ -86,7 +90,11 @@ export default function AppShell({
     <div className="app-shell objections-shell">
       <SaqSidebar
         onHome={home}
-        items={navigation.map(({ page, label }) => ({
+        items={navigation
+          .filter(
+            ({ page }) => !(isAuthorityRole(role) && page === "sessions"),
+          )
+          .map(({ page, label }) => ({
           page,
           label,
           badge: page === "notifications" ? unreadNotifications : undefined,
@@ -94,7 +102,7 @@ export default function AppShell({
             route.page === page ||
             (route.page === "detail" && page === "registry"),
           onClick: () => onNavigate({ page }),
-        }))}
+          }))}
       />
       <header className="topbar saq-topbar">
         <div className="topbar-title">
