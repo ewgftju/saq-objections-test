@@ -504,7 +504,7 @@ export function actionForm(
           input(
             "conclusionRegistrationNumber",
             "Номер регистрации",
-            "ЗАКЛ-" + c.id,
+            "",
           ),
         );
         note = "Вложите заключение по обращению. После сохранения станет доступно закрытие рассмотрения.";
