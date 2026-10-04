@@ -1162,7 +1162,8 @@ export default function ObjectionsModule() {
             </button>
           </Notice>
         ))}
-      {model.route.page === "sessions" && (
+      {model.route.page === "sessions" &&
+        !["dvga", "kvga"].includes(model.role) && (
         <SessionsPage
           cases={model.state.cases}
           meetings={model.state.meetings ?? []}
