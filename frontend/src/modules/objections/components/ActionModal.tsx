@@ -336,7 +336,7 @@ export default function ActionModal({
   const [requestAttachments, setRequestAttachments] = useState<File[]>([]);
   const [conclusionFiles, setConclusionFiles] = useState<File[]>([]);
   const [recommendationRecipients, setRecommendationRecipients] = useState<string[]>([]);
-  const [recipientQuery, setRecipientQuery] = useState("");
+  const [selectedRecommendationRecipient, setSelectedRecommendationRecipient] = useState("");
   const [requestTab, setRequestTab] = useState<"form" | "print">("form");
   const definition = actionForm(action, c, date, values, role);
   const activeCommissionVoter = commissionMemberId
@@ -625,31 +625,27 @@ export default function ActionModal({
               <span>
                 Кому направить рекомендацию <span className="required">*</span>
               </span>
-              <input
-                type="search"
-                list={`recommendation-recipients-${c.id}`}
-                value={recipientQuery}
-                placeholder="Начните вводить наименование кабинета"
+              <select
+                className="recommendation-recipient-select"
+                value={selectedRecommendationRecipient}
                 onChange={(event) => {
                   const value = event.currentTarget.value;
-                  const selected = recommendationRecipientField?.options?.find(
-                    ([optionValue, label]) => optionValue === value || label === value,
-                  );
-                  if (!selected) {
-                    setRecipientQuery(value);
-                    return;
-                  }
+                  if (!value) return;
                   setRecommendationRecipients((current) =>
-                    current.includes(selected[0]) ? current : [...current, selected[0]],
+                    current.includes(value) ? current : [...current, value],
                   );
-                  setRecipientQuery("");
+                  setSelectedRecommendationRecipient("");
                 }}
-              />
-              <datalist id={`recommendation-recipients-${c.id}`}>
-                {recommendationRecipientField?.options?.map(([value, label]) => (
-                  <option key={value} value={label} />
+              >
+                <option value="">Выберите кабинет</option>
+                {recommendationRecipientField?.options
+                  ?.filter(([value]) => !recommendationRecipients.includes(value))
+                  .map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
                 ))}
-              </datalist>
+              </select>
               <small>Можно выбрать несколько кабинетов.</small>
               {recommendationRecipients.map((recipient) => {
                 const label = recommendationRecipientField?.options?.find(
