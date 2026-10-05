@@ -1057,7 +1057,6 @@ export default function ObjectionsModule() {
               if (
                 action === "screen" ||
                 action === "send-request-approval" ||
-                action === "approve-request" ||
                 action === "sign-request" ||
                 action === "approve-response" ||
                 action === "sign-response" ||
@@ -1096,9 +1095,6 @@ export default function ObjectionsModule() {
                       "Обращение принято к рассмотрению в общем порядке.",
                     );
                 }
-                if (action === "approve-request") {
-                  form.set("approved", "on");
-                }
                 if (action === "members") {
                   form.set("meetingConducted", "on");
                 }
@@ -1125,8 +1121,6 @@ export default function ObjectionsModule() {
                   next,
                   action === "screen"
                     ? "Обращение принято к рассмотрению"
-                    : action === "approve-request"
-                    ? "Запрос согласован"
                     : action === "sign-request"
                       ? "Запрос подписан"
                     : action === "approve-response"
