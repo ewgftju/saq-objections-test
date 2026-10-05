@@ -1146,6 +1146,25 @@ td .subline {
   background: #f7fbfe;
   color: var(--blue);
 }
+.point-number-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.point-number-field input {
+  width: 58px;
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 1px solid #c4d5df;
+  border-radius: 5px;
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+}
 .new-case-actions {
   position: sticky;
   bottom: -22px;
