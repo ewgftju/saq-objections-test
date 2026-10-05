@@ -702,6 +702,23 @@ td .subline {
 .registry-table th {
   white-space: normal;
 }
+.registry-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.registry-sort-button span {
+  color: var(--blue);
+  font-size: 15px;
+}
 .registry-table th:nth-child(1) { width: 12%; }
 .registry-table th:nth-child(2) { width: 15%; }
 .registry-table th:nth-child(3) { width: 15%; }
