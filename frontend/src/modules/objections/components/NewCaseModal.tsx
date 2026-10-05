@@ -72,7 +72,7 @@ const APPEAL_TYPES = [
   },
   {
     value: "notice-objection",
-    label: "Возражение на уведомления",
+    label: "Возражение на уведомление",
     caseType: "notice",
   },
   {
