@@ -1043,7 +1043,7 @@ export default function ObjectionsModule() {
             role={model.role}
             onBack={() => model.navigate({ page: "registry" })}
             onTab={(tab) => model.navigate({ ...model.route, tab })}
-            onAction={(action, role) => {
+            onAction={(action, role, requestId) => {
               if (
                 action === "assign-work-executor" ||
                 action === "commission-vote" ||
@@ -1052,6 +1052,14 @@ export default function ObjectionsModule() {
               ) {
                 if (model.role !== "demo-superuser") model.setRole(role);
                 setDialog({ type: "action", action });
+                return;
+              }
+              if (action === "approve-request") {
+                const form = new FormData();
+                form.set("approved", "on");
+                form.set("requestId", requestId || "");
+                const next = applyAction(model.state, c.id, action, role, form);
+                model.commit(next, "Запрос согласован");
                 return;
               }
               if (
