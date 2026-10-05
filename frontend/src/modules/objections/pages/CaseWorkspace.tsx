@@ -223,7 +223,7 @@ export default function CaseWorkspace({
   role: Role;
   onBack: () => void;
   onTab: (tab: CaseTab) => void;
-  onAction: (action: Action, role: Role) => void;
+  onAction: (action: Action, role: Role, requestId?: string) => void;
   onDocument: (kind: string, document?: CaseDocument) => void;
   onUpload: () => void;
 }) {
