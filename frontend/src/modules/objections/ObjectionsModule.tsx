@@ -1118,6 +1118,9 @@ export default function ObjectionsModule() {
                     "Результаты голосования членов АК зафиксированы в протоколе.",
                   );
                 }
+                if (action === "sign-request") {
+                  form.set("requestId", requestId || "");
+                }
                 const next = applyAction(
                   model.state,
                   c.id,
