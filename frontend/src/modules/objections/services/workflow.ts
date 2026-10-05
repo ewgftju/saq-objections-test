@@ -675,16 +675,21 @@ export function applyAction(
     case "approve-request": {
       checked(form, "approved");
       if (!c.requests.length) throw new Error("Запрос не сформирован");
-      const requestId = text("requestId", "Запрос");
-      const request = c.requests.find((item) => item.id === requestId);
+      const pendingRequests = c.requests.filter((item) => !item.approved);
+      const requestId = String(form.get("requestId") || "");
+      const request = requestId
+        ? c.requests.find((item) => item.id === requestId)
+        : pendingRequests.length === 1
+          ? pendingRequests[0]
+          : undefined;
       if (!request) throw new Error("Выберите запрос для согласования");
       if (request.approved) throw new Error("Этот запрос уже согласован");
       request.approved = date;
-      const pendingRequests = c.requests.filter((item) => !item.approved);
-      c.status = pendingRequests.length ? "request_approval" : "request_signed";
+      const remainingRequests = c.requests.filter((item) => !item.approved);
+      c.status = remainingRequests.length ? "request_approval" : "request_signed";
       title = `Запрос в ${request.recipient} согласован`;
-      note = pendingRequests.length
-        ? `Осталось согласовать запросов: ${pendingRequests.length}.`
+      note = remainingRequests.length
+        ? `Осталось согласовать запросов: ${remainingRequests.length}.`
         : "Все запросы согласованы и ожидают подписи директора ДАВГА.";
       break;
     }
@@ -692,44 +697,59 @@ export function applyAction(
       if (!c.requests.length) throw new Error("Запрос не сформирован");
       if (c.requests.some((request) => !request.approved))
         throw new Error("Сначала согласуйте каждый сформированный запрос");
-      c.status = allResponsesReadyForConfirmation(c)
-        ? "response_ready"
-        : "request_approved";
-      c.requests.forEach((request) => {
-        request.sent ||= date;
-        if (isDvgaOrKvgaRequest(request.recipient))
-          next.notifications.push({
-            id: `notification-${c.id}-${next.notifications.length + 1}`,
-            caseId: c.id,
-            recipient: isKvgaRequest(request.recipient) ? "КВГА" : "ДВГА",
-            date,
-            read: false,
-            text: `В ваш кабинет направлен запрос по обращению №${c.appealNumber || c.id} для подготовки мотивированного ответа.`,
-          });
-        if (request.template === "other" && request.saqRecipient === "subject")
-          next.notifications.push({
-            id: `notification-${c.id}-${next.notifications.length + 1}`,
-            caseId: c.id,
-            recipient: c.org,
-            recipientRole: "subject",
-            date,
-            read: false,
-            text: `В ваш кабинет направлен запрос по обращению №${c.appealNumber || c.id} для предоставления необходимых материалов.`,
-          });
-      });
-      c.requestPauseStartedAt ||= date;
-      title = "Запрос подписан";
-      note = directedToDvgaOrKvga(c)
-        ? "Подписанные запросы направлены отдельно в кабинеты ДВГА и КВГА для подготовки мотивированных ответов."
-        : "Подписанный запрос ожидает поступления ответа.";
-      next.notifications.push({
-        id: `notification-${c.id}-${next.notifications.length + 1}`,
-        caseId: c.id,
-        recipient: c.org,
-        date,
-        read: false,
-        text: `По Вашему возражению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения возражения приостанавливается на период до поступления ответа на указанный запрос.`,
-      });
+      const unsignedRequests = c.requests.filter((item) => !item.sent);
+      const requestId = String(form.get("requestId") || "");
+      const request = requestId
+        ? c.requests.find((item) => item.id === requestId)
+        : unsignedRequests.length === 1
+          ? unsignedRequests[0]
+          : undefined;
+      if (!request) throw new Error("Выберите запрос для подписания");
+      if (request.sent) throw new Error("Этот запрос уже подписан");
+      const firstSignedRequest = c.requests.every((item) => !item.sent);
+      request.sent = date;
+      if (isDvgaOrKvgaRequest(request.recipient))
+        next.notifications.push({
+          id: `notification-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient: isKvgaRequest(request.recipient) ? "КВГА" : "ДВГА",
+          date,
+          read: false,
+          text: `В ваш кабинет направлен запрос по обращению №${c.appealNumber || c.id} для подготовки мотивированного ответа.`,
+        });
+      if (request.template === "other" && request.saqRecipient === "subject")
+        next.notifications.push({
+          id: `notification-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient: c.org,
+          recipientRole: "subject",
+          date,
+          read: false,
+          text: `В ваш кабинет направлен запрос по обращению №${c.appealNumber || c.id} для предоставления необходимых материалов.`,
+        });
+      if (firstSignedRequest) {
+        c.requestPauseStartedAt = date;
+        next.notifications.push({
+          id: `notification-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient: c.org,
+          date,
+          read: false,
+          text: `По Вашему возражению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения возражения приостанавливается на период до поступления ответа на указанный запрос.`,
+        });
+      }
+      const remainingRequests = c.requests.filter((item) => !item.sent);
+      c.status = remainingRequests.length
+        ? "request_signed"
+        : allResponsesReadyForConfirmation(c)
+          ? "response_ready"
+          : "request_approved";
+      title = `Запрос в ${request.recipient} подписан`;
+      note = remainingRequests.length
+        ? `Осталось подписать запросов: ${remainingRequests.length}.`
+        : directedToDvgaOrKvga(c)
+          ? "Все подписанные запросы направлены отдельно в кабинеты ДВГА и КВГА для подготовки мотивированных ответов."
+          : "Подписанные запросы ожидают поступления ответов.";
       break;
     }
     case "approve-certificate": {
