@@ -675,13 +675,23 @@ export function applyAction(
     case "approve-request": {
       checked(form, "approved");
       if (!c.requests.length) throw new Error("Запрос не сформирован");
-      c.status = "request_signed";
-      title = "Запрос согласован";
-      note = "Согласованный запрос ожидает подписи директора ДАВГА.";
+      const requestId = text("requestId", "Запрос");
+      const request = c.requests.find((item) => item.id === requestId);
+      if (!request) throw new Error("Выберите запрос для согласования");
+      if (request.approved) throw new Error("Этот запрос уже согласован");
+      request.approved = date;
+      const pendingRequests = c.requests.filter((item) => !item.approved);
+      c.status = pendingRequests.length ? "request_approval" : "request_signed";
+      title = `Запрос в ${request.recipient} согласован`;
+      note = pendingRequests.length
+        ? `Осталось согласовать запросов: ${pendingRequests.length}.`
+        : "Все запросы согласованы и ожидают подписи директора ДАВГА.";
       break;
     }
     case "sign-request": {
       if (!c.requests.length) throw new Error("Запрос не сформирован");
+      if (c.requests.some((request) => !request.approved))
+        throw new Error("Сначала согласуйте каждый сформированный запрос");
       c.status = allResponsesReadyForConfirmation(c)
         ? "response_ready"
         : "request_approved";
