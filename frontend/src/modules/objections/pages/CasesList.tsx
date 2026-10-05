@@ -242,7 +242,7 @@ export default function CasesList({
           >
             Все
           </button>
-          {(role === "director" || role === "work") && (
+          {(role === "demo-superuser" || role === "director" || role === "work") && (
             <button
               className={tab === "incoming" ? "active" : ""}
               type="button"
@@ -252,7 +252,7 @@ export default function CasesList({
               {incomingCount > 0 && <span className="count">{incomingCount}</span>}
             </button>
           )}
-          {(role === "work" || role === "director") && (
+          {(role === "demo-superuser" || role === "work" || role === "director") && (
             <>
               <button
                 className={tab === "request-direction" ? "active" : ""}
@@ -374,8 +374,8 @@ export default function CasesList({
             <tbody>
               {visible.map((c) => {
                 const unread =
-                  (role === "director" && c.unread) ||
-                  (role === "work" && c.unreadForAssignee);
+                  ((role === "demo-superuser" || role === "director") && c.unread) ||
+                  ((role === "demo-superuser" || role === "work") && c.unreadForAssignee);
                 return (
                 <tr key={c.id} className={unread ? "unread-case" : ""}>
                   <td>

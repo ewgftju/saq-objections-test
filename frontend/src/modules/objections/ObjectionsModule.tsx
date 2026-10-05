@@ -1050,7 +1050,7 @@ export default function ObjectionsModule() {
                 action === "vote" ||
                 action === "fill-meeting-certificate"
               ) {
-                model.setRole(role);
+                if (model.role !== "demo-superuser") model.setRole(role);
                 setDialog({ type: "action", action });
                 return;
               }
@@ -1118,7 +1118,7 @@ export default function ObjectionsModule() {
                   model.state,
                   c.id,
                   action,
-                  role,
+                  model.role === "demo-superuser" ? model.role : role,
                   form,
                 );
                 model.commit(
@@ -1159,7 +1159,7 @@ export default function ObjectionsModule() {
                 );
                 return;
               }
-              model.setRole(role);
+              if (model.role !== "demo-superuser") model.setRole(role);
               setDialog({ type: "action", action });
             }}
             onDocument={(kind, document) =>

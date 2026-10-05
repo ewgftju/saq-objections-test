@@ -6,7 +6,8 @@ export type Role =
   | "kvga"
   | "commission"
   | "subject"
-  | "higher";
+  | "higher"
+  | "demo-superuser";
 export type CaseStatus =
   | "received"
   | "accepted"
