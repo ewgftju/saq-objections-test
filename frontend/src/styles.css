@@ -703,21 +703,37 @@ td .subline {
   white-space: normal;
 }
 .registry-sort-button {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 4px;
-  padding: 0;
-  border: 0;
+  width: 100%;
+  min-height: 30px;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: 5px;
   background: transparent;
-  color: inherit;
+  color: #596b7e;
   font: inherit;
   font-weight: inherit;
   text-align: left;
   cursor: pointer;
 }
+.registry-sort-button:hover,
+.registry-sort-button:focus-visible {
+  border-color: #c9dfed;
+  background: #f3f9fd;
+  color: var(--blue);
+  outline: none;
+}
+.registry-sort-button.active {
+  background: #eaf5fc;
+  color: var(--blue);
+}
 .registry-sort-button span {
   color: var(--blue);
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1;
 }
 .registry-table th:nth-child(1) { width: 12%; }
 .registry-table th:nth-child(2) { width: 15%; }
