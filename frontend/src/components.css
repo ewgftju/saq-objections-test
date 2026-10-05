@@ -897,7 +897,7 @@
 .consideration-task-action .button + .button {
   margin-top: 8px;
 }
-.request-approval-actions {
+.request-actions {
   display: grid;
   gap: 8px;
 }
