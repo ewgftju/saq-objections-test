@@ -897,6 +897,10 @@
 .consideration-task-action .button + .button {
   margin-top: 8px;
 }
+.request-approval-actions {
+  display: grid;
+  gap: 8px;
+}
 @media (max-width: 600px) {
   .request-document-row {
     align-items: stretch;
