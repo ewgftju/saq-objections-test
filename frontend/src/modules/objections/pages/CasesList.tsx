@@ -426,7 +426,9 @@ export default function CasesList({
                 <th>
                   <button
                     type="button"
-                    className="registry-sort-button"
+                    className={`registry-sort-button ${
+                      deadlineSort.column === "execution" ? "active" : ""
+                    }`}
                     onClick={() => toggleDeadlineSort("execution")}
                     aria-label="Сортировать по сроку исполнения"
                   >
@@ -436,7 +438,9 @@ export default function CasesList({
                 <th>
                   <button
                     type="button"
-                    className="registry-sort-button"
+                    className={`registry-sort-button ${
+                      deadlineSort.column === "review" ? "active" : ""
+                    }`}
                     onClick={() => toggleDeadlineSort("review")}
                     aria-label="Сортировать по сроку рассмотрения"
                   >
