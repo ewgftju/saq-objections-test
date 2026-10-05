@@ -129,7 +129,7 @@ const TASK_HELP: Partial<Record<Action, string>> = {
   "send-request-approval":
     "Проверьте сформированные запрос и приложение, затем направьте их директору ДАВГА на согласование.",
   "approve-request":
-    "Проверьте сформированные документы и подтвердите согласование запроса.",
+    "Согласуйте каждый сформированный запрос отдельно. После согласования всех запросов они станут доступны для подписания.",
   "sign-request":
     "Подпишите согласованный запрос. После этого он будет направлен адресату для подготовки ответа.",
   "fill-request-response":
@@ -192,12 +192,16 @@ export default function ConsiderationProcess({
 }: {
   c: ObjectionCase;
   role: Role;
-  onAction: (action: Action, role: Role) => void;
+  onAction: (action: Action, role: Role, requestId?: string) => void;
   onHistory: () => void;
   /** Члены АК работают только с задачей по делу, без служебной схемы процесса. */
   hideStages?: boolean;
 }) {
   const next = nextAction(c, role);
+  const pendingRequestApprovals =
+    next?.action === "approve-request"
+      ? c.requests.filter((request) => !request.approved)
+      : [];
   const stages = OBJECTION_STAGES;
   const currentStatus = c.status === "paused" ? c.resumeStatus : c.status;
   const inRequestFormationStage = stages[1].statuses.includes(
@@ -324,19 +328,36 @@ export default function ConsiderationProcess({
             </p>
           </div>
           <div className="consideration-task-action">
-            {(next.action !== "commission-vote" || (role === "demo-superuser" || role === "commission")) && (
-              <Button
-                primary
-                disabled={next.action === "members" && !meetingCompletionAvailable}
-                title={
-                  next.action === "members" && !meetingCompletionAvailable
-                    ? "Сначала заполните и сохраните справку"
-                    : undefined
-                }
-                onClick={() => onAction(next.action, next.role)}
-              >
-                {next.label}
-              </Button>
+            {pendingRequestApprovals.length > 0 ? (
+              <div className="request-approval-actions">
+                {pendingRequestApprovals.map((request) => (
+                  <Button
+                    key={request.id}
+                    primary
+                    onClick={() =>
+                      onAction("approve-request", next.role, request.id)
+                    }
+                  >
+                    Согласовать запрос в {request.recipient}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              (next.action !== "commission-vote" ||
+                (role === "demo-superuser" || role === "commission")) && (
+                <Button
+                  primary
+                  disabled={next.action === "members" && !meetingCompletionAvailable}
+                  title={
+                    next.action === "members" && !meetingCompletionAvailable
+                      ? "Сначала заполните и сохраните справку"
+                      : undefined
+                  }
+                  onClick={() => onAction(next.action, next.role)}
+                >
+                  {next.label}
+                </Button>
+              )
             )}
             {meetingCertificateAvailable && (
               <Button primary onClick={() => onAction("fill-meeting-certificate", "work")}>
