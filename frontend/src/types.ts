@@ -194,6 +194,8 @@ export interface CaseRequest {
   saqRecipient?: Role;
   author?: string;
   customText?: string;
+  /** Дата согласования отдельного запроса директором ДАВГА. */
+  approved?: string;
   sent?: string;
   responded?: string;
   /** Ответ органа хранится в запросе и недоступен другому адресату. */
