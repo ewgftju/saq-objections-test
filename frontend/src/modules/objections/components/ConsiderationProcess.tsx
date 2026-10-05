@@ -131,7 +131,7 @@ const TASK_HELP: Partial<Record<Action, string>> = {
   "approve-request":
     "Согласуйте каждый сформированный запрос отдельно. После согласования всех запросов они станут доступны для подписания.",
   "sign-request":
-    "Подпишите согласованный запрос. После этого он будет направлен адресату для подготовки ответа.",
+    "Подпишите каждый согласованный запрос отдельно. Каждый подписанный запрос сразу будет направлен адресату.",
   "fill-request-response":
     "Заполните мотивированный ответ по каждому пункту и приложите подтверждающие документы.",
   "approve-response": "Согласуйте заполненный ответ ДВГА/КВГА.",
@@ -198,10 +198,12 @@ export default function ConsiderationProcess({
   hideStages?: boolean;
 }) {
   const next = nextAction(c, role);
-  const pendingRequestApprovals =
+  const pendingRequestActions =
     next?.action === "approve-request"
       ? c.requests.filter((request) => !request.approved)
-      : [];
+      : next?.action === "sign-request"
+        ? c.requests.filter((request) => !request.sent)
+        : [];
   const stages = OBJECTION_STAGES;
   const currentStatus = c.status === "paused" ? c.resumeStatus : c.status;
   const inRequestFormationStage = stages[1].statuses.includes(
@@ -328,17 +330,17 @@ export default function ConsiderationProcess({
             </p>
           </div>
           <div className="consideration-task-action">
-            {pendingRequestApprovals.length > 0 ? (
-              <div className="request-approval-actions">
-                {pendingRequestApprovals.map((request) => (
+            {pendingRequestActions.length > 0 ? (
+              <div className="request-actions">
+                {pendingRequestActions.map((request) => (
                   <Button
                     key={request.id}
                     primary
                     onClick={() =>
-                      onAction("approve-request", next.role, request.id)
+                      onAction(next.action, next.role, request.id)
                     }
                   >
-                    Согласовать запрос в {request.recipient}
+                    {next.action === "approve-request" ? "Согласовать" : "Подписать"} запрос в {request.recipient}
                   </Button>
                 ))}
               </div>
