@@ -3,11 +3,7 @@ import { Button, PageHeading } from "../../../components/ui";
 import { CLOSED, STATUS, TYPES } from "../../../data/constants";
 import type { CaseStatus, ObjectionCase, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
-import {
-  addWorkdays,
-  executionDeadline,
-  reviewDeadline,
-} from "../services/deadlines";
+import { executionDeadline, reviewDeadline } from "../services/deadlines";
 
 const APPEAL_TYPE_OPTIONS = [
   "Заявление",
@@ -19,7 +15,8 @@ const APPEAL_TYPE_OPTIONS = [
   "Жалоба на уведомление",
 ] as const;
 
-type DeadlineUrgency = "all" | "overdue" | "today" | "next-three-workdays";
+type DeadlineSortColumn = "review" | "execution" | null;
+type DeadlineSortDirection = "asc" | "desc";
 
 const REQUEST_DIRECTION_STATUSES = [
   "accepted",
@@ -95,19 +92,6 @@ function normalizedAppealType(c: ObjectionCase) {
     .replace("аудиторский отчёт", "аудиторский отчет");
 }
 
-function matchesDeadlineUrgency(
-  deadline: string | null,
-  status: CaseStatus,
-  date: string,
-  urgency: DeadlineUrgency,
-) {
-  if (urgency === "all") return true;
-  if (!deadline || CLOSED.includes(status)) return false;
-  if (urgency === "overdue") return deadline < date;
-  if (urgency === "today") return deadline === date;
-  return deadline > date && deadline <= addWorkdays(date, 3);
-}
-
 export default function CasesList({
   cases,
   date,
@@ -134,10 +118,10 @@ export default function CasesList({
   );
   const [query, setQuery] = useState("");
   const [appealTypeFilter, setAppealTypeFilter] = useState("all");
-  const [reviewUrgency, setReviewUrgency] =
-    useState<DeadlineUrgency>("all");
-  const [executionUrgency, setExecutionUrgency] =
-    useState<DeadlineUrgency>("all");
+  const [deadlineSort, setDeadlineSort] = useState<{
+    column: DeadlineSortColumn;
+    direction: DeadlineSortDirection;
+  }>({ column: null, direction: "asc" });
   const [tab, setTab] = useState<
     | "all"
     | "incoming"
@@ -170,9 +154,8 @@ export default function CasesList({
     HEARING_WAITING_STATUSES,
   );
   const finalResponseCount = countCasesByStatus(cases, FINAL_RESPONSE_STATUSES);
-  const visible = useMemo(
-    () =>
-      registryCases.filter((c) => {
+  const visible = useMemo(() => {
+    const filtered = registryCases.filter((c) => {
         const matchesQuery = `${c.id} ${c.appealNumber} ${c.org} ${c.bin} ${c.assignee}`
           .toLowerCase()
           .includes(query.toLowerCase());
@@ -180,18 +163,6 @@ export default function CasesList({
           matchesQuery &&
           (appealTypeFilter === "all" ||
             normalizedAppealType(c) === appealTypeFilter) &&
-          matchesDeadlineUrgency(
-            reviewDeadline(c),
-            c.status,
-            date,
-            reviewUrgency,
-          ) &&
-          matchesDeadlineUrgency(
-            executionDeadline(c),
-            c.status,
-            date,
-            executionUrgency,
-          ) &&
           (tab !== "incoming" ||
             (c.status === "received" && c.channel === "SAQ")) &&
           (tab !== "request-direction" ||
@@ -221,17 +192,43 @@ export default function CasesList({
               c.status as (typeof FINAL_RESPONSE_STATUSES)[number],
             ))
         );
-      }),
-    [
+      });
+    if (!deadlineSort.column) return filtered;
+    const deadline = (c: ObjectionCase) =>
+      deadlineSort.column === "review"
+        ? c.status === "paused"
+          ? null
+          : reviewDeadline(c)
+        : executionDeadline(c);
+    return [...filtered].sort((left, right) => {
+      const leftDeadline = deadline(left);
+      const rightDeadline = deadline(right);
+      if (!leftDeadline) return rightDeadline ? 1 : 0;
+      if (!rightDeadline) return -1;
+      const comparison = leftDeadline.localeCompare(rightDeadline);
+      return deadlineSort.direction === "asc" ? comparison : -comparison;
+    });
+  }, [
       registryCases,
       query,
       appealTypeFilter,
-      reviewUrgency,
-      executionUrgency,
       tab,
-      date,
-    ],
-  );
+      deadlineSort,
+    ]);
+
+  const toggleDeadlineSort = (column: Exclude<DeadlineSortColumn, null>) => {
+    setDeadlineSort((current) =>
+      current.column === column
+        ? { column, direction: current.direction === "asc" ? "desc" : "asc" }
+        : { column, direction: "asc" },
+    );
+  };
+  const sortIcon = (column: Exclude<DeadlineSortColumn, null>) =>
+    deadlineSort.column !== column
+      ? "↕"
+      : deadlineSort.direction === "asc"
+        ? "↑"
+        : "↓";
   const stats = authorityRole
     ? [
         [authorityRequests.length, "Всего запросов", "поступило в кабинет", "blue"],
@@ -416,34 +413,6 @@ export default function CasesList({
               ))}
             </select>
           </label>
-          <label className="field">
-            <span>Срок рассмотрения</span>
-            <select
-              value={reviewUrgency}
-              onChange={(event) =>
-                setReviewUrgency(event.target.value as DeadlineUrgency)
-              }
-            >
-              <option value="all">Все сроки</option>
-              <option value="overdue">Просрочено</option>
-              <option value="today">Сегодня</option>
-              <option value="next-three-workdays">Ближайшие 3 раб. дня</option>
-            </select>
-          </label>
-          <label className="field">
-            <span>Срок исполнения</span>
-            <select
-              value={executionUrgency}
-              onChange={(event) =>
-                setExecutionUrgency(event.target.value as DeadlineUrgency)
-              }
-            >
-              <option value="all">Все сроки</option>
-              <option value="overdue">Просрочено</option>
-              <option value="today">Сегодня</option>
-              <option value="next-three-workdays">Ближайшие 3 раб. дня</option>
-            </select>
-          </label>
           <span className="muted">Найдено: {visible.length}</span>
         </div>
         <div className="table-scroll">
@@ -454,8 +423,26 @@ export default function CasesList({
                 <th>Объект</th>
                 <th>Вид обращения</th>
                 <th>Статус</th>
-                <th>Срок исполнения</th>
-                <th>Срок рассмотрения</th>
+                <th>
+                  <button
+                    type="button"
+                    className="registry-sort-button"
+                    onClick={() => toggleDeadlineSort("execution")}
+                    aria-label="Сортировать по сроку исполнения"
+                  >
+                    Срок исполнения <span>{sortIcon("execution")}</span>
+                  </button>
+                </th>
+                <th>
+                  <button
+                    type="button"
+                    className="registry-sort-button"
+                    onClick={() => toggleDeadlineSort("review")}
+                    aria-label="Сортировать по сроку рассмотрения"
+                  >
+                    Срок рассмотрения <span>{sortIcon("review")}</span>
+                  </button>
+                </th>
                 <th>Исполнитель</th>
                 <th />
               </tr>
