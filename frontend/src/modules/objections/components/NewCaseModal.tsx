@@ -352,18 +352,22 @@ export default function NewCaseModal({
               request: get("request", "Требования"),
               amount,
               issues: pointIds.map((pointId, index) => {
-                const pointNumber = index + 1;
+                const defaultPointNumber = index + 1;
+                const pointNumber = get(
+                  `pointNumber_${pointId}`,
+                  `Номер пункта ${defaultPointNumber}`,
+                );
                 return {
                   id: pointId,
-                  number: String(pointNumber),
+                  number: pointNumber,
                   title: get(
                     `pointTitle_${pointId}`,
-                    `Описание пункта ${pointNumber}`,
+                    `Описание пункта ${defaultPointNumber}`,
                   ),
                   finding: "",
                   argument: get(
                     `argument_${pointId}`,
-                    `Довод заявителя по пункту ${pointNumber}`,
+                    `Довод заявителя по пункту ${defaultPointNumber}`,
                   ),
                   evidence: pointEvidenceFiles[index]
                     .map((file) => file.name)
@@ -775,7 +779,17 @@ export default function NewCaseModal({
           return (
             <section className="disputed-point-form-card" key={pointId}>
               <div className="disputed-point-form-head">
-                <h3>Пункт № {pointNumber}</h3>
+                <h3>Оспариваемый пункт</h3>
+                <label className="point-number-field">
+                  <span>№ пункта</span>
+                  <input
+                    name={`pointNumber_${pointId}`}
+                    type="text"
+                    defaultValue={String(pointNumber)}
+                    required
+                    aria-label={`Номер пункта ${pointNumber}`}
+                  />
+                </label>
                 <div className="point-card-actions">
                   <Button
                     className="point-card-icon-button"
