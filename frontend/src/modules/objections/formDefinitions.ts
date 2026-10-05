@@ -236,9 +236,21 @@ export function actionForm(
       break;
     case "approve-request":
       title = "Согласование запроса";
-      fields.push(check("approved", "Запрос и приложение согласованы"));
+      fields.push(
+        select(
+          "requestId",
+          "Запрос",
+          c.requests
+            .filter((request) => !request.approved)
+            .map((request) => [
+              request.id,
+              `Запрос в ${request.recipient}`,
+            ]),
+        ),
+        check("approved", "Запрос и приложение согласованы"),
+      );
       note =
-        "После согласования запрос в ДВГА/КВГА будет направлен в их кабинет для подготовки мотивированного ответа.";
+        "Согласуйте каждый сформированный запрос отдельно. После согласования всех запросов они будут доступны для подписания.";
       break;
     case "fill-request-response":
       title = "Ответ ДВГА/КВГА на запрос";
@@ -692,6 +704,8 @@ export function actionForm(
     submit:
       action === "edit-certificate"
         ? "Сохранить"
+        : action === "approve-request"
+          ? "Согласовать запрос"
         : action === "analysis"
           ? "Сформировать справку"
         : action === "create-decision-project"
