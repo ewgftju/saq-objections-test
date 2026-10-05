@@ -3,7 +3,23 @@ import { Button, PageHeading } from "../../../components/ui";
 import { CLOSED, STATUS, TYPES } from "../../../data/constants";
 import type { CaseStatus, ObjectionCase, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
-import { executionDeadline, reviewDeadline } from "../services/deadlines";
+import {
+  addWorkdays,
+  executionDeadline,
+  reviewDeadline,
+} from "../services/deadlines";
+
+const APPEAL_TYPE_OPTIONS = [
+  "Заявление",
+  "Жалоба на акт о результате профилактического контроля",
+  "Жалоба на действие/бездействие",
+  "Жалоба на решение КВГА/ДВГА",
+  "Возражение на уведомление",
+  "Возражение на аудиторский отчет",
+  "Жалоба на уведомление",
+] as const;
+
+type DeadlineUrgency = "all" | "overdue" | "today" | "next-three-workdays";
 
 const REQUEST_DIRECTION_STATUSES = [
   "accepted",
@@ -73,6 +89,25 @@ function isRequestForAuthority(
     : recipient.includes("ДВГА");
 }
 
+function normalizedAppealType(c: ObjectionCase) {
+  return (c.appealType ?? TYPES[c.type])
+    .replace("Возражение на уведомления", "Возражение на уведомление")
+    .replace("аудиторский отчёт", "аудиторский отчет");
+}
+
+function matchesDeadlineUrgency(
+  deadline: string | null,
+  status: CaseStatus,
+  date: string,
+  urgency: DeadlineUrgency,
+) {
+  if (urgency === "all") return true;
+  if (!deadline || CLOSED.includes(status)) return false;
+  if (urgency === "overdue") return deadline < date;
+  if (urgency === "today") return deadline === date;
+  return deadline > date && deadline <= addWorkdays(date, 3);
+}
+
 export default function CasesList({
   cases,
   date,
@@ -98,7 +133,11 @@ export default function CasesList({
     c.requests.filter((request) => isRequestForAuthority(request, role)),
   );
   const [query, setQuery] = useState("");
-  const [type, setType] = useState("all");
+  const [appealTypeFilter, setAppealTypeFilter] = useState("all");
+  const [reviewUrgency, setReviewUrgency] =
+    useState<DeadlineUrgency>("all");
+  const [executionUrgency, setExecutionUrgency] =
+    useState<DeadlineUrgency>("all");
   const [tab, setTab] = useState<
     | "all"
     | "incoming"
@@ -134,12 +173,25 @@ export default function CasesList({
   const visible = useMemo(
     () =>
       registryCases.filter((c) => {
-        const matchesQuery = `${c.id} ${c.org} ${c.bin}`
+        const matchesQuery = `${c.id} ${c.appealNumber} ${c.org} ${c.bin} ${c.assignee}`
           .toLowerCase()
           .includes(query.toLowerCase());
         return (
           matchesQuery &&
-          (type === "all" || c.type === type) &&
+          (appealTypeFilter === "all" ||
+            normalizedAppealType(c) === appealTypeFilter) &&
+          matchesDeadlineUrgency(
+            reviewDeadline(c),
+            c.status,
+            date,
+            reviewUrgency,
+          ) &&
+          matchesDeadlineUrgency(
+            executionDeadline(c),
+            c.status,
+            date,
+            executionUrgency,
+          ) &&
           (tab !== "incoming" ||
             (c.status === "received" && c.channel === "SAQ")) &&
           (tab !== "request-direction" ||
@@ -170,7 +222,15 @@ export default function CasesList({
             ))
         );
       }),
-    [registryCases, query, type, tab],
+    [
+      registryCases,
+      query,
+      appealTypeFilter,
+      reviewUrgency,
+      executionUrgency,
+      tab,
+      date,
+    ],
   );
   const stats = authorityRole
     ? [
@@ -343,17 +403,45 @@ export default function CasesList({
             />
           </label>
           <label className="field">
-            <span>Предмет обращения</span>
+            <span>Вид обращения</span>
             <select
-              value={type}
-              onChange={(event) => setType(event.target.value)}
+              value={appealTypeFilter}
+              onChange={(event) => setAppealTypeFilter(event.target.value)}
             >
               <option value="all">Все виды</option>
-              {Object.entries(TYPES).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
+              {APPEAL_TYPE_OPTIONS.map((appealType) => (
+                <option key={appealType} value={appealType}>
+                  {appealType}
                 </option>
               ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Срок рассмотрения</span>
+            <select
+              value={reviewUrgency}
+              onChange={(event) =>
+                setReviewUrgency(event.target.value as DeadlineUrgency)
+              }
+            >
+              <option value="all">Все сроки</option>
+              <option value="overdue">Просрочено</option>
+              <option value="today">Сегодня</option>
+              <option value="next-three-workdays">Ближайшие 3 раб. дня</option>
+            </select>
+          </label>
+          <label className="field">
+            <span>Срок исполнения</span>
+            <select
+              value={executionUrgency}
+              onChange={(event) =>
+                setExecutionUrgency(event.target.value as DeadlineUrgency)
+              }
+            >
+              <option value="all">Все сроки</option>
+              <option value="overdue">Просрочено</option>
+              <option value="today">Сегодня</option>
+              <option value="next-three-workdays">Ближайшие 3 раб. дня</option>
             </select>
           </label>
           <span className="muted">Найдено: {visible.length}</span>
@@ -364,10 +452,11 @@ export default function CasesList({
               <tr>
                 <th>Обращение / поступление</th>
                 <th>Объект</th>
-                <th>Предмет обращения</th>
+                <th>Вид обращения</th>
                 <th>Статус</th>
                 <th>Срок исполнения</th>
                 <th>Срок рассмотрения</th>
+                <th>Исполнитель</th>
                 <th />
               </tr>
             </thead>
@@ -389,7 +478,7 @@ export default function CasesList({
                     <span className="subline">БИН {c.bin}</span>
                   </td>
                   <td>
-                    {c.appealType ?? TYPES[c.type]}
+                    {normalizedAppealType(c)}
                     <span className="subline">№ {c.document.number}</span>
                   </td>
                   <td>
@@ -431,6 +520,9 @@ export default function CasesList({
                     </strong>
                   </td>
                   <td>
+                    <strong>{c.assignee || "Не назначен"}</strong>
+                  </td>
+                  <td>
                     <Button onClick={() => onOpen(c)}>Открыть</Button>
                   </td>
                 </tr>
@@ -438,7 +530,7 @@ export default function CasesList({
               })}
               {!visible.length && (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <div className="empty-state">
                       <h3>Обращения не найдены</h3>
                       <p>Измените строку поиска или фильтры.</p>
