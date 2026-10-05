@@ -30,7 +30,7 @@ export default function RecommendationsPage({
 }) {
   const [selected, setSelected] = useState<CaseRecommendation | null>(null);
   const visibleRecommendations =
-    role === "work"
+    (role === "demo-superuser" || role === "work")
       ? recommendations
       : recommendations.filter(
           (recommendation) =>
@@ -43,7 +43,7 @@ export default function RecommendationsPage({
       <PageHeading
         title="Рекомендации"
         subtitle={
-          role === "work"
+          (role === "demo-superuser" || role === "work")
             ? "Направленные рекомендации и контроль их исполнения"
             : "Рекомендации, направленные в ваш кабинет для исполнения"
         }
@@ -89,7 +89,7 @@ export default function RecommendationsPage({
                     </td>
                     <td>
                       {recommendation.status === "sent" &&
-                        role === recommendation.recipientRole && (
+                        (role === "demo-superuser" || role === recommendation.recipientRole) && (
                         <Button primary onClick={() => setSelected(recommendation)}>
                           Внести ответ
                         </Button>

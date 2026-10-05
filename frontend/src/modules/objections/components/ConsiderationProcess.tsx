@@ -226,10 +226,10 @@ export default function ConsiderationProcess({
         ? ROLES[next.role]
         : "";
   const meetingCertificateAvailable =
-    role === "work" &&
+    (role === "demo-superuser" || role === "work") &&
     ["commission_voting", "circulated"].includes(c.status);
   const awaitingAuthorityResponse =
-    role === "work" &&
+    (role === "demo-superuser" || role === "work") &&
     ["request_approved", "response_approval", "response_signed"].includes(
       c.status,
     );
@@ -324,7 +324,7 @@ export default function ConsiderationProcess({
             </p>
           </div>
           <div className="consideration-task-action">
-            {(next.action !== "commission-vote" || role === "commission") && (
+            {(next.action !== "commission-vote" || (role === "demo-superuser" || role === "commission")) && (
               <Button
                 primary
                 disabled={next.action === "members" && !meetingCompletionAvailable}
@@ -351,7 +351,7 @@ export default function ConsiderationProcess({
                 Сформировать запрос в другой орган
               </Button>
             )}
-            {role === "work" && c.status === "decided" && c.type === "notice" &&
+            {(role === "demo-superuser" || role === "work") && c.status === "decided" && c.type === "notice" &&
               !c.documents.some((document) => document.kind === "conclusion") && (
                 <>
                   <Button primary onClick={() => onAction("send-recommendations", "work")}>
@@ -380,7 +380,7 @@ export default function ConsiderationProcess({
                 Направить на согласование
               </Button>
             )}
-            {role !== next.role && (
+            {role !== "demo-superuser" && role !== next.role && (
               <small>Действие выполняет {taskOwner}.</small>
             )}
             {c.status === "accepted" && (

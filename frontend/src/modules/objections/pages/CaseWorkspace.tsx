@@ -613,7 +613,7 @@ export default function CaseWorkspace({
                             >
                               Скачать Word
                             </Button>
-                            {role === "work" && c.type !== "notice" && (
+                            {(role === "demo-superuser" || role === "work") && c.type !== "notice" && (
                               <Button
                                 primary
                                 onClick={() => onAction("send-recommendations", "work")}
@@ -768,7 +768,7 @@ export default function CaseWorkspace({
                     </section>
                   ) : null;
                 })()}
-                {["work", "commission", "dvga", "kvga"].includes(role) &&
+                {["demo-superuser", "work", "commission", "dvga", "kvga"].includes(role) &&
                   [
                     {
                       title: "Ответ ДВГА",

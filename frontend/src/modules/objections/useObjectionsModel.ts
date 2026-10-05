@@ -259,7 +259,18 @@ function synchronizeUpcomingMeetingCases(state: DemoState) {
 export function useObjectionsModel() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
-  const [role, setRole] = useState<Role>("work");
+  const [role, setRole] = useState<Role>(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("demoUser") === "saq-demo-superuser") {
+      url.searchParams.delete("demoUser");
+      window.history.replaceState(window.history.state, "", url);
+      return "demo-superuser";
+    }
+    try { return localStorage.getItem("saq.objections.demo-role.v1") === "demo-superuser" ? "demo-superuser" : "work"; } catch { return "work"; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("saq.objections.demo-role.v1", role); } catch { /* In-memory demo remains usable. */ }
+  }, [role]);
   const [route, setRoute] = useState<Route>(() =>
     routeFromPath(window.location.pathname),
   );

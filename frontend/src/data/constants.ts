@@ -4,6 +4,7 @@ export const TYPES = {
   control: "На акт о результатах",
 } as const;
 export const ROLES = {
+  "demo-superuser": "Демо-суперпользователь",
   work: "Рабочий орган",
   director: "Директор ДАВГА",
   dvga: "ДВГА",

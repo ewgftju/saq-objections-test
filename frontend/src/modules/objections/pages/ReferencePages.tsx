@@ -375,7 +375,7 @@ export function SessionsPage({
                   <th>Ответ</th>
                   <th>Роль на заседании</th>
                   <th>Изменение исполнителем рабочего органа</th>
-                  {role === "work" && <th>Отметить вручную</th>}
+                  {(role === "demo-superuser" || role === "work") && <th>Отметить вручную</th>}
                 </tr>
               </thead>
               <tbody>
@@ -408,7 +408,7 @@ export function SessionsPage({
                           ? changed.changedBy + " изменил(а) ответ " + formatDate(changed.changedAt)
                           : "—"}
                       </td>
-                      {role === "work" && (
+                      {(role === "demo-superuser" || role === "work") && (
                         <td>
                           <select
                             value={response}
@@ -452,7 +452,7 @@ export function SessionsPage({
               <h3>Обращения</h3>
               <span className="muted">Готовые к рассмотрению АК обращения, включённые в заседание</span>
             </div>
-            {role === "director" && (
+            {(role === "demo-superuser" || role === "director") && (
               <div className="agenda-registry-actions">
                 <Button
                   disabled={Boolean(selectedMeeting.agendaSigned)}
@@ -489,7 +489,7 @@ export function SessionsPage({
               <thead>
                 <tr>
                   <th>
-                    {role === "director" && !selectedMeeting.agendaSigned ? (
+                    {(role === "demo-superuser" || role === "director") && !selectedMeeting.agendaSigned ? (
                       <input
                         type="checkbox"
                         aria-label="Выбрать все обращения"
@@ -519,7 +519,7 @@ export function SessionsPage({
                 {meetingCases.map((caseItem, index) => (
                   <tr key={caseItem.id}>
                     <td>
-                      {role === "director" && !selectedMeeting.agendaSigned ? (
+                      {(role === "demo-superuser" || role === "director") && !selectedMeeting.agendaSigned ? (
                         <input
                           type="checkbox"
                           aria-label={`Выбрать обращение ${caseItem.id}`}
@@ -575,7 +575,7 @@ export function SessionsPage({
           </div>
         </section>
 
-        {isAddingCase && role === "director" && (
+        {isAddingCase && (role === "demo-superuser" || role === "director") && (
           <Modal
             title="Добавить обращение в заседание"
             onClose={() => setIsAddingCase(false)}
@@ -621,7 +621,7 @@ export function SessionsPage({
           </Modal>
         )}
 
-        {isTransferringCases && role === "director" && (
+        {isTransferringCases && (role === "demo-superuser" || role === "director") && (
           <Modal
             title="Перенести обращения в другое заседание"
             onClose={() => setIsTransferringCases(false)}
@@ -684,7 +684,7 @@ export function SessionsPage({
               <Button onClick={() => onPreviewAgenda(selectedMeeting)}>
                 Открыть печатную форму
               </Button>
-              {role === "director" && (
+              {(role === "demo-superuser" || role === "director") && (
                 <Button
                   primary
                   disabled={!canSignAgenda || !meetingCases.length}
@@ -705,7 +705,7 @@ export function SessionsPage({
               {meetingCases.map((caseItem, index) => (
                 <li key={caseItem.id}>
                   <span>{agendaItemText(caseItem)}</span>
-                  {role === "director" && !selectedMeeting.agendaSigned && (
+                  {(role === "demo-superuser" || role === "director") && !selectedMeeting.agendaSigned && (
                     <span className="agenda-registry-actions">
                       <Button
                         disabled={index === 0}
@@ -736,7 +736,7 @@ export function SessionsPage({
         title="Заседания комиссии"
         subtitle="Карточки заседаний, опрос членов АК и повестка дня"
         action={
-          role === "work" && sessionsTab === "meetings" ? (
+          (role === "demo-superuser" || role === "work") && sessionsTab === "meetings" ? (
             <Button primary onClick={onCreateMeeting}>+ Создать заседание</Button>
           ) : undefined
         }
@@ -796,7 +796,7 @@ export function SessionsPage({
                         <td>
                           {meeting.completed ? (
                             <span className="badge green">Проведено</span>
-                          ) : role === "work" ? (
+                          ) : (role === "demo-superuser" || role === "work") ? (
                             <Button
                               disabled={
                                 !meeting.agendaSigned ||

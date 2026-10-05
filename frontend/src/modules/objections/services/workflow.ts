@@ -198,6 +198,7 @@ function authorityStatus(c: ObjectionCase): ObjectionCase["status"] | null {
 }
 
 export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
+  if (role === "demo-superuser") role = undefined;
   const reviewer: Role = "work";
   const authorityInProgress = [
     "request_approved",
@@ -561,7 +562,7 @@ export function applyAction(
   const available = [nextAction(c, role), ...additionalActions(c)].find(
     (item) => item?.action === action,
   );
-  if (!available || (available.role !== role && action !== "upload"))
+  if (!available || (role !== "demo-superuser" && available.role !== role && action !== "upload"))
     throw new Error("Действие недоступно на этом этапе или для выбранной роли");
   const date = actionDate(next, c, form);
   const text = (name: string, label?: string) => required(form, name, label);
@@ -1017,7 +1018,7 @@ export function applyAction(
       break;
     }
     case "subject-response": {
-      if (role !== "subject") throw new Error("Ответ может направить только Объект");
+      if (role !== "subject" && role !== "demo-superuser") throw new Error("Ответ может направить только Объект");
       const request = c.requests.find(
         (item) =>
           item.template === "other" &&
