@@ -202,7 +202,7 @@ export default function ConsiderationProcess({
     next?.action === "approve-request"
       ? c.requests.filter((request) => !request.approved)
       : next?.action === "sign-request"
-        ? c.requests.filter((request) => !request.sent)
+        ? c.requests.filter((request) => request.approved && !request.sent)
         : [];
   const stages = OBJECTION_STAGES;
   const currentStatus = c.status === "paused" ? c.resumeStatus : c.status;
@@ -253,10 +253,20 @@ export default function ConsiderationProcess({
   const workRequestStatus =
     role === "work" &&
     (c.status === "request_approval" || c.status === "request_signed");
+  const pendingApprovals = c.requests.filter((request) => !request.approved);
+  const pendingSignatures = c.requests.filter(
+    (request) => request.approved && !request.sent,
+  );
   const workRequestStatusLabel =
-    c.status === "request_approval" ? "На согласовании" : "На подписании";
+    pendingApprovals.length && pendingSignatures.length
+      ? "На согласовании и подписании"
+      : pendingApprovals.length
+        ? "На согласовании"
+        : "На подписании";
   const workRequestStatusOwner =
-    c.status === "request_approval"
+    pendingApprovals.length && pendingSignatures.length
+      ? "Заместитель директора ДАВГА и директор ДАВГА"
+      : pendingApprovals.length
       ? "Заместитель директора ДАВГА"
       : "Директор ДАВГА";
   const canPerformNextAction =
@@ -339,32 +349,33 @@ export default function ConsiderationProcess({
               <strong>{workRequestStatusLabel}</strong>
             </div>
             <span className="request-response-summary">
-              Ожидает действия:{" "}
+              Ожидают действия:{" "}
               <b>
-                {
-                  c.requests.filter((request) =>
-                    c.status === "request_approval"
-                      ? !request.approved
-                      : !request.sent,
-                  ).length
-                }
+                {pendingApprovals.length + pendingSignatures.length}
               </b>
             </span>
           </div>
           <ul className="request-response-status-list">
-            {c.requests.map((request) => (
-              <li className="is-pending" key={request.id}>
-                <span className="request-response-marker" aria-hidden="true">…</span>
-                <span className="request-response-recipient">
-                  <strong>{request.recipient}</strong>
-                  <small>Направлен {formatDate(request.date)}</small>
-                </span>
-                <span className="response-pending">
-                  <span className="response-status-dot" aria-hidden="true" />
-                  {workRequestStatusLabel}
-                </span>
-              </li>
-            ))}
+            {c.requests.map((request) => {
+              const status = request.sent
+                ? "Ответ ожидается"
+                : request.approved
+                  ? "На подписании"
+                  : "На согласовании";
+              return (
+                <li className="is-pending" key={request.id}>
+                  <span className="request-response-marker" aria-hidden="true">…</span>
+                  <span className="request-response-recipient">
+                    <strong>{request.recipient}</strong>
+                    <small>Направлен {formatDate(request.date)}</small>
+                  </span>
+                  <span className="response-pending">
+                    <span className="response-status-dot" aria-hidden="true" />
+                    {status}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
           <p className="request-status-owner">
             Действие выполняется в кабинете: <strong>{workRequestStatusOwner}</strong>.
