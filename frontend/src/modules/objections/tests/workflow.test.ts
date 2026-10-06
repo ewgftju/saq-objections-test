@@ -1329,6 +1329,45 @@ test("кабинет объекта получает возможность на
   );
 });
 
+test("кабинет объекта видит в реестре только подписанные запросы, ожидающие ответа", () => {
+  const h = harness();
+  const awaiting = structuredClone(h.c);
+  awaiting.id = "subject-awaiting";
+  awaiting.requests = [
+    {
+      id: "subject-awaiting-request",
+      recipient: "Кабинет Объекта",
+      date: "2026-09-08",
+      text: "Предоставить пояснения",
+      deadline: "2026-09-10T18:00",
+      sent: "2026-09-08",
+      template: "other",
+      saqRecipient: "subject",
+    },
+  ];
+  const unsigned = structuredClone(awaiting);
+  unsigned.id = "subject-unsigned";
+  delete unsigned.requests[0].sent;
+  const answered = structuredClone(awaiting);
+  answered.id = "subject-answered";
+  answered.requests[0].responded = "2026-09-09";
+
+  const html = renderToStaticMarkup(
+    createElement(CasesList, {
+      cases: [awaiting, unsigned, answered],
+      date: "2026-09-08",
+      role: "subject",
+      onOpen() {},
+      onCreate() {},
+      onExport() {},
+    }),
+  );
+  assert.match(html, /subject-awaiting/);
+  assert.doesNotMatch(html, /subject-unsigned/);
+  assert.doesNotMatch(html, /subject-answered/);
+  assert.doesNotMatch(html, /Новое возражение\/обращение/);
+});
+
 test("справка редактируется с созданием новой версии перед формированием протокола", () => {
   const h = harness();
   const point = h.c.issues.find((item) => item.disputed)!;

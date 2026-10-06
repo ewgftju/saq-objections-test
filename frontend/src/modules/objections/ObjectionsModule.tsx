@@ -163,6 +163,14 @@ export default function ObjectionsModule() {
     model.state.attendancePolls
       .filter((poll) => poll.caseIds.includes(caseId))
       .at(-1)?.responses[activeCommissionMember.id] === "yes";
+  const subjectCanOpenCase = (item: ObjectionCase) =>
+    item.requests.some(
+      (request) =>
+        request.template === "other" &&
+        request.saqRecipient === "subject" &&
+        Boolean(request.sent) &&
+        !request.responded,
+    );
   const close = () => {
     setDialog(null);
     setDialogError("");
@@ -172,6 +180,10 @@ export default function ObjectionsModule() {
       model.setToast(
         "Карточка станет доступна после подтверждения присутствия на заседании.",
       );
+      return;
+    }
+    if (model.role === "subject" && !subjectCanOpenCase(c)) {
+      model.setToast("В кабинет объекта поступают только запросы, ожидающие ответа.");
       return;
     }
     const shouldMarkRead =
@@ -1043,6 +1055,11 @@ export default function ObjectionsModule() {
               Карточка обращения доступна члену АК только после ответа «Да» в
               опросе о присутствии на заседании.
             </Notice>
+          ) : model.role === "subject" && !subjectCanOpenCase(c) ? (
+            <Notice tone="amber">
+              Карточка обращения недоступна: в кабинете объекта отображаются
+              только запросы, ожидающие предоставления ответа.
+            </Notice>
           ) : (
           <CaseWorkspace
             c={c}
@@ -1192,7 +1209,7 @@ export default function ObjectionsModule() {
           </Notice>
         ))}
       {model.route.page === "sessions" &&
-        !["dvga", "kvga"].includes(model.role) && (
+        !["dvga", "kvga", "subject"].includes(model.role) && (
         <SessionsPage
           cases={model.state.cases}
           meetings={model.state.meetings ?? []}

@@ -92,7 +92,8 @@ export default function AppShell({
         onHome={home}
         items={navigation
           .filter(
-            ({ page }) => !(isAuthorityRole(role) && page === "sessions"),
+            ({ page }) =>
+              !((isAuthorityRole(role) || role === "subject") && page === "sessions"),
           )
           .map(({ page, label }) => ({
           page,
