@@ -1368,6 +1368,60 @@ test("кабинет объекта видит в реестре только п
   assert.doesNotMatch(html, /Новое возражение\/обращение/);
 });
 
+test("внешний ответ можно зафиксировать до поступления ответов SAQ", () => {
+  const h = harness();
+  screen(h);
+  h.run("request", "work", {
+    recipient: "КВГА",
+    deadline: "2026-09-10T18:00",
+  });
+  h.run("request-other", "work", {
+    recipient: "Экспертная организация",
+    customRequestText: "Просим предоставить заключение.",
+  });
+  h.run("send-request-approval", "work");
+  h.c.requests.forEach((request) =>
+    h.run("approve-request", "deputy", { requestId: request.id, approved: "on" }),
+  );
+  h.c.requests.forEach((request) =>
+    h.run("sign-request", "director", { requestId: request.id }),
+  );
+  const external = h.c.requests.find(
+    (request) => request.recipient === "Экспертная организация",
+  )!;
+
+  h.run("record-external-response", "work", {
+    externalRequestId: external.id,
+    date: "2026-09-09",
+  });
+  assert.equal(
+    h.c.requests.find((request) => request.id === external.id)?.responded,
+    "2026-09-09",
+  );
+  assert.notEqual(h.c.status, "materials");
+
+  h.run(
+    "fill-request-response",
+    "kvga",
+    Object.fromEntries(
+      h.c.issues
+        .filter((point) => point.disputed)
+        .flatMap((point) => [
+          [`authorityFinding_${point.id}`, "Нарушение КВГА"],
+          [`authorityResponse_${point.id}`, "Ответ КВГА"],
+        ]),
+    ),
+  );
+  h.run("approve-response", "kvga");
+  h.run("sign-response", "kvga");
+
+  assert.equal(h.c.status, "materials");
+  assert.equal(
+    h.c.requests.find((request) => request.id === external.id)?.confirmed,
+    "2026-09-09",
+  );
+});
+
 test("справка редактируется с созданием новой версии перед формированием протокола", () => {
   const h = harness();
   const point = h.c.issues.find((item) => item.disputed)!;

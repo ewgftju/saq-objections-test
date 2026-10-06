@@ -66,7 +66,10 @@ function pendingDvgaOrKvgaRequest(c: ObjectionCase, role?: Role) {
 function pendingOtherRequest(c: ObjectionCase) {
   return c.requests.find(
     (request) =>
-      !request.responded && !isDvgaOrKvgaRequest(request.recipient),
+      request.template === "other" &&
+      !request.saqRecipient &&
+      Boolean(request.sent) &&
+      !request.responded,
   );
 }
 
@@ -88,20 +91,6 @@ function allResponsesReadyForConfirmation(c: ObjectionCase) {
   );
 }
 
-/** Запросы, ответы на которые поступают непосредственно в SAQ. Если среди
- * адресатов есть внешний орган без кабинета SAQ, получение его ответа рабочий
- * орган фиксирует одним отдельным действием. */
-function allRequestsHandledInSaq(c: ObjectionCase) {
-  return (
-    c.requests.length > 0 &&
-    c.requests.every(
-      (request) =>
-        isDvgaOrKvgaRequest(request.recipient) ||
-        (request.template === "other" && request.saqRecipient === "subject"),
-    )
-  );
-}
-
 /** Пока не подписаны все запросы, общий статус обращения остаётся на
  * согласовании или подписании. Это не мешает адресату уже подписанного
  * запроса заполнять ответ в своём кабинете. */
@@ -114,12 +103,20 @@ function requestRoutingStatus(c: ObjectionCase): ObjectionCase["status"] | null 
 
 /** Когда все ответы пришли в кабинеты SAQ, фиксировать их вручную не нужно:
  * система сразу переводит обращение на следующий этап. */
-function advanceAfterSaqResponses(c: ObjectionCase, date: string) {
-  if (
-    !allRequestsHandledInSaq(c) ||
-    !allResponsesReadyForConfirmation(c)
-  )
-    return null;
+function allResponsesReceived(c: ObjectionCase) {
+  return (
+    allResponsesReadyForConfirmation(c) &&
+    c.requests.every(
+      (request) =>
+        request.template !== "other" ||
+        Boolean(request.saqRecipient) ||
+        Boolean(request.responded),
+    )
+  );
+}
+
+function advanceAfterResponses(c: ObjectionCase, date: string) {
+  if (!allResponsesReceived(c)) return null;
 
   c.requests.forEach((request) => {
     request.confirmed ||= date;
@@ -223,6 +220,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     "response_ready",
   ].includes(c.status);
   if (authorityInProgress) {
+    if (pendingOtherRequest(c)) return null;
     if (role === "work") {
       if (allResponsesReadyForConfirmation(c))
         return { action: "position", label: "Ответ получен", role: "work" };
@@ -441,6 +439,12 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
     !CLOSED.includes(c.status) &&
     !["protocol", "decided", "delivered", "court"].includes(c.status);
   if (active) {
+    if (pendingOtherRequest(c))
+      options.push({
+        action: "record-external-response",
+        label: "Вложить ответ другого органа",
+        role: "work",
+      });
     if (c.status === "accepted") {
       options.push({
         action: "request-other",
@@ -1066,7 +1070,7 @@ export function applyAction(
       );
       if (!request) throw new Error("Нет согласованного ответа для подписания");
       request.responseSigned = date;
-      const pausedDays = advanceAfterSaqResponses(c, date);
+      const pausedDays = advanceAfterResponses(c, date);
       if (pausedDays === null)
         c.status = requestRoutingStatus(c) || authorityStatus(c) || "response_ready";
       title = "Ответ ДВГА/КВГА подписан";
@@ -1116,6 +1120,30 @@ export function applyAction(
       doc("Полученные материалы по запросам", "position", note);
       break;
     }
+    case "record-external-response": {
+      const requestId = text("externalRequestId", "Запрос другого органа");
+      const request = c.requests.find(
+        (item) =>
+          item.id === requestId &&
+          item.template === "other" &&
+          !item.saqRecipient &&
+          Boolean(item.sent) &&
+          !item.responded,
+      );
+      if (!request)
+        throw new Error("Выберите подписанный запрос другого органа, ожидающий ответа");
+      request.responded = date;
+      const pausedDays = advanceAfterResponses(c, date);
+      title = `Ответ ${request.recipient} зафиксирован`;
+      note =
+        pausedDays === null
+          ? `Ответ ${request.recipient} сохранён. Обращение ожидает ответы по остальным направленным запросам.`
+          : "Получены ответы по всем направленным запросам. Обращение автоматически переведено на этап «Материалы».";
+      if (pausedDays && pausedDays > 0)
+        note += ` Срок рассмотрения продлён на ${pausedDays} раб. дн.`;
+      doc(`Ответ ${request.recipient}`, "position", note, request.id);
+      break;
+    }
     case "subject-response": {
       if (role !== "subject" && role !== "demo-superuser") throw new Error("Ответ может направить только Объект");
       const request = c.requests.find(
@@ -1127,7 +1155,7 @@ export function applyAction(
       );
       if (!request) throw new Error("Нет запроса, ожидающего ответа Объекта");
       request.responded = date;
-      const pausedDays = advanceAfterSaqResponses(c, date);
+      const pausedDays = advanceAfterResponses(c, date);
       if (pausedDays === null && allResponsesReadyForConfirmation(c))
         c.status = "response_ready";
       title = "Ответ направлен рабочему органу";

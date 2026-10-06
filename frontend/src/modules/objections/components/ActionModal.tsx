@@ -1149,6 +1149,26 @@ export default function ActionModal({
               <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
             </label>
           </>
+        ) : action === "record-external-response" ? (
+          <>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            {definition.fields.map((field) => (
+              <Field key={field.name} field={field} />
+            ))}
+            <label className="field request-attachments-field">
+              <span>
+                Полученный файл <span className="required">*</span>
+              </span>
+              <input
+                type="file"
+                name="responseFiles"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                multiple
+                required
+              />
+              <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
+            </label>
+          </>
         ) : action === "position" ? (
           <>
             <Notice tone="amber">
@@ -1338,6 +1358,8 @@ export default function ActionModal({
               ? "Сохранение..."
               : action === "position"
                 ? "Сохранить полученный ответ"
+                : action === "record-external-response"
+                  ? "Сохранить ответ"
                 : action === "subject-response"
                   ? "Направить ответ"
                 : definition.submit}

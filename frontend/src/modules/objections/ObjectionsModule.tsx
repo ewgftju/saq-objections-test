@@ -816,7 +816,7 @@ export default function ObjectionsModule() {
       form.set("commissionMember", activeCommissionMember.id);
     }
     if (
-        !["position", "fill-request-response", "request", "request-other", "deliver", "subject-response"].includes(
+        !["position", "record-external-response", "fill-request-response", "request", "request-other", "deliver", "subject-response"].includes(
         action,
       )
     ) {
@@ -853,7 +853,7 @@ export default function ObjectionsModule() {
       .filter(
         (item): item is File => item instanceof File && item.name.length > 0,
       );
-    if (action === "position" && !files.length)
+    if (["position", "record-external-response"].includes(action) && !files.length)
       throw new Error("Вложите хотя бы один полученный файл");
     if (action === "subject-response" && !files.length)
       throw new Error("Вложите хотя бы один файл ответа");
@@ -894,6 +894,8 @@ export default function ObjectionsModule() {
                 request.saqRecipient === "subject" &&
                 !request.responded,
             )?.id
+          : action === "record-external-response"
+            ? String(form.get("externalRequestId") || "")
           : action === "position"
           ? c.requests.find(
               (request) =>
@@ -973,6 +975,8 @@ export default function ObjectionsModule() {
           ? "Ответ Объекта направлен рабочему органу"
         : action === "deliver"
           ? "Заключение по обращению вложено"
+        : action === "record-external-response"
+          ? "Ответ другого органа и вложения сохранены"
         : "Полученный ответ и вложения сохранены",
     );
   }
