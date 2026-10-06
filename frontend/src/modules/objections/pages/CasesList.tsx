@@ -86,6 +86,15 @@ function isRequestForAuthority(
     : recipient.includes("ДВГА");
 }
 
+function isRequestForSubject(request: ObjectionCase["requests"][number]) {
+  return (
+    request.template === "other" &&
+    request.saqRecipient === "subject" &&
+    Boolean(request.sent) &&
+    !request.responded
+  );
+}
+
 function normalizedAppealType(c: ObjectionCase) {
   return (c.appealType ?? TYPES[c.type])
     .replace("Возражение на уведомления", "Возражение на уведомление")
@@ -108,13 +117,21 @@ export default function CasesList({
   onExport: (cases: ObjectionCase[]) => void;
 }) {
   const authorityRole = isAuthorityRole(role);
+  const subjectRole = role === "subject";
+  const recipientRole = authorityRole || subjectRole;
   const registryCases = authorityRole
     ? cases.filter((c) =>
         c.requests.some((request) => isRequestForAuthority(request, role)),
       )
+    : subjectRole
+      ? cases.filter((c) => c.requests.some(isRequestForSubject))
     : cases;
-  const authorityRequests = registryCases.flatMap((c) =>
-    c.requests.filter((request) => isRequestForAuthority(request, role)),
+  const recipientRequests = registryCases.flatMap((c) =>
+    c.requests.filter((request) =>
+      authorityRole
+        ? isRequestForAuthority(request, role)
+        : isRequestForSubject(request),
+    ),
   );
   const [query, setQuery] = useState("");
   const [appealTypeFilter, setAppealTypeFilter] = useState("all");
@@ -231,14 +248,16 @@ export default function CasesList({
         : "↓";
   const stats = authorityRole
     ? [
-        [authorityRequests.length, "Всего запросов", "поступило в кабинет", "blue"],
+        [recipientRequests.length, "Всего запросов", "поступило в кабинет", "blue"],
         [
-          authorityRequests.filter((request) => request.responseSigned).length,
+          recipientRequests.filter((request) => request.responseSigned).length,
           "Направлено ответов",
           "ответов подписано и направлено",
           "green",
         ],
       ]
+    : subjectRole
+      ? [[recipientRequests.length, "Ожидают ответа", "требуется предоставить ответ", "blue"]]
     : [
         [cases.length, "Всего обращений", "зарегистрировано в реестре", "blue"],
         [
@@ -266,14 +285,14 @@ export default function CasesList({
       <PageHeading
         title="Реестр обращений"
         subtitle={
-          authorityRole
+          recipientRole
             ? "Запросы, поступившие в кабинет"
             : "Возражения объектов аудита и жалобы субъектов контроля"
         }
         action={
           <>
             <Button onClick={() => onExport(visible)}>Экспорт CSV</Button>
-            {!authorityRole && (
+            {!recipientRole && (
               <Button primary onClick={onCreate}>
                 + Новое возражение/обращение
               </Button>
