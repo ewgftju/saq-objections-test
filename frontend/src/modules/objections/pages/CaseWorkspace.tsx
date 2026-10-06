@@ -208,103 +208,6 @@ function AuthorityRequestMaterials({
   );
 }
 
-function OtherOrganResponses({
-  c,
-  role,
-  onAction,
-  onDocument,
-}: {
-  c: ObjectionCase;
-  role: Role;
-  onAction: (action: Action, role: Role, requestId?: string) => void;
-  onDocument: (kind: string, document?: CaseDocument) => void;
-}) {
-  const requests = c.requests.filter(
-    (request) =>
-      request.template === "other" &&
-      !request.saqRecipient &&
-      Boolean(request.sent),
-  );
-  if (!requests.length) return null;
-  const canRecord =
-    (role === "demo-superuser" || role === "work") &&
-    requests.some((request) => !request.responded);
-  const receivedCount = requests.filter((request) => request.responded).length;
-
-  return (
-    <section className="request-documents-section external-response-section">
-      <div className="external-response-header">
-        <div>
-          <h4>Ответы других органов</h4>
-          <span className="external-response-summary">
-            Получено: {receivedCount} из {requests.length}
-          </span>
-        </div>
-        {canRecord && (
-          <Button primary onClick={() => onAction("record-external-response", "work")}>
-            Вложить ответ
-          </Button>
-        )}
-      </div>
-      <div className="external-response-list">
-        {requests.map((request) => {
-          const documents = c.documents.filter(
-            (document) =>
-              document.requestId === request.id &&
-              ["response-attachment", "position"].includes(document.kind),
-          );
-          return (
-            <article className="external-response-card" key={request.id}>
-              <div className="external-response-card-header">
-                <div className="external-response-recipient">
-                  <span aria-hidden="true">↗</span>
-                  <b>{request.recipient}</b>
-                </div>
-                {request.responded ? (
-                  <span className="response-received">Ответ получен</span>
-                ) : (
-                  <span className="response-pending">Ответ ожидается</span>
-                )}
-              </div>
-              {request.responded && (
-                <div className="external-response-details">
-                  <span>Получен: {formatDate(request.responded)}</span>
-                  {request.responseLetterNumber && (
-                    <span>Письмо № {request.responseLetterNumber}</span>
-                  )}
-                </div>
-              )}
-              {documents.length ? (
-                <div className="external-response-files">
-                  <span>Вложения</span>
-                  {documents.map((document, index) => (
-                    <div
-                      className="external-response-file"
-                      key={`${document.name}-${document.date}-${index}`}
-                    >
-                      {document.dataUrl ? (
-                        <a href={document.dataUrl} download={document.filename || document.name}>
-                          {document.name}
-                        </a>
-                      ) : (
-                        <Button onClick={() => onDocument(document.kind, document)}>
-                          Просмотр
-                        </Button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : request.responded ? (
-                <span className="external-response-no-files">Файлы не приложены</span>
-              ) : null}
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
 export default function CaseWorkspace({
   c,
   tab,
@@ -878,12 +781,11 @@ export default function CaseWorkspace({
                       ),
                     },
                     {
-                      title: "Ответ Кабинета Объекта",
+                      title: "Ответ других органов",
                       requests: c.requests.filter(
                         (request) =>
                           !!request.sent &&
-                          request.template === "other" &&
-                          request.saqRecipient === "subject",
+                          request.template === "other",
                       ),
                     },
                     {
@@ -976,14 +878,6 @@ export default function CaseWorkspace({
                       );
                     },
                   )}
-                {(["demo-superuser", "work", "commission", "dvga", "kvga"] as Role[]).includes(role) && (
-                  <OtherOrganResponses
-                    c={c}
-                    role={role}
-                    onAction={onAction}
-                    onDocument={onDocument}
-                  />
-                )}
                 {(!hideRequestBlocks || role === "commission") && c.requests.length > 0 && (
                   <>
                     {[
@@ -1187,14 +1081,6 @@ export default function CaseWorkspace({
                     )}
                   </div>
                   ))}
-                {(["demo-superuser", "work"] as Role[]).includes(role) && (
-                  <OtherOrganResponses
-                    c={c}
-                    role={role}
-                    onAction={onAction}
-                    onDocument={onDocument}
-                  />
-                )}
               </>
             )}
             {tab === "history" && (

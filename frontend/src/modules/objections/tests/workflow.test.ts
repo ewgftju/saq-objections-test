@@ -1393,17 +1393,12 @@ test("внешний ответ можно зафиксировать до по�
   h.run("record-external-response", "work", {
     externalRequestId: external.id,
     date: "2026-09-09",
-    responseLetterNumber: "15-02/184",
   });
   assert.equal(
     h.c.requests.find((request) => request.id === external.id)?.responded,
     "2026-09-09",
   );
   assert.notEqual(h.c.status, "materials");
-  assert.equal(
-    h.c.requests.find((request) => request.id === external.id)?.responseLetterNumber,
-    "15-02/184",
-  );
 
   h.run(
     "fill-request-response",
