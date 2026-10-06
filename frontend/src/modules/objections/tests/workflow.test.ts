@@ -1299,6 +1299,36 @@ test("рабочий орган видит статусы ответов по н
   assert.match(html, /Ответ получен/);
 });
 
+test("кабинет объекта получает возможность направить ответ только после подписи запроса", () => {
+  const h = harness();
+  screen(h);
+  h.run("request", "work", {
+    recipient: "КВГА",
+    deadline: "2026-09-10T18:00",
+  });
+  h.run("request-other", "work", {
+    saqRecipient: "subject",
+    customRequestText: "Предоставить пояснения и документы.",
+  });
+
+  assert.ok(
+    !additionalActions(h.c).some((action) => action.action === "subject-response"),
+  );
+
+  h.run("send-request-approval", "work");
+  h.c.requests.forEach((request) =>
+    h.run("approve-request", "deputy", { requestId: request.id, approved: "on" }),
+  );
+  const subjectRequest = h.c.requests.find(
+    (request) => request.saqRecipient === "subject",
+  )!;
+  h.run("sign-request", "director", { requestId: subjectRequest.id });
+
+  assert.ok(
+    additionalActions(h.c).some((action) => action.action === "subject-response"),
+  );
+});
+
 test("справка редактируется с созданием новой версии перед формированием протокола", () => {
   const h = harness();
   const point = h.c.issues.find((item) => item.disputed)!;

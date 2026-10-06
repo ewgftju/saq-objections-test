@@ -250,6 +250,7 @@ export default function CaseWorkspace({
     (request) =>
       request.template === "other" &&
       request.saqRecipient === "subject" &&
+      Boolean(request.sent) &&
       !request.responded,
   );
   return (
