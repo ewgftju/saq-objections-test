@@ -208,6 +208,85 @@ function AuthorityRequestMaterials({
   );
 }
 
+function OtherOrganResponses({
+  c,
+  role,
+  onAction,
+  onDocument,
+}: {
+  c: ObjectionCase;
+  role: Role;
+  onAction: (action: Action, role: Role, requestId?: string) => void;
+  onDocument: (kind: string, document?: CaseDocument) => void;
+}) {
+  const requests = c.requests.filter(
+    (request) =>
+      request.template === "other" &&
+      !request.saqRecipient &&
+      Boolean(request.sent),
+  );
+  if (!requests.length) return null;
+  const canRecord =
+    (role === "demo-superuser" || role === "work") &&
+    requests.some((request) => !request.responded);
+
+  return (
+    <section className="request-documents-section">
+      <div className="section-heading">
+        <h4>Ответ других органов</h4>
+        {canRecord && (
+          <Button primary onClick={() => onAction("record-external-response", "work")}>
+            Вложить ответ
+          </Button>
+        )}
+      </div>
+      <div className="request-documents-list">
+        {requests.map((request) => {
+          const documents = c.documents.filter(
+            (document) =>
+              document.requestId === request.id &&
+              ["response-attachment", "position"].includes(document.kind),
+          );
+          return (
+            <section className="response-receipt-response" key={request.id}>
+              <b>{request.recipient}</b>
+              {request.responded ? (
+                <span className="response-received">
+                  Ответ получен {formatDate(request.responded)}
+                  {request.responseLetterNumber
+                    ? ` · №${request.responseLetterNumber}`
+                    : ""}
+                </span>
+              ) : (
+                <span className="response-pending">Ответ ожидается</span>
+              )}
+              {documents.length ? (
+                <ul>
+                  {documents.map((document, index) => (
+                    <li key={`${document.name}-${document.date}-${index}`}>
+                      {document.dataUrl ? (
+                        <a href={document.dataUrl} download={document.filename || document.name}>
+                          {document.name}
+                        </a>
+                      ) : (
+                        <Button onClick={() => onDocument(document.kind, document)}>
+                          Просмотр
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : request.responded ? (
+                <span className="muted">Файлы не приложены</span>
+              ) : null}
+            </section>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function CaseWorkspace({
   c,
   tab,
@@ -781,11 +860,12 @@ export default function CaseWorkspace({
                       ),
                     },
                     {
-                      title: "Ответ других органов",
+                      title: "Ответ Кабинета Объекта",
                       requests: c.requests.filter(
                         (request) =>
                           !!request.sent &&
-                          request.template === "other",
+                          request.template === "other" &&
+                          request.saqRecipient === "subject",
                       ),
                     },
                     {
@@ -878,6 +958,14 @@ export default function CaseWorkspace({
                       );
                     },
                   )}
+                {(["demo-superuser", "work", "commission", "dvga", "kvga"] as Role[]).includes(role) && (
+                  <OtherOrganResponses
+                    c={c}
+                    role={role}
+                    onAction={onAction}
+                    onDocument={onDocument}
+                  />
+                )}
                 {(!hideRequestBlocks || role === "commission") && c.requests.length > 0 && (
                   <>
                     {[
@@ -1081,6 +1169,14 @@ export default function CaseWorkspace({
                     )}
                   </div>
                   ))}
+                {(["demo-superuser", "work"] as Role[]).includes(role) && (
+                  <OtherOrganResponses
+                    c={c}
+                    role={role}
+                    onAction={onAction}
+                    onDocument={onDocument}
+                  />
+                )}
               </>
             )}
             {tab === "history" && (

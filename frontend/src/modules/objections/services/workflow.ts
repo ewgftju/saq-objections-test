@@ -1133,6 +1133,7 @@ export function applyAction(
       if (!request)
         throw new Error("Выберите подписанный запрос другого органа, ожидающий ответа");
       request.responded = date;
+      request.responseLetterNumber = text("responseLetterNumber", "Номер письма ответа");
       const pausedDays = advanceAfterResponses(c, date);
       title = `Ответ ${request.recipient} зафиксирован`;
       note =

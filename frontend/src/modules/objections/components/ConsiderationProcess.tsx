@@ -215,6 +215,7 @@ export default function ConsiderationProcess({
       option.action !== "vote" &&
       option.action !== "fill-meeting-certificate" &&
       option.action !== "supplement" &&
+      option.action !== "record-external-response" &&
       option.action !== "court" &&
       option.action !== "receipt",
   );
@@ -241,13 +242,6 @@ export default function ConsiderationProcess({
       c.status,
     );
   const sentRequests = c.requests.filter((request) => Boolean(request.sent));
-  const pendingExternalRequest = c.requests.find(
-    (request) =>
-      request.template === "other" &&
-      !request.saqRecipient &&
-      Boolean(request.sent) &&
-      !request.responded,
-  );
   const pendingResponses = sentRequests.filter((request) => !request.responded)
     .length;
   const awaitingAttendancePoll = c.status === "certificate_approved";
@@ -548,16 +542,6 @@ export default function ConsiderationProcess({
               );
             })}
           </ul>
-          {pendingExternalRequest && (
-            <div className="consideration-task-action">
-              <Button
-                primary
-                onClick={() => onAction("record-external-response", "work")}
-              >
-                Вложить ответ другого органа
-              </Button>
-            </div>
-          )}
         </Notice>
       ) : materialsAvailableForCommission ? (
         <Notice>
