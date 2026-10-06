@@ -295,7 +295,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     certificate_approval: {
       action: "approve-certificate",
       label: "Согласовать справку",
-      role: "director",
+      role: "deputy",
     },
     certificate_signed: {
       action: "sign-certificate",
@@ -1164,12 +1164,21 @@ export function applyAction(
         c.result = null;
         c.votes = null;
         c.meeting = null;
-        note = "Справка сформирована и направлена для ознакомления членам апелляционной комиссии.";
+        note = "Справка сформирована и направлена заместителю директора ДАВГА на согласование.";
         doc(
           "Справка по результатам изучения и анализа возражения",
           "certificate",
           note,
         );
+        next.notifications.push({
+          id: `notification-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient: ROLES.deputy,
+          recipientRole: "deputy",
+          date,
+          read: false,
+          text: `В ваш кабинет поступила справка по обращению №${c.appealNumber || c.id} для согласования.`,
+        });
         break;
       }
       for (const point of disputed(c)) {

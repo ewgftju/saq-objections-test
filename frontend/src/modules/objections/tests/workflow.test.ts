@@ -1616,7 +1616,7 @@ test("справка формируется с отдельными довода
     }),
   );
   assert.match(certificateApprovalHtml, /Заместитель директора ДАВГА/);
-  h.run("approve-certificate", "director");
+  h.run("approve-certificate", "deputy");
   assert.equal(h.c.status, "certificate_signed");
   assert.equal(nextAction(h.c)?.action, "sign-certificate");
   h.run("sign-certificate", "work");
