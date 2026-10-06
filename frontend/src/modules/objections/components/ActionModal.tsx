@@ -369,14 +369,6 @@ export default function ActionModal({
   const recommendationTextField = definition.fields.find(
     (field) => field.name === "recommendationText",
   );
-  const authorityRequestForConfirmation = c.requests.find(
-    (request) =>
-      !!request.responded &&
-      !request.confirmed &&
-      (request.template === "dvga" ||
-        request.recipient.toUpperCase().includes("ДВГА") ||
-        request.recipient.toUpperCase().includes("КВГА")),
-  );
   const authorityRequestForResponse = c.requests.find(
     (request) =>
       !request.responded &&
@@ -388,29 +380,36 @@ export default function ActionModal({
           ? request.recipient.toUpperCase().includes("КВГА")
           : request.recipient.toUpperCase().includes("ДВГА"))),
   );
-  const authorityAppendix = authorityRequestForConfirmation
-    ? c.documents.find(
-        (document) =>
-          document.kind === "authority-response-appendix" &&
-          document.requestId === authorityRequestForConfirmation.id,
-      ) ||
-      c.documents.find(
-        (document) =>
-          document.kind === "request-appendix" &&
-          document.requestId === authorityRequestForConfirmation.id,
-      )
-    : undefined;
-  const authorityResponseFiles = authorityRequestForConfirmation
-    ? c.documents.filter(
-        (document) =>
-          document.kind === "authority-response-attachment" &&
-          document.requestId === authorityRequestForConfirmation.id,
-      )
-    : [];
   const isAuthorityRequest = (request: ObjectionCase["requests"][number]) =>
     request.template === "dvga" ||
     request.recipient.toUpperCase().includes("ДВГА") ||
     request.recipient.toUpperCase().includes("КВГА");
+  const saqResponsesForConfirmation = c.requests.filter(
+    (request) =>
+      (isAuthorityRequest(request) && Boolean(request.responseSigned)) ||
+      (request.saqRecipient === "subject" && Boolean(request.responded)),
+  );
+  const responseAppendix = (request: ObjectionCase["requests"][number]) =>
+    c.documents.find(
+      (document) =>
+        document.kind === "authority-response-appendix" && document.requestId === request.id,
+    ) ||
+    c.documents.find(
+      (document) => document.kind === "request-appendix" && document.requestId === request.id,
+    );
+  const responseFiles = (request: ObjectionCase["requests"][number]) =>
+    c.documents.filter(
+      (document) =>
+        document.requestId === request.id &&
+        (document.kind === "authority-response-attachment" ||
+          document.kind === "subject-response-attachment"),
+    );
+  const hasPendingExternalResponse = c.requests.some(
+    (request) =>
+      !isAuthorityRequest(request) &&
+      request.saqRecipient !== "subject" &&
+      !request.responded,
+  );
   const responseStatus = (request: ObjectionCase["requests"][number]) => {
     if (request.confirmed) return "Получен и зафиксирован";
     if (request.saqRecipient === "subject" && request.responded)
@@ -421,21 +420,19 @@ export default function ActionModal({
       return "Ответ готовится в ДВГА/КВГА";
     return "Ожидается ответ";
   };
-  const openAppendix = () => {
-    if (!authorityAppendix) return;
+  const openAppendix = (appendix: NonNullable<ObjectionCase["documents"][number]>) => {
     const popup = window.open("", "_blank");
     if (!popup) {
       setError("Не удалось открыть приложение. Разрешите всплывающие окна в браузере.");
       return;
     }
-    popup.document.write(appendixDocumentHtml(c, authorityAppendix));
+    popup.document.write(appendixDocumentHtml(c, appendix));
     popup.document.close();
   };
-  const downloadAppendix = () => {
-    if (!authorityAppendix) return;
+  const downloadAppendix = (appendix: NonNullable<ObjectionCase["documents"][number]>) => {
     downloadFile(
-      `${c.id}-${authorityAppendix.name}.html`,
-      appendixDocumentHtml(c, authorityAppendix),
+      `${c.id}-${appendix.name}.html`,
+      appendixDocumentHtml(c, appendix),
       "text/html;charset=utf-8",
     );
   };
@@ -1106,8 +1103,9 @@ export default function ActionModal({
         ) : action === "position" ? (
           <>
             <Notice tone="amber">
-              Все ожидаемые ответы поступили. Одним действием зафиксируйте дату
-              их получения и вложите все полученные файлы.
+              {hasPendingExternalResponse
+                ? "Ответы из кабинетов SAQ поступили. Зафиксируйте дату их получения и приложите ответ внешнего адресата."
+                : "Все ожидаемые ответы поступили. Одним действием зафиксируйте дату их получения и вложите все полученные файлы."}
             </Notice>
             <section className="response-receipt-statuses" aria-label="Статусы ответов по запросам">
               <b>Статус ответов по запросам</b>
@@ -1140,52 +1138,64 @@ export default function ActionModal({
                       Ответы по направленным запросам
                     </b>
                     <small>
-                      {authorityRequestForConfirmation
+                      {saqResponsesForConfirmation.length
                         ? "Электронные ответы и приложенные документы"
                         : "Ответы, полученные вне SAQ"}
                     </small>
                   </div>
                   <em>ПОСТУПИЛИ</em>
                 </div>
-                {authorityRequestForConfirmation ? (
+                {saqResponsesForConfirmation.length ? (
                   <div className="response-receipt-materials">
-                    <b>Заполненное приложение</b>
-                    {authorityAppendix ? (
-                      <div className="response-appendix-actions">
-                        <span>{authorityAppendix.name}</span>
-                        <div>
-                          <Button type="button" onClick={openAppendix}>
-                            Открыть
-                          </Button>
-                          <Button type="button" onClick={downloadAppendix}>
-                            Скачать
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="muted">Приложение не найдено</span>
-                    )}
-                    <b>Подтверждающие документы</b>
-                    {authorityResponseFiles.length ? (
-                      <ul>
-                        {authorityResponseFiles.map((document) =>
-                          document.dataUrl ? (
-                            <li key={document.name}>
-                              <a
-                                href={document.dataUrl}
-                                download={document.filename || document.name}
-                              >
-                                {document.name}
-                              </a>
-                            </li>
+                    {saqResponsesForConfirmation.map((request) => {
+                      const appendix = responseAppendix(request);
+                      const files = responseFiles(request);
+                      return (
+                        <section key={request.id} className="response-receipt-response">
+                          <b>{request.recipient}</b>
+                          {isAuthorityRequest(request) && (
+                            <>
+                              <span className="response-receipt-label">Заполненное приложение</span>
+                              {appendix ? (
+                                <div className="response-appendix-actions">
+                                  <span>{appendix.name}</span>
+                                  <div>
+                                    <Button type="button" onClick={() => openAppendix(appendix)}>
+                                      Открыть
+                                    </Button>
+                                    <Button type="button" onClick={() => downloadAppendix(appendix)}>
+                                      Скачать
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="muted">Приложение не найдено</span>
+                              )}
+                            </>
+                          )}
+                          <span className="response-receipt-label">
+                            {isAuthorityRequest(request) ? "Подтверждающие документы" : "Файлы ответа"}
+                          </span>
+                          {files.length ? (
+                            <ul>
+                              {files.map((document) =>
+                                document.dataUrl ? (
+                                  <li key={`${request.id}-${document.name}`}>
+                                    <a href={document.dataUrl} download={document.filename || document.name}>
+                                      {document.name}
+                                    </a>
+                                  </li>
+                                ) : (
+                                  <li key={`${request.id}-${document.name}`}>{document.name}</li>
+                                ),
+                              )}
+                            </ul>
                           ) : (
-                            <li key={document.name}>{document.name}</li>
-                          ),
-                        )}
-                      </ul>
-                    ) : (
-                      <span className="muted">Файлы не приложены</span>
-                    )}
+                            <span className="muted">Файлы не приложены</span>
+                          )}
+                        </section>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="response-receipt-empty">
