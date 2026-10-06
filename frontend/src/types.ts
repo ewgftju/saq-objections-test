@@ -181,6 +181,8 @@ export interface CaseDocument {
     hearing: Hearing | null;
     delivery: Delivery | null;
     certificate: CaseCertificate | null;
+    /** Адресаты и их ответы на момент формирования версии документа. */
+    requests?: CaseRequest[];
   };
 }
 
