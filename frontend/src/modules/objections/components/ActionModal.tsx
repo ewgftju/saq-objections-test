@@ -131,6 +131,17 @@ function certificateBasisForPoint(
   ].join("\n\n");
 }
 
+function protocolReasonForMember(
+  c: ObjectionCase,
+  point: ReturnType<typeof disputed>[number],
+  memberId: string,
+) {
+  const basis = certificateBasisForPoint(c, point);
+  const memberReason = c.votes?.[point.id]?.voteReasons?.[memberId]?.trim();
+  if (!memberReason || memberReason === basis) return basis;
+  return `${basis}\n\nДополнительное обоснование члена АК:\n${memberReason}`;
+}
+
 function ProtocolVotesFields({
   c,
   members,
@@ -182,7 +193,7 @@ function ProtocolVotesFields({
                       <textarea
                         name={reasonName}
                         defaultValue={values[reasonName] || ""}
-                        rows={2}
+                        rows={8}
                         required
                         aria-label={`Обоснование ${member.name} по пункту ${point.number}`}
                       />
@@ -323,8 +334,7 @@ export default function ActionModal({
           ],
           [
             `protocolReason_${point.id}_${member.id}`,
-            c.votes?.[point.id]?.voteReasons?.[member.id] ||
-              certificateBasisForPoint(c, point),
+            protocolReasonForMember(c, point, member.id),
           ],
         ]),
       ),
