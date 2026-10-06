@@ -178,6 +178,13 @@ function ProtocolVotesFields({
                 const voteName = `protocolVote_${point.id}_${member.id}`;
                 const reasonName = `protocolReason_${point.id}_${member.id}`;
                 const vote = normalizeVoteChoice(values[voteName]);
+                const certificateBasis = certificateBasisForPoint(c, point);
+                const enteredReason = values[reasonName] || "";
+                const reason = enteredReason.includes(certificateBasis)
+                  ? enteredReason
+                  : enteredReason
+                    ? `${certificateBasis}\n\nДополнительное обоснование члена АК:\n${enteredReason}`
+                    : certificateBasis;
                 return (
                   <tr key={`${point.id}-${member.id}`}>
                     <td>{index === 0 ? point.number : ""}</td>
@@ -192,7 +199,7 @@ function ProtocolVotesFields({
                     <td>
                       <textarea
                         name={reasonName}
-                        defaultValue={values[reasonName] || ""}
+                        value={reason}
                         rows={8}
                         required
                         aria-label={`Обоснование ${member.name} по пункту ${point.number}`}
