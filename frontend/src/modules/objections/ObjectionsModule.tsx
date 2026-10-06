@@ -875,7 +875,14 @@ export default function ObjectionsModule() {
                   ? request.recipient.toUpperCase().includes("КВГА")
                   : request.recipient.toUpperCase().includes("ДВГА"))),
           )?.id
-        : action === "position" || action === "subject-response"
+        : action === "subject-response"
+          ? c.requests.find(
+              (request) =>
+                request.template === "other" &&
+                request.saqRecipient === "subject" &&
+                !request.responded,
+            )?.id
+          : action === "position"
           ? c.requests.find(
               (request) =>
                 request.template === "other" && !request.confirmed,
