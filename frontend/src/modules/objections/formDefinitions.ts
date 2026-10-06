@@ -302,6 +302,7 @@ export function actionForm(
             )
             .map((request) => [request.id, `Запрос в ${request.recipient}`]),
         ),
+        input("responseLetterNumber", "Номер письма ответа"),
       );
       note =
         "Вложите полученный ответ. Общий этап обращения не изменится, пока не поступят ответы по остальным запросам.";

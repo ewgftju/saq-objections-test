@@ -201,6 +201,8 @@ export interface CaseRequest {
   approved?: string;
   sent?: string;
   responded?: string;
+  /** Реквизит письма внешнего органа при ручной фиксации ответа. */
+  responseLetterNumber?: string;
   /** Ответ органа хранится в запросе и недоступен другому адресату. */
   authorityResponses?: Record<
     string,
