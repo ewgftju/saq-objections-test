@@ -9,7 +9,7 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 9;
+const CURRENT_VERSION = 10;
 
 // Version 6 distinguishes incoming SAQ appeals from manually created appeals.
 
@@ -35,7 +35,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, 8, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, 8, 9, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -119,13 +119,29 @@ export function createDemoRepository(
           const otherRequest = requests.find(
             (request) => request.template === "other" && !request.saqRecipient,
           );
-          const documents = otherRequest
+          const documentsAfterExternalResponseMigration = otherRequest
             ? normalized.documents.map((document) =>
                 document.kind === "response-attachment"
                   ? { ...document, requestId: otherRequest.id }
                   : document,
               )
             : normalized.documents;
+          // Ранние версии привязывали файл ответа из кабинета Объекта
+          // к первому запросу «иной орган». Переносим его к фактическому
+          // запросу в кабинет SAQ, чтобы он был виден рабочему органу.
+          const subjectRequests = requests.filter(
+            (request) =>
+              request.template === "other" && request.saqRecipient === "subject",
+          );
+          const documents = documentsAfterExternalResponseMigration.map((document) => {
+            if (document.kind !== "subject-response-attachment") return document;
+            const subjectRequest =
+              subjectRequests.find((request) => request.responded === document.date) ||
+              (subjectRequests.length === 1 ? subjectRequests[0] : undefined);
+            return subjectRequest && document.requestId !== subjectRequest.id
+              ? { ...document, requestId: subjectRequest.id }
+              : document;
+          });
           return {
             ...normalized,
             status,
