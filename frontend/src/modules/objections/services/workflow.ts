@@ -428,6 +428,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       (request) =>
         request.template === "other" &&
         request.saqRecipient === "subject" &&
+        Boolean(request.sent) &&
         !request.responded,
     )
   )
@@ -1121,6 +1122,7 @@ export function applyAction(
         (item) =>
           item.template === "other" &&
           item.saqRecipient === "subject" &&
+          Boolean(item.sent) &&
           !item.responded,
       );
       if (!request) throw new Error("Нет запроса, ожидающего ответа Объекта");
