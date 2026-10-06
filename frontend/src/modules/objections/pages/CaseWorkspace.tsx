@@ -229,18 +229,24 @@ function OtherOrganResponses({
   const canRecord =
     (role === "demo-superuser" || role === "work") &&
     requests.some((request) => !request.responded);
+  const receivedCount = requests.filter((request) => request.responded).length;
 
   return (
-    <section className="request-documents-section">
-      <div className="section-heading">
-        <h4>Ответ других органов</h4>
+    <section className="request-documents-section external-response-section">
+      <div className="external-response-header">
+        <div>
+          <h4>Ответы других органов</h4>
+          <span className="external-response-summary">
+            Получено: {receivedCount} из {requests.length}
+          </span>
+        </div>
         {canRecord && (
           <Button primary onClick={() => onAction("record-external-response", "work")}>
             Вложить ответ
           </Button>
         )}
       </div>
-      <div className="request-documents-list">
+      <div className="external-response-list">
         {requests.map((request) => {
           const documents = c.documents.filter(
             (document) =>
@@ -248,22 +254,34 @@ function OtherOrganResponses({
               ["response-attachment", "position"].includes(document.kind),
           );
           return (
-            <section className="response-receipt-response" key={request.id}>
-              <b>{request.recipient}</b>
-              {request.responded ? (
-                <span className="response-received">
-                  Ответ получен {formatDate(request.responded)}
-                  {request.responseLetterNumber
-                    ? ` · №${request.responseLetterNumber}`
-                    : ""}
-                </span>
-              ) : (
-                <span className="response-pending">Ответ ожидается</span>
+            <article className="external-response-card" key={request.id}>
+              <div className="external-response-card-header">
+                <div className="external-response-recipient">
+                  <span aria-hidden="true">↗</span>
+                  <b>{request.recipient}</b>
+                </div>
+                {request.responded ? (
+                  <span className="response-received">Ответ получен</span>
+                ) : (
+                  <span className="response-pending">Ответ ожидается</span>
+                )}
+              </div>
+              {request.responded && (
+                <div className="external-response-details">
+                  <span>Получен: {formatDate(request.responded)}</span>
+                  {request.responseLetterNumber && (
+                    <span>Письмо № {request.responseLetterNumber}</span>
+                  )}
+                </div>
               )}
               {documents.length ? (
-                <ul>
+                <div className="external-response-files">
+                  <span>Вложения</span>
                   {documents.map((document, index) => (
-                    <li key={`${document.name}-${document.date}-${index}`}>
+                    <div
+                      className="external-response-file"
+                      key={`${document.name}-${document.date}-${index}`}
+                    >
                       {document.dataUrl ? (
                         <a href={document.dataUrl} download={document.filename || document.name}>
                           {document.name}
@@ -273,13 +291,13 @@ function OtherOrganResponses({
                           Просмотр
                         </Button>
                       )}
-                    </li>
+                    </div>
                   ))}
-                </ul>
+                </div>
               ) : request.responded ? (
-                <span className="muted">Файлы не приложены</span>
+                <span className="external-response-no-files">Файлы не приложены</span>
               ) : null}
-            </section>
+            </article>
           );
         })}
       </div>
