@@ -242,7 +242,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     request_approval: {
       action: "approve-request",
       label: "Согласовать запрос",
-      role: "director",
+      role: "deputy",
     },
     request_signed: {
       action: "sign-request",
@@ -669,7 +669,16 @@ export function applyAction(
         );
       c.status = "request_approval";
       title = "Сформированные запросы направлены на согласование";
-      note = "Все сформированные запросы и приложения направлены директору ДАВГА.";
+      note = "Все сформированные запросы и приложения направлены заместителю директора ДАВГА.";
+      next.notifications.push({
+        id: `notification-${c.id}-${next.notifications.length + 1}`,
+        caseId: c.id,
+        recipient: ROLES.deputy,
+        recipientRole: "deputy",
+        date,
+        read: false,
+        text: `В ваш кабинет поступили запросы по обращению №${c.appealNumber || c.id} для согласования.`,
+      });
       break;
     }
     case "approve-request": {
@@ -690,7 +699,17 @@ export function applyAction(
       title = `Запрос в ${request.recipient} согласован`;
       note = remainingRequests.length
         ? `Осталось согласовать запросов: ${remainingRequests.length}.`
-        : "Все запросы согласованы и ожидают подписи директора ДАВГА.";
+        : "Все запросы согласованы и направлены в кабинет директора ДАВГА для подписания.";
+      if (!remainingRequests.length)
+        next.notifications.push({
+          id: `notification-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient: ROLES.director,
+          recipientRole: "director",
+          date,
+          read: false,
+          text: `В ваш кабинет поступили согласованные запросы по обращению №${c.appealNumber || c.id} для подписания.`,
+        });
       break;
     }
     case "sign-request": {

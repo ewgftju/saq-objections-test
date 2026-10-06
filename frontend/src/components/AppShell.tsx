@@ -142,7 +142,7 @@ export default function AppShell({
         <div className="demo-bar saq-demo-bar">
           <div className="saq-demo-controls">
             <label className="role-control">
-              <span>Исполнитель</span>
+              <span>Кабинет</span>
               <select
                 value={role}
                 onChange={(event) => onRoleChange(event.target.value as Role)}
