@@ -584,6 +584,7 @@ export function addDocument(
       hearing: c.hearing || null,
       delivery: c.delivery || null,
       certificate: c.certificate || null,
+      requests: c.requests,
     }),
   });
 }
