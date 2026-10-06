@@ -285,6 +285,27 @@ export function actionForm(
       note =
         "Вложите все полученные от адресата документы и сохраните подтверждение поступления ответа.";
       break;
+    case "record-external-response":
+      title = "Вложить ответ другого органа";
+      fields[0] = input("date", "Дата получения ответа", date, "date");
+      fields.push(
+        select(
+          "externalRequestId",
+          "Запрос другого органа",
+          c.requests
+            .filter(
+              (request) =>
+                request.template === "other" &&
+                !request.saqRecipient &&
+                Boolean(request.sent) &&
+                !request.responded,
+            )
+            .map((request) => [request.id, `Запрос в ${request.recipient}`]),
+        ),
+      );
+      note =
+        "Вложите полученный ответ. Общий этап обращения не изменится, пока не поступят ответы по остальным запросам.";
+      break;
     case "subject-response":
       title = "Направить ответ";
       note = "Вложите ответ на запрос. После отправки он поступит в кабинет рабочего органа.";

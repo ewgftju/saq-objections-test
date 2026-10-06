@@ -475,6 +475,7 @@ export type Action =
   | "commission-vote"
   | "fill-request-response"
   | "subject-response"
+  | "record-external-response"
   | "position"
   | "analysis"
   | "edit-certificate"
