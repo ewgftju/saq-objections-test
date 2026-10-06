@@ -125,11 +125,11 @@ const TASK_HELP: Partial<Record<Action, string>> = {
   screen:
     "Проверьте заявителя, исходный документ, срок подачи и компетенцию органа. Назначьте ответственного и зафиксируйте основание принятия к рассмотрению.",
   request:
-    "Сформируйте один или оба вида запросов. Когда все документы готовы, направьте их директору ДАВГА на согласование.",
+    "Сформируйте один или оба вида запросов. Когда все документы готовы, направьте их заместителю директора ДАВГА на согласование.",
   "send-request-approval":
-    "Проверьте сформированные запрос и приложение, затем направьте их директору ДАВГА на согласование.",
+    "Проверьте сформированные запросы и приложения, затем направьте их заместителю директора ДАВГА на согласование.",
   "approve-request":
-    "Согласуйте каждый сформированный запрос отдельно. После согласования всех запросов они станут доступны для подписания.",
+    "Согласуйте каждый сформированный запрос отдельно. После согласования всех запросов они поступят директору ДАВГА для подписания.",
   "sign-request":
     "Подпишите каждый согласованный запрос отдельно. Каждый подписанный запрос сразу будет направлен адресату.",
   "fill-request-response":
@@ -225,6 +225,7 @@ export default function ConsiderationProcess({
   const taskTitle =
     next?.action === "position" ? "Зафиксировать полученный ответ" : next?.label;
   const taskOwner =
+    next?.action === "approve-request" ||
     next?.action === "approve-certificate" ||
     next?.action === "approve-meeting-certificate"
       ? "Заместитель директора ДАВГА"
@@ -249,6 +250,17 @@ export default function ConsiderationProcess({
   const currentRequestSubstep = requestSubstep(c.status);
   const currentAnalysisSubstep = analysisSubstep(c.status);
   const currentDecisionSubstep = decisionSubstep(c.status);
+  const workRequestStatus =
+    role === "work" &&
+    (c.status === "request_approval" || c.status === "request_signed");
+  const workRequestStatusLabel =
+    c.status === "request_approval" ? "На согласовании" : "На подписании";
+  const workRequestStatusOwner =
+    c.status === "request_approval"
+      ? "Заместитель директора ДАВГА"
+      : "Директор ДАВГА";
+  const canPerformNextAction =
+    role === "demo-superuser" || role === next?.role;
 
   return (
     <section
@@ -319,7 +331,46 @@ export default function ConsiderationProcess({
           )}
         </>
       )}
-      {next ? (
+      {workRequestStatus ? (
+        <Notice tone="amber">
+          <div className="request-response-heading">
+            <div>
+              <span className="request-response-eyebrow">Запросы направлены</span>
+              <strong>{workRequestStatusLabel}</strong>
+            </div>
+            <span className="request-response-summary">
+              Ожидает действия:{" "}
+              <b>
+                {
+                  c.requests.filter((request) =>
+                    c.status === "request_approval"
+                      ? !request.approved
+                      : !request.sent,
+                  ).length
+                }
+              </b>
+            </span>
+          </div>
+          <ul className="request-response-status-list">
+            {c.requests.map((request) => (
+              <li className="is-pending" key={request.id}>
+                <span className="request-response-marker" aria-hidden="true">…</span>
+                <span className="request-response-recipient">
+                  <strong>{request.recipient}</strong>
+                  <small>Направлен {formatDate(request.date)}</small>
+                </span>
+                <span className="response-pending">
+                  <span className="response-status-dot" aria-hidden="true" />
+                  {workRequestStatusLabel}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="request-status-owner">
+            Действие выполняется в кабинете: <strong>{workRequestStatusOwner}</strong>.
+          </p>
+        </Notice>
+      ) : next ? (
         <div className="consideration-task">
           <div>
             <span className="consideration-eyebrow">Текущая задача</span>
@@ -330,7 +381,7 @@ export default function ConsiderationProcess({
             </p>
           </div>
           <div className="consideration-task-action">
-            {pendingRequestActions.length > 0 ? (
+            {canPerformNextAction && pendingRequestActions.length > 0 ? (
               <div className="request-actions">
                 {pendingRequestActions.map((request) => (
                   <Button
@@ -344,7 +395,7 @@ export default function ConsiderationProcess({
                   </Button>
                 ))}
               </div>
-            ) : (
+            ) : canPerformNextAction ? (
               (next.action !== "commission-vote" ||
                 (role === "demo-superuser" || role === "commission")) && (
                 <Button
@@ -360,7 +411,7 @@ export default function ConsiderationProcess({
                   {next.label}
                 </Button>
               )
-            )}
+            ) : null}
             {meetingCertificateAvailable && (
               <Button primary onClick={() => onAction("fill-meeting-certificate", "work")}>
                 Заполнить справку

@@ -6,6 +6,7 @@ export const TYPES = {
 export const ROLES = {
   "demo-superuser": "Демо-суперпользователь",
   work: "Рабочий орган",
+  deputy: "Заместитель директора ДАВГА",
   director: "Директор ДАВГА",
   dvga: "ДВГА",
   kvga: "КВГА",

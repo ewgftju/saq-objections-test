@@ -1477,6 +1477,11 @@
   color: var(--muted);
   font-size: 12px;
 }
+.request-status-owner {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
 .response-received,
 .response-pending {
   display: inline-flex;

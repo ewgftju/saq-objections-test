@@ -1,6 +1,7 @@
 export type CaseType = "notice" | "audit" | "control";
 export type Role =
   | "work"
+  | "deputy"
   | "director"
   | "dvga"
   | "kvga"

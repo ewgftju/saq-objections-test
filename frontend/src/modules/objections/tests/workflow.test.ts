@@ -101,7 +101,7 @@ function prepare(h: Harness, partial = false) {
     deadline: "2026-09-10T18:00",
   });
   h.run("send-request-approval", "work");
-  h.run("approve-request", "director", { approved: "on" });
+  h.run("approve-request", "deputy", { approved: "on" });
   h.run("sign-request", "director");
   h.run(
     "fill-request-response",
@@ -424,7 +424,7 @@ test("ответ ДВГА доступен после согласования, 
     customRequestText: "Просим предоставить заключение.",
   });
   h.run("send-request-approval", "work");
-  h.run("approve-request", "director", { approved: "on" });
+  h.run("approve-request", "deputy", { approved: "on" });
   assert.equal(nextAction(h.c)?.action, "sign-request");
   h.run("sign-request", "director");
   assert.equal(nextAction(h.c)?.action, "fill-request-response");
@@ -457,7 +457,7 @@ test("ответ КВГА сначала фиксируется инициато
     customRequestText: "Просим предоставить заключение.",
   });
   h.run("send-request-approval", "work");
-  h.run("approve-request", "director", { approved: "on" });
+  h.run("approve-request", "deputy", { approved: "on" });
   h.run("sign-request", "director");
   h.run(
     "fill-request-response",
@@ -492,7 +492,7 @@ test("ответ КВГА без внешних запросов автомат�
   screen(h);
   h.run("request", "work", { recipient: "КВГА" });
   h.run("send-request-approval", "work");
-  h.run("approve-request", "director", { approved: "on" });
+  h.run("approve-request", "deputy", { approved: "on" });
   h.run("sign-request", "director");
   h.run(
     "fill-request-response",
@@ -519,7 +519,7 @@ test("фиксация ответа продлевает срок на пери�
   screen(h);
   h.run("request", "work", { recipient: "КВГА" });
   h.run("send-request-approval", "work");
-  h.run("approve-request", "director", { approved: "on" });
+  h.run("approve-request", "deputy", { approved: "on" });
   h.run("sign-request", "director");
   const deadlineBeforePause = reviewDeadline(h.c);
   h.run(
@@ -583,7 +583,7 @@ test("запросы в ДВГА и КВГА формируются, напра�
   );
 
   h.run("send-request-approval", "work");
-  h.run("approve-request", "director", { approved: "on" });
+  h.run("approve-request", "deputy", { approved: "on" });
   h.run("sign-request", "director");
   assert.ok(h.c.requests.every((request) => request.sent === h.state.date));
   assert.ok(
@@ -1270,7 +1270,7 @@ test("рабочий орган видит статусы ответов по н
     deadline: "2026-09-10T18:00",
   });
   h.run("send-request-approval", "work");
-  h.run("approve-request", "director", { approved: "on" });
+  h.run("approve-request", "deputy", { approved: "on" });
   h.run("sign-request", "director");
   h.c.requests.push({
     id: "subject-request",
@@ -1499,7 +1499,7 @@ test("дело открывает процесс, а одно действие �
   assert.match(renderToStaticMarkup(process()), /Направить на согласование/);
   h.run("send-request-approval", "work");
   assert.match(renderToStaticMarkup(process()), /Согласовать запрос/);
-  h.run("approve-request", "director", { approved: "on" });
+  h.run("approve-request", "deputy", { approved: "on" });
   assert.match(renderToStaticMarkup(process()), /Подписать запрос/);
   h.run("sign-request", "director");
   const workProcessHtml = renderToStaticMarkup(process());
@@ -1529,7 +1529,7 @@ test("справка формируется с отдельными довода
     deadline: "2026-09-10T18:00",
   });
   h.run("send-request-approval", "work");
-  h.run("approve-request", "director", { approved: "on" });
+  h.run("approve-request", "deputy", { approved: "on" });
   h.run("sign-request", "director");
   h.run(
     "fill-request-response",
