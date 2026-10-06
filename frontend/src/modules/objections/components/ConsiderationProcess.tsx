@@ -357,19 +357,27 @@ export default function ConsiderationProcess({
           </div>
           <ul className="request-response-status-list">
             {c.requests.map((request) => {
-              const status = request.sent
-                ? "Ответ ожидается"
-                : request.approved
-                  ? "На подписании"
-                  : "На согласовании";
+              const responseReceived = Boolean(request.responded);
+              const status = responseReceived
+                ? `Ответ получен ${formatDate(request.responded)}`
+                : request.sent
+                  ? "Ответ ожидается"
+                  : request.approved
+                    ? "На подписании"
+                    : "На согласовании";
               return (
-                <li className="is-pending" key={request.id}>
-                  <span className="request-response-marker" aria-hidden="true">…</span>
+                <li
+                  className={responseReceived ? "is-received" : "is-pending"}
+                  key={request.id}
+                >
+                  <span className="request-response-marker" aria-hidden="true">
+                    {responseReceived ? "✓" : "…"}
+                  </span>
                   <span className="request-response-recipient">
                     <strong>{request.recipient}</strong>
                     <small>Направлен {formatDate(request.date)}</small>
                   </span>
-                  <span className="response-pending">
+                  <span className={responseReceived ? "response-received" : "response-pending"}>
                     <span className="response-status-dot" aria-hidden="true" />
                     {status}
                   </span>
