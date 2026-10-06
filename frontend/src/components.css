@@ -1108,6 +1108,25 @@
 .response-receipt-materials > b {
   font-size: 13px;
 }
+.response-receipt-response {
+  display: grid;
+  gap: 8px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid #d7e2e8;
+}
+.response-receipt-response:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.response-receipt-response > b {
+  color: #243746;
+  font-size: 14px;
+}
+.response-receipt-label {
+  color: #536778;
+  font-size: 13px;
+  font-weight: 600;
+}
 .response-receipt-materials ul {
   display: grid;
   gap: 5px;
