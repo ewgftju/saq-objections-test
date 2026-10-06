@@ -509,7 +509,32 @@ export default function ConsiderationProcess({
           </div>
         </div>
       ) : awaitingAuthorityResponse ? (
-        <Notice tone="amber">
+        <>
+          {pendingExternalRequest && (
+            <div className="consideration-task">
+              <div>
+                <span className="consideration-eyebrow">Текущая задача</span>
+                <h4>Фиксация получения ответа</h4>
+                <p>
+                  Вложите ответ другого органа, укажите дату поступления и
+                  номер письма.
+                </p>
+                <p className="consideration-owner">
+                  Исполнитель: <strong>Рабочий орган ДАВГА</strong>
+                </p>
+              </div>
+              <div className="consideration-task-action">
+                <Button
+                  primary
+                  onClick={() => onAction("record-external-response", "work")}
+                >
+                  Вложить ответ
+                </Button>
+                <small>Действие выполняет Рабочий орган ДАВГА.</small>
+              </div>
+            </div>
+          )}
+          <Notice tone="amber">
           <div className="request-response-heading">
             <div>
               <span className="request-response-eyebrow">Запросы направлены</span>
@@ -548,17 +573,8 @@ export default function ConsiderationProcess({
               );
             })}
           </ul>
-          {pendingExternalRequest && (
-            <div className="consideration-task-action">
-              <Button
-                primary
-                onClick={() => onAction("record-external-response", "work")}
-              >
-                Вложить ответ другого органа
-              </Button>
-            </div>
-          )}
-        </Notice>
+          </Notice>
+        </>
       ) : materialsAvailableForCommission ? (
         <Notice>
           <strong>Материалы доступны членам АК</strong>
