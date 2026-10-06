@@ -413,6 +413,8 @@ export default function ActionModal({
     request.recipient.toUpperCase().includes("КВГА");
   const responseStatus = (request: ObjectionCase["requests"][number]) => {
     if (request.confirmed) return "Получен и зафиксирован";
+    if (request.saqRecipient === "subject" && request.responded)
+      return "Поступил — ждёт фиксации";
     if (isAuthorityRequest(request) && request.responseSigned)
       return "Поступил — ждёт фиксации";
     if (isAuthorityRequest(request) && request.responded)
@@ -1117,7 +1119,8 @@ export default function ActionModal({
                       className={
                         request.confirmed
                           ? "received"
-                          : isAuthorityRequest(request) && request.responseSigned
+                          : (isAuthorityRequest(request) && request.responseSigned) ||
+                              (request.saqRecipient === "subject" && request.responded)
                             ? "ready"
                             : "waiting"
                       }
