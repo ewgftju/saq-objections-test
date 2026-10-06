@@ -223,6 +223,36 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     if (allResponsesReadyForConfirmation(c))
       return { action: "position", label: "Ответ получен", role: "work" };
   }
+  if (c.status === "request_approval") {
+    const hasUnapprovedRequests = c.requests.some((request) => !request.approved);
+    const hasApprovedUnsignedRequests = c.requests.some(
+      (request) => Boolean(request.approved) && !request.sent,
+    );
+    if (role === "director" && hasApprovedUnsignedRequests)
+      return {
+        action: "sign-request",
+        label: "Подписать запрос",
+        role: "director",
+      };
+    if (role === "deputy" && hasUnapprovedRequests)
+      return {
+        action: "approve-request",
+        label: "Согласовать запрос",
+        role: "deputy",
+      };
+    if (!role && hasUnapprovedRequests)
+      return {
+        action: "approve-request",
+        label: "Согласовать запрос",
+        role: "deputy",
+      };
+    if (!role && hasApprovedUnsignedRequests)
+      return {
+        action: "sign-request",
+        label: "Подписать запрос",
+        role: "director",
+      };
+  }
   const map: Partial<Record<ObjectionCase["status"], ActionOption>> = {
     received: {
       action: "assign-work-executor",
@@ -698,25 +728,24 @@ export function applyAction(
       c.status = remainingRequests.length ? "request_approval" : "request_signed";
       title = `Запрос в ${request.recipient} согласован`;
       note = remainingRequests.length
-        ? `Осталось согласовать запросов: ${remainingRequests.length}.`
+        ? `Запрос направлен в кабинет директора ДАВГА для подписания. Осталось согласовать запросов: ${remainingRequests.length}.`
         : "Все запросы согласованы и направлены в кабинет директора ДАВГА для подписания.";
-      if (!remainingRequests.length)
-        next.notifications.push({
-          id: `notification-${c.id}-${next.notifications.length + 1}`,
-          caseId: c.id,
-          recipient: ROLES.director,
-          recipientRole: "director",
-          date,
-          read: false,
-          text: `В ваш кабинет поступили согласованные запросы по обращению №${c.appealNumber || c.id} для подписания.`,
-        });
+      next.notifications.push({
+        id: `notification-${c.id}-${next.notifications.length + 1}`,
+        caseId: c.id,
+        recipient: ROLES.director,
+        recipientRole: "director",
+        date,
+        read: false,
+        text: `В ваш кабинет поступил согласованный запрос в ${request.recipient} по обращению №${c.appealNumber || c.id} для подписания.`,
+      });
       break;
     }
     case "sign-request": {
       if (!c.requests.length) throw new Error("Запрос не сформирован");
-      if (c.requests.some((request) => !request.approved))
-        throw new Error("Сначала согласуйте каждый сформированный запрос");
-      const unsignedRequests = c.requests.filter((item) => !item.sent);
+      const unsignedRequests = c.requests.filter(
+        (item) => Boolean(item.approved) && !item.sent,
+      );
       const requestId = String(form.get("requestId") || "");
       const request = requestId
         ? c.requests.find((item) => item.id === requestId)
@@ -725,6 +754,8 @@ export function applyAction(
           : undefined;
       if (!request) throw new Error("Выберите запрос для подписания");
       if (request.sent) throw new Error("Этот запрос уже подписан");
+      if (!request.approved)
+        throw new Error("Сначала согласуйте этот запрос");
       const firstSignedRequest = c.requests.every((item) => !item.sent);
       request.sent = date;
       if (isDvgaOrKvgaRequest(request.recipient))
@@ -757,15 +788,20 @@ export function applyAction(
           text: `По Вашему возражению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения возражения приостанавливается на период до поступления ответа на указанный запрос.`,
         });
       }
-      const remainingRequests = c.requests.filter((item) => !item.sent);
-      c.status = remainingRequests.length
-        ? "request_signed"
+      const unapprovedRequests = c.requests.filter((item) => !item.approved);
+      const remainingSignedRequests = c.requests.filter((item) => !item.sent);
+      c.status = remainingSignedRequests.length
+        ? unapprovedRequests.length
+          ? "request_approval"
+          : "request_signed"
         : allResponsesReadyForConfirmation(c)
           ? "response_ready"
           : "request_approved";
       title = `Запрос в ${request.recipient} подписан`;
-      note = remainingRequests.length
-        ? `Осталось подписать запросов: ${remainingRequests.length}.`
+      note = remainingSignedRequests.length
+        ? unapprovedRequests.length
+          ? `Запрос направлен адресату. Осталось согласовать: ${unapprovedRequests.length}; подписать: ${remainingSignedRequests.length}.`
+          : `Осталось подписать запросов: ${remainingSignedRequests.length}.`
         : directedToDvgaOrKvga(c)
           ? "Все подписанные запросы направлены отдельно в кабинеты ДВГА и КВГА для подготовки мотивированных ответов."
           : "Подписанные запросы ожидают поступления ответов.";
