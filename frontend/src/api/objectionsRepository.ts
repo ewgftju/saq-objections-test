@@ -9,7 +9,7 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 8;
+const CURRENT_VERSION = 9;
 
 // Version 6 distinguishes incoming SAQ appeals from manually created appeals.
 
@@ -35,7 +35,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, 8, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -105,6 +105,15 @@ export function createDemoRepository(
               ? { ...request, saqRecipient: undefined }
               : request,
           );
+          // Версии до независимой маршрутизации могли сохранить обращение
+          // на этапе подписания, хотя все запросы уже были направлены.
+          // После загрузки такой карточки она должна ожидать ответов.
+          const status =
+            ["request_approval", "request_signed"].includes(normalized.status) &&
+            requests.length > 0 &&
+            requests.every((request) => Boolean(request.sent))
+              ? "request_approved"
+              : normalized.status;
           // Файлы, внесённые рабочим органом при единой фиксации ответов,
           // относятся к ответу внешнего органа, а не к ответу ДВГА/КВГА.
           const otherRequest = requests.find(
@@ -119,6 +128,7 @@ export function createDemoRepository(
             : normalized.documents;
           return {
             ...normalized,
+            status,
             requests,
             documents,
             members: attendanceMembers,
