@@ -54,6 +54,7 @@ function authorityRequestsForRole(c: ObjectionCase, role?: Role) {
   return c.requests.filter(
     (request) =>
       isDvgaOrKvgaRequest(request.recipient) &&
+      Boolean(request.sent) &&
       (role !== "dvga" && role !== "kvga" || authorityRole(request.recipient) === role),
   );
 }
@@ -99,6 +100,16 @@ function allRequestsHandledInSaq(c: ObjectionCase) {
         (request.template === "other" && request.saqRecipient === "subject"),
     )
   );
+}
+
+/** Пока не подписаны все запросы, общий статус обращения остаётся на
+ * согласовании или подписании. Это не мешает адресату уже подписанного
+ * запроса заполнять ответ в своём кабинете. */
+function requestRoutingStatus(c: ObjectionCase): ObjectionCase["status"] | null {
+  if (!c.requests.some((request) => !request.sent)) return null;
+  return c.requests.some((request) => !request.approved)
+    ? "request_approval"
+    : "request_signed";
 }
 
 /** Когда все ответы пришли в кабинеты SAQ, фиксировать их вручную не нужно:
@@ -200,6 +211,11 @@ function authorityStatus(c: ObjectionCase): ObjectionCase["status"] | null {
 export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
   if (role === "demo-superuser") role = undefined;
   const reviewer: Role = "work";
+  if (role === "dvga" || role === "kvga") {
+    const authorityAction = authorityResponseAction(c, role);
+    if (authorityAction) return authorityAction;
+    return null;
+  }
   const authorityInProgress = [
     "request_approved",
     "response_approval",
@@ -212,14 +228,8 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
         return { action: "position", label: "Ответ получен", role: "work" };
       return null;
     }
-    const authorityAction =
-      role === "dvga" || role === "kvga"
-        ? authorityResponseAction(c, role)
-        : role
-          ? null
-          : authorityResponseAction(c);
+    const authorityAction = role ? null : authorityResponseAction(c);
     if (authorityAction) return authorityAction;
-    if (role === "dvga" || role === "kvga") return null;
     if (allResponsesReadyForConfirmation(c))
       return { action: "position", label: "Ответ получен", role: "work" };
   }
@@ -763,6 +773,7 @@ export function applyAction(
           id: `notification-${c.id}-${next.notifications.length + 1}`,
           caseId: c.id,
           recipient: isKvgaRequest(request.recipient) ? "КВГА" : "ДВГА",
+          recipientRole: authorityRole(request.recipient),
           date,
           read: false,
           text: `В ваш кабинет направлен запрос по обращению №${c.appealNumber || c.id} для подготовки мотивированного ответа.`,
@@ -1032,7 +1043,7 @@ export function applyAction(
         request.id,
       );
       note = "Мотивированные ответы ДВГА/КВГА заполнены по всем оспариваемым пунктам.";
-      c.status = authorityStatus(c) || "response_approval";
+      c.status = requestRoutingStatus(c) || authorityStatus(c) || "response_approval";
       doc("Мотивированный ответ ДВГА/КВГА", "authority-response", note);
       break;
     }
@@ -1042,7 +1053,7 @@ export function applyAction(
       );
       if (!request) throw new Error("Нет ответа, ожидающего согласования");
       request.responseApproved = date;
-      c.status = authorityStatus(c) || "response_signed";
+      c.status = requestRoutingStatus(c) || authorityStatus(c) || "response_signed";
       title = "Ответ ДВГА/КВГА согласован";
       note = "Согласованный ответ ДВГА/КВГА ожидает подписания.";
       break;
@@ -1054,7 +1065,8 @@ export function applyAction(
       if (!request) throw new Error("Нет согласованного ответа для подписания");
       request.responseSigned = date;
       const pausedDays = advanceAfterSaqResponses(c, date);
-      if (pausedDays === null) c.status = authorityStatus(c) || "response_ready";
+      if (pausedDays === null)
+        c.status = requestRoutingStatus(c) || authorityStatus(c) || "response_ready";
       title = "Ответ ДВГА/КВГА подписан";
       note =
         pausedDays === null
