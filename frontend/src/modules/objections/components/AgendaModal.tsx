@@ -45,7 +45,7 @@ export function agendaItemText(c: ObjectionCase) {
   }
 
   if (appealType === "Возражение на аудиторский отчет") {
-    return `Возражение ${appealReference(c)} ${common} на аудиторский отчет ${documentReference(c)}, проведенного ${issuer} (${executor})`;
+    return `Возражение от ${value(c.org)}, БИН ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года, на аудиторский отчет от ${formatDate(c.document.date)} года № ${value(c.document.number)}, проведенный ${issuer}.`;
   }
 
   if (appealType === "Жалоба на действие/бездействие") {

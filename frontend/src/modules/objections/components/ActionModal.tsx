@@ -317,6 +317,7 @@ export default function ActionModal({
   c,
   date,
   role,
+  requestId,
   commissionMemberId,
   onSubmit,
   onSaveDraft,
@@ -326,6 +327,8 @@ export default function ActionModal({
   c: ObjectionCase;
   date: string;
   role: Role;
+  /** Предварительно выбранный запрос, для которого фиксируется ответ. */
+  requestId?: string;
   /** The AK member currently using the Appeals Commission cabinet. */
   commissionMemberId?: string;
   onSubmit: (form: FormData) => void | Promise<void>;
@@ -1152,9 +1155,14 @@ export default function ActionModal({
         ) : action === "record-external-response" ? (
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
-            {definition.fields.map((field) => (
+            {requestId && (
+              <input type="hidden" name="externalRequestId" value={requestId} />
+            )}
+            {definition.fields
+              .filter((field) => !requestId || field.name !== "externalRequestId")
+              .map((field) => (
               <Field key={field.name} field={field} />
-            ))}
+              ))}
             <label className="field request-attachments-field">
               <span>
                 Полученный файл <span className="required">*</span>

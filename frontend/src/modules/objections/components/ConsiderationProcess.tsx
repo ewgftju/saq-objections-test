@@ -241,13 +241,6 @@ export default function ConsiderationProcess({
       c.status,
     );
   const sentRequests = c.requests.filter((request) => Boolean(request.sent));
-  const pendingExternalRequest = c.requests.find(
-    (request) =>
-      request.template === "other" &&
-      !request.saqRecipient &&
-      Boolean(request.sent) &&
-      !request.responded,
-  );
   const pendingResponses = sentRequests.filter((request) => !request.responded)
     .length;
   const awaitingAttendancePoll = c.status === "certificate_approved";
@@ -510,30 +503,6 @@ export default function ConsiderationProcess({
         </div>
       ) : awaitingAuthorityResponse ? (
         <>
-          {pendingExternalRequest && (
-            <div className="consideration-task">
-              <div>
-                <span className="consideration-eyebrow">Текущая задача</span>
-                <h4>Фиксация получения ответа</h4>
-                <p>
-                  Вложите ответ другого органа, укажите дату поступления и
-                  номер письма.
-                </p>
-                <p className="consideration-owner">
-                  Исполнитель: <strong>Рабочий орган ДАВГА</strong>
-                </p>
-              </div>
-              <div className="consideration-task-action">
-                <Button
-                  primary
-                  onClick={() => onAction("record-external-response", "work")}
-                >
-                  Вложить ответ
-                </Button>
-                <small>Действие выполняет Рабочий орган ДАВГА.</small>
-              </div>
-            </div>
-          )}
           <Notice tone="amber">
           <div className="request-response-heading">
             <div>
@@ -551,6 +520,11 @@ export default function ConsiderationProcess({
                 (request.saqRecipient === "subject"
                   ? "Кабинет Объекта"
                   : "Адресат запроса");
+              const canAttachExternalResponse =
+                (role === "demo-superuser" || role === "work") &&
+                request.template === "other" &&
+                !request.saqRecipient &&
+                !request.responded;
               return (
                 <li
                   className={request.responded ? "is-received" : "is-pending"}
@@ -569,6 +543,17 @@ export default function ConsiderationProcess({
                       ? `Ответ получен ${formatDate(request.responded)}`
                       : "Ответ ожидается"}
                   </span>
+                  {canAttachExternalResponse && (
+                    <Button
+                      className="request-response-action"
+                      primary
+                      onClick={() =>
+                        onAction("record-external-response", "work", request.id)
+                      }
+                    >
+                      Вложить ответ
+                    </Button>
+                  )}
                 </li>
               );
             })}

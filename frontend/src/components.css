@@ -1515,6 +1515,13 @@
 }
 .response-received { color: #177846; background: #e8f6ec; }
 .response-pending { color: #8f5d00; background: #fff4d8; }
+.request-response-action {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
 .response-status-dot {
   width: 6px;
   height: 6px;
@@ -1589,6 +1596,7 @@
   .request-response-recipient { flex: 1 1 calc(100% - 36px); }
   .response-received,
   .response-pending { margin-left: 36px; }
+  .request-response-action { margin-left: 36px; }
   .consideration-stages {
     grid-template-columns: 1fr;
     gap: 5px;

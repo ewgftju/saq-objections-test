@@ -39,7 +39,7 @@ import { casesEligibleForMeeting, useObjectionsModel } from "./useObjectionsMode
 import { formatDateTime } from "../../utils/dateFormat";
 
 type DialogState =
-  | { type: "action"; action: Action }
+  | { type: "action"; action: Action; requestId?: string }
   | { type: "document"; kind: string; document?: CaseDocument }
   | { type: "agenda"; cases: ObjectionCase[] }
   | { type: "agenda-results"; agendaId: string }
@@ -1072,6 +1072,10 @@ export default function ObjectionsModule() {
             onBack={() => model.navigate({ page: "registry" })}
             onTab={(tab) => model.navigate({ ...model.route, tab })}
             onAction={(action, role, requestId) => {
+              if (action === "record-external-response") {
+                setDialog({ type: "action", action, requestId });
+                return;
+              }
               if (
                 action === "assign-work-executor" ||
                 action === "commission-vote" ||
@@ -1284,11 +1288,12 @@ export default function ObjectionsModule() {
       {model.route.page === "sources" && <SourcesPage />}
       {dialog?.type === "action" && c && (
         <ActionModal
-          key={`${c.id}-${dialog.action}`}
+          key={`${c.id}-${dialog.action}-${dialog.requestId || ""}`}
           action={dialog.action}
           c={c}
           date={model.state.date}
           role={model.role}
+          requestId={dialog.requestId}
           commissionMemberId={
             dialog.action === "commission-vote" && model.role === "commission"
               ? activeCommissionMember.id
