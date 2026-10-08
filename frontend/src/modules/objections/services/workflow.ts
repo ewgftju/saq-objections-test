@@ -1668,6 +1668,10 @@ export function applyAction(
         appealProcedure: String(form.get("appealProcedure") || ""),
         published: c.type === "notice" ? date : null,
       };
+      disputed(c).forEach((point) => {
+        point.finalDecisionByMajority =
+          form.get(`finalResponseMajority_${point.id}`) === "on";
+      });
       c.status = "final_response_approval";
       doc(
         c.type === "notice"
