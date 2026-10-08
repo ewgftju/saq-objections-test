@@ -48,8 +48,7 @@ function fileDataUrl(file: File) {
 }
 
 function formatFileSize(bytes: number) {
-  if (bytes < 1024 * 1024)
-    return `${Math.max(1, Math.round(bytes / 1024))} КБ`;
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} КБ`;
   return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} МБ`;
 }
 
@@ -107,8 +106,14 @@ export default function NewCaseModal({
     Record<string, File[]>
   >({});
   const [requirementFiles, setRequirementFiles] = useState<File[]>([]);
+  const [isApplicantRepresentative, setIsApplicantRepresentative] =
+    useState(false);
+  const [powerOfAttorneyFile, setPowerOfAttorneyFile] = useState<File | null>(
+    null,
+  );
   const evidenceInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const requirementsInput = useRef<HTMLInputElement | null>(null);
+  const powerOfAttorneyInput = useRef<HTMLInputElement | null>(null);
   const [hasProcurement, setHasProcurement] = useState(true);
   const [decisionKind, setDecisionKind] = useState<
     | "prescription-audit"
@@ -132,16 +137,18 @@ export default function NewCaseModal({
     isActionComplaint ||
     isDecisionComplaint ||
     appealType === "statement";
-  const needsAgendaTemplateFields =
-    isNotice ||
+  const supportsRepresentativeConfirmation =
     isAudit ||
+    isDecisionComplaint ||
     isActionComplaint ||
-    isDecisionComplaint;
+    appealType === "statement";
+  const needsAgendaTemplateFields =
+    isNotice || isAudit || isActionComplaint || isDecisionComplaint;
   const sourceDocumentLabel = isNotice
     ? "Уведомление об устранении нарушений"
-      : isAudit
-        ? "Аудиторский отчет"
-        : isActionComplaint
+    : isAudit
+      ? "Аудиторский отчет"
+      : isActionComplaint
         ? hasProcurement
           ? "Обращение, по которому обжалуется действие/бездействие"
           : "Аудиторский отчет"
@@ -150,9 +157,9 @@ export default function NewCaseModal({
             ? "Результат контроля качества"
             : decisionKind === "preventive-control-act"
               ? "Акт о результате профилактического контроля"
-            : decisionKind === "administrative-act"
-              ? "Административный акт"
-              : "Предписание"
+              : decisionKind === "administrative-act"
+                ? "Административный акт"
+                : "Предписание"
           : "Оспариваемый документ";
   const sourceDocumentNumberLabel = isActionComplaint
     ? "Номер первичного обращения в ДВГА/КВГА"
@@ -220,6 +227,8 @@ export default function NewCaseModal({
                 );
               return files;
             });
+            if (isApplicantRepresentative && !powerOfAttorneyFile)
+              throw new Error("Вложите доверенность представителя");
             const get = (name: string, label: string) =>
               required(data, name, label);
             const bin = get("bin", applicantBinLabel);
@@ -249,7 +258,7 @@ export default function NewCaseModal({
               : [];
             const primaryActionAppeal = actionAppealAuthorities[0];
             const documentDate = isActionComplaint
-              ? primaryActionAppeal?.documentDate ?? appealDate
+              ? (primaryActionAppeal?.documentDate ?? appealDate)
               : needsAgendaTemplateFields
                 ? get("documentDate", sourceDocumentDateLabel)
                 : appealDate;
@@ -260,9 +269,7 @@ export default function NewCaseModal({
               documentDate,
               ...actionAppealAuthorities.map((item) => item.documentDate),
             ].forEach(dateObject);
-            const amount = isNotice
-              ? Number(get("amount", "Сумма, тенге"))
-              : 0;
+            const amount = isNotice ? Number(get("amount", "Сумма, тенге")) : 0;
             if (!Number.isFinite(amount) || amount < 0)
               throw new Error("Сумма должна быть неотрицательным числом");
             const customerBin = isNotice
@@ -274,7 +281,9 @@ export default function NewCaseModal({
               ? get("auditObjectBin", "БИН/ИИН объекта аудита")
               : "";
             if (hasSeparateAuditObject && !/^\d{12}$/.test(auditObjectBin))
-              throw new Error("БИН/ИИН объекта аудита должен содержать 12 цифр");
+              throw new Error(
+                "БИН/ИИН объекта аудита должен содержать 12 цифр",
+              );
             const numberPrefix =
               selectedAppealType.label === "Заявление"
                 ? "З"
@@ -310,7 +319,7 @@ export default function NewCaseModal({
               filed,
               channel: get("channel", "Портал / цифровая система"),
               issuer: isActionComplaint
-                ? primaryActionAppeal?.issuer ?? ""
+                ? (primaryActionAppeal?.issuer ?? "")
                 : get("issuer", "Орган"),
               authority:
                 type === "control"
@@ -318,7 +327,7 @@ export default function NewCaseModal({
                   : "Апелляционная комиссия при Министерстве финансов РК",
               document: {
                 number: isActionComplaint
-                  ? primaryActionAppeal?.documentNumber ?? ""
+                  ? (primaryActionAppeal?.documentNumber ?? "")
                   : needsAgendaTemplateFields
                     ? get("documentNumber", sourceDocumentNumberLabel)
                     : "",
@@ -350,14 +359,21 @@ export default function NewCaseModal({
                         "Наименование объекта аудита",
                       ),
                       auditObjectBin,
+                      ...(supportsRepresentativeConfirmation
+                        ? {
+                            applicantIsAuditObjectRepresentative:
+                              isApplicantRepresentative,
+                          }
+                        : {}),
                     }
                   : {}),
-                ...(isActionComplaint
-                  ? { actionAppealAuthorities }
-                  : {}),
+                ...(isActionComplaint ? { actionAppealAuthorities } : {}),
                 ...(isActionComplaint && hasProcurement
                   ? {
-                      procurementNumber: get("procurementNumber", "Номер закупки"),
+                      procurementNumber: get(
+                        "procurementNumber",
+                        "Номер закупки",
+                      ),
                       lotNumber: get("lotNumber", "Номер лота"),
                       procurementSubject: get(
                         "procurementSubject",
@@ -428,6 +444,15 @@ export default function NewCaseModal({
                     author: "Заявитель",
                   })),
                 ),
+                ...(isApplicantRepresentative && powerOfAttorneyFile
+                  ? [
+                      {
+                        file: powerOfAttorneyFile,
+                        text: "Доверенность представителя",
+                        author: "Заявитель",
+                      },
+                    ]
+                  : []),
               ].map(async ({ file, text, author }) => ({
                 name: file.name,
                 filename: file.name,
@@ -444,6 +469,14 @@ export default function NewCaseModal({
                 actor: "Заявитель",
                 title: "Добавлены требования заявителя",
                 text: requirementFiles.map((file) => file.name).join(", "),
+              });
+            }
+            if (isApplicantRepresentative && powerOfAttorneyFile) {
+              c.history.push({
+                date: state.date,
+                actor: "Заявитель",
+                title: "Добавлена доверенность представителя",
+                text: powerOfAttorneyFile.name,
               });
             }
             const next = { ...state, cases: [...state.cases, c] };
@@ -489,27 +522,118 @@ export default function NewCaseModal({
           </select>
         </label>
         <div className="form-grid">
-          {[
-            {
+          <Field
+            field={{
               name: "org",
               label: applicantNameLabel,
-              type: "text" as const,
-            },
-            { name: "bin", label: applicantBinLabel, type: "text" as const },
-            ...(hasSeparateAuditObject
-              ? [
-                  {
-                    name: "auditObjectName",
-                    label: "Наименование объекта аудита",
-                    type: "text" as const,
-                  },
-                  {
-                    name: "auditObjectBin",
-                    label: "БИН/ИИН",
-                    type: "text" as const,
-                  },
-                ]
-              : []),
+              type: "text",
+              required: true,
+            }}
+          />
+          <Field
+            field={{
+              name: "bin",
+              label: applicantBinLabel,
+              type: "text",
+              required: true,
+            }}
+          />
+        </div>
+        {supportsRepresentativeConfirmation && (
+          <section className="representative-confirmation">
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={isApplicantRepresentative}
+                onChange={(event) => {
+                  setIsApplicantRepresentative(event.target.checked);
+                  if (!event.target.checked) {
+                    setPowerOfAttorneyFile(null);
+                    if (powerOfAttorneyInput.current)
+                      powerOfAttorneyInput.current.value = "";
+                  }
+                }}
+              />
+              Заявитель является представителем объекта аудита
+            </label>
+            {isApplicantRepresentative && (
+              <div className="point-evidence-field representative-power-of-attorney">
+                <span>Вложить доверенность</span>
+                <label
+                  className="point-evidence-dropzone"
+                  htmlFor="powerOfAttorneyFile"
+                >
+                  <span className="point-evidence-icon" aria-hidden="true">
+                    📎
+                  </span>
+                  <span className="point-evidence-copy">
+                    Выберите доверенность на компьютере
+                  </span>
+                  <span className="point-evidence-button">Выбрать файл</span>
+                </label>
+                <input
+                  ref={powerOfAttorneyInput}
+                  id="powerOfAttorneyFile"
+                  className="point-evidence-input"
+                  type="file"
+                  name="powerOfAttorneyFile"
+                  required
+                  aria-label="Вложить доверенность"
+                  onClick={(event) => event.stopPropagation()}
+                  onChange={(event) =>
+                    setPowerOfAttorneyFile(event.target.files?.[0] ?? null)
+                  }
+                />
+                {powerOfAttorneyFile && (
+                  <span className="point-evidence-files">
+                    <span className="point-evidence-file">
+                      <span className="point-evidence-file-info">
+                        <strong>{powerOfAttorneyFile.name}</strong>
+                        <small>
+                          {formatFileSize(powerOfAttorneyFile.size)}
+                        </small>
+                      </span>
+                      <Button
+                        className="point-evidence-remove"
+                        type="button"
+                        aria-label="Удалить доверенность"
+                        onClick={() => {
+                          setPowerOfAttorneyFile(null);
+                          if (powerOfAttorneyInput.current)
+                            powerOfAttorneyInput.current.value = "";
+                        }}
+                      >
+                        ×
+                      </Button>
+                    </span>
+                  </span>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+        <div className="form-grid">
+          {hasSeparateAuditObject && (
+            <>
+              <Field
+                field={{
+                  name: "auditObjectName",
+                  label: "Наименование объекта аудита",
+                  type: "text",
+                  required: true,
+                }}
+              />
+              <Field
+                field={{
+                  name: "auditObjectBin",
+                  label: "БИН/ИИН",
+                  type: "text",
+                  required: true,
+                }}
+              />
+            </>
+          )}
+          {[
             {
               name: "appealNumber",
               label: "Номер возражения, жалобы, заявления",
@@ -521,8 +645,16 @@ export default function NewCaseModal({
               type: "date" as const,
               value: state.date,
             },
-            { name: "address", label: "Местонахождение", type: "text" as const },
-            { name: "applicant", label: "Представитель", type: "text" as const },
+            {
+              name: "address",
+              label: "Местонахождение",
+              type: "text" as const,
+            },
+            {
+              name: "applicant",
+              label: "Представитель",
+              type: "text" as const,
+            },
           ].map((field) => (
             <Field
               field={{ ...field, required: field.name !== "applicant" }}
@@ -541,19 +673,19 @@ export default function NewCaseModal({
               }}
             />
           )}
-          {[
-            { name: "received", label: "Дата получения документа" },
-          ].map((field) => (
-            <Field
-              key={field.name}
-              field={{
-                ...field,
-                type: "date",
-                value: state.date,
-                required: true,
-              }}
-            />
-          ))}
+          {[{ name: "received", label: "Дата получения документа" }].map(
+            (field) => (
+              <Field
+                key={field.name}
+                field={{
+                  ...field,
+                  type: "date",
+                  value: state.date,
+                  required: true,
+                }}
+              />
+            ),
+          )}
         </div>
         {needsAgendaTemplateFields && !isActionComplaint && (
           <>
@@ -594,8 +726,14 @@ export default function NewCaseModal({
                       options: [
                         ["конкурс", "конкурс"],
                         ["аукцион", "аукцион"],
-                        ["запрос ценовых предложений", "запрос ценовых предложений"],
-                        ["рейтингово-балльная система", "рейтингово-балльная система"],
+                        [
+                          "запрос ценовых предложений",
+                          "запрос ценовых предложений",
+                        ],
+                        [
+                          "рейтингово-балльная система",
+                          "рейтингово-балльная система",
+                        ],
                         ["из одного источника", "из одного источника"],
                         ["товарная биржа", "товарная биржа"],
                       ],
@@ -653,7 +791,10 @@ export default function NewCaseModal({
                       label: "Орган аудита (КВГА/ДВГА)",
                       type: "select",
                       value: "ДВГА по Атырауской области",
-                      options: AUDIT_ORGAN_OPTIONS.map((option) => [option, option]),
+                      options: AUDIT_ORGAN_OPTIONS.map((option) => [
+                        option,
+                        option,
+                      ]),
                       required: true,
                     }}
                   />
@@ -806,7 +947,10 @@ export default function NewCaseModal({
         <Field
           field={{
             name: "request",
-            label: appealType === "statement" ? "О чем заявление" : "Краткое описание",
+            label:
+              appealType === "statement"
+                ? "О чем заявление"
+                : "Краткое описание",
             type: "textarea",
             required: true,
           }}
@@ -822,7 +966,9 @@ export default function NewCaseModal({
               updateRequirementFiles(Array.from(event.dataTransfer.files));
             }}
           >
-            <span className="point-evidence-icon" aria-hidden="true">📎</span>
+            <span className="point-evidence-icon" aria-hidden="true">
+              📎
+            </span>
             <span className="point-evidence-copy">
               Перетащите файлы сюда или выберите на компьютере
             </span>
@@ -837,7 +983,6 @@ export default function NewCaseModal({
             multiple
             aria-label="Вложить файлы"
             onClick={(event) => event.stopPropagation()}
-            
             onChange={(event) =>
               updateRequirementFiles(Array.from(event.target.files ?? []))
             }
@@ -859,7 +1004,9 @@ export default function NewCaseModal({
                     aria-label={`Удалить файл ${file.name}`}
                     onClick={() =>
                       setRequirementFiles((current) => {
-                        const next = current.filter((_, index) => index !== fileIndex);
+                        const next = current.filter(
+                          (_, index) => index !== fileIndex,
+                        );
                         const input = requirementsInput.current;
                         if (input) {
                           const dataTransfer = new DataTransfer();
@@ -987,7 +1134,6 @@ export default function NewCaseModal({
                     multiple
                     required
                     onClick={(event) => event.stopPropagation()}
-                    
                     onChange={(event) =>
                       updatePointEvidenceFiles(
                         pointId,
@@ -997,32 +1143,34 @@ export default function NewCaseModal({
                   />
                   {pointEvidenceFilesByPoint[pointId]?.length ? (
                     <span className="point-evidence-files">
-                      {pointEvidenceFilesByPoint[pointId].map((file, fileIndex) => (
-                        <span
-                          className="point-evidence-file"
-                          key={`${file.name}-${file.lastModified}-${fileIndex}`}
-                        >
-                          <span className="point-evidence-file-info">
-                            <strong>{file.name}</strong>
-                            <small>{formatFileSize(file.size)}</small>
-                          </span>
-                          <Button
-                            className="point-evidence-remove"
-                            type="button"
-                            aria-label={`Удалить файл ${file.name}`}
-                            onClick={() =>
-                              updatePointEvidenceFiles(
-                                pointId,
-                                pointEvidenceFilesByPoint[pointId].filter(
-                                  (_, index) => index !== fileIndex,
-                                ),
-                              )
-                            }
+                      {pointEvidenceFilesByPoint[pointId].map(
+                        (file, fileIndex) => (
+                          <span
+                            className="point-evidence-file"
+                            key={`${file.name}-${file.lastModified}-${fileIndex}`}
                           >
-                            ×
-                          </Button>
-                        </span>
-                      ))}
+                            <span className="point-evidence-file-info">
+                              <strong>{file.name}</strong>
+                              <small>{formatFileSize(file.size)}</small>
+                            </span>
+                            <Button
+                              className="point-evidence-remove"
+                              type="button"
+                              aria-label={`Удалить файл ${file.name}`}
+                              onClick={() =>
+                                updatePointEvidenceFiles(
+                                  pointId,
+                                  pointEvidenceFilesByPoint[pointId].filter(
+                                    (_, index) => index !== fileIndex,
+                                  ),
+                                )
+                              }
+                            >
+                              ×
+                            </Button>
+                          </span>
+                        ),
+                      )}
                     </span>
                   ) : null}
                 </div>
