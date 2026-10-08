@@ -98,6 +98,8 @@ export default function NewCaseModal({
   const [appealType, setAppealType] = useState<string>(APPEAL_TYPES[0].value);
   const [pointIds, setPointIds] = useState(["point1"]);
   const nextPointId = useRef(2);
+  const [actionAppealIds, setActionAppealIds] = useState(["actionAppeal1"]);
+  const nextActionAppealId = useRef(2);
   const [collapsedPoints, setCollapsedPoints] = useState<Set<string>>(
     () => new Set(),
   );
@@ -229,10 +231,35 @@ export default function NewCaseModal({
             );
             const received = get("received", "Дата получения документа");
             const filed = state.date;
-            const documentDate = needsAgendaTemplateFields
-              ? get("documentDate", sourceDocumentDateLabel)
-              : appealDate;
-            [appealDate, received, filed, documentDate].forEach(dateObject);
+            const actionAppealAuthorities = isActionComplaint
+              ? actionAppealIds.map((appealId, index) => ({
+                  issuer: get(
+                    `actionIssuer_${appealId}`,
+                    `Орган аудита (КВГА/ДВГА) ${index + 1}`,
+                  ),
+                  documentNumber: get(
+                    `actionDocumentNumber_${appealId}`,
+                    `Номер первичного обращения в ДВГА/КВГА ${index + 1}`,
+                  ),
+                  documentDate: get(
+                    `actionDocumentDate_${appealId}`,
+                    `Дата первичного обращения в ДВГА/КВГА ${index + 1}`,
+                  ),
+                }))
+              : [];
+            const primaryActionAppeal = actionAppealAuthorities[0];
+            const documentDate = isActionComplaint
+              ? primaryActionAppeal?.documentDate ?? appealDate
+              : needsAgendaTemplateFields
+                ? get("documentDate", sourceDocumentDateLabel)
+                : appealDate;
+            [
+              appealDate,
+              received,
+              filed,
+              documentDate,
+              ...actionAppealAuthorities.map((item) => item.documentDate),
+            ].forEach(dateObject);
             const amount = isNotice
               ? Number(get("amount", "Сумма, тенге"))
               : 0;
@@ -282,15 +309,19 @@ export default function NewCaseModal({
               registered: state.date,
               filed,
               channel: get("channel", "Портал / цифровая система"),
-              issuer: get("issuer", "Орган"),
+              issuer: isActionComplaint
+                ? primaryActionAppeal?.issuer ?? ""
+                : get("issuer", "Орган"),
               authority:
                 type === "control"
                   ? "Вышестоящий орган — определить компетенцию"
                   : "Апелляционная комиссия при Министерстве финансов РК",
               document: {
-                number: needsAgendaTemplateFields
-                  ? get("documentNumber", sourceDocumentNumberLabel)
-                  : "",
+                number: isActionComplaint
+                  ? primaryActionAppeal?.documentNumber ?? ""
+                  : needsAgendaTemplateFields
+                    ? get("documentNumber", sourceDocumentNumberLabel)
+                    : "",
                 date: documentDate,
                 received,
                 name: needsAgendaTemplateFields
@@ -320,6 +351,9 @@ export default function NewCaseModal({
                       ),
                       auditObjectBin,
                     }
+                  : {}),
+                ...(isActionComplaint
+                  ? { actionAppealAuthorities }
                   : {}),
                 ...(isActionComplaint && hasProcurement
                   ? {
@@ -495,16 +529,18 @@ export default function NewCaseModal({
               key={field.name}
             />
           ))}
-          <Field
-            field={{
-              name: "issuer",
-              label: "Орган аудита (КВГА/ДВГА)",
-              type: "select",
-              value: "ДВГА по Атырауской области",
-              options: AUDIT_ORGAN_OPTIONS.map((option) => [option, option]),
-              required: true,
-            }}
-          />
+          {!isActionComplaint && (
+            <Field
+              field={{
+                name: "issuer",
+                label: "Орган аудита (КВГА/ДВГА)",
+                type: "select",
+                value: "ДВГА по Атырауской области",
+                options: AUDIT_ORGAN_OPTIONS.map((option) => [option, option]),
+                required: true,
+              }}
+            />
+          )}
           {[
             { name: "received", label: "Дата получения документа" },
           ].map((field) => (
@@ -519,7 +555,7 @@ export default function NewCaseModal({
             />
           ))}
         </div>
-        {needsAgendaTemplateFields && (
+        {needsAgendaTemplateFields && !isActionComplaint && (
           <>
             <div className="form-grid">
               <Field
@@ -589,6 +625,71 @@ export default function NewCaseModal({
         )}
         {isActionComplaint && (
           <section>
+            {actionAppealIds.map((appealId, index) => (
+              <section className="disputed-point-form-card" key={appealId}>
+                <div className="disputed-point-form-head">
+                  <h3>Обжалуемое действие/бездействие {index + 1}</h3>
+                  {actionAppealIds.length > 1 && (
+                    <div className="point-card-actions">
+                      <Button
+                        className="point-card-icon-button point-delete-button"
+                        type="button"
+                        aria-label={`Удалить блок ${index + 1}`}
+                        onClick={() =>
+                          setActionAppealIds((current) =>
+                            current.filter((item) => item !== appealId),
+                          )
+                        }
+                      >
+                        <span aria-hidden="true">×</span>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="form-grid">
+                  <Field
+                    field={{
+                      name: `actionIssuer_${appealId}`,
+                      label: "Орган аудита (КВГА/ДВГА)",
+                      type: "select",
+                      value: "ДВГА по Атырауской области",
+                      options: AUDIT_ORGAN_OPTIONS.map((option) => [option, option]),
+                      required: true,
+                    }}
+                  />
+                  <Field
+                    field={{
+                      name: `actionDocumentNumber_${appealId}`,
+                      label: "Номер первичного обращения в ДВГА/КВГА",
+                      type: "text",
+                      required: true,
+                    }}
+                  />
+                  <Field
+                    field={{
+                      name: `actionDocumentDate_${appealId}`,
+                      label: "Дата первичного обращения в ДВГА/КВГА",
+                      type: "date",
+                      value: state.date,
+                      required: true,
+                    }}
+                  />
+                </div>
+              </section>
+            ))}
+            <Button
+              className="add-disputed-point-button"
+              type="button"
+              onClick={() =>
+                setActionAppealIds((current) => [
+                  ...current,
+                  `actionAppeal${nextActionAppealId.current++}`,
+                ])
+              }
+            >
+              <span aria-hidden="true">＋</span>
+              Добавить орган аудита и обращение
+            </Button>
             <label className="checkbox-row">
               <input
                 type="checkbox"
