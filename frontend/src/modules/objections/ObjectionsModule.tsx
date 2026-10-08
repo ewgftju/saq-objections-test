@@ -170,6 +170,10 @@ export default function ObjectionsModule() {
         request.saqRecipient === "subject" &&
         Boolean(request.sent) &&
         !request.responded,
+    ) ||
+    Boolean(
+      item.delivery?.recipientRoles?.includes("subject") &&
+        item.documents.some((document) => document.kind === "final-response"),
     );
   const close = () => {
     setDialog(null);
@@ -183,7 +187,7 @@ export default function ObjectionsModule() {
       return;
     }
     if (model.role === "subject" && !subjectCanOpenCase(c)) {
-      model.setToast("В кабинет объекта поступают только запросы, ожидающие ответа.");
+      model.setToast("В кабинет заявителя поступают запросы и подписанные окончательные ответы.");
       return;
     }
     const shouldMarkRead =
@@ -1062,7 +1066,8 @@ export default function ObjectionsModule() {
           ) : model.role === "subject" && !subjectCanOpenCase(c) ? (
             <Notice tone="amber">
               Карточка обращения недоступна: в кабинете объекта отображаются
-              только запросы, ожидающие предоставления ответа.
+              только запросы, ожидающие предоставления ответа, и подписанные
+              окончательные ответы.
             </Notice>
           ) : (
           <CaseWorkspace
