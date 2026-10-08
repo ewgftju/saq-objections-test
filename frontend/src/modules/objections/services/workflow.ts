@@ -1674,6 +1674,11 @@ export function applyAction(
       });
       c.status = "final_response_approval";
       doc(
+        "Проект окончательного ответа",
+        "final-response",
+        c.result?.reason || "Окончательный ответ сформирован и ожидает согласования.",
+      );
+      doc(
         c.type === "notice"
           ? "Заключение по результатам рассмотрения возражения"
           : "Письменный результат рассмотрения",
