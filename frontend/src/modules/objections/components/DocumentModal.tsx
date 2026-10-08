@@ -145,6 +145,7 @@ export function DocumentContent({
   appendixPreview,
   certificatePreview,
   protocolPreview,
+  finalResponseMajorityByPoint,
 }: {
   c: ObjectionCase;
   kind: string;
@@ -162,6 +163,7 @@ export function DocumentContent({
   appendixFindingPreview?: Record<string, string>;
   appendixPreview?: Record<string, string>;
   certificatePreview?: CaseCertificate;
+  finalResponseMajorityByPoint?: Record<string, boolean>;
   protocolPreview?: {
     date: string;
     number: string;
@@ -544,6 +546,9 @@ export function DocumentContent({
             const pointDecision = winningOutcome
               ? OUTCOMES[winningOutcome].toLocaleLowerCase("ru-RU")
               : decision;
+            const decidedByMajority =
+              finalResponseMajorityByPoint?.[point.id] ??
+              point.finalDecisionByMajority;
             return (
               <section className="final-response-appendix-point" key={point.id}>
                 <p className="final-response-point-title">- по п. {point.number}:</p>
@@ -551,7 +556,7 @@ export function DocumentContent({
                   {pointReason}.
                 </p>
                 <p className="final-response-point-decision">
-                  На основании вышеизложенного, Апелляционной комиссией принято решение {pointDecision}.
+                  На основании вышеизложенного, Апелляционной комиссией принято решение {pointDecision}{decidedByMajority ? " большинством голосов" : ""}.
                 </p>
               </section>
             );

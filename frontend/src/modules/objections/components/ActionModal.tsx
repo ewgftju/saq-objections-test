@@ -743,9 +743,39 @@ export default function ActionModal({
             </div>
             <div hidden={requestTab !== "form"} className="form-grid">
               {definition.fields.map((field) => <Field key={field.name} field={field} />)}
+              {action === "deliver" && disputed(c).length > 0 && (
+                <div className="field wide">
+                  <span>Итоговый результат по оспариваемым пунктам</span>
+                  {disputed(c).map((point) => (
+                    <label className="checkbox-row" key={point.id}>
+                      <input
+                        type="checkbox"
+                        name={`finalResponseMajority_${point.id}`}
+                        defaultChecked={
+                          Object.hasOwn(values, `finalResponseMajority_${point.id}`)
+                            ? values[`finalResponseMajority_${point.id}`] === "on"
+                            : point.finalDecisionByMajority
+                        }
+                      />
+                      <span>По п. {point.number} — с большинством голосов</span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
-              <DocumentContent c={c} kind="final-response" />
+              <DocumentContent
+                c={c}
+                kind="final-response"
+                finalResponseMajorityByPoint={Object.fromEntries(
+                  disputed(c).map((point) => [
+                    point.id,
+                    Object.hasOwn(values, `finalResponseMajority_${point.id}`)
+                      ? values[`finalResponseMajority_${point.id}`] === "on"
+                      : Boolean(point.finalDecisionByMajority),
+                  ]),
+                )}
+              />
             </div>
           </>
         ) : action === "fill-request-response" ? (
