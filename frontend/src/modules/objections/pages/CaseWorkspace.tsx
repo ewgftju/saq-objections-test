@@ -178,6 +178,9 @@ function AuthorityRequestMaterials({
     isRequestForAuthority(request, role),
   );
   const authorityLabel = role === "kvga" ? "КВГА" : "ДВГА";
+  const finalResponse = c.delivery?.recipientRoles?.includes(role)
+    ? c.documents.filter((document) => document.kind === "final-response").at(-1)
+    : undefined;
 
   return (
     <>
@@ -242,6 +245,19 @@ function AuthorityRequestMaterials({
           </div>
         );
       })}
+      {finalResponse && (
+        <section className="request-documents-section">
+          <h4>Окончательный ответ</h4>
+          <div className="request-documents-list">
+            <div className="request-document-row">
+              <span>{finalResponse.name}</span>
+              <Button onClick={() => onDocument(finalResponse.kind, finalResponse)}>
+                Просмотр
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
     </>
   );
 }

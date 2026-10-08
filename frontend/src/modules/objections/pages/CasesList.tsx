@@ -94,6 +94,13 @@ function isRequestForSubject(request: ObjectionCase["requests"][number]) {
   );
 }
 
+function hasFinalResponseForRecipient(c: ObjectionCase, role: Role) {
+  return (
+    Boolean(c.delivery?.recipientRoles?.includes(role)) &&
+    c.documents.some((document) => document.kind === "final-response")
+  );
+}
+
 function normalizedAppealType(c: ObjectionCase) {
   return (c.appealType ?? TYPES[c.type])
     .replace("Возражение на уведомления", "Возражение на уведомление")
@@ -120,10 +127,15 @@ export default function CasesList({
   const recipientRole = authorityRole || subjectRole;
   const registryCases = authorityRole
     ? cases.filter((c) =>
-        c.requests.some((request) => isRequestForAuthority(request, role)),
+        c.requests.some((request) => isRequestForAuthority(request, role)) ||
+        hasFinalResponseForRecipient(c, role),
       )
     : subjectRole
-      ? cases.filter((c) => c.requests.some(isRequestForSubject))
+      ? cases.filter(
+          (c) =>
+            c.requests.some(isRequestForSubject) ||
+            hasFinalResponseForRecipient(c, role),
+        )
     : cases;
   const recipientRequests = registryCases.flatMap((c) =>
     c.requests.filter((request) =>
@@ -285,7 +297,7 @@ export default function CasesList({
         title="Реестр обращений"
         subtitle={
           recipientRole
-            ? "Запросы, поступившие в кабинет"
+            ? "Запросы и окончательные ответы, поступившие в кабинет"
             : "Возражения объектов аудита и жалобы субъектов контроля"
         }
         action={
