@@ -75,6 +75,8 @@ export interface ViolationPoint {
   legal?: string;
   proposal?: Outcome;
   final?: Outcome;
+  /** В приложении окончательного ответа решение по пункту принято большинством голосов. */
+  finalDecisionByMajority?: boolean;
   remainingAmount?: number;
 }
 
