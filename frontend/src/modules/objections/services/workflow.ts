@@ -1696,10 +1696,28 @@ export function applyAction(
       if (!c.delivery) throw new Error("Окончательный ответ ещё не сформирован");
       // Дата направления фиксируется в момент подписи и отправки ответа.
       c.delivery.date = date;
+      c.delivery.recipientRoles = [authorityRole(c.issuer), "subject"];
       c.status = "completed";
       title = "Окончательный ответ подписан";
-      note = "Окончательный ответ подписан и направлен заявителю.";
+      note = "Окончательный ответ подписан и направлен органу аудита и заявителю.";
       doc("Подписанный окончательный ответ", "final-response", note);
+      c.delivery.recipientRoles.forEach((recipientRole) => {
+        const recipient =
+          recipientRole === "subject"
+            ? c.org
+            : recipientRole === "kvga"
+              ? "КВГА"
+              : "ДВГА";
+        next.notifications.push({
+          id: `notification-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient,
+          recipientRole,
+          date,
+          read: false,
+          text: `В ваш кабинет направлен подписанный окончательный ответ по обращению №${c.appealNumber || c.id}.`,
+        });
+      });
       break;
     case "send-recommendations": {
       if (
