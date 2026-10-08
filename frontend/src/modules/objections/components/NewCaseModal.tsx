@@ -125,7 +125,11 @@ export default function NewCaseModal({
   const isActionComplaint = appealType === "action-inaction-complaint";
   const isDecisionComplaint = appealType === "kvga-dvga-decision-complaint";
   const hasSeparateAuditObject =
-    isNoticeComplaint || isAudit || isActionComplaint || isDecisionComplaint;
+    isNoticeComplaint ||
+    isAudit ||
+    isActionComplaint ||
+    isDecisionComplaint ||
+    appealType === "statement";
   const needsAgendaTemplateFields =
     isNotice ||
     isAudit ||
