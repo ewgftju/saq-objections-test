@@ -54,16 +54,10 @@ function formatFileSize(bytes: number) {
 }
 
 const APPEAL_TYPES = [
-  { value: "statement", label: "Заявление", caseType: "control" },
   {
-    value: "action-inaction-complaint",
-    label: "Жалоба на действие/бездействие",
-    caseType: "control",
-  },
-  {
-    value: "kvga-dvga-decision-complaint",
-    label: "Жалоба на решение КВГА/ДВГА",
-    caseType: "control",
+    value: "audit-objection",
+    label: "Возражение на аудиторский отчет",
+    caseType: "audit",
   },
   {
     value: "notice-objection",
@@ -76,10 +70,16 @@ const APPEAL_TYPES = [
     caseType: "notice",
   },
   {
-    value: "audit-objection",
-    label: "Возражение на аудиторский отчет",
-    caseType: "audit",
+    value: "kvga-dvga-decision-complaint",
+    label: "Жалоба на решение КВГА/ДВГА",
+    caseType: "control",
   },
+  {
+    value: "action-inaction-complaint",
+    label: "Жалоба на действие/бездействие",
+    caseType: "control",
+  },
+  { value: "statement", label: "Заявление", caseType: "control" },
 ] as const satisfies ReadonlyArray<{
   value: string;
   label: string;
