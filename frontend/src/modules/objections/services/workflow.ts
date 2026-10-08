@@ -73,6 +73,10 @@ function pendingOtherRequest(c: ObjectionCase) {
   );
 }
 
+function canSuspendReview(c: ObjectionCase) {
+  return c.appealType !== "Жалоба на уведомление";
+}
+
 /**
  * Рабочий орган фиксирует поступление один раз, только когда готовы ответы
  * на все направленные запросы. Для внешнего органа без кабинета SAQ
@@ -123,11 +127,11 @@ function advanceAfterResponses(c: ObjectionCase, date: string) {
   });
 
   let pausedDays = 0;
-  if (c.requestPauseStartedAt) {
+  if (c.requestPauseStartedAt && canSuspendReview(c)) {
     pausedDays = workdaysBetween(c.requestPauseStartedAt, date);
     if (pausedDays > 0) c.pauseDays += pausedDays;
-    c.requestPauseStartedAt = undefined;
   }
+  c.requestPauseStartedAt = undefined;
   c.status = "materials";
   return pausedDays;
 }
@@ -469,7 +473,10 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       label: "Дополнение к возражению",
       role: "work",
     });
-    if (!["paused", "materials", "meeting"].includes(c.status))
+    if (
+      canSuspendReview(c) &&
+      !["paused", "materials", "meeting"].includes(c.status)
+    )
       options.push({
         action: "pause",
         label: "Внешний запрос / приостановление",
@@ -795,14 +802,16 @@ export function applyAction(
           text: `В ваш кабинет направлен запрос по обращению №${c.appealNumber || c.id} для предоставления необходимых материалов.`,
         });
       if (firstSignedRequest) {
-        c.requestPauseStartedAt = date;
+        if (canSuspendReview(c)) c.requestPauseStartedAt = date;
         next.notifications.push({
           id: `notification-${c.id}-${next.notifications.length + 1}`,
           caseId: c.id,
           recipient: c.org,
           date,
           read: false,
-          text: `По Вашему возражению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения возражения приостанавливается на период до поступления ответа на указанный запрос.`,
+          text: canSuspendReview(c)
+            ? `По Вашему возражению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения возражения приостанавливается на период до поступления ответа на указанный запрос.`
+            : `По Вашей жалобе №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения жалобы не приостанавливается.`,
         });
       }
       const unapprovedRequests = c.requests.filter((item) => !item.approved);
@@ -1108,14 +1117,14 @@ export function applyAction(
       note = `Рабочий орган зафиксировал получение ответов: ${receivedRequests
         .map((request) => request.recipient)
         .join(", ")}.`;
-      if (c.requestPauseStartedAt) {
+      if (c.requestPauseStartedAt && canSuspendReview(c)) {
         const pausedDays = workdaysBetween(c.requestPauseStartedAt, date);
         if (pausedDays > 0) {
           c.pauseDays += pausedDays;
           note += ` Срок рассмотрения продлён на ${pausedDays} раб. дн.`;
         }
-        c.requestPauseStartedAt = undefined;
       }
+      c.requestPauseStartedAt = undefined;
       c.status = "materials";
       doc("Полученные материалы по запросам", "position", note);
       break;
@@ -1757,6 +1766,8 @@ export function applyAction(
       note += ` Новый срок: ${reviewDeadline(c)}. Извещение о продлении учтено.`;
       break;
     case "pause":
+      if (!canSuspendReview(c))
+        throw new Error("Срок рассмотрения жалобы на уведомление не приостанавливается");
       checked(form, "notified");
       c.pause = {
         date,
@@ -1772,6 +1783,8 @@ export function applyAction(
       );
       break;
     case "resume":
+      if (!canSuspendReview(c))
+        throw new Error("Срок рассмотрения жалобы на уведомление не приостанавливается");
       if (!c.pause || !c.resumeStatus)
         throw new Error("Приостановление не зарегистрировано");
       c.pauseDays += workdaysBetween(c.pause.date, date);

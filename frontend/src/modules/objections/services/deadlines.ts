@@ -68,6 +68,7 @@ export function filingDeadline(c: ObjectionCase) {
 
 export function reviewDuration(c: ObjectionCase) {
   if (c.appealType === "Возражение на аудиторский отчет") return 30;
+  if (c.appealType === "Жалоба на уведомление") return 20;
   if (c.appealType === "Жалоба на действие/бездействие") return 20;
   if (c.appealType === "Заявление") return 15;
   if (
@@ -79,10 +80,14 @@ export function reviewDuration(c: ObjectionCase) {
   return 30;
 }
 
+export function reviewPauseDays(c: ObjectionCase) {
+  return c.appealType === "Жалоба на уведомление" ? 0 : c.pauseDays;
+}
+
 export function reviewDeadline(c: ObjectionCase) {
   let d = addWorkdays(c.document.received, reviewDuration(c));
   if (c.extensionDays) d = addWorkdays(d, c.extensionDays);
-  if (c.pauseDays) d = addWorkdays(d, c.pauseDays);
+  if (reviewPauseDays(c)) d = addWorkdays(d, reviewPauseDays(c));
   return d;
 }
 
@@ -95,7 +100,10 @@ export function executionDeadline(c: ObjectionCase): string | null {
   )
     return addWorkdays(c.document.received, 2);
   if (["materials", "certificate_approval", "certificate_signed"].includes(c.status))
-    return addWorkdays(addWorkdays(c.document.received, 5), c.pauseDays);
+    return addWorkdays(
+      addWorkdays(c.document.received, 5),
+      reviewPauseDays(c),
+    );
   if (
     [
       "certificate_approved",

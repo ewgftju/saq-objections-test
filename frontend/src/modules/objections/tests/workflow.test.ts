@@ -404,6 +404,54 @@ test("справка и протокол используют часть шаб�
   );
 });
 
+test("жалоба на уведомление рассматривается без приостановления и использует свои шаблоны", () => {
+  const h = harness();
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.org = "ТОО «Заявитель»";
+  h.c.bin = "123456789012";
+  h.c.appealNumber = "Ж-2026-01";
+  h.c.appealDate = "2026-09-01";
+  h.c.issuer = "ДВГА по Атырауской области";
+  h.c.document = {
+    ...h.c.document,
+    received: "2026-09-01",
+    number: "УВ-2026-01",
+    date: "2026-08-28",
+  };
+  h.c.pauseDays = 5;
+
+  assert.equal(reviewDuration(h.c), 20);
+  assert.equal(reviewDeadline(h.c), "2026-09-29");
+  assert.ok(!additionalActions(h.c).some((action) => action.action === "pause"));
+
+  const request = renderToStaticMarkup(
+    createElement(DocumentContent, {
+      c: h.c,
+      kind: "request",
+      requestPreview: {
+        recipient: "ДВГА по Атырауской области",
+        deadline: "2026-09-10T18:00",
+        template: "dvga",
+      },
+    }),
+  );
+  const certificate = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "certificate" }),
+  );
+  const protocol = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "protocol" }),
+  );
+  const complaintDetails =
+    /от ТОО «Заявитель», ИИН\/БИН 123456789012, № Ж-2026-01 от 01\.09\.2026 года, на уведомление об устранении нарушений от 28\.08\.2026 года № УВ-2026-01, проведенный/;
+
+  assert.match(request, /жалобы от ТОО «Заявитель»/);
+  assert.match(request, complaintDetails);
+  assert.match(certificate, /поступила жалоба от ТОО «Заявитель»/);
+  assert.match(certificate, complaintDetails);
+  assert.match(protocol, /Жалоба от ТОО «Заявитель», ИИН\/БИН 123456789012, № Ж-2026-01 от 01\.09\.2026 года, на уведомление об устранении нарушений от 28\.08\.2026 года № УВ-2026-01, проведенный/);
+  assert.match(agendaItemText(h.c), /Жалоба от ТОО «Заявитель», ИИН\/БИН 123456789012, № Ж-2026-01 от 01\.09\.2026 года, на уведомление об устранении нарушений от 28\.08\.2026 года № УВ-2026-01, проведенный/);
+});
+
 test("исходное обращение использует реквизиты формы заполнения", () => {
   const h = harness(2);
   h.c.appealType = "Жалоба на решение КВГА/ДВГА";

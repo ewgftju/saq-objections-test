@@ -44,7 +44,7 @@ function requestIntro(c: ObjectionCase, deadline: string) {
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, направленного по результатам камерального контроля ${auditAuthorityFullName(c.issuer)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
 
   if (appealType === "Жалоба на уведомление")
-    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, направленного по результатам камерального контроля ${auditAuthorityFullName(c.issuer)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, на уведомление об устранении нарушений от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, проведенный ${auditAuthorityFullName(c.issuer)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
 
   if (appealType === "Возражение на аудиторский отчет")
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения от ${c.org}, БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, на аудиторский отчет от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, проведенный ${auditAuthorityFullName(c.issuer)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
@@ -111,7 +111,7 @@ function certificateIntro(c: ObjectionCase) {
     return `В Министерство финансов Республики Казахстан поступило возражение от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${number} от ${date} года, к уведомлению об устранении нарушений от ${sourceDate} года № ${sourceNumber}, направленного по результатам камерального контроля ${authority}.`;
 
   if (appealType === "Жалоба на уведомление")
-    return `В Министерство финансов Республики Казахстан поступила жалоба от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${number} от ${date} года, к уведомлению об устранении нарушений от ${sourceDate} года № ${sourceNumber}, направленного по результатам камерального контроля ${authority}.`;
+    return `В Министерство финансов Республики Казахстан поступила жалоба от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${number} от ${date} года, на уведомление об устранении нарушений от ${sourceDate} года № ${sourceNumber}, проведенный ${authority}.`;
 
   if (appealType === "Возражение на аудиторский отчет")
     return `В Министерство финансов Республики Казахстан поступило возражение от ${c.org}, БИН ${c.bin || "—"}, № ${number} от ${date} года, на аудиторский отчет от ${sourceDate} года № ${sourceNumber}, проведенный ${authority}.`;
@@ -612,7 +612,9 @@ export function DocumentContent({
       ? OUTCOMES[overallResult].toLocaleLowerCase("ru-RU")
       : "—";
     const protocolIntro =
-      snapshot.appealType === "Возражение на аудиторский отчет"
+      snapshot.appealType === "Жалоба на уведомление"
+        ? `Жалоба от ${snapshot.org}, ИИН/БИН ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на уведомление об устранении нарушений от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityFullName(snapshot.issuer)}.`
+        : snapshot.appealType === "Возражение на аудиторский отчет"
         ? `Возражение от ${snapshot.org}, БИН ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на аудиторский отчет от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityFullName(snapshot.issuer)}.`
         : `Возражение «${snapshot.org}», БИН ${snapshot.bin} от ${formatDate(snapshot.appealDate || snapshot.filed)} года №${snapshot.appealNumber || snapshot.document.number} к уведомлению ${auditAuthorityFullName(snapshot.issuer)} от ${formatDate(snapshot.document.date)} года №${snapshot.document.number}.`;
     return (

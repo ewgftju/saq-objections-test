@@ -1151,7 +1151,9 @@ export default function CaseWorkspace({
                   <strong>+{c.extensionDays} раб. дн.</strong>
                 </div>
               )}
-              {!isAuthorityRole(role) && c.pauseDays > 0 && (
+              {!isAuthorityRole(role) &&
+                c.appealType !== "Жалоба на уведомление" &&
+                c.pauseDays > 0 && (
                 <div className="support-row">
                   <span>Приостановление</span>
                   <strong>{c.pauseDays} раб. дн.</strong>
