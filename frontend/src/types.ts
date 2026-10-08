@@ -282,6 +282,7 @@ export interface AgendaDetails {
   decisionKind?:
     | "prescription-audit"
     | "prescription-preventive"
+    | "preventive-control-act"
     | "quality-control"
     | "administrative-act"
     /** Значения сохранённых до обновления карточек. */

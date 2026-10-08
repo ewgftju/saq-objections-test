@@ -27,6 +27,15 @@ function requestDeadlineDate(deadline: string) {
   return formatDate(deadline.slice(0, 10));
 }
 
+function hasSeparateAuditObject(c: ObjectionCase) {
+  return [
+    "Жалоба на уведомление",
+    "Возражение на аудиторский отчет",
+    "Жалоба на действие/бездействие",
+    "Жалоба на решение КВГА/ДВГА",
+  ].includes(c.appealType || "");
+}
+
 function requestIntro(c: ObjectionCase, deadline: string) {
   const details = c.agendaDetails;
   const appealType =
@@ -57,6 +66,8 @@ function requestIntro(c: ObjectionCase, deadline: string) {
       return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на решение контроля качества от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
     if (details?.decisionKind === "administrative-act")
       return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на административный акт от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
+    if (details?.decisionKind === "preventive-control-act")
+      return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на акт о результате профилактического контроля ${auditAuthorityFullName(c.issuer)} от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
     if (details?.decisionKind === "prescription-preventive")
       return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на предписание на акт о результате профилактического контроля от ${formatDate(details.relatedDocumentDate)} №${details.relatedDocumentNumber || "—"}${finish("жалобы")}`;
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на предписание на аудиторский отчет от ${formatDate(details?.relatedDocumentDate)} №${details?.relatedDocumentNumber || "—"}${finish("жалобы")}`;
@@ -104,6 +115,8 @@ function certificateIntro(c: ObjectionCase) {
       return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, по результатам контроля качества ${authority} от ${sourceDate} № ${sourceNumber}.`;
     if (details?.decisionKind === "administrative-act")
       return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на административный акт ${authority} от ${sourceDate} № ${sourceNumber}.`;
+    if (details?.decisionKind === "preventive-control-act")
+      return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на акт о результате профилактического контроля ${authority} от ${sourceDate} № ${sourceNumber}.`;
     return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на предписание ${authority} от ${sourceDate} № ${sourceNumber} по аудиторскому отчёту № ${details?.relatedDocumentNumber || "—"} от ${formatDate(details?.relatedDocumentDate)}.`;
   }
 
@@ -194,6 +207,8 @@ export function DocumentContent({
       ? "Предписание на аудиторский отчет"
       : agendaDetails?.decisionKind === "prescription-preventive"
         ? "Предписание по профилактическому контролю"
+        : agendaDetails?.decisionKind === "preventive-control-act"
+          ? "Акт о результате профилактического контроля"
         : agendaDetails?.decisionKind === "quality-control"
           ? "Контроль качества"
           : agendaDetails?.decisionKind === "administrative-act"
@@ -759,9 +774,35 @@ export function DocumentContent({
           <p>
             <b>Вид обращения:</b> {c.appealType || (c.type === "control" ? "Жалоба" : "Возражение")}
             <br />
-            <b>Наименование объекта аудита/заявителя:</b> {c.org}
+            <b>
+              {hasSeparateAuditObject(c)
+                ? "Наименование объекта заявителя"
+                : "Наименование объекта аудита/заявителя"}
+              :
+            </b>{" "}
+            {c.org}
             <br />
-            <b>БИН/ИИН:</b> {c.bin}
+            <b>
+              {hasSeparateAuditObject(c)
+                ? "БИН/ИИН заявителя"
+                : "БИН/ИИН"}
+              :
+            </b>{" "}
+            {c.bin}
+            {hasSeparateAuditObject(c) &&
+              c.agendaDetails?.auditObjectName && (
+                <>
+                  <br />
+                  <b>Наименование объекта аудита:</b>{" "}
+                  {c.agendaDetails.auditObjectName}
+                  {c.agendaDetails.auditObjectBin && (
+                    <>
+                      <br />
+                      <b>БИН/ИИН:</b> {c.agendaDetails.auditObjectBin}
+                    </>
+                  )}
+                </>
+              )}
             <br />
             <b>Номер возражения, жалобы, заявления:</b> {c.appealNumber || "—"}
             <br />

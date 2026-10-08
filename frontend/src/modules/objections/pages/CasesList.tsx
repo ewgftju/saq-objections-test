@@ -7,7 +7,6 @@ import { executionDeadline, reviewDeadline } from "../services/deadlines";
 
 const APPEAL_TYPE_OPTIONS = [
   "Заявление",
-  "Жалоба на акт о результате профилактического контроля",
   "Жалоба на действие/бездействие",
   "Жалоба на решение КВГА/ДВГА",
   "Возражение на уведомление",

@@ -229,11 +229,19 @@ export default function CaseWorkspace({
 }) {
   const [issuesExpanded, setIssuesExpanded] = useState(true);
   const agendaDetails = c.agendaDetails;
+  const hasSeparateAuditObject = [
+    "Жалоба на уведомление",
+    "Возражение на аудиторский отчет",
+    "Жалоба на действие/бездействие",
+    "Жалоба на решение КВГА/ДВГА",
+  ].includes(c.appealType || "");
   const decisionKindLabel =
     agendaDetails?.decisionKind === "prescription-audit"
       ? "Предписание на аудиторский отчет"
       : agendaDetails?.decisionKind === "prescription-preventive"
         ? "Предписание по профилактическому контролю"
+        : agendaDetails?.decisionKind === "preventive-control-act"
+          ? "Акт о результате профилактического контроля"
         : agendaDetails?.decisionKind === "quality-control"
           ? "Контроль качества"
           : agendaDetails?.decisionKind === "administrative-act"
@@ -326,7 +334,7 @@ export default function CaseWorkspace({
                   />
                   <Fact
                     label={
-                      c.appealType === "Жалоба на уведомление"
+                      hasSeparateAuditObject
                         ? "Наименование объекта заявителя"
                         : "Наименование объекта аудита/заявителя"
                     }
@@ -334,7 +342,7 @@ export default function CaseWorkspace({
                   />
                   <Fact
                     label={
-                      c.appealType === "Жалоба на уведомление"
+                      hasSeparateAuditObject
                         ? "БИН/ИИН заявителя"
                         : "БИН/ИИН"
                     }

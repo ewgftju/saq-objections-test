@@ -61,6 +61,8 @@ export function agendaItemText(c: ObjectionCase) {
       return `Жалоба ${appealReference(c)} ${common} на предписание ${issuer} ${documentReference(c)} по аудиторскому отчету ${related}`;
     if (kind === "prescription-preventive")
       return `Жалоба ${appealReference(c)} ${common} на предписание ${issuer} ${documentReference(c)} по профилактическому контролю ${related}`;
+    if (kind === "preventive-control-act")
+      return `Жалоба ${appealReference(c)} ${common} на акт о результате профилактического контроля ${issuer} ${documentReference(c)}`;
     if (kind === "administrative-act")
       return `Жалоба ${appealReference(c)} ${common} на административный акт ${issuer} ${documentReference(c)}`;
     return `Жалоба ${appealReference(c)} ${common} по результатам контроля качества ${issuer} ${documentReference(c)}`;

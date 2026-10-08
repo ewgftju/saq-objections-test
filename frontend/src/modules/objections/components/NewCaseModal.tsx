@@ -56,11 +56,6 @@ function formatFileSize(bytes: number) {
 const APPEAL_TYPES = [
   { value: "statement", label: "Заявление", caseType: "control" },
   {
-    value: "preventive-control-complaint",
-    label: "Жалоба на акт о результате профилактического контроля",
-    caseType: "control",
-  },
-  {
     value: "action-inaction-complaint",
     label: "Жалоба на действие/бездействие",
     caseType: "control",
@@ -116,6 +111,7 @@ export default function NewCaseModal({
   const [decisionKind, setDecisionKind] = useState<
     | "prescription-audit"
     | "prescription-preventive"
+    | "preventive-control-act"
     | "quality-control"
     | "administrative-act"
   >("prescription-audit");
@@ -128,14 +124,13 @@ export default function NewCaseModal({
   const isAudit = appealType === "audit-objection";
   const isActionComplaint = appealType === "action-inaction-complaint";
   const isDecisionComplaint = appealType === "kvga-dvga-decision-complaint";
-  const isPreventiveComplaint =
-    appealType === "preventive-control-complaint";
+  const hasSeparateAuditObject =
+    isNoticeComplaint || isAudit || isActionComplaint || isDecisionComplaint;
   const needsAgendaTemplateFields =
     isNotice ||
     isAudit ||
     isActionComplaint ||
-    isDecisionComplaint ||
-    isPreventiveComplaint;
+    isDecisionComplaint;
   const sourceDocumentLabel = isNotice
     ? "Уведомление об устранении нарушений"
       : isAudit
@@ -147,22 +142,24 @@ export default function NewCaseModal({
         : isDecisionComplaint
           ? decisionKind === "quality-control"
             ? "Результат контроля качества"
+            : decisionKind === "preventive-control-act"
+              ? "Акт о результате профилактического контроля"
             : decisionKind === "administrative-act"
               ? "Административный акт"
               : "Предписание"
-          : isPreventiveComplaint
-            ? "Акт о результате профилактического контроля"
-            : "Оспариваемый документ";
+          : "Оспариваемый документ";
   const sourceDocumentNumberLabel = isActionComplaint
     ? "Номер первичного обращения в ДВГА/КВГА"
     : `Номер: ${sourceDocumentLabel}`;
   const sourceDocumentDateLabel = isActionComplaint
     ? "Дата первичного обращения в ДВГА/КВГА"
     : `Дата: ${sourceDocumentLabel}`;
-  const applicantNameLabel = isNoticeComplaint
+  const applicantNameLabel = hasSeparateAuditObject
     ? "Наименование объекта заявителя"
     : "Наименование объекта аудита/заявителя";
-  const applicantBinLabel = isNoticeComplaint ? "БИН/ИИН заявителя" : "БИН/ИИН";
+  const applicantBinLabel = hasSeparateAuditObject
+    ? "БИН/ИИН заявителя"
+    : "БИН/ИИН";
   const updateRequirementFiles = (files: File[]) => {
     if (!files.length) return;
     setRequirementFiles((current) => {
@@ -242,10 +239,10 @@ export default function NewCaseModal({
               : "";
             if (isNotice && !/^\d{12}$/.test(customerBin))
               throw new Error("БИН заказчика должен содержать 12 цифр");
-            const auditObjectBin = isNoticeComplaint
+            const auditObjectBin = hasSeparateAuditObject
               ? get("auditObjectBin", "БИН/ИИН объекта аудита")
               : "";
-            if (isNoticeComplaint && !/^\d{12}$/.test(auditObjectBin))
+            if (hasSeparateAuditObject && !/^\d{12}$/.test(auditObjectBin))
               throw new Error("БИН/ИИН объекта аудита должен содержать 12 цифр");
             const numberPrefix =
               selectedAppealType.label === "Заявление"
@@ -309,13 +306,15 @@ export default function NewCaseModal({
                         "Наименование заказчика",
                       ),
                       customerBin,
-                      ...(isNoticeComplaint && {
-                        auditObjectName: get(
-                          "auditObjectName",
-                          "Наименование объекта аудита",
-                        ),
-                        auditObjectBin,
-                      }),
+                    }
+                  : {}),
+                ...(hasSeparateAuditObject
+                  ? {
+                      auditObjectName: get(
+                        "auditObjectName",
+                        "Наименование объекта аудита",
+                      ),
+                      auditObjectBin,
                     }
                   : {}),
                 ...(isActionComplaint && hasProcurement
@@ -459,20 +458,7 @@ export default function NewCaseModal({
               type: "text" as const,
             },
             { name: "bin", label: applicantBinLabel, type: "text" as const },
-            {
-              name: "appealNumber",
-              label: "Номер возражения, жалобы, заявления",
-              type: "text" as const,
-            },
-            {
-              name: "appealDate",
-              label: "Дата возражения, жалобы, заявления",
-              type: "date" as const,
-              value: state.date,
-            },
-            { name: "address", label: "Местонахождение", type: "text" as const },
-            { name: "applicant", label: "Представитель", type: "text" as const },
-            ...(isNoticeComplaint
+            ...(hasSeparateAuditObject
               ? [
                   {
                     name: "auditObjectName",
@@ -486,6 +472,19 @@ export default function NewCaseModal({
                   },
                 ]
               : []),
+            {
+              name: "appealNumber",
+              label: "Номер возражения, жалобы, заявления",
+              type: "text" as const,
+            },
+            {
+              name: "appealDate",
+              label: "Дата возражения, жалобы, заявления",
+              type: "date" as const,
+              value: state.date,
+            },
+            { name: "address", label: "Местонахождение", type: "text" as const },
+            { name: "applicant", label: "Представитель", type: "text" as const },
           ].map((field) => (
             <Field
               field={{ ...field, required: field.name !== "applicant" }}
@@ -635,6 +634,7 @@ export default function NewCaseModal({
                     event.target.value as
                       | "prescription-audit"
                       | "prescription-preventive"
+                      | "preventive-control-act"
                       | "quality-control"
                       | "administrative-act",
                   )
@@ -645,6 +645,9 @@ export default function NewCaseModal({
                 </option>
                 <option value="prescription-preventive">
                   Предписание по профилактическому контролю
+                </option>
+                <option value="preventive-control-act">
+                  Акт о результате профилактического контроля
                 </option>
                 <option value="quality-control">Контроль качества</option>
                 <option value="administrative-act">Административный акт</option>
