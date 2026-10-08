@@ -277,6 +277,12 @@ export interface AgendaDetails {
   customerBin?: string;
   auditObjectName?: string;
   auditObjectBin?: string;
+  /** Реквизиты каждого обжалованного действия/бездействия. */
+  actionAppealAuthorities?: Array<{
+    issuer: string;
+    documentNumber: string;
+    documentDate: string;
+  }>;
   relatedDocumentNumber?: string;
   relatedDocumentDate?: string;
   decisionKind?:
