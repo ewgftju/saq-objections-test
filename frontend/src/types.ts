@@ -163,6 +163,8 @@ export interface Delivery {
   appealProcedure: string;
   published?: string | null;
   received?: string;
+  /** Кабинеты, в которые направлен подписанный окончательный ответ. */
+  recipientRoles?: Role[];
 }
 
 export interface CaseDocument {
