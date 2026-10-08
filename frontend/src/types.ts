@@ -310,7 +310,8 @@ export interface CaseNotification {
     | "agenda-sign"
     | "agenda-signed"
     | "request-response"
-    | "recommendation";
+    | "recommendation"
+    | "final-response";
   attendancePollId?: string;
   commissionMemberId?: string;
   meetingId?: string;
