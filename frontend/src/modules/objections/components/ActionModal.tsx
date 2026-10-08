@@ -178,10 +178,12 @@ function ProtocolVotesFields({
   c,
   members,
   values,
+  onReasonChange,
 }: {
   c: ObjectionCase;
   members: Array<{ id: string; name: string }>;
   values: FormValues;
+  onReasonChange: (name: string, value: string) => void;
 }) {
   if (!members.length)
     return (
@@ -211,12 +213,7 @@ function ProtocolVotesFields({
                 const reasonName = `protocolReason_${point.id}_${member.id}`;
                 const vote = normalizeVoteChoice(values[voteName]);
                 const certificateBasis = certificateBasisForPoint(c, point);
-                const enteredReason = values[reasonName] || "";
-                const reason = enteredReason.includes(certificateBasis)
-                  ? enteredReason
-                  : enteredReason
-                    ? `${certificateBasis}\n\nДополнительное обоснование члена АК:\n${enteredReason}`
-                    : certificateBasis;
+                const reason = values[reasonName] ?? certificateBasis;
                 return (
                   <tr key={`${point.id}-${member.id}`}>
                     <td>{index === 0 ? point.number : ""}</td>
@@ -235,6 +232,7 @@ function ProtocolVotesFields({
                         rows={8}
                         required
                         aria-label={`Обоснование ${member.name} по пункту ${point.number}`}
+                        onChange={(event) => onReasonChange(reasonName, event.currentTarget.value)}
                       />
                     </td>
                   </tr>
@@ -1016,6 +1014,9 @@ export default function ActionModal({
                 c={c}
                 members={protocolMembers}
                 values={values}
+                onReasonChange={(name, value) =>
+                  setValues((current) => ({ ...current, [name]: value }))
+                }
               />
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
