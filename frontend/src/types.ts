@@ -202,10 +202,7 @@ export interface CaseRequest {
   sent?: string;
   responded?: string;
   /** Ответ органа хранится в запросе и недоступен другому адресату. */
-  authorityResponses?: Record<
-    string,
-    { finding: string; response: string }
-  >;
+  authorityResponses?: Record<string, { finding: string; response: string }>;
   responseApproved?: string;
   responseSigned?: string;
   confirmed?: string;
@@ -277,6 +274,8 @@ export interface AgendaDetails {
   customerBin?: string;
   auditObjectName?: string;
   auditObjectBin?: string;
+  /** Заявитель действует от имени объекта аудита по доверенности. */
+  applicantIsAuditObjectRepresentative?: boolean;
   /** Реквизиты каждого обжалованного действия/бездействия. */
   actionAppealAuthorities?: Array<{
     issuer: string;
