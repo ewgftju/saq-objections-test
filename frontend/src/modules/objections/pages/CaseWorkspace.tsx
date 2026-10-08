@@ -188,20 +188,58 @@ function AuthorityRequestMaterials({
             document.requestId === request.id &&
             ["request", "request-appendix"].includes(document.kind),
         );
+        const responseDocuments = c.documents.filter(
+          (document) =>
+            document.requestId === request.id &&
+            [
+              "authority-response-appendix",
+              "authority-response-attachment",
+            ].includes(document.kind),
+        );
         return (
-          <section className="request-documents-section" key={request.id}>
-            <h4>Запрос в {authorityLabel}</h4>
-            <div className="request-documents-list">
-              {documents.map((document) => (
-                <div className="request-document-row" key={document.name}>
-                  <span>{document.name}</span>
-                  <Button onClick={() => onDocument(document.kind, document)}>
-                    Просмотр
-                  </Button>
+          <div key={request.id}>
+            <section className="request-documents-section">
+              <h4>Запрос в {authorityLabel}</h4>
+              <div className="request-documents-list">
+                {documents.map((document) => (
+                  <div className="request-document-row" key={document.name}>
+                    <span>{document.name}</span>
+                    <Button onClick={() => onDocument(document.kind, document)}>
+                      Просмотр
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </section>
+            {request.responded && (
+              <section className="request-documents-section">
+                <h4>Ответ {authorityLabel}</h4>
+                <div className="request-documents-list">
+                  {responseDocuments.map((document) => (
+                    <div
+                      className="request-document-row"
+                      key={`${document.kind}-${document.name}`}
+                    >
+                      <span>{document.name}</span>
+                      {document.dataUrl ? (
+                        <a
+                          className="button"
+                          href={document.dataUrl}
+                          download={document.filename || document.name}
+                        >
+                          Скачать
+                        </a>
+                      ) : (
+                        <Button onClick={() => onDocument(document.kind, document)}>
+                          Просмотр
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
+              </section>
+            )}
+          </div>
         );
       })}
     </>
