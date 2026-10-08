@@ -1059,7 +1059,12 @@ export function applyAction(
       );
       note = "Мотивированные ответы ДВГА/КВГА заполнены по всем оспариваемым пунктам.";
       c.status = requestRoutingStatus(c) || authorityStatus(c) || "response_approval";
-      doc("Мотивированный ответ ДВГА/КВГА", "authority-response", note);
+      doc(
+        "Мотивированный ответ ДВГА/КВГА",
+        "authority-response",
+        note,
+        request.id,
+      );
       break;
     }
     case "approve-response": {
