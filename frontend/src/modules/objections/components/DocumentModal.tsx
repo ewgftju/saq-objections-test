@@ -467,6 +467,7 @@ export function DocumentContent({
               const positions = (certificate?.memberPositions || []).filter(
                 (position) => position.pointId === point.id,
               );
+              if (!positions.length) return null;
               const members = snapshot.members.length
                 ? snapshot.members
                 : positions.map((position) => ({ id: position.id, name: position.name }));
