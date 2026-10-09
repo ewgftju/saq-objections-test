@@ -743,9 +743,13 @@ export default function ActionModal({
             </div>
             <div hidden={requestTab !== "form"} className="form-grid">
               {definition.fields.map((field) => <Field key={field.name} field={field} />)}
-              {action === "deliver" && disputed(c).length > 0 && (
+              {(action === "deliver" || action === "create-decision-project") && disputed(c).length > 0 && (
                 <div className="field wide">
-                  <span>Итоговый результат по оспариваемым пунктам</span>
+                  <span>
+                    {action === "create-decision-project"
+                      ? "Решение по оспариваемым пунктам"
+                      : "Итоговый результат по оспариваемым пунктам"}
+                  </span>
                   {disputed(c).map((point) => (
                     <label className="checkbox-row" key={point.id}>
                       <input
