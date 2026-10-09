@@ -113,12 +113,14 @@ export default function NotificationsPage({
                           primary={
                             notification.kind === "request-response" ||
                             notification.kind === "final-response" ||
-                            notification.kind === "decision-project"
+                            notification.kind === "decision-project" ||
+                            notification.kind === "hearing-notice"
                           }
                           onClick={() => onOpenCase(notification.caseId)}
                         >
                           {notification.kind === "final-response" ||
-                          notification.kind === "decision-project"
+                          notification.kind === "decision-project" ||
+                          notification.kind === "hearing-notice"
                             ? "Перейти к обращению"
                             : notification.kind === "request-response"
                               ? "Открыть обращение"
