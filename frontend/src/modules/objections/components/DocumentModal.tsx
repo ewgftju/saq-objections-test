@@ -691,6 +691,10 @@ export function DocumentContent({
         </div>
         <p className="protocol-template-intro">{protocolIntro}</p>
         <p>
+          <span style={{ display: "block", textAlign: "left" }}>
+            Наименование органа, вынесшего обжалуемое решение: {auditAuthorityFullName(snapshot.issuer)}.
+          </span>
+          <br />
           <span style={{ display: "block", textAlign: "left" }}>Количество присутствовавших членов Апелляционной комиссии: {presentMembers.length}.</span>
           <br />
           <span style={{ display: "block", textAlign: "left" }}><b>Результаты голосования членов Апелляционной комиссии:</b></span>
