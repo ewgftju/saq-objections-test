@@ -323,8 +323,6 @@ export default function CaseWorkspace({
       Boolean(request.sent) &&
       !request.responded,
   );
-  const projectAvailableToSubject =
-    role !== "subject" || c.decisionProject?.recipientRoles?.includes("subject");
   return (
     <>
       <div className="back-row">
@@ -724,7 +722,7 @@ export default function CaseWorkspace({
                   const decisionProject = c.documents
                     .filter((document) => document.kind === "decision-project")
                     .at(-1);
-                  return decisionProject && projectAvailableToSubject ? (
+                  return decisionProject ? (
                     <section className="request-documents-section">
                       <h4>Проект решения</h4>
                       <div className="request-documents-list">
@@ -1047,21 +1045,14 @@ export default function CaseWorkspace({
                     <p>{c.memberPosition}</p>
                   </Notice>
                 )}
-                {c.hearing && (!c.decisionProject || c.decisionProject.signed) && (
+                {c.hearing && (
                   <Notice>
                     <strong>Заслушивание</strong>
                     <p>
                       {c.hearing.skip
                         ? `Не проводилось: ${c.hearing.reason}`
-                        : `Дата и время: ${formatDateTime(c.hearing.date)} · Место: ${c.hearing.location || "—"}`}
+                        : `Извещение ${formatDate(c.hearing.notice)} · Заслушивание ${formatDate(c.hearing.date)}`}
                     </p>
-                    {!c.hearing.skip && c.hearing.noticeChannel && (
-                      <p>
-                        Уведомление направлено: {formatDateTime(c.hearing.noticeSentAt || c.hearing.notice)}
-                        {` · ${c.hearing.noticeChannel}`}
-                        {c.hearing.noticeReference ? ` · ${c.hearing.noticeReference}` : ""}
-                      </p>
-                    )}
                     {c.hearing.subject && <p>Заявитель: {c.hearing.subject}</p>}
                     {c.hearing.issuer && <p>Орган: {c.hearing.issuer}</p>}
                     <p>{c.hearing.note}</p>
@@ -1238,12 +1229,10 @@ export default function CaseWorkspace({
                   <strong>{c.pauseDays} раб. дн.</strong>
                 </div>
               )}
-              {!isAuthorityRole(role) &&
-                c.hearing?.date &&
-                (!c.decisionProject || c.decisionProject.signed) && (
+              {!isAuthorityRole(role) && c.hearing?.date && (
                 <div className="support-row">
                   <span>Заслушивание</span>
-                  <strong>{formatDateTime(c.hearing.date)}</strong>
+                  <strong>{formatDate(c.hearing.date)}</strong>
                 </div>
               )}
               {c.delivery?.received && (
