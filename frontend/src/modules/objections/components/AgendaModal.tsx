@@ -4,6 +4,7 @@ import { Button, Modal } from "../../../components/ui";
 import type { ObjectionCase } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import { auditAuthorityFullName } from "../../../utils/auditAuthority";
+import { agendaOrProtocolIntro } from "../services/appealTemplates";
 
 function value(text?: string) {
   return text?.trim() || "—";
@@ -24,6 +25,9 @@ function documentReference(c: ObjectionCase) {
 }
 
 export function agendaItemText(c: ObjectionCase) {
+  const sharedIntro = agendaOrProtocolIntro(c);
+  if (sharedIntro) return sharedIntro;
+
   const details = c.agendaDetails;
   const appealType =
     c.appealType ??
@@ -71,9 +75,6 @@ export function agendaItemText(c: ObjectionCase) {
   if (appealType === "Жалоба на акт о результате профилактического контроля")
     return `Жалоба ${appealReference(c)} ${common} на акт о результате профилактического контроля ${issuer} ${documentReference(c)}`;
 
-  if (appealType === "Заявление")
-    return `Заявление ${appealReference(c)} ${common} ${value(c.request)}.`;
-
   return `${value(appealType)} ${appealReference(c)} ${common}`;
 }
 
@@ -102,7 +103,10 @@ export function AgendaDocument({
   );
 }
 
-export function agendaDocumentHtml(cases: ObjectionCase[], meetingDate: string) {
+export function agendaDocumentHtml(
+  cases: ObjectionCase[],
+  meetingDate: string,
+) {
   const content = renderToStaticMarkup(
     <AgendaDocument cases={cases} meetingDate={meetingDate} />,
   );
