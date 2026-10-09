@@ -55,12 +55,15 @@ function authorityRequestsForRole(c: ObjectionCase, role?: Role) {
     (request) =>
       isDvgaOrKvgaRequest(request.recipient) &&
       Boolean(request.sent) &&
-      (role !== "dvga" && role !== "kvga" || authorityRole(request.recipient) === role),
+      ((role !== "dvga" && role !== "kvga") ||
+        authorityRole(request.recipient) === role),
   );
 }
 
 function pendingDvgaOrKvgaRequest(c: ObjectionCase, role?: Role) {
-  return authorityRequestsForRole(c, role).find((request) => !request.responded);
+  return authorityRequestsForRole(c, role).find(
+    (request) => !request.responded,
+  );
 }
 
 function pendingOtherRequest(c: ObjectionCase) {
@@ -74,7 +77,7 @@ function pendingOtherRequest(c: ObjectionCase) {
 }
 
 function canSuspendReview(c: ObjectionCase) {
-  return c.appealType !== "Жалоба на уведомление";
+  return !c.appealType?.trim().startsWith("Жалоба");
 }
 
 /**
@@ -98,7 +101,9 @@ function allResponsesReadyForConfirmation(c: ObjectionCase) {
 /** Пока не подписаны все запросы, общий статус обращения остаётся на
  * согласовании или подписании. Это не мешает адресату уже подписанного
  * запроса заполнять ответ в своём кабинете. */
-function requestRoutingStatus(c: ObjectionCase): ObjectionCase["status"] | null {
+function requestRoutingStatus(
+  c: ObjectionCase,
+): ObjectionCase["status"] | null {
   if (!c.requests.some((request) => !request.sent)) return null;
   return c.requests.some((request) => !request.approved)
     ? "request_approval"
@@ -198,8 +203,10 @@ function authorityResponseAction(
 function authorityStatus(c: ObjectionCase): ObjectionCase["status"] | null {
   const requests = authorityRequestsForRole(c);
   if (requests.some((request) => !request.responded)) return "request_approved";
-  if (requests.some((request) => !request.responseApproved)) return "response_approval";
-  if (requests.some((request) => !request.responseSigned)) return "response_signed";
+  if (requests.some((request) => !request.responseApproved))
+    return "response_approval";
+  if (requests.some((request) => !request.responseSigned))
+    return "response_signed";
   if (requests.some((request) => !request.confirmed))
     return allResponsesReadyForConfirmation(c)
       ? "response_ready"
@@ -234,7 +241,9 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       return { action: "position", label: "Ответ получен", role: "work" };
   }
   if (c.status === "request_approval") {
-    const hasUnapprovedRequests = c.requests.some((request) => !request.approved);
+    const hasUnapprovedRequests = c.requests.some(
+      (request) => !request.approved,
+    );
     const hasApprovedUnsignedRequests = c.requests.some(
       (request) => Boolean(request.approved) && !request.sent,
     );
@@ -384,7 +393,8 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     },
     decided: {
       action:
-        c.type === "notice" && c.documents.some((document) => document.kind === "conclusion")
+        c.type === "notice" &&
+        c.documents.some((document) => document.kind === "conclusion")
           ? "close-review"
           : "deliver",
       label:
@@ -506,10 +516,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
         role: "work",
       });
   }
-  if (
-    (c.type === "notice" && c.status === "decided") ||
-    c.documents.some((document) => document.kind === "final-response")
-  ) {
+  if (c.status === "completed") {
     options.push({
       action: "send-recommendations",
       label: "Направить рекомендации",
@@ -613,7 +620,12 @@ export function applyAction(
   const available = [nextAction(c, role), ...additionalActions(c)].find(
     (item) => item?.action === action,
   );
-  if (!available || (role !== "demo-superuser" && available.role !== role && action !== "upload"))
+  if (
+    !available ||
+    (role !== "demo-superuser" &&
+      available.role !== role &&
+      action !== "upload")
+  )
     throw new Error("Действие недоступно на этом этапе или для выбранной роли");
   const date = actionDate(next, c, form);
   const text = (name: string, label?: string) => required(form, name, label);
@@ -679,14 +691,18 @@ export function applyAction(
       // Ручной адресат — это внешний орган, у него нет кабинета SAQ.
       // Кабинет Объекта используется только если адресат вручную не указан.
       const saqRecipient =
-        otherOrgan && !enteredRecipient && form.get("saqRecipient") === "subject"
+        otherOrgan &&
+        !enteredRecipient &&
+        form.get("saqRecipient") === "subject"
           ? "subject"
           : undefined;
       const saqRecipientLabel =
         saqRecipient === "subject" ? "Кабинет Объекта" : "";
       const recipient = enteredRecipient || saqRecipientLabel;
       if (!recipient)
-        throw new Error("Заполните «Кому направить запрос» или «Получатель SAQ»");
+        throw new Error(
+          "Заполните «Кому направить запрос» или «Получатель SAQ»",
+        );
       const deadline = `${addWorkdays(date, 2)}T18:00`;
       const requestId = `request-${c.requests.length + 1}`;
       note = `Запрос сформирован для ${recipient}. Срок рассмотрения: ${deadline}.`;
@@ -720,7 +736,8 @@ export function applyAction(
         );
       c.status = "request_approval";
       title = "Сформированные запросы направлены на согласование";
-      note = "Все сформированные запросы и приложения направлены заместителю директора ДАВГА.";
+      note =
+        "Все сформированные запросы и приложения направлены заместителю директора ДАВГА.";
       next.notifications.push({
         id: `notification-${c.id}-${next.notifications.length + 1}`,
         caseId: c.id,
@@ -746,7 +763,9 @@ export function applyAction(
       if (request.approved) throw new Error("Этот запрос уже согласован");
       request.approved = date;
       const remainingRequests = c.requests.filter((item) => !item.approved);
-      c.status = remainingRequests.length ? "request_approval" : "request_signed";
+      c.status = remainingRequests.length
+        ? "request_approval"
+        : "request_signed";
       title = `Запрос в ${request.recipient} согласован`;
       note = remainingRequests.length
         ? `Запрос направлен в кабинет директора ДАВГА для подписания. Осталось согласовать запросов: ${remainingRequests.length}.`
@@ -775,8 +794,7 @@ export function applyAction(
           : undefined;
       if (!request) throw new Error("Выберите запрос для подписания");
       if (request.sent) throw new Error("Этот запрос уже подписан");
-      if (!request.approved)
-        throw new Error("Сначала согласуйте этот запрос");
+      if (!request.approved) throw new Error("Сначала согласуйте этот запрос");
       const firstSignedRequest = c.requests.every((item) => !item.sent);
       request.sent = date;
       if (isDvgaOrKvgaRequest(request.recipient))
@@ -808,7 +826,7 @@ export function applyAction(
           date,
           read: false,
           text: canSuspendReview(c)
-            ? `По Вашему возражению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения возражения приостанавливается на период до поступления ответа на указанный запрос.`
+            ? `По Вашему обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения обращения приостанавливается на период до поступления ответа на указанный запрос.`
             : `По Вашей жалобе №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения жалобы не приостанавливается.`,
         });
       }
@@ -840,22 +858,25 @@ export function applyAction(
       break;
     }
     case "sign-certificate": {
-      if (!c.certificate)
-        throw new Error("Справка по доводам не сформирована");
+      if (!c.certificate) throw new Error("Справка по доводам не сформирована");
       c.status = "certificate_approved";
       title = "Справка подписана";
-      note = "Справка подписана. Опрос о присутствии направляется автоматически при создании заседания.";
+      note =
+        "Справка подписана. Опрос о присутствии направляется автоматически при создании заседания.";
       break;
     }
     case "review-commission-documents": {
       c.status = "commission_voting";
       title = "Члены АК ознакомились с документами";
-      note = "Ознакомление членов апелляционной комиссии со справкой и материалами обращения завершено. Состав участников определяется подтверждёнными ответами «Да» в опросе о присутствии.";
+      note =
+        "Ознакомление членов апелляционной комиссии со справкой и материалами обращения завершено. Состав участников определяется подтверждёнными ответами «Да» в опросе о присутствии.";
       doc("Ознакомление членов АК с документами", "commission-review", note);
       break;
     }
     case "choose-commission-members": {
-      throw new Error("Состав участников определяется ответами в опросе о присутствии");
+      throw new Error(
+        "Состав участников определяется ответами в опросе о присутствии",
+      );
     }
     case "commission-vote": {
       const voterId = text("commissionMember", "Голосующий член АК");
@@ -871,8 +892,7 @@ export function applyAction(
         const vote = normalizeVoteChoice(
           text(`commissionVote_${point.id}`, `Голос по пункту ${point.number}`),
         );
-        if (!vote)
-          throw new Error("Выберите вариант голоса по каждому пункту");
+        if (!vote) throw new Error("Выберите вариант голоса по каждому пункту");
         const result = c.votes[point.id] || {
           yes: 0,
           no: 0,
@@ -886,8 +906,9 @@ export function applyAction(
         result.votes ||= {};
         result.voteReasons ||= {};
         result.votes[voter.id] = vote;
-        result.voteReasons[voter.id] =
-          String(form.get(`commissionReason_${point.id}`) || "").trim();
+        result.voteReasons[voter.id] = String(
+          form.get(`commissionReason_${point.id}`) || "",
+        ).trim();
         const recordedVotes = c.members.map((member) =>
           normalizeVoteChoice(result.votes![member.id]),
         );
@@ -897,10 +918,7 @@ export function applyAction(
         result.eligible = c.members.length;
         const allVoted = recordedVotes.every(Boolean);
         const outcome = allVoted
-          ? pointOutcomeFromVotes(
-              result.votes,
-              chairId,
-            )
+          ? pointOutcomeFromVotes(result.votes, chairId)
           : "";
         result.approved = outcome === "accept";
         c.votes[point.id] = result;
@@ -929,7 +947,9 @@ export function applyAction(
       if (!c.certificate)
         throw new Error("Сначала сформируйте и направьте справку членам АК");
       if (!c.members.length)
-        throw new Error("В последнем опросе о присутствии нет участников заседания");
+        throw new Error(
+          "В последнем опросе о присутствии нет участников заседания",
+        );
       const chairId = presidingChairId(c.members);
       if (!chairId)
         throw new Error(
@@ -940,10 +960,16 @@ export function applyAction(
       for (const point of disputed(c)) {
         for (const member of c.members) {
           const manualResult = normalizeVoteChoice(
-            String(form.get(`meetingCertificateResult_${point.id}_${member.id}`) || form.get(`meetingCertificateResult_${member.id}`) || ""),
+            String(
+              form.get(`meetingCertificateResult_${point.id}_${member.id}`) ||
+                form.get(`meetingCertificateResult_${member.id}`) ||
+                "",
+            ),
           );
           const comment = String(
-            form.get(`meetingCertificateComment_${point.id}_${member.id}`) || form.get(`meetingCertificateComment_${member.id}`) || "",
+            form.get(`meetingCertificateComment_${point.id}_${member.id}`) ||
+              form.get(`meetingCertificateComment_${member.id}`) ||
+              "",
           ).trim();
           if (!manualResult) continue;
           const result = c.votes[point.id] || {
@@ -969,10 +995,7 @@ export function applyAction(
           result.eligible = c.members.length;
           const allVoted = recordedVotes.every(Boolean);
           const outcome = allVoted
-            ? pointOutcomeFromVotes(
-                result.votes,
-                chairId,
-              )
+            ? pointOutcomeFromVotes(result.votes, chairId)
             : "";
           result.approved = outcome === "accept";
           c.votes[point.id] = result;
@@ -984,7 +1007,10 @@ export function applyAction(
       }
 
       const savedPositions = new Map(
-        c.certificate.memberPositions.map((position) => [`${position.pointId || "legacy"}_${position.id}`, position]),
+        c.certificate.memberPositions.map((position) => [
+          `${position.pointId || "legacy"}_${position.id}`,
+          position,
+        ]),
       );
       c.certificate.memberPositions = disputed(c).flatMap((point) =>
         c.members.map((member) => ({
@@ -1010,16 +1036,20 @@ export function applyAction(
       );
       if (allVotesRecorded) c.status = "meeting_certificate_approved";
       title = "Справка заполнена результатами голосования";
-      note = "В справке зафиксированы голоса и комментарии участников заседания. Результаты, внесённые вручную, учитываются наравне с электронными голосами.";
+      note =
+        "В справке зафиксированы голоса и комментарии участников заседания. Результаты, внесённые вручную, учитываются наравне с электронными голосами.";
       doc("Справка: результаты голосования членов АК", "certificate", note);
       break;
     }
     case "approve-meeting-certificate": {
       if (!c.certificate?.memberPositions.length)
-        throw new Error("Сначала заполните и сохраните справку результатами голосования");
+        throw new Error(
+          "Сначала заполните и сохраните справку результатами голосования",
+        );
       c.status = "meeting_certificate_signed";
       title = "Справка согласована";
-      note = "Справка по результатам голосования согласована и ожидает подписи исполнителя рабочего органа.";
+      note =
+        "Справка по результатам голосования согласована и ожидает подписи исполнителя рабочего органа.";
       break;
     }
     case "sign-meeting-certificate": {
@@ -1027,7 +1057,8 @@ export function applyAction(
         throw new Error("Справка результатами голосования не заполнена");
       c.status = "meeting_certificate_approved";
       title = "Справка подписана";
-      note = "Справка по результатам голосования подписана. Можно зафиксировать проведение заседания.";
+      note =
+        "Справка по результатам голосования подписана. Можно зафиксировать проведение заседания.";
       break;
     }
     case "fill-request-response": {
@@ -1055,8 +1086,10 @@ export function applyAction(
         `Заполненное приложение к запросу в ${request.recipient}.`,
         request.id,
       );
-      note = "Мотивированные ответы ДВГА/КВГА заполнены по всем оспариваемым пунктам.";
-      c.status = requestRoutingStatus(c) || authorityStatus(c) || "response_approval";
+      note =
+        "Мотивированные ответы ДВГА/КВГА заполнены по всем оспариваемым пунктам.";
+      c.status =
+        requestRoutingStatus(c) || authorityStatus(c) || "response_approval";
       doc(
         "Мотивированный ответ ДВГА/КВГА",
         "authority-response",
@@ -1071,7 +1104,8 @@ export function applyAction(
       );
       if (!request) throw new Error("Нет ответа, ожидающего согласования");
       request.responseApproved = date;
-      c.status = requestRoutingStatus(c) || authorityStatus(c) || "response_signed";
+      c.status =
+        requestRoutingStatus(c) || authorityStatus(c) || "response_signed";
       title = "Ответ ДВГА/КВГА согласован";
       note = "Согласованный ответ ДВГА/КВГА ожидает подписания.";
       break;
@@ -1084,7 +1118,8 @@ export function applyAction(
       request.responseSigned = date;
       const pausedDays = advanceAfterResponses(c, date);
       if (pausedDays === null)
-        c.status = requestRoutingStatus(c) || authorityStatus(c) || "response_ready";
+        c.status =
+          requestRoutingStatus(c) || authorityStatus(c) || "response_ready";
       title = "Ответ ДВГА/КВГА подписан";
       note =
         pausedDays === null
@@ -1109,7 +1144,9 @@ export function applyAction(
         throw new Error(
           "Зафиксировать получение можно после поступления ответов на все запросы",
         );
-      const receivedRequests = c.requests.filter((request) => !request.confirmed);
+      const receivedRequests = c.requests.filter(
+        (request) => !request.confirmed,
+      );
       if (!receivedRequests.length)
         throw new Error("Все полученные ответы уже зафиксированы");
       receivedRequests.forEach((request) => {
@@ -1143,7 +1180,9 @@ export function applyAction(
           !item.responded,
       );
       if (!request)
-        throw new Error("Выберите подписанный запрос другого органа, ожидающий ответа");
+        throw new Error(
+          "Выберите подписанный запрос другого органа, ожидающий ответа",
+        );
       request.responded = date;
       const pausedDays = advanceAfterResponses(c, date);
       title = `Ответ ${request.recipient} зафиксирован`;
@@ -1157,7 +1196,8 @@ export function applyAction(
       break;
     }
     case "subject-response": {
-      if (role !== "subject" && role !== "demo-superuser") throw new Error("Ответ может направить только Объект");
+      if (role !== "subject" && role !== "demo-superuser")
+        throw new Error("Ответ может направить только Объект");
       const request = c.requests.find(
         (item) =>
           item.template === "other" &&
@@ -1198,7 +1238,10 @@ export function applyAction(
           davgaArgumentsByPoint: Object.fromEntries(
             points.map((point) => [
               point.id,
-              text(`davgaArguments_${point.id}`, `Доводы ДАВГА по пункту ${point.number}`),
+              text(
+                `davgaArguments_${point.id}`,
+                `Доводы ДАВГА по пункту ${point.number}`,
+              ),
             ]),
           ),
           memberPositions: [],
@@ -1207,7 +1250,8 @@ export function applyAction(
         c.result = null;
         c.votes = null;
         c.meeting = null;
-        note = "Справка сформирована и направлена заместителю директора ДАВГА на согласование.";
+        note =
+          "Справка сформирована и направлена заместителю директора ДАВГА на согласование.";
         doc(
           "Справка по результатам изучения и анализа возражения",
           "certificate",
@@ -1255,8 +1299,7 @@ export function applyAction(
       break;
     }
     case "edit-certificate": {
-      if (!c.certificate)
-        throw new Error("Справка ещё не сформирована");
+      if (!c.certificate) throw new Error("Справка ещё не сформирована");
       const points = disputed(c);
       const davgaArgumentsByPoint = Object.fromEntries(
         points.map((point) => [
@@ -1272,8 +1315,7 @@ export function applyAction(
         davgaArguments:
           points
             .map((point) => davgaArgumentsByPoint[point.id])
-            .find(Boolean) ||
-          c.certificate.davgaArguments,
+            .find(Boolean) || c.certificate.davgaArguments,
         davgaArgumentsByPoint,
       };
       const resultCertificateName = "Справка: результаты голосования членов АК";
@@ -1321,11 +1363,7 @@ export function applyAction(
       c.result = null;
       c.votes = null;
       c.meeting = null;
-      doc(
-        "Анализ административного дела",
-        "analysis",
-        note,
-      );
+      doc("Анализ административного дела", "analysis", note);
       break;
     }
     case "members":
@@ -1334,7 +1372,8 @@ export function applyAction(
           throw new Error("Сначала заполните и сохраните справку");
         c.memberPosition = "Заседание по данному делу проведено.";
         c.status = "meeting";
-        note = "Заседание по данному делу проведено. Обращение переведено на этап принятия решения.";
+        note =
+          "Заседание по данному делу проведено. Обращение переведено на этап принятия решения.";
         doc("Сведения о проведении заседания", "members", note);
         break;
       }
@@ -1410,16 +1449,16 @@ export function applyAction(
       // New protocol forms use the participants of the latest attendance poll.
       // The fallback supports cases that were created before attendance polls.
       const legacyMembers = Array.from(form.entries())
-          .filter(
-            ([name, value]) =>
-              name.startsWith("protocolMember_") &&
-              typeof value === "string" &&
-              value.trim().length > 0,
-          )
-          .map(([name, value]) => ({
-            id: `protocol-member-${name.replace("protocolMember_", "")}`,
-            name: String(value).trim(),
-          }));
+        .filter(
+          ([name, value]) =>
+            name.startsWith("protocolMember_") &&
+            typeof value === "string" &&
+            value.trim().length > 0,
+        )
+        .map(([name, value]) => ({
+          id: `protocol-member-${name.replace("protocolMember_", "")}`,
+          name: String(value).trim(),
+        }));
       if (legacyMembers.length) {
         c.members = legacyMembers.map((member) => ({
           id: member.id,
@@ -1431,14 +1470,16 @@ export function applyAction(
         }));
       }
       if (!c.members.length)
-        throw new Error("В последнем опросе о присутствии нет участников с ответом «Да»");
+        throw new Error(
+          "В последнем опросе о присутствии нет участников с ответом «Да»",
+        );
       c.votes = {};
       for (const point of disputed(c)) {
         const memberVotes = Object.fromEntries(
           c.members.map((member) => {
-            const vote = normalizeVoteChoice(String(
-              form.get(`protocolVote_${point.id}_${member.id}`) || "",
-            ));
+            const vote = normalizeVoteChoice(
+              String(form.get(`protocolVote_${point.id}_${member.id}`) || ""),
+            );
             if (!vote)
               throw new Error(
                 "Выберите вариант голоса для каждого члена АК по всем пунктам",
@@ -1458,7 +1499,8 @@ export function applyAction(
             "Для проведения голосования должен присутствовать Вице-министр или Директор ДАВГА",
           );
         const outcome = pointOutcomeFromVotes(memberVotes, chairId);
-        if (!outcome) throw new Error("Не удалось определить результат голосования");
+        if (!outcome)
+          throw new Error("Не удалось определить результат голосования");
         c.votes[point.id] = {
           yes,
           no,
@@ -1484,7 +1526,9 @@ export function applyAction(
         String(form.get("meetingFormat") || "онлайн, Qosyl") === "офлайн"
           ? "офлайн"
           : "онлайн, Qosyl";
-      const recommendationText = String(form.get("recommendations") || "").trim();
+      const recommendationText = String(
+        form.get("recommendations") || "",
+      ).trim();
       dateObject(protocolDate);
       c.meeting = {
         date: protocolDate,
@@ -1514,8 +1558,8 @@ export function applyAction(
       if (!c.meeting) throw new Error("Протокол не сформирован");
       c.meeting.signed = date;
       const [year, month] = date.split("-");
-      const signedProtocolCount = next.cases.filter(
-        (item) => Boolean(item.meeting?.signed),
+      const signedProtocolCount = next.cases.filter((item) =>
+        Boolean(item.meeting?.signed),
       ).length;
       c.meeting.number = `ПЗ-${month}/${year}-${signedProtocolCount}`;
       const result = overall(c);
@@ -1557,20 +1601,23 @@ export function applyAction(
       break;
     }
     case "approve-decision-project":
-      if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
+      if (!c.decisionProject)
+        throw new Error("Проект решения ещё не сформирован");
       c.status = "decision_project_signed";
       title = "Проект решения согласован";
       note = "Согласованный проект решения ожидает подписания.";
       break;
     case "sign-decision-project":
-      if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
+      if (!c.decisionProject)
+        throw new Error("Проект решения ещё не сформирован");
       c.status = "decision_project_eotinish";
       title = "Проект решения подписан";
       note = "Подписанный проект решения готов к направлению через E-Otinish.";
       doc("Подписанный проект решения", "decision-project", note);
       break;
     case "send-decision-project-eotinish":
-      if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
+      if (!c.decisionProject)
+        throw new Error("Проект решения ещё не сформирован");
       const hearingDateTime = text(
         "hearingDateTime",
         "Дата и время заслушивания",
@@ -1591,14 +1638,18 @@ export function applyAction(
         date: hearingDateTime,
         location: hearingLocation,
         notice: hearingNoticeDate,
-        noticeChannel: text("hearingNoticeChannel", "Канал отправки уведомления"),
+        noticeChannel: text(
+          "hearingNoticeChannel",
+          "Канал отправки уведомления",
+        ),
       };
       title = "Заслушивание назначено";
       note = `Дата и время: ${hearingDateTime}. Место или формат: ${hearingLocation}. Уведомление направлено ${hearingNoticeDate} через ${c.hearing.noticeChannel}.`;
       doc("Извещение о назначении заслушивания", "hearing", note);
       break;
     case "hearing-after-decision-project":
-      if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
+      if (!c.decisionProject)
+        throw new Error("Проект решения ещё не сформирован");
       c.status = "decided";
       title = "Заслушивание проведено";
       note = "Заслушивание после направления проекта решения проведено.";
@@ -1701,7 +1752,8 @@ export function applyAction(
       doc(
         "Проект окончательного ответа",
         "final-response",
-        c.result?.reason || "Окончательный ответ сформирован и ожидает согласования.",
+        c.result?.reason ||
+          "Окончательный ответ сформирован и ожидает согласования.",
       );
       doc(
         c.type === "notice"
@@ -1712,19 +1764,22 @@ export function applyAction(
       );
       break;
     case "approve-final-response":
-      if (!c.delivery) throw new Error("Окончательный ответ ещё не сформирован");
+      if (!c.delivery)
+        throw new Error("Окончательный ответ ещё не сформирован");
       c.status = "final_response_signed";
       title = "Окончательный ответ согласован";
       note = "Согласованный окончательный ответ ожидает подписания.";
       break;
     case "sign-final-response":
-      if (!c.delivery) throw new Error("Окончательный ответ ещё не сформирован");
+      if (!c.delivery)
+        throw new Error("Окончательный ответ ещё не сформирован");
       // Дата направления фиксируется в момент подписи и отправки ответа.
       c.delivery.date = date;
       c.delivery.recipientRoles = [authorityRole(c.issuer), "subject"];
       c.status = "completed";
       title = "Окончательный ответ подписан";
-      note = "Окончательный ответ подписан и направлен органу аудита и заявителю.";
+      note =
+        "Окончательный ответ подписан и направлен органу аудита и заявителю.";
       doc("Подписанный окончательный ответ", "final-response", note);
       c.delivery.recipientRoles.forEach((recipientRole) => {
         const recipient =
@@ -1746,19 +1801,25 @@ export function applyAction(
       });
       break;
     case "send-recommendations": {
-      if (
-        c.type !== "notice" &&
-        !c.documents.some((document) => document.kind === "final-response")
-      )
-        throw new Error("Сначала направьте окончательный ответ");
-      const recommendationText = text("recommendationText", "Текст рекомендации");
+      if (c.status !== "completed")
+        throw new Error(
+          "Рекомендации можно направить после завершения рассмотрения",
+        );
+      const recommendationText = text(
+        "recommendationText",
+        "Текст рекомендации",
+      );
       const allowedRecipients: Role[] = ["dvga", "kvga", "subject", "higher"];
-      const recipientRoles = [...new Set(
-        form
-          .getAll("recommendationRecipients")
-          .map((value) => String(value))
-          .filter((value): value is Role => allowedRecipients.includes(value as Role)),
-      )];
+      const recipientRoles = [
+        ...new Set(
+          form
+            .getAll("recommendationRecipients")
+            .map((value) => String(value))
+            .filter((value): value is Role =>
+              allowedRecipients.includes(value as Role),
+            ),
+        ),
+      ];
       if (!recipientRoles.length)
         throw new Error("Выберите хотя бы один кабинет-получатель");
       const sentAt = c.delivery?.date || date;
@@ -1800,7 +1861,10 @@ export function applyAction(
       break;
     }
     case "close-review":
-      if (c.type !== "notice") throw new Error("Закрытие доступно только для возражения на уведомление");
+      if (c.type !== "notice")
+        throw new Error(
+          "Закрытие доступно только для возражения на уведомление",
+        );
       if (!c.documents.some((document) => document.kind === "conclusion"))
         throw new Error("Сначала вложите заключение по обращению");
       c.status = "completed";
@@ -1825,7 +1889,7 @@ export function applyAction(
       break;
     case "pause":
       if (!canSuspendReview(c))
-        throw new Error("Срок рассмотрения жалобы на уведомление не приостанавливается");
+        throw new Error("Срок рассмотрения жалоб не приостанавливается");
       checked(form, "notified");
       c.pause = {
         date,
@@ -1842,7 +1906,7 @@ export function applyAction(
       break;
     case "resume":
       if (!canSuspendReview(c))
-        throw new Error("Срок рассмотрения жалобы на уведомление не приостанавливается");
+        throw new Error("Срок рассмотрения жалоб не приостанавливается");
       if (!c.pause || !c.resumeStatus)
         throw new Error("Приостановление не зарегистрировано");
       c.pauseDays += workdaysBetween(c.pause.date, date);
