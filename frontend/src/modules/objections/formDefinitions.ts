@@ -102,9 +102,13 @@ const REQUEST_RECIPIENT_OPTIONS = [
   ["ДВГА по области Абай", "ДВГА по области Абай"],
 ] as const satisfies FormField["options"];
 
-const SAQ_RECIPIENT_OPTIONS = [
-  ["", "Выберите получателя SAQ"],
-  ["subject", "Кабинет Объекта"],
+const EXTERNAL_REQUEST_PATH_OPTIONS = [
+  ["", "Выберите путь направления"],
+  ["E-Otinish", "E-Otinish"],
+  ["СЭД", "СЭД"],
+  ["Портал / цифровая система", "Портал / цифровая система"],
+  ["Почтовая связь", "Почтовая связь"],
+  ["Вручение нарочно", "Вручение нарочно"],
 ] as const satisfies FormField["options"];
 
 const RECOMMENDATION_RECIPIENT_OPTIONS = [
@@ -140,7 +144,6 @@ export function actionForm(
   const day = input("date", "Дата действия", date, "date");
   let fields: FormField[] =
     action === "request" ||
-    action === "request-other" ||
     action === "vote" ||
     action === "analysis" ||
     action === "assign-work-executor" ||
@@ -227,17 +230,19 @@ export function actionForm(
       );
       break;
     case "request-other":
-      title = "Сформировать запрос в другой орган";
+      title = "Зафиксировать запрос через другую систему";
+      fields[0] = input("date", "Дата направления запроса", date, "date");
       fields.push(
-        input("recipient", "Кому направить запрос", values.recipient || ""),
-        select(
-          "saqRecipient",
-          "Получатель SAQ",
-          SAQ_RECIPIENT_OPTIONS,
-          values.saqRecipient || "",
+        input("recipient", "Кому направлен запрос", values.recipient || ""),
+        input(
+          "registrationNumber",
+          "Номер регистрации запроса",
+          values.registrationNumber || "",
         ),
-        area("customRequestText", "Текст запроса", values.customRequestText || ""),
+        select("deliveryPath", "Путь направления запроса", EXTERNAL_REQUEST_PATH_OPTIONS),
       );
+      note =
+        "Укажите реквизиты запроса, направленного во внешней системе в орган без кабинета SAQ.";
       break;
     case "send-request-approval":
       title = "Отправить запрос на согласование";
@@ -251,7 +256,7 @@ export function actionForm(
           "requestId",
           "Запрос",
           c.requests
-            .filter((request) => !request.approved)
+            .filter((request) => !request.sent && !request.approved)
             .map((request) => [
               request.id,
               `Запрос в ${request.recipient}`,
