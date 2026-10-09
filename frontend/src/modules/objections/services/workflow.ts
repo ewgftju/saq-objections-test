@@ -1538,12 +1538,18 @@ export function applyAction(
     case "create-decision-project": {
       c.decisionProject = {
         date,
-        number: text("number", "Исходящий номер"),
+        // Для проекта решения исходящий номер не оформляется: его укажут
+        // при направлении окончательного ответа.
+        number: String(form.get("number") || ""),
         receipt: text("receipt", "Квитанция отправки"),
         channel: text("channel", "Канал"),
         appealCourt: String(form.get("appealCourt") || ""),
         appealProcedure: String(form.get("appealProcedure") || ""),
       };
+      disputed(c).forEach((point) => {
+        point.finalDecisionByMajority =
+          form.get(`finalResponseMajority_${point.id}`) === "on";
+      });
       c.status = "decision_project_approval";
       doc(
         "Проект решения по жалобе",
