@@ -246,6 +246,8 @@ export interface CommissionMeeting {
   id: string;
   number: number;
   dateTime: string;
+  /** Формат и место проведения заседания. */
+  formatAndPlace?: string;
   /** Обращения, включённые в данное заседание; порядок используется в повестке дня. */
   caseIds: string[];
   pollId: string;
@@ -328,6 +330,8 @@ export interface CommissionAttendanceMember {
 export interface CommissionAttendancePoll {
   id: string;
   dateTime: string;
+  /** Формат и место проведения заседания, указанные в опросе. */
+  formatAndPlace?: string;
   caseIds: string[];
   sentAt: string;
   responses: Record<string, "pending" | "yes" | "no">;
