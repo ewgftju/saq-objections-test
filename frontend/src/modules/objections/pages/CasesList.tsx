@@ -101,6 +101,14 @@ function hasFinalResponseForRecipient(c: ObjectionCase, role: Role) {
   );
 }
 
+function hasDecisionProjectForRecipient(c: ObjectionCase, role: Role) {
+  return (
+    role === "subject" &&
+    Boolean(c.decisionProject?.recipientRoles?.includes(role)) &&
+    c.documents.some((document) => document.kind === "decision-project")
+  );
+}
+
 function normalizedAppealType(c: ObjectionCase) {
   return (c.appealType ?? TYPES[c.type])
     .replace("Возражение на уведомления", "Возражение на уведомление")
@@ -134,7 +142,8 @@ export default function CasesList({
       ? cases.filter(
           (c) =>
             c.requests.some(isRequestForSubject) ||
-            hasFinalResponseForRecipient(c, role),
+            hasFinalResponseForRecipient(c, role) ||
+            hasDecisionProjectForRecipient(c, role),
         )
     : cases;
   const recipientRequests = registryCases.flatMap((c) =>
