@@ -178,9 +178,17 @@ function AuthorityRequestMaterials({
     isRequestForAuthority(request, role),
   );
   const authorityLabel = role === "kvga" ? "КВГА" : "ДВГА";
-  const finalResponse = c.delivery?.recipientRoles?.includes(role)
-    ? c.documents.filter((document) => document.kind === "final-response").at(-1)
-    : undefined;
+  const signedFinalResponse = c.documents
+    .filter((document) => document.kind === "final-response")
+    .at(-1);
+  // Карточки, подписанные до появления recipientRoles, уже содержат запрос
+  // в соответствующий орган. Показываем им ответ также, чтобы исторические
+  // обращения не теряли документ после обновления.
+  const finalResponse =
+    c.delivery?.recipientRoles?.includes(role) ||
+    (c.status === "completed" && requests.length > 0)
+      ? signedFinalResponse
+      : undefined;
 
   return (
     <>

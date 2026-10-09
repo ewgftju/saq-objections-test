@@ -110,12 +110,17 @@ export default function NotificationsPage({
                         </Button>
                       ) : (
                         <Button
-                          primary={notification.kind === "request-response"}
+                          primary={
+                            notification.kind === "request-response" ||
+                            notification.kind === "final-response"
+                          }
                           onClick={() => onOpenCase(notification.caseId)}
                         >
-                          {notification.kind === "request-response"
-                            ? "Открыть обращение"
-                            : "Открыть"}
+                          {notification.kind === "final-response"
+                            ? "Перейти к обращению"
+                            : notification.kind === "request-response"
+                              ? "Открыть обращение"
+                              : "Открыть"}
                         </Button>
                       )}
                     </td>
