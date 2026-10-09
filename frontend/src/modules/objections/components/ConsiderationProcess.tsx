@@ -229,7 +229,7 @@ export default function ConsiderationProcess({
   const next = nextAction(c, role);
   const pendingRequestActions =
     next?.action === "approve-request"
-      ? c.requests.filter((request) => !request.approved)
+      ? c.requests.filter((request) => !request.sent && !request.approved)
       : next?.action === "sign-request"
         ? c.requests.filter((request) => request.approved && !request.sent)
         : [];
@@ -275,6 +275,10 @@ export default function ConsiderationProcess({
       "response_ready",
     ].includes(c.status);
   const sentRequests = c.requests.filter((request) => Boolean(request.sent));
+  const pendingExternalRequests = c.requests.filter(
+    (request) =>
+      request.template === "other" && Boolean(request.sent) && !request.responded,
+  );
   const pendingResponses = sentRequests.filter(
     (request) => !request.responded,
   ).length;
@@ -288,7 +292,9 @@ export default function ConsiderationProcess({
   const workRequestStatus =
     role === "work" &&
     (c.status === "request_approval" || c.status === "request_signed");
-  const pendingApprovals = c.requests.filter((request) => !request.approved);
+  const pendingApprovals = c.requests.filter(
+    (request) => !request.sent && !request.approved,
+  );
   const pendingSignatures = c.requests.filter(
     (request) => request.approved && !request.sent,
   );
@@ -516,7 +522,7 @@ export default function ConsiderationProcess({
             )}
             {c.status === "accepted" && (
               <Button primary onClick={() => onAction("request-other", "work")}>
-                Сформировать запрос в другой орган
+                Зафиксировать запрос через другую систему
               </Button>
             )}
             {(role === "demo-superuser" || role === "work") &&
@@ -549,9 +555,21 @@ export default function ConsiderationProcess({
             {c.status === "accepted" && (
               <small>
                 Сначала сформируйте обязательный запрос в ДВГА/КВГА, затем при
-                необходимости добавьте запрос в другой орган и направьте
-                документы на согласование.
+                необходимости зафиксируйте запрос во внешний орган и направьте
+                запрос в ДВГА/КВГА на согласование.
               </small>
+            )}
+            {c.status === "accepted" && pendingExternalRequests.length > 0 && (
+              <Notice tone="amber">
+                <strong>Запросы через другую систему</strong>
+                {pendingExternalRequests.map((request) => (
+                  <p key={request.id}>
+                    {request.recipient}: <b>Ответ ожидается</b>
+                    {request.registrationNumber &&
+                      ` (№${request.registrationNumber} от ${formatDate(request.sent)})`}
+                  </p>
+                ))}
+              </Notice>
             )}
           </div>
         </div>
