@@ -560,8 +560,9 @@ export function actionForm(
           ["post", "Почта"],
         ],
         ),
-        input("receipt", "Квитанция отправки", "КВ-" + c.id),
       );
+      if (action === "deliver")
+        fields.push(input("receipt", "Квитанция отправки", "КВ-" + c.id));
       note =
         action === "create-decision-project"
           ? "Проект решения формируется по той же печатной форме, что и окончательный ответ. После сохранения он будет направлен на согласование и подписание."
