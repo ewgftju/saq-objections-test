@@ -203,6 +203,9 @@ export interface CaseRequest {
   saqRecipient?: Role;
   author?: string;
   customText?: string;
+  /** Реквизиты направления запроса во внешней системе. */
+  registrationNumber?: string;
+  deliveryPath?: string;
   /** Дата согласования отдельного запроса директором ДАВГА. */
   approved?: string;
   sent?: string;
