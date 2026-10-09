@@ -392,10 +392,18 @@ test("печатная форма запроса использует полны
   );
 
   h.c.appealType = "Жалоба на действие/бездействие";
-  h.c.agendaDetails = {};
+  h.c.agendaDetails = {
+    actionAppealAuthorities: [
+      {
+        issuer: "ДВГА по Атырауской области",
+        documentNumber: "Д-01",
+        documentDate: "2026-08-30",
+      },
+    ],
+  };
   assert.match(
     html(),
-    /касательно действия\/бездействия .* на аудиторский отчет от 30\.08\.2026 №Д-01/,
+    /касательно действий \(бездействий\) Департамент внутреннего государственного аудита по Атырауской области .*при рассмотрении обращения №Д-01 от 30\.08\.2026/,
   );
 
   h.c.agendaDetails = {
@@ -405,7 +413,7 @@ test("печатная форма запроса использует полны
   };
   assert.match(
     html(),
-    /при рассмотрении обращения от 30\.08\.2026 №Д-01 по государственной закупке № 2026-77 \(лот №5\) на Поставка оборудования/,
+    /касательно действий \(бездействий\).*при рассмотрении обращения №Д-01 от 30\.08\.2026/,
   );
 
   h.c.appealType = "Жалоба на решение КВГА/ДВГА";
@@ -2096,19 +2104,22 @@ test("повестка дня выбирает шаблон по виду обр
 
   h.c.appealType = "Жалоба на действие/бездействие";
   h.c.agendaDetails = {
-    procurementNumber: "2026-77",
-    lotNumber: "5",
-    procurementSubject: "Поставка оборудования",
+    actionAppealAuthorities: [
+      {
+        issuer: "ДВГА по Атырауской области",
+        documentNumber: "Д-01",
+        documentDate: "2026-08-30",
+      },
+      {
+        issuer: "КВГА",
+        documentNumber: "К-02",
+        documentDate: "2026-08-31",
+      },
+    ],
   };
   assert.match(
     agendaItemText(h.c),
-    /при рассмотрении обращения от 30\.08\.2026 №Д-01 по государственной закупке №2026-77 \(лот №5\) на Поставка оборудования \(Исполнитель ДАВГА\)/,
-  );
-
-  h.c.agendaDetails = {};
-  assert.match(
-    agendaItemText(h.c),
-    /касательно действия\/бездействия Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан на аудиторский отчет от 30\.08\.2026 №Д-01/,
+    /касательно действий \(бездействий\) Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан при рассмотрении обращения №Д-01 от 30\.08\.2026; Комитет внутреннего государственного аудита Министерства финансов Республики Казахстан при рассмотрении обращения №К-02 от 31\.08\.2026\./,
   );
 
   h.c.appealType = "Жалоба на решение КВГА/ДВГА";
@@ -2264,7 +2275,11 @@ test("шаблоны подвидов профилактического кон�
     subject: string,
   ) => {
     h.c.agendaDetails = { decisionKind };
-    h.c.document = { ...h.c.document, number: documentNumber, date: documentDate };
+    h.c.document = {
+      ...h.c.document,
+      number: documentNumber,
+      date: documentDate,
+    };
     const reference = `ТОО «Заявитель», ИИН/БИН 123456789012, № Ж-21 от 11.09.2026 года, на ${subject} от ${documentDate.split("-").reverse().join(".")} года № ${documentNumber}, проведенный ${authority}`;
     const request = renderToStaticMarkup(
       createElement(DocumentContent, {
@@ -2313,6 +2328,54 @@ test("шаблоны подвидов профилактического кон�
     "2026-09-05",
     "административный акт",
   );
+});
+
+test("шаблоны жалобы на действие или бездействие перечисляют все обращения", () => {
+  const h = harness(0);
+  h.c.appealType = "Жалоба на действие/бездействие";
+  h.c.org = "ТОО «Заявитель»";
+  h.c.bin = "123456789012";
+  h.c.appealNumber = "Ж-22";
+  h.c.appealDate = "2026-09-12";
+  h.c.agendaDetails = {
+    actionAppealAuthorities: [
+      {
+        issuer: "ДВГА по Атырауской области",
+        documentNumber: "ДВГА-11",
+        documentDate: "2026-09-01",
+      },
+      {
+        issuer: "КВГА",
+        documentNumber: "КВГА-12",
+        documentDate: "2026-09-02",
+      },
+    ],
+  };
+  const actions =
+    "касательно действий (бездействий) Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан при рассмотрении обращения №ДВГА-11 от 01.09.2026; Комитет внутреннего государственного аудита Министерства финансов Республики Казахстан при рассмотрении обращения №КВГА-12 от 02.09.2026";
+  const reference = `ТОО «Заявитель», ИИН/БИН 123456789012, № Ж-22 от 12.09.2026 года, ${actions}`;
+  const request = renderToStaticMarkup(
+    createElement(DocumentContent, {
+      c: h.c,
+      kind: "request",
+      requestPreview: {
+        recipient: "ДВГА",
+        deadline: "2026-09-15T18:00",
+        template: "dvga",
+      },
+    }),
+  );
+  const certificate = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "certificate" }),
+  );
+  const protocol = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "protocol" }),
+  );
+
+  assert.equal(agendaItemText(h.c), `Жалоба от ${reference}.`);
+  assert.ok(certificate.includes(`поступила жалоба от ${reference}`));
+  assert.ok(request.includes(`жалобы от ${reference}, просим`));
+  assert.ok(protocol.includes(`Жалоба от ${reference}.`));
 });
 
 test("итоги повестки фильтруются по дате и показывают голоса", () => {
