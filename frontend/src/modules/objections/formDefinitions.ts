@@ -121,6 +121,15 @@ const WORK_EXECUTOR_OPTIONS = [
   ["Эксперт ДАВГА", "Эксперт ДАВГА"],
 ] as const satisfies FormField["options"];
 
+function requiresConclusion(c: ObjectionCase) {
+  const appealType = (c.appealType || "").trim();
+  return (
+    appealType === "Возражение на уведомление" ||
+    appealType === "Возражение на уведомления" ||
+    (!appealType && c.type === "notice")
+  );
+}
+
 export function actionForm(
   action: Action,
   c: ObjectionCase,
@@ -531,7 +540,7 @@ export function actionForm(
       break;
     case "create-decision-project":
     case "deliver":
-      if (c.type === "notice") {
+      if (requiresConclusion(c)) {
         title = "Вложить заключение";
         fields.push(
           input("conclusionRegistrationDate", "Дата регистрации", date, "date"),
@@ -766,7 +775,7 @@ export function actionForm(
         : action === "create-decision-project"
         ? "Сформировать проект решения"
         : action === "deliver"
-        ? c.type === "notice"
+        ? requiresConclusion(c)
           ? "Вложить заключение"
           : "Сформировать окончательный ответ"
         : action === "close-review"
