@@ -500,7 +500,8 @@ export default function ActionModal({
         action === "position" ||
         action === "subject-response" ||
         action === "deliver" ||
-        action === "create-decision-project"
+        action === "create-decision-project" ||
+        action === "send-decision-project-eotinish"
       }
     >
       <form
