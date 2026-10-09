@@ -38,6 +38,7 @@ export type CaseStatus =
   | "decision_project_approval"
   | "decision_project_signed"
   | "decision_project_eotinish"
+  | "decision_project_notice"
   | "decision_project_hearing"
   | "decided"
   | "final_response_approval"
@@ -114,7 +115,14 @@ export interface Hearing {
   skip: boolean;
   reason?: string;
   notice?: string;
+  /** Дата и время назначенного заслушивания. */
   date?: string;
+  /** Место проведения заслушивания. */
+  location?: string;
+  /** Реквизиты направления извещения, если у заявителя нет кабинета SAQ. */
+  noticeChannel?: string;
+  noticeSentAt?: string;
+  noticeReference?: string;
   subject?: string;
   issuer?: string;
   note?: string;
@@ -165,6 +173,8 @@ export interface Delivery {
   received?: string;
   /** Кабинеты, в которые направлен подписанный окончательный ответ. */
   recipientRoles?: Role[];
+  /** Дата подписания документа. */
+  signed?: string;
 }
 
 export interface CaseDocument {
@@ -312,7 +322,8 @@ export interface CaseNotification {
     | "request-response"
     | "recommendation"
     | "final-response"
-    | "decision-project";
+    | "decision-project"
+    | "hearing-notice";
   attendancePollId?: string;
   commissionMemberId?: string;
   meetingId?: string;
@@ -500,6 +511,7 @@ export type Action =
   | "approve-decision-project"
   | "sign-decision-project"
   | "send-decision-project-eotinish"
+  | "record-decision-project-hearing-notice"
   | "hearing-after-decision-project"
   | "deliver"
   | "close-review"
