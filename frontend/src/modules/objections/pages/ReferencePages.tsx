@@ -785,7 +785,12 @@ export function SessionsPage({
                     return (
                       <tr key={meeting.id}>
                         <td>№ {meeting.number}</td>
-                        <td>{formatDateTime(meeting.dateTime)}</td>
+                        <td>
+                          {formatDateTime(meeting.dateTime)}
+                          {meeting.formatAndPlace && (
+                            <small className="muted">{meeting.formatAndPlace}</small>
+                          )}
+                        </td>
                         <td>{meeting.caseIds.length}</td>
                         <td>{poll ? "Подтвердили: " + yes : "Не направлен"}</td>
                         <td>
