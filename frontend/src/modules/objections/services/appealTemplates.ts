@@ -47,6 +47,29 @@ function decisionComplaintReference(c: ObjectionCase) {
   return undefined;
 }
 
+function actionInactionComplaintReference(c: ObjectionCase) {
+  if (c.appealType !== "Жалоба на действие/бездействие") return undefined;
+
+  const appeals = c.agendaDetails?.actionAppealAuthorities?.filter(
+    (item) => item.issuer || item.documentNumber || item.documentDate,
+  ) ?? [
+    {
+      issuer: c.issuer,
+      documentNumber: c.document.number,
+      documentDate: c.document.date,
+    },
+  ];
+
+  const actions = appeals
+    .map(
+      (item) =>
+        `${auditAuthorityFullName(item.issuer)} при рассмотрении обращения №${value(item.documentNumber)} от ${formatDate(item.documentDate)}`,
+    )
+    .join("; ");
+
+  return `${applicantReference(c)}, касательно действий (бездействий) ${actions}`;
+}
+
 function statementReference(c: ObjectionCase) {
   return `${applicantReference(c)} ${inlineValue(c.request)}`;
 }
@@ -59,6 +82,9 @@ export function agendaOrProtocolIntro(c: ObjectionCase) {
   const complaintReference = decisionComplaintReference(c);
   if (complaintReference) return `Жалоба от ${complaintReference}.`;
 
+  const actionInactionReference = actionInactionComplaintReference(c);
+  if (actionInactionReference) return `Жалоба от ${actionInactionReference}.`;
+
   return undefined;
 }
 
@@ -70,6 +96,10 @@ export function requestTemplateIntro(c: ObjectionCase) {
   const complaintReference = decisionComplaintReference(c);
   if (complaintReference)
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы от ${complaintReference}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
+
+  const actionInactionReference = actionInactionComplaintReference(c);
+  if (actionInactionReference)
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы от ${actionInactionReference}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
 
   return undefined;
 }
@@ -84,6 +114,10 @@ export function certificateTemplateIntro(c: ObjectionCase) {
   const complaintReference = decisionComplaintReference(c);
   if (complaintReference)
     return `В Министерство финансов Республики Казахстан поступила жалоба от ${complaintReference}.`;
+
+  const actionInactionReference = actionInactionComplaintReference(c);
+  if (actionInactionReference)
+    return `В Министерство финансов Республики Казахстан поступила жалоба от ${actionInactionReference}.`;
 
   return undefined;
 }
