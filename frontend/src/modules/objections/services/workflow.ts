@@ -376,7 +376,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     },
     decision_project_eotinish: {
       action: "send-decision-project-eotinish",
-      label: "Проект решения направлен через систему E-Otinish",
+      label: "Заслушивание назначено",
       role: "work",
     },
     decision_project_hearing: {
@@ -1573,10 +1573,31 @@ export function applyAction(
       break;
     case "send-decision-project-eotinish":
       if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
+      const hearingDateTime = text(
+        "hearingDateTime",
+        "Дата и время заслушивания",
+      );
+      if (!hearingDateTime.includes("T"))
+        throw new Error("Укажите дату и время заслушивания");
+      const hearingLocation = text(
+        "hearingLocation",
+        "Место или формат проведения заслушивания",
+      );
+      const hearingNoticeDate = text(
+        "hearingNoticeDate",
+        "Дата направления уведомления",
+      );
       c.status = "decision_project_hearing";
-      title = "Проект решения направлен через систему E-Otinish";
-      note = "Направление проекта решения через E-Otinish зафиксировано.";
-      doc("Проект решения направлен через E-Otinish", "decision-project", note);
+      c.hearing = {
+        skip: false,
+        date: hearingDateTime,
+        location: hearingLocation,
+        notice: hearingNoticeDate,
+        noticeChannel: text("hearingNoticeChannel", "Канал отправки уведомления"),
+      };
+      title = "Заслушивание назначено";
+      note = `Дата и время: ${hearingDateTime}. Место или формат: ${hearingLocation}. Уведомление направлено ${hearingNoticeDate} через ${c.hearing.noticeChannel}.`;
+      doc("Извещение о назначении заслушивания", "hearing", note);
       break;
     case "hearing-after-decision-project":
       if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
