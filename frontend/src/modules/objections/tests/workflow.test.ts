@@ -2378,6 +2378,51 @@ test("шаблоны жалобы на действие или бездейст�
   assert.ok(protocol.includes(`Жалоба от ${reference}.`));
 });
 
+test("шаблоны жалобы на действие или бездействие выводят реквизиты госзакупки", () => {
+  const h = harness(0);
+  h.c.appealType = "Жалоба на действие/бездействие";
+  h.c.org = "ТОО «Заявитель»";
+  h.c.bin = "123456789012";
+  h.c.appealNumber = "Ж-23";
+  h.c.appealDate = "2026-09-13";
+  h.c.agendaDetails = {
+    actionAppealAuthorities: [
+      {
+        issuer: "ДВГА по Атырауской области",
+        documentNumber: "ДВГА-13",
+        documentDate: "2026-09-03",
+      },
+    ],
+    procurementNumber: "2026-77",
+    lotNumber: "5",
+    procurementSubject: "Поставка оборудования",
+  };
+  const procurement =
+    "по государственной закупке № 2026-77, лот № 5, предмет: Поставка оборудования";
+  const request = renderToStaticMarkup(
+    createElement(DocumentContent, {
+      c: h.c,
+      kind: "request",
+      requestPreview: {
+        recipient: "ДВГА",
+        deadline: "2026-09-15T18:00",
+        template: "dvga",
+      },
+    }),
+  );
+  const certificate = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "certificate" }),
+  );
+  const protocol = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "protocol" }),
+  );
+
+  assert.ok(agendaItemText(h.c).includes(procurement));
+  assert.ok(certificate.includes(procurement));
+  assert.ok(request.includes(`${procurement}, просим`));
+  assert.ok(protocol.includes(procurement));
+});
+
 test("итоги повестки фильтруются по дате и показывают голоса", () => {
   const h = harness(0);
   h.c.agendaMeetingDate = "2026-09-24";
