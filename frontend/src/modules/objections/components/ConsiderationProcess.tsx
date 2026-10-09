@@ -34,11 +34,7 @@ const OBJECTION_STAGES: ProcessStage[] = [
   {
     label: "Анализ обращения",
     description: "Формирование, согласование и подписание справки",
-    statuses: [
-      "materials",
-      "certificate_approval",
-      "certificate_signed",
-    ],
+    statuses: ["materials", "certificate_approval", "certificate_signed"],
   },
   {
     label: "Заседание",
@@ -100,7 +96,11 @@ function requestSubstep(status: CaseStatus) {
   if (["accepted", "requested", "forwarded"].includes(status)) return 0;
   if (status === "request_approval") return 1;
   if (status === "request_signed") return 2;
-  if (["request_approved", "response_approval", "response_signed"].includes(status))
+  if (
+    ["request_approved", "response_approval", "response_signed"].includes(
+      status,
+    )
+  )
     return 3;
   if (status === "response_ready") return 4;
   return null;
@@ -162,12 +162,18 @@ const TASK_HELP: Partial<Record<Action, string>> = {
   sign: "Проверьте результаты голосования и зарегистрируйте подписание протокола. После этого оформляется результат рассмотрения.",
   "create-decision-project":
     "Сформируйте проект решения по той же форме, что и окончательный ответ. Далее он будет согласован и подписан.",
-  "approve-decision-project": "Проверьте сформированный проект решения и согласуйте его для подписания.",
-  "sign-decision-project": "Подпишите согласованный проект решения. Затем назначьте заслушивание и зафиксируйте направление уведомления.",
-  "send-decision-project-eotinish": "Укажите реквизиты заслушивания и направление уведомления заявителю.",
-  "hearing-after-decision-project": "Зафиксируйте проведение заслушивания. После этого станет доступно формирование окончательного ответа.",
-  "approve-final-response": "Проверьте сформированный окончательный ответ и согласуйте его для подписания.",
-  "sign-final-response": "Подпишите согласованный окончательный ответ. После подписи рассмотрение будет завершено.",
+  "approve-decision-project":
+    "Проверьте сформированный проект решения и согласуйте его для подписания.",
+  "sign-decision-project":
+    "Подпишите согласованный проект решения. Затем назначьте заслушивание и зафиксируйте направление уведомления.",
+  "send-decision-project-eotinish":
+    "Укажите реквизиты заслушивания и направление уведомления заявителю.",
+  "hearing-after-decision-project":
+    "Зафиксируйте проведение заслушивания. После этого станет доступно формирование окончательного ответа.",
+  "approve-final-response":
+    "Проверьте сформированный окончательный ответ и согласуйте его для подписания.",
+  "sign-final-response":
+    "Подпишите согласованный окончательный ответ. После подписи рассмотрение будет завершено.",
   deliver:
     "Оформите окончательный ответ. После этого он будет направлен на согласование и подписание.",
   "close-review": "Заключение по обращению вложено. Закройте рассмотрение.",
@@ -223,7 +229,9 @@ export default function ConsiderationProcess({
     : availableExtras;
   const lastEvent = c.history.at(-1);
   const taskTitle =
-    next?.action === "position" ? "Зафиксировать полученный ответ" : next?.label;
+    next?.action === "position"
+      ? "Зафиксировать полученный ответ"
+      : next?.label;
   const taskOwner =
     next?.action === "approve-request" ||
     next?.action === "approve-certificate" ||
@@ -237,16 +245,19 @@ export default function ConsiderationProcess({
     ["commission_voting", "circulated"].includes(c.status);
   const awaitingAuthorityResponse =
     (role === "demo-superuser" || role === "work") &&
-    ["request_approved", "response_approval", "response_signed", "response_ready"].includes(
-      c.status,
-    );
+    [
+      "request_approved",
+      "response_approval",
+      "response_signed",
+      "response_ready",
+    ].includes(c.status);
   const sentRequests = c.requests.filter((request) => Boolean(request.sent));
-  const pendingResponses = sentRequests.filter((request) => !request.responded)
-    .length;
+  const pendingResponses = sentRequests.filter(
+    (request) => !request.responded,
+  ).length;
   const awaitingAttendancePoll = c.status === "certificate_approved";
   const materialsAvailableForCommission = c.status === "documents_review";
-  const meetingCompletionAvailable =
-    !!c.certificate?.memberPositions.length;
+  const meetingCompletionAvailable = !!c.certificate?.memberPositions.length;
   const currentRequestSubstep = requestSubstep(c.status);
   const currentAnalysisSubstep = analysisSubstep(c.status);
   const currentDecisionSubstep = decisionSubstep(c.status);
@@ -267,10 +278,9 @@ export default function ConsiderationProcess({
     pendingApprovals.length && pendingSignatures.length
       ? "Заместитель директора ДАВГА и директор ДАВГА"
       : pendingApprovals.length
-      ? "Заместитель директора ДАВГА"
-      : "Директор ДАВГА";
-  const canPerformNextAction =
-    role === "demo-superuser" || role === next?.role;
+        ? "Заместитель директора ДАВГА"
+        : "Директор ДАВГА";
+  const canPerformNextAction = role === "demo-superuser" || role === next?.role;
 
   return (
     <section
@@ -288,8 +298,14 @@ export default function ConsiderationProcess({
               const current =
                 !!currentStatus && stage.statuses.includes(currentStatus);
               return (
-                <li key={stage.label} aria-current={current ? "step" : undefined}>
-                  <span className="consideration-stage-number" aria-hidden="true">
+                <li
+                  key={stage.label}
+                  aria-current={current ? "step" : undefined}
+                >
+                  <span
+                    className="consideration-stage-number"
+                    aria-hidden="true"
+                  >
                     {index + 1}
                   </span>
                   <div>
@@ -305,7 +321,9 @@ export default function ConsiderationProcess({
               {REQUEST_SUBSTEPS.map((label, index) => (
                 <li
                   key={label}
-                  aria-current={index === currentRequestSubstep ? "step" : undefined}
+                  aria-current={
+                    index === currentRequestSubstep ? "step" : undefined
+                  }
                 >
                   <span>{index + 1}</span>
                   {label}
@@ -314,11 +332,16 @@ export default function ConsiderationProcess({
             </ol>
           )}
           {currentAnalysisSubstep !== null && (
-            <ol className="process-substeps" aria-label="Шаги этапа анализа обращения">
+            <ol
+              className="process-substeps"
+              aria-label="Шаги этапа анализа обращения"
+            >
               {ANALYSIS_SUBSTEPS.map((label, index) => (
                 <li
                   key={label}
-                  aria-current={index === currentAnalysisSubstep ? "step" : undefined}
+                  aria-current={
+                    index === currentAnalysisSubstep ? "step" : undefined
+                  }
                 >
                   <span>{index + 1}</span>
                   {label}
@@ -331,7 +354,9 @@ export default function ConsiderationProcess({
               {DECISION_SUBSTEPS.map((label, index) => (
                 <li
                   key={label}
-                  aria-current={index === currentDecisionSubstep ? "step" : undefined}
+                  aria-current={
+                    index === currentDecisionSubstep ? "step" : undefined
+                  }
                 >
                   <span>{index + 1}</span>
                   {label}
@@ -345,14 +370,14 @@ export default function ConsiderationProcess({
         <Notice tone="amber">
           <div className="request-response-heading">
             <div>
-              <span className="request-response-eyebrow">Запросы направлены</span>
+              <span className="request-response-eyebrow">
+                Запросы направлены
+              </span>
               <strong>{workRequestStatusLabel}</strong>
             </div>
             <span className="request-response-summary">
               Ожидают действия:{" "}
-              <b>
-                {pendingApprovals.length + pendingSignatures.length}
-              </b>
+              <b>{pendingApprovals.length + pendingSignatures.length}</b>
             </span>
           </div>
           <ul className="request-response-status-list">
@@ -377,7 +402,13 @@ export default function ConsiderationProcess({
                     <strong>{request.recipient}</strong>
                     <small>Направлен {formatDate(request.date)}</small>
                   </span>
-                  <span className={responseReceived ? "response-received" : "response-pending"}>
+                  <span
+                    className={
+                      responseReceived
+                        ? "response-received"
+                        : "response-pending"
+                    }
+                  >
                     <span className="response-status-dot" aria-hidden="true" />
                     {status}
                   </span>
@@ -386,7 +417,8 @@ export default function ConsiderationProcess({
             })}
           </ul>
           <p className="request-status-owner">
-            Действие выполняется в кабинете: <strong>{workRequestStatusOwner}</strong>.
+            Действие выполняется в кабинете:{" "}
+            <strong>{workRequestStatusOwner}</strong>.
           </p>
         </Notice>
       ) : next ? (
@@ -406,20 +438,24 @@ export default function ConsiderationProcess({
                   <Button
                     key={request.id}
                     primary
-                    onClick={() =>
-                      onAction(next.action, next.role, request.id)
-                    }
+                    onClick={() => onAction(next.action, next.role, request.id)}
                   >
-                    {next.action === "approve-request" ? "Согласовать" : "Подписать"} запрос в {request.recipient}
+                    {next.action === "approve-request"
+                      ? "Согласовать"
+                      : "Подписать"}{" "}
+                    запрос в {request.recipient}
                   </Button>
                 ))}
               </div>
             ) : canPerformNextAction ? (
               (next.action !== "commission-vote" ||
-                (role === "demo-superuser" || role === "commission")) && (
+                role === "demo-superuser" ||
+                role === "commission") && (
                 <Button
                   primary
-                  disabled={next.action === "members" && !meetingCompletionAvailable}
+                  disabled={
+                    next.action === "members" && !meetingCompletionAvailable
+                  }
                   title={
                     next.action === "members" && !meetingCompletionAvailable
                       ? "Сначала заполните и сохраните справку"
@@ -432,31 +468,26 @@ export default function ConsiderationProcess({
               )
             ) : null}
             {meetingCertificateAvailable && (
-              <Button primary onClick={() => onAction("fill-meeting-certificate", "work")}>
+              <Button
+                primary
+                onClick={() => onAction("fill-meeting-certificate", "work")}
+              >
                 Заполнить справку
               </Button>
             )}
             {c.status === "accepted" && (
-              <Button
-                primary
-                onClick={() => onAction("request-other", "work")}
-              >
+              <Button primary onClick={() => onAction("request-other", "work")}>
                 Сформировать запрос в другой орган
               </Button>
             )}
-            {(role === "demo-superuser" || role === "work") && c.status === "decided" && c.type === "notice" &&
-              !c.documents.some((document) => document.kind === "conclusion") && (
-                <>
-                  <Button primary onClick={() => onAction("send-recommendations", "work")}>
-                    Направить рекомендации
-                  </Button>
-                  <Button
-                    disabled
-                    title="Сначала вложите заключение по обращению"
-                  >
-                    Завершить рассмотрение
-                  </Button>
-                </>
+            {(role === "demo-superuser" || role === "work") &&
+              c.status === "completed" && (
+                <Button
+                  primary
+                  onClick={() => onAction("send-recommendations", "work")}
+                >
+                  Направить рекомендации
+                </Button>
               )}
             {c.status === "accepted" && (
               <Button
@@ -478,7 +509,9 @@ export default function ConsiderationProcess({
             )}
             {c.status === "accepted" && (
               <small>
-                Сначала сформируйте обязательный запрос в ДВГА/КВГА, затем при необходимости добавьте запрос в другой орган и направьте документы на согласование.
+                Сначала сформируйте обязательный запрос в ДВГА/КВГА, затем при
+                необходимости добавьте запрос в другой орган и направьте
+                документы на согласование.
               </small>
             )}
           </div>
@@ -490,81 +523,102 @@ export default function ConsiderationProcess({
             <h4>Готово к рассмотрению АК</h4>
             <p>
               Опрос о присутствии направлен автоматически при создании
-              заседания. После первого подтверждения присутствия члену АК
-              сразу открывается доступ к материалам обращения.
+              заседания. После первого подтверждения присутствия члену АК сразу
+              открывается доступ к материалам обращения.
             </p>
             <p className="consideration-owner">
               Исполнитель: <strong>Члены АК</strong>
             </p>
           </div>
           <div className="consideration-task-action">
-            <small>Ожидается хотя бы одно подтверждение присутствия от члена АК.</small>
+            <small>
+              Ожидается хотя бы одно подтверждение присутствия от члена АК.
+            </small>
           </div>
         </div>
       ) : awaitingAuthorityResponse ? (
         <>
           <Notice tone="amber">
-          <div className="request-response-heading">
-            <div>
-              <span className="request-response-eyebrow">Запросы направлены</span>
-              <strong>Ожидание ответов</strong>
+            <div className="request-response-heading">
+              <div>
+                <span className="request-response-eyebrow">
+                  Запросы направлены
+                </span>
+                <strong>Ожидание ответов</strong>
+              </div>
+              <span className="request-response-summary">
+                Ожидают ответа: <b>{pendingResponses}</b>
+              </span>
             </div>
-            <span className="request-response-summary">
-              Ожидают ответа: <b>{pendingResponses}</b>
-            </span>
-          </div>
-          <ul className="request-response-status-list">
-            {sentRequests.map((request) => {
-              const recipient =
-                request.recipient ||
-                (request.saqRecipient === "subject"
-                  ? "Кабинет Объекта"
-                  : "Адресат запроса");
-              const canAttachExternalResponse =
-                (role === "demo-superuser" || role === "work") &&
-                request.template === "other" &&
-                !request.saqRecipient &&
-                !request.responded;
-              return (
-                <li
-                  className={request.responded ? "is-received" : "is-pending"}
-                  key={request.id}
-                >
-                  <span className="request-response-marker" aria-hidden="true">
-                    {request.responded ? "✓" : "…"}
-                  </span>
-                  <span className="request-response-recipient">
-                    <strong>{recipient}</strong>
-                    <small>Направлен {formatDate(request.sent)}</small>
-                  </span>
-                  <span className={request.responded ? "response-received" : "response-pending"}>
-                    <span className="response-status-dot" aria-hidden="true" />
-                    {request.responded
-                      ? `Ответ получен ${formatDate(request.responded)}`
-                      : "Ответ ожидается"}
-                  </span>
-                  {canAttachExternalResponse && (
-                    <Button
-                      className="request-response-action"
-                      primary
-                      onClick={() =>
-                        onAction("record-external-response", "work", request.id)
+            <ul className="request-response-status-list">
+              {sentRequests.map((request) => {
+                const recipient =
+                  request.recipient ||
+                  (request.saqRecipient === "subject"
+                    ? "Кабинет Объекта"
+                    : "Адресат запроса");
+                const canAttachExternalResponse =
+                  (role === "demo-superuser" || role === "work") &&
+                  request.template === "other" &&
+                  !request.saqRecipient &&
+                  !request.responded;
+                return (
+                  <li
+                    className={request.responded ? "is-received" : "is-pending"}
+                    key={request.id}
+                  >
+                    <span
+                      className="request-response-marker"
+                      aria-hidden="true"
+                    >
+                      {request.responded ? "✓" : "…"}
+                    </span>
+                    <span className="request-response-recipient">
+                      <strong>{recipient}</strong>
+                      <small>Направлен {formatDate(request.sent)}</small>
+                    </span>
+                    <span
+                      className={
+                        request.responded
+                          ? "response-received"
+                          : "response-pending"
                       }
                     >
-                      Вложить ответ
-                    </Button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                      <span
+                        className="response-status-dot"
+                        aria-hidden="true"
+                      />
+                      {request.responded
+                        ? `Ответ получен ${formatDate(request.responded)}`
+                        : "Ответ ожидается"}
+                    </span>
+                    {canAttachExternalResponse && (
+                      <Button
+                        className="request-response-action"
+                        primary
+                        onClick={() =>
+                          onAction(
+                            "record-external-response",
+                            "work",
+                            request.id,
+                          )
+                        }
+                      >
+                        Вложить ответ
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           </Notice>
         </>
       ) : materialsAvailableForCommission ? (
         <Notice>
           <strong>Материалы доступны членам АК</strong>
           <p>
-            Доступ к карточке обращения открыт членам комиссии, которые подтвердили присутствие на заседании.
+            Доступ к карточке обращения открыт членам комиссии, которые
+            подтвердили присутствие на заседании.
           </p>
         </Notice>
       ) : (
