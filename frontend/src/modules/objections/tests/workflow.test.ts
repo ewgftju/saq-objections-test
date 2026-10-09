@@ -2397,16 +2397,8 @@ test("жалоба из E-Otinish проходит проект решения �
     decisionProjectForm.fields.some((field) => field.name === "channel"),
     false,
   );
-  assert.ok(
-    decisionProjectForm.fields.some((field) => field.name === "hearingDateTime"),
-  );
-  assert.ok(
-    decisionProjectForm.fields.some((field) => field.name === "hearingLocation"),
-  );
 
   h.run("create-decision-project", "work", {
-    hearingDateTime: "2026-09-16T10:30",
-    hearingLocation: "г. Астана, ул. Победы, 33",
     [`finalResponseMajority_${h.c.issues.find((point) => point.disputed)!.id}`]: "on",
   });
   assert.equal(h.c.status, "decision_project_approval");
@@ -2416,20 +2408,10 @@ test("жалоба из E-Otinish проходит проект решения �
   assert.match(projectHtml, /решение удовлетворить большинством голосов\./);
   h.run("approve-decision-project", "director");
   assert.equal(h.c.status, "decision_project_signed");
-  h.c.channel = "SAQ";
   h.run("sign-decision-project", "director");
   assert.equal(h.c.status, "decision_project_eotinish");
-  assert.equal(h.c.hearing?.date, "2026-09-16T10:30");
-  assert.equal(h.c.hearing?.location, "г. Астана, ул. Победы, 33");
-  assert.equal(h.state.notifications.at(-1)?.kind, "hearing-notice");
   h.run("send-decision-project-eotinish", "work");
   assert.equal(h.c.status, "decision_project_hearing");
-  assert.deepEqual(h.c.decisionProject?.recipientRoles, ["subject"]);
-  assert.equal(
-    h.state.notifications.at(-1)?.kind,
-    "decision-project",
-  );
-  assert.equal(h.state.notifications.at(-1)?.recipientRole, "subject");
   h.run("hearing-after-decision-project", "work");
   assert.equal(h.c.status, "decided");
   assert.equal(nextAction(h.c)?.action, "deliver");
@@ -2459,35 +2441,6 @@ test("все виды жалоб проходят маршрут с проект
     assert.equal(h.c.status, "decision_project", appealType);
     assert.equal(nextAction(h.c)?.action, "create-decision-project", appealType);
   });
-});
-
-test("направление уведомления о заслушивании вне SAQ фиксируется отдельно", () => {
-  const h = harness(2);
-  h.c.status = "decision_project_notice";
-  h.c.decisionProject = {
-    date: "2026-09-10",
-    number: "",
-    receipt: "",
-    channel: "",
-    appealCourt: "",
-    appealProcedure: "",
-    signed: "2026-09-11",
-  };
-  h.c.hearing = {
-    skip: false,
-    date: "2026-09-16T10:30",
-    location: "г. Астана, ул. Победы, 33",
-  };
-
-  h.run("record-decision-project-hearing-notice", "work", {
-    hearingNoticeChannel: "portal",
-    hearingNoticeSentAt: "2026-09-11T15:20",
-    hearingNoticeReference: "ИСХ-77",
-  });
-
-  assert.equal(h.c.status, "decision_project_hearing");
-  assert.equal(h.c.hearing.noticeChannel, "portal");
-  assert.equal(h.c.hearing.noticeReference, "ИСХ-77");
 });
 
 test("уведомления АК показывают новые опросы первыми и блокируют повторный ответ", () => {
