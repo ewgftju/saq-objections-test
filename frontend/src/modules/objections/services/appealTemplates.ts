@@ -38,6 +38,12 @@ function decisionComplaintReference(c: ObjectionCase) {
   if (kind === "preventive-control-act")
     return `${applicantReference(c)}, на акт о результате профилактического контроля ${document}`;
 
+  if (kind === "quality-control")
+    return `${applicantReference(c)}, на решение по результатам контроля качества ${document}`;
+
+  if (kind === "administrative-act")
+    return `${applicantReference(c)}, на административный акт ${document}`;
+
   return undefined;
 }
 
