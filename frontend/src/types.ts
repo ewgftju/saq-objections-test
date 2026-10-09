@@ -115,6 +115,8 @@ export interface Hearing {
   reason?: string;
   notice?: string;
   date?: string;
+  location?: string;
+  noticeChannel?: string;
   subject?: string;
   issuer?: string;
   note?: string;
