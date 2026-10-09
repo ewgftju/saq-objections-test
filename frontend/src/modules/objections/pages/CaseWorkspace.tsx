@@ -1238,12 +1238,6 @@ export default function CaseWorkspace({
                   <strong>{c.pauseDays} раб. дн.</strong>
                 </div>
               )}
-              {!isAuthorityRole(role) && c.hearing?.date && (
-                <div className="support-row">
-                  <span>Заслушивание</span>
-                  <strong>{formatDate(c.hearing.date)}</strong>
-                </div>
-              )}
               {c.delivery?.received && (
                 <>
                   <div className="support-row">
