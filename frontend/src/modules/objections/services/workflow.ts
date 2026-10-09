@@ -105,7 +105,7 @@ function requestRoutingStatus(
   c: ObjectionCase,
 ): ObjectionCase["status"] | null {
   if (!c.requests.some((request) => !request.sent)) return null;
-  return c.requests.some((request) => !request.approved)
+  return c.requests.some((request) => !request.sent && !request.approved)
     ? "request_approval"
     : "request_signed";
 }
@@ -251,7 +251,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
   }
   if (c.status === "request_approval") {
     const hasUnapprovedRequests = c.requests.some(
-      (request) => !request.approved,
+      (request) => !request.sent && !request.approved,
     );
     const hasApprovedUnsignedRequests = c.requests.some(
       (request) => Boolean(request.approved) && !request.sent,
@@ -469,7 +469,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
     if (c.status === "accepted") {
       options.push({
         action: "request-other",
-        label: "Сформировать запрос в другой орган",
+        label: "Зафиксировать запрос через другую систему",
         role: "work",
       });
       if (directedToDvgaOrKvga(c))
@@ -690,28 +690,8 @@ export function applyAction(
       note = c.screening;
       break;
     }
-    case "request":
-    case "request-other": {
-      const otherOrgan = action === "request-other";
-      const enteredRecipient = String(form.get("recipient") || "").trim();
-      const customText = otherOrgan
-        ? text("customRequestText", "Текст запроса")
-        : undefined;
-      // Ручной адресат — это внешний орган, у него нет кабинета SAQ.
-      // Кабинет Объекта используется только если адресат вручную не указан.
-      const saqRecipient =
-        otherOrgan &&
-        !enteredRecipient &&
-        form.get("saqRecipient") === "subject"
-          ? "subject"
-          : undefined;
-      const saqRecipientLabel =
-        saqRecipient === "subject" ? "Кабинет Объекта" : "";
-      const recipient = enteredRecipient || saqRecipientLabel;
-      if (!recipient)
-        throw new Error(
-          "Заполните «Кому направить запрос» или «Получатель SAQ»",
-        );
+    case "request": {
+      const recipient = text("recipient", "Кому направить запрос");
       const deadline = `${addWorkdays(date, 2)}T18:00`;
       const requestId = `request-${c.requests.length + 1}`;
       note = `Запрос сформирован для ${recipient}. Срок рассмотрения: ${deadline}.`;
@@ -721,21 +701,43 @@ export function applyAction(
         date,
         text: note,
         deadline,
-        template: otherOrgan ? "other" : "dvga",
-        saqRecipient,
-        author: otherOrgan
-          ? DEMO_USER.fullName
-          : String(form.get("executor") || DEMO_USER.fullName),
-        customText,
+        template: "dvga",
+        author: String(form.get("executor") || DEMO_USER.fullName),
       });
       doc(`Запрос в ${recipient}`, "request", note, requestId);
-      if (!otherOrgan)
-        doc(
-          `Приложение к запросу в ${recipient}`,
-          "request-appendix",
-          `Приложение к запросу в ${recipient}.`,
-          requestId,
-        );
+      doc(
+        `Приложение к запросу в ${recipient}`,
+        "request-appendix",
+        `Приложение к запросу в ${recipient}.`,
+        requestId,
+      );
+      break;
+    }
+    case "request-other": {
+      const recipient = text("recipient", "Кому направлен запрос");
+      const sent = text("date", "Дата направления запроса");
+      dateObject(sent);
+      const registrationNumber = text(
+        "registrationNumber",
+        "Номер регистрации запроса",
+      );
+      const deliveryPath = text("deliveryPath", "Путь направления запроса");
+      const requestId = `request-${c.requests.length + 1}`;
+      note = `Направление запроса в ${recipient} зафиксировано: №${registrationNumber} от ${formatDate(sent)}, ${deliveryPath}. Ответ ожидается.`;
+      c.requests.push({
+        id: requestId,
+        recipient,
+        date: sent,
+        text: note,
+        deadline: "",
+        template: "other",
+        author: DEMO_USER.fullName,
+        registrationNumber,
+        deliveryPath,
+        sent,
+      });
+      if (canSuspendReview(c) && !c.requestPauseStartedAt)
+        c.requestPauseStartedAt = sent;
       break;
     }
     case "send-request-approval": {
@@ -761,7 +763,9 @@ export function applyAction(
     case "approve-request": {
       checked(form, "approved");
       if (!c.requests.length) throw new Error("Запрос не сформирован");
-      const pendingRequests = c.requests.filter((item) => !item.approved);
+      const pendingRequests = c.requests.filter(
+        (item) => !item.sent && !item.approved,
+      );
       const requestId = String(form.get("requestId") || "");
       const request = requestId
         ? c.requests.find((item) => item.id === requestId)
@@ -771,7 +775,9 @@ export function applyAction(
       if (!request) throw new Error("Выберите запрос для согласования");
       if (request.approved) throw new Error("Этот запрос уже согласован");
       request.approved = date;
-      const remainingRequests = c.requests.filter((item) => !item.approved);
+      const remainingRequests = c.requests.filter(
+        (item) => !item.sent && !item.approved,
+      );
       c.status = remainingRequests.length
         ? "request_approval"
         : "request_signed";
@@ -839,7 +845,9 @@ export function applyAction(
             : `По Вашей жалобе №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения жалобы не приостанавливается.`,
         });
       }
-      const unapprovedRequests = c.requests.filter((item) => !item.approved);
+      const unapprovedRequests = c.requests.filter(
+        (item) => !item.sent && !item.approved,
+      );
       const remainingSignedRequests = c.requests.filter((item) => !item.sent);
       c.status = remainingSignedRequests.length
         ? unapprovedRequests.length
