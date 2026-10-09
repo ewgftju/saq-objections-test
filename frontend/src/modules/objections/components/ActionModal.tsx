@@ -1346,6 +1346,24 @@ export default function ActionModal({
               </section>
             </div>
           </>
+        ) : action === "record-decision-project-hearing-notice" ? (
+          <>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            <div className="form-grid">
+              {definition.fields.map((field) => (
+                <Field key={field.name} field={field} />
+              ))}
+            </div>
+            <label className="field request-attachments-field">
+              <span>Подтверждение направления</span>
+              <input
+                type="file"
+                name="hearingNoticeFiles"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                multiple
+              />
+            </label>
+          </>
         ) : (
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
