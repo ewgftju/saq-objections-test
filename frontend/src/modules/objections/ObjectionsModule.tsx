@@ -174,6 +174,10 @@ export default function ObjectionsModule() {
     Boolean(
       item.delivery?.recipientRoles?.includes("subject") &&
         item.documents.some((document) => document.kind === "final-response"),
+    ) ||
+    Boolean(
+      item.decisionProject?.recipientRoles?.includes("subject") &&
+        item.documents.some((document) => document.kind === "decision-project"),
     );
   const close = () => {
     setDialog(null);
@@ -820,7 +824,7 @@ export default function ObjectionsModule() {
       form.set("commissionMember", activeCommissionMember.id);
     }
     if (
-        !["position", "record-external-response", "fill-request-response", "request", "request-other", "deliver", "subject-response"].includes(
+        !["position", "record-external-response", "fill-request-response", "request", "request-other", "deliver", "subject-response", "record-decision-project-hearing-notice"].includes(
         action,
       )
     ) {
@@ -852,6 +856,8 @@ export default function ObjectionsModule() {
             ? "conclusionFiles"
             : action === "subject-response"
               ? "subjectResponseFiles"
+              : action === "record-decision-project-hearing-notice"
+                ? "hearingNoticeFiles"
             : "responseFiles",
       )
       .filter(
@@ -934,6 +940,8 @@ export default function ObjectionsModule() {
               ? "authority-response-attachment"
               : action === "subject-response"
                 ? "subject-response-attachment"
+                : action === "record-decision-project-hearing-notice"
+                  ? "hearing-notice-attachment"
               : "response-attachment",
           text:
             ["request", "request-other"].includes(action)
@@ -944,6 +952,8 @@ export default function ObjectionsModule() {
               ? "Подтверждающий документ ДВГА/КВГА"
               : action === "subject-response"
                 ? "Ответ Объекта на запрос"
+                : action === "record-decision-project-hearing-notice"
+                  ? "Подтверждение направления уведомления о заслушивании"
               : "Полученный ответ на запрос",
           author: ROLES[model.role],
           date: next.date,
@@ -963,6 +973,8 @@ export default function ObjectionsModule() {
             ? "Вложены документы ДВГА/КВГА"
             : action === "subject-response"
               ? "Вложен ответ Объекта"
+            : action === "record-decision-project-hearing-notice"
+              ? "Вложено подтверждение направления уведомления о заслушивании"
             : "Вложены полученные файлы",
         text: attached.map(({ file }) => file.name).join(", "),
       });
@@ -1066,8 +1078,8 @@ export default function ObjectionsModule() {
           ) : model.role === "subject" && !subjectCanOpenCase(c) ? (
             <Notice tone="amber">
               Карточка обращения недоступна: в кабинете объекта отображаются
-              только запросы, ожидающие предоставления ответа, и подписанные
-              окончательные ответы.
+              направленные запросы, проекты решений и подписанные окончательные
+              ответы.
             </Notice>
           ) : (
           <CaseWorkspace
@@ -1077,7 +1089,10 @@ export default function ObjectionsModule() {
             onBack={() => model.navigate({ page: "registry" })}
             onTab={(tab) => model.navigate({ ...model.route, tab })}
             onAction={(action, role, requestId) => {
-              if (action === "record-external-response") {
+              if (
+                action === "record-external-response" ||
+                action === "record-decision-project-hearing-notice"
+              ) {
                 setDialog({ type: "action", action, requestId });
                 return;
               }
