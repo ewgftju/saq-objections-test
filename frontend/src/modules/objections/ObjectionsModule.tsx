@@ -839,7 +839,7 @@ export default function ObjectionsModule() {
       form.set("commissionMember", activeCommissionMember.id);
     }
     if (
-        !["position", "record-external-response", "fill-request-response", "request", "request-other", "deliver", "subject-response"].includes(
+        !["position", "record-external-response", "fill-request-response", "request", "deliver", "subject-response"].includes(
         action,
       )
     ) {
@@ -865,7 +865,7 @@ export default function ObjectionsModule() {
     }
     const files = form
       .getAll(
-        ["request", "request-other"].includes(action)
+        action === "request"
           ? "requestAttachments"
           : action === "deliver"
             ? "conclusionFiles"
@@ -939,10 +939,10 @@ export default function ObjectionsModule() {
           : undefined;
     const next = applyAction(model.state, c.id, action, model.role, form);
     const updated = next.cases.find((item) => item.id === c.id)!;
-    if (action === "request" || action === "request-other")
+    if (action === "request")
       delete updated.requestDrafts?.[action];
     const responseRequestId =
-      ["request", "request-other"].includes(action)
+      action === "request"
         ? updated.requests.at(-1)?.id
         : responseRequestIdBeforeAction;
     if (attached.length) {
@@ -951,7 +951,7 @@ export default function ObjectionsModule() {
           name: file.name,
           filename: file.name,
           kind:
-            ["request", "request-other"].includes(action)
+            action === "request"
               ? "request-attachment"
               : action === "deliver"
                 ? "conclusion"
@@ -961,7 +961,7 @@ export default function ObjectionsModule() {
                 ? "subject-response-attachment"
               : "response-attachment",
           text:
-            ["request", "request-other"].includes(action)
+            action === "request"
               ? "Приложение исполнителя рабочего органа к запросу"
               : action === "deliver"
                 ? "Заключение по обращению"
@@ -980,7 +980,7 @@ export default function ObjectionsModule() {
         date: next.date,
         actor: ROLES[model.role],
         title:
-          ["request", "request-other"].includes(action)
+          action === "request"
             ? "Вложены приложения к запросу"
             : action === "deliver"
               ? "Вложено заключение по обращению"
@@ -994,7 +994,7 @@ export default function ObjectionsModule() {
     }
     model.commit(
       next,
-      ["request", "request-other"].includes(action)
+      action === "request"
         ? attached.length
           ? "Запрос и приложения сохранены"
           : "Запрос сохранён"
@@ -1332,7 +1332,7 @@ export default function ObjectionsModule() {
           onClose={close}
           onSubmit={(form) => submitAction(dialog.action, form)}
           onSaveDraft={
-            dialog.action === "request" || dialog.action === "request-other"
+            dialog.action === "request"
               ? (form) =>
                   saveRequestDraft(c.id, dialog.action as RequestDraftKind, form)
               : dialog.action === "analysis"
