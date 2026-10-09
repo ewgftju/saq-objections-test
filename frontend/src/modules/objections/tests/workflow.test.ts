@@ -253,24 +253,23 @@ test("три исходных дела: разные сроки и перено�
     }),
     "2026-09-28",
   );
-  assert.equal(
-    reviewDuration({ ...state.cases[1], appealType: "Заявление" }),
-    15,
-  );
-  assert.equal(
-    reviewDuration({
-      ...state.cases[2],
-      appealType: "Жалоба на действие/бездействие",
-    }),
-    20,
-  );
-  assert.equal(
-    reviewDuration({
-      ...state.cases[1],
-      appealType: "Возражение на аудиторский отчет",
-    }),
-    30,
-  );
+  const reviewDurations = [
+    ["Возражение на аудиторский отчет", 30],
+    ["Жалоба на уведомление", 20],
+    ["Жалоба на решение КВГА/ДВГА", 20],
+    ["Жалоба на действие/бездействие", 20],
+    ["Возражение на уведомление", 15],
+    ["Заявление", 15],
+  ] as const;
+  for (const [appealType, expected] of reviewDurations)
+    assert.equal(
+      reviewDuration({
+        ...state.cases[1],
+        appealType,
+        channel: "E-Otinish",
+      }),
+      expected,
+    );
   assert.equal(addMonths("2026-08-31", 3), "2026-11-30");
   assert.equal(
     state.cases.every((c) => c.status === "accepted"),
