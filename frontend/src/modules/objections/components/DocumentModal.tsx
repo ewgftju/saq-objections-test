@@ -9,10 +9,7 @@ import type {
   CommissionMember,
   ObjectionCase,
 } from "../../../types";
-import {
-  formatDate,
-  formatMoney,
-} from "../../../utils/dateFormat";
+import { formatDate, formatMoney } from "../../../utils/dateFormat";
 import { auditAuthorityFullName } from "../../../utils/auditAuthority";
 import { downloadFile } from "../../../utils/download";
 import { DEMO_USER } from "../../../config";
@@ -22,6 +19,11 @@ import {
   pointOutcomeFromVotes,
   presidingChairId,
 } from "../services/decisions";
+import {
+  agendaOrProtocolIntro,
+  certificateTemplateIntro,
+  requestTemplateIntro,
+} from "../services/appealTemplates";
 
 function requestDeadlineDate(deadline: string) {
   return formatDate(deadline.slice(0, 10));
@@ -37,6 +39,9 @@ function hasSeparateAuditObject(c: ObjectionCase) {
 }
 
 function requestIntro(c: ObjectionCase, deadline: string) {
+  const templateIntro = requestTemplateIntro(c);
+  if (templateIntro) return templateIntro;
+
   const details = c.agendaDetails;
   const appealType =
     c.appealType ??
@@ -58,11 +63,11 @@ function requestIntro(c: ObjectionCase, deadline: string) {
   if (appealType === "Возражение на аудиторский отчет")
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения от ${c.org}, БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, на аудиторский отчет от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, проведенный ${auditAuthorityFullName(c.issuer)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
 
-  if (appealType === "Заявление")
-    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан заявления ${c.org}${finish("заявления")}`;
-
   if (appealType === "Жалоба на решение КВГА/ДВГА") {
-    if (details?.decisionKind === "quality-control" || details?.decisionKind === "inspection-act")
+    if (
+      details?.decisionKind === "quality-control" ||
+      details?.decisionKind === "inspection-act"
+    )
       return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на решение контроля качества от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
     if (details?.decisionKind === "administrative-act")
       return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на административный акт от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
@@ -87,6 +92,9 @@ function requestIntro(c: ObjectionCase, deadline: string) {
 }
 
 function certificateIntro(c: ObjectionCase) {
+  const templateIntro = certificateTemplateIntro(c);
+  if (templateIntro) return templateIntro;
+
   const details = c.agendaDetails;
   const appealType = c.appealType ?? "";
   const number = c.appealNumber || c.document.number || "—";
@@ -95,9 +103,6 @@ function certificateIntro(c: ObjectionCase) {
   const sourceNumber = c.document.number || "—";
   const authority = auditAuthorityFullName(c.issuer);
   const applicant = `${c.org}, ИИН/БИН ${c.bin}`;
-
-  if (appealType === "Заявление")
-    return `В Министерство финансов Республики Казахстан поступило заявление № ${number} от ${date} ${applicant}: ${c.request || "—"}.`;
 
   if (appealType === "Жалоба на акт о результате профилактического контроля")
     return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на акт о результате профилактического контроля ${authority} от ${sourceDate} № ${sourceNumber}.`;
@@ -111,7 +116,10 @@ function certificateIntro(c: ObjectionCase) {
   if (appealType === "Жалоба на решение КВГА/ДВГА") {
     if (details?.decisionKind === "prescription-preventive")
       return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на предписание ${authority} от ${sourceDate} № ${sourceNumber} по профилактическому контролю № ${details.relatedDocumentNumber || "—"} от ${formatDate(details.relatedDocumentDate)}.`;
-    if (details?.decisionKind === "quality-control" || details?.decisionKind === "inspection-act")
+    if (
+      details?.decisionKind === "quality-control" ||
+      details?.decisionKind === "inspection-act"
+    )
       return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, по результатам контроля качества ${authority} от ${sourceDate} № ${sourceNumber}.`;
     if (details?.decisionKind === "administrative-act")
       return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на административный акт ${authority} от ${sourceDate} № ${sourceNumber}.`;
@@ -211,13 +219,14 @@ export function DocumentContent({
         ? "Предписание по профилактическому контролю"
         : agendaDetails?.decisionKind === "preventive-control-act"
           ? "Акт о результате профилактического контроля"
-        : agendaDetails?.decisionKind === "quality-control"
-          ? "Контроль качества"
-          : agendaDetails?.decisionKind === "administrative-act"
-            ? "Административный акт"
-            : undefined;
+          : agendaDetails?.decisionKind === "quality-control"
+            ? "Контроль качества"
+            : agendaDetails?.decisionKind === "administrative-act"
+              ? "Административный акт"
+              : undefined;
   const requirementFiles = c.documents.filter(
-    (item) => item.kind === "attachment" && item.text === "Требования заявителя",
+    (item) =>
+      item.kind === "attachment" && item.text === "Требования заявителя",
   );
   if (kind === "request" && request && request.template === "other")
     return (
@@ -253,7 +262,10 @@ export function DocumentContent({
         </div>
         <div className="other-request-template-line" />
         <p className="other-request-template-recipient">
-          <b>{auditAuthorityFullName(request.recipient) || "<Кому направить запрос>"}</b>
+          <b>
+            {auditAuthorityFullName(request.recipient) ||
+              "<Кому направить запрос>"}
+          </b>
         </p>
         <p className="other-request-template-body">
           {request.customText || "<Текст запроса>"}
@@ -294,7 +306,10 @@ export function DocumentContent({
         </div>
         <div className="request-template-line" />
         <p className="request-template-recipient">
-          <b>{auditAuthorityFullName(request.recipient) || "Кому направить запрос"}</b>
+          <b>
+            {auditAuthorityFullName(request.recipient) ||
+              "Кому направить запрос"}
+          </b>
         </p>
         <p
           className={`request-template-body ${
@@ -326,57 +341,58 @@ export function DocumentContent({
       </article>
     );
 
-  if (
-    kind === "request-appendix" ||
-    kind === "authority-response-appendix"
-  ) {
+  if (kind === "request-appendix" || kind === "authority-response-appendix") {
     const isResponseAppendix = kind === "authority-response-appendix";
 
     return (
       <article className="print-document appendix-template">
         <p className="appendix-template-number">Таблица №1</p>
         <div className="appendix-template-table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>№ п-п</th>
-              <th>Нарушение, по которым поступило возражение</th>
-              <th>Возражение объекта аудита</th>
-              <th>
-                Мотивированный ответ {appendixAuthority} по доводам возражения объекта аудита
-                с приложением подтверждающих документов по фактам нарушений
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {snapshot.issues
-              .filter((point) => point.disputed)
-              .map((point) => (
-                <tr key={point.id}>
-                  <td>{point.number}</td>
-                  <td>
-                    {appendixFindingPreview?.[point.id] ??
-                      (isResponseAppendix
-                        ? request?.authorityResponses?.[point.id]?.finding ??
-                          (useLegacyAuthorityValues
-                            ? point.authorityFinding
-                            : "")
-                        : point.authorityFinding) ??
-                      ""}
-                  </td>
-                  <td>{point.argument || "—"}</td>
-                  <td aria-label={`Мотивированный ответ ${appendixAuthority}`}>
-                    {appendixPreview?.[point.id] ??
-                      (isResponseAppendix
-                        ? request?.authorityResponses?.[point.id]?.response ??
-                          (useLegacyAuthorityValues ? point.position : "")
-                        : point.position) ??
-                      ""}
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
+          <table>
+            <thead>
+              <tr>
+                <th>№ п-п</th>
+                <th>Нарушение, по которым поступило возражение</th>
+                <th>Возражение объекта аудита</th>
+                <th>
+                  Мотивированный ответ {appendixAuthority} по доводам возражения
+                  объекта аудита с приложением подтверждающих документов по
+                  фактам нарушений
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {snapshot.issues
+                .filter((point) => point.disputed)
+                .map((point) => (
+                  <tr key={point.id}>
+                    <td>{point.number}</td>
+                    <td>
+                      {appendixFindingPreview?.[point.id] ??
+                        (isResponseAppendix
+                          ? (request?.authorityResponses?.[point.id]?.finding ??
+                            (useLegacyAuthorityValues
+                              ? point.authorityFinding
+                              : ""))
+                          : point.authorityFinding) ??
+                        ""}
+                    </td>
+                    <td>{point.argument || "—"}</td>
+                    <td
+                      aria-label={`Мотивированный ответ ${appendixAuthority}`}
+                    >
+                      {appendixPreview?.[point.id] ??
+                        (isResponseAppendix
+                          ? (request?.authorityResponses?.[point.id]
+                              ?.response ??
+                            (useLegacyAuthorityValues ? point.position : ""))
+                          : point.position) ??
+                        ""}
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
         </div>
       </article>
     );
@@ -387,10 +403,7 @@ export function DocumentContent({
     const authorityRequests = c.requests.filter((item) =>
       /ДВГА|КВГА/i.test(item.recipient),
     );
-    const authorityText = (
-      pointId: string,
-      field: "finding" | "response",
-    ) => {
+    const authorityText = (pointId: string, field: "finding" | "response") => {
       if (!authorityRequests.length)
         return [{ authority: "ДВГА/КВГА", value: "—" }];
       return authorityRequests.map((item) => {
@@ -421,7 +434,8 @@ export function DocumentContent({
           (наименование, БИН/ИИН лица, подавшего возражение, жалобу)
         </p>
         <p className="certificate-template-authority">
-          {auditAuthorityFullName(snapshot.issuer)} (далее – {snapshot.issuer === "КВГА" ? "КВГА" : "ДВГА"}).
+          {auditAuthorityFullName(snapshot.issuer)} (далее –{" "}
+          {snapshot.issuer === "КВГА" ? "КВГА" : "ДВГА"}).
         </p>
         <p className="certificate-template-explanation">
           (наименование органа, чьи акты, действия (бездействие) обжалуются)
@@ -463,7 +477,9 @@ export function DocumentContent({
             </div>
             <div className="certificate-template-line">
               <b>Доводы рабочего органа (ДАВГА МФ РК):</b>{" "}
-              {certificate?.davgaArgumentsByPoint?.[point.id] || certificate?.davgaArguments || "—"}
+              {certificate?.davgaArgumentsByPoint?.[point.id] ||
+                certificate?.davgaArguments ||
+                "—"}
             </div>
             {(() => {
               const positions = (certificate?.memberPositions || []).filter(
@@ -472,20 +488,39 @@ export function DocumentContent({
               if (!positions.length) return null;
               const members = snapshot.members.length
                 ? snapshot.members
-                : positions.map((position) => ({ id: position.id, name: position.name }));
+                : positions.map((position) => ({
+                    id: position.id,
+                    name: position.name,
+                  }));
               return (
                 <table className="certificate-members-table certificate-point-votes-table">
                   <thead>
                     <tr>
-                      {members.map((member) => <th key={member.id}>{member.name}</th>)}
-                      {!members.length && <th>Участники заседания не определены</th>}
+                      {members.map((member) => (
+                        <th key={member.id}>{member.name}</th>
+                      ))}
+                      {!members.length && (
+                        <th>Участники заседания не определены</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       {members.map((member) => {
-                        const position = positions.find((item) => item.id === member.id);
-                        return <td key={member.id}><b>{position?.result ? OUTCOMES[position.result] : "Нет голоса"}</b><br />{position?.comment || "—"}</td>;
+                        const position = positions.find(
+                          (item) => item.id === member.id,
+                        );
+                        return (
+                          <td key={member.id}>
+                            <b>
+                              {position?.result
+                                ? OUTCOMES[position.result]
+                                : "Нет голоса"}
+                            </b>
+                            <br />
+                            {position?.comment || "—"}
+                          </td>
+                        );
                       })}
                       {!members.length && <td>—</td>}
                     </tr>
@@ -513,27 +548,59 @@ export function DocumentContent({
             <p>{auditAuthorityFullName(snapshot.issuer)}</p>
           </div>
           <div className="final-response-body">
-            <p>Қазақстан Республикасы Қаржы министрлігінің (бұдан әрі – Министрлік) апелляциялық комиссиясының қарауына Ішкі мемлекеттік аудит комитетінен жүргізілген аудиторлық есепте көрсетілген бұзушылықтарға түскен қарсылықты қарап, келесіні хабарлайды.</p>
-            <p>Заңның 58-4-бабының 2-тармағына сәйкес, қарсылық мемлекеттік аудит объектісі даулайтын мәселелер шегінде қаралады.</p>
-            <p>Апелляциялық комиссия отырысында дауыс беру қорытындысы бойынша қарсылықты {decision} туралы шешім қабылдады.</p>
-            <p>Жауаппен келіспеген жағдайда, Сіз Қазақстан Республикасы Әкімшілік рәсімдік-процестік кодексінің 91-бабының 6-тармағына сәйкес шешімге шағым жасауға құқылысыз. Екінші мекенжайға мәлімет және жұмыс үшін жолданады.</p>
-            <p className="final-response-attachment-note">Қосымша: {Math.max(1, disputedIssues.length)} парақта.</p>
+            <p>
+              Қазақстан Республикасы Қаржы министрлігінің (бұдан әрі –
+              Министрлік) апелляциялық комиссиясының қарауына Ішкі мемлекеттік
+              аудит комитетінен жүргізілген аудиторлық есепте көрсетілген
+              бұзушылықтарға түскен қарсылықты қарап, келесіні хабарлайды.
+            </p>
+            <p>
+              Заңның 58-4-бабының 2-тармағына сәйкес, қарсылық мемлекеттік аудит
+              объектісі даулайтын мәселелер шегінде қаралады.
+            </p>
+            <p>
+              Апелляциялық комиссия отырысында дауыс беру қорытындысы бойынша
+              қарсылықты {decision} туралы шешім қабылдады.
+            </p>
+            <p>
+              Жауаппен келіспеген жағдайда, Сіз Қазақстан Республикасы Әкімшілік
+              рәсімдік-процестік кодексінің 91-бабының 6-тармағына сәйкес
+              шешімге шағым жасауға құқылысыз. Екінші мекенжайға мәлімет және
+              жұмыс үшін жолданады.
+            </p>
+            <p className="final-response-attachment-note">
+              Қосымша: {Math.max(1, disputedIssues.length)} парақта.
+            </p>
           </div>
           <div className="final-response-signature">
-            <span>Ішкі мемлекеттік аудит бойынша апелляция департаментінің директоры</span>
+            <span>
+              Ішкі мемлекеттік аудит бойынша апелляция департаментінің директоры
+            </span>
             <b>Ш. Күреңбек тегі</b>
           </div>
-          <p className="final-response-executor">Орын.: {snapshot.assignee === "Не назначен" ? DEMO_USER.fullName : snapshot.assignee}<br />Тел.: 70-13-08</p>
+          <p className="final-response-executor">
+            Орын.:{" "}
+            {snapshot.assignee === "Не назначен"
+              ? DEMO_USER.fullName
+              : snapshot.assignee}
+            <br />
+            Тел.: 70-13-08
+          </p>
         </article>
         <article className="print-document final-response-template final-response-appendix">
           <h2>Қосымша</h2>
           {disputedIssues.map((point) => {
             const pointVotes = snapshot.votes?.[point.id];
             const winningOutcome =
-              pointOutcomeFromVotes(pointVotes?.votes || {}, pointVotes?.chair) ||
+              pointOutcomeFromVotes(
+                pointVotes?.votes || {},
+                pointVotes?.chair,
+              ) ||
               point.final ||
               point.proposal;
-            const winningReasonMemberId = Object.entries(pointVotes?.votes || {}).find(
+            const winningReasonMemberId = Object.entries(
+              pointVotes?.votes || {},
+            ).find(
               ([memberId, vote]) =>
                 normalizeVoteChoice(vote) === winningOutcome &&
                 Boolean(pointVotes?.voteReasons?.[memberId]?.trim()),
@@ -551,12 +618,14 @@ export function DocumentContent({
               point.finalDecisionByMajority;
             return (
               <section className="final-response-appendix-point" key={point.id}>
-                <p className="final-response-point-title">- по п. {point.number}:</p>
-                <p className="final-response-point-reason">
-                  {pointReason}.
+                <p className="final-response-point-title">
+                  - по п. {point.number}:
                 </p>
+                <p className="final-response-point-reason">{pointReason}.</p>
                 <p className="final-response-point-decision">
-                  На основании вышеизложенного, Апелляционной комиссией принято решение {pointDecision}{decidedByMajority ? " большинством голосов" : ""}.
+                  На основании вышеизложенного, Апелляционной комиссией принято
+                  решение {pointDecision}
+                  {decidedByMajority ? " большинством голосов" : ""}.
                 </p>
               </section>
             );
@@ -582,7 +651,9 @@ export function DocumentContent({
     const presidingMember =
       viceMinister ||
       davgaDirector ||
-      presentMembers.find((member) => member.id === presidingChairId(presentMembers));
+      presentMembers.find(
+        (member) => member.id === presidingChairId(presentMembers),
+      );
     const commissionMembers = presentMembers.filter(
       (member) => member.id !== presidingMember?.id,
     );
@@ -598,7 +669,9 @@ export function DocumentContent({
     const votes = protocolPreview?.votes || snapshot.votes;
     const hasPreviewVotes = Object.values(protocolPreview?.votes || {}).some(
       (pointVotes) =>
-        Object.values(pointVotes).some((vote) => Boolean(normalizeVoteChoice(vote))),
+        Object.values(pointVotes).some((vote) =>
+          Boolean(normalizeVoteChoice(vote)),
+        ),
     );
     const overallResult = hasPreviewVotes
       ? (() => {
@@ -633,11 +706,12 @@ export function DocumentContent({
       ? OUTCOMES[overallResult].toLocaleLowerCase("ru-RU")
       : "—";
     const protocolIntro =
-      snapshot.appealType === "Жалоба на уведомление"
+      agendaOrProtocolIntro(snapshot) ||
+      (snapshot.appealType === "Жалоба на уведомление"
         ? `Жалоба от ${snapshot.org}, ИИН/БИН ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на уведомление об устранении нарушений от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityFullName(snapshot.issuer)}.`
         : snapshot.appealType === "Возражение на аудиторский отчет"
-        ? `Возражение от ${snapshot.org}, БИН ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на аудиторский отчет от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityFullName(snapshot.issuer)}.`
-        : `Возражение «${snapshot.org}», БИН ${snapshot.bin} от ${formatDate(snapshot.appealDate || snapshot.filed)} года №${snapshot.appealNumber || snapshot.document.number} к уведомлению ${auditAuthorityFullName(snapshot.issuer)} от ${formatDate(snapshot.document.date)} года №${snapshot.document.number}.`;
+          ? `Возражение от ${snapshot.org}, БИН ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на аудиторский отчет от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityFullName(snapshot.issuer)}.`
+          : `Возражение «${snapshot.org}», БИН ${snapshot.bin} от ${formatDate(snapshot.appealDate || snapshot.filed)} года №${snapshot.appealNumber || snapshot.document.number} к уведомлению ${auditAuthorityFullName(snapshot.issuer)} от ${formatDate(snapshot.document.date)} года №${snapshot.document.number}.`);
     return (
       <article className="print-document protocol-template">
         <h1>
@@ -651,9 +725,7 @@ export function DocumentContent({
         </div>
         <div className="protocol-template-attendance">
           <p className="protocol-template-attendance-title">
-            <b>
-              ПРИСУТСТВОВАЛИ ({meeting?.format || "онлайн, Qosyl"}):
-            </b>
+            <b>ПРИСУТСТВОВАЛИ ({meeting?.format || "онлайн, Qosyl"}):</b>
           </p>
           {presidingMember ? (
             <>
@@ -692,12 +764,18 @@ export function DocumentContent({
         <p className="protocol-template-intro">{protocolIntro}</p>
         <p>
           <span style={{ display: "block", textAlign: "left" }}>
-            Наименование органа, вынесшего обжалуемое решение: {auditAuthorityFullName(snapshot.issuer)}.
+            Наименование органа, вынесшего обжалуемое решение:{" "}
+            {auditAuthorityFullName(snapshot.issuer)}.
           </span>
           <br />
-          <span style={{ display: "block", textAlign: "left" }}>Количество присутствовавших членов Апелляционной комиссии: {presentMembers.length}.</span>
+          <span style={{ display: "block", textAlign: "left" }}>
+            Количество присутствовавших членов Апелляционной комиссии:{" "}
+            {presentMembers.length}.
+          </span>
           <br />
-          <span style={{ display: "block", textAlign: "left" }}><b>Результаты голосования членов Апелляционной комиссии:</b></span>
+          <span style={{ display: "block", textAlign: "left" }}>
+            <b>Результаты голосования членов Апелляционной комиссии:</b>
+          </span>
         </p>
         <table className="protocol-votes-table">
           <thead>
@@ -751,7 +829,10 @@ export function DocumentContent({
           </tbody>
         </table>
         <p className="protocol-template-result">
-          На основании результатов голосования членов Апелляционной комиссии принято РЕШЕНИЕ {decision} {snapshot.appealType} {snapshot.org} от {formatDate(snapshot.appealDate || snapshot.filed)} года №{snapshot.appealNumber || snapshot.document.number}.
+          На основании результатов голосования членов Апелляционной комиссии
+          принято РЕШЕНИЕ {decision} {snapshot.appealType} {snapshot.org} от{" "}
+          {formatDate(snapshot.appealDate || snapshot.filed)} года №
+          {snapshot.appealNumber || snapshot.document.number}.
         </p>
         {recommendations && recommendations !== "—" && (
           <p className="protocol-template-recommendations">
@@ -765,9 +846,13 @@ export function DocumentContent({
             </p>
           ) : null}
           {commissionMembers.map((member) => (
-            <p key={member.id}>Член Апелляционной комиссии: __________________ {member.name}</p>
+            <p key={member.id}>
+              Член Апелляционной комиссии: __________________ {member.name}
+            </p>
           ))}
-          <p>Секретарь Апелляционной комиссии: __________________ {secretaryName}</p>
+          <p>
+            Секретарь Апелляционной комиссии: __________________ {secretaryName}
+          </p>
         </div>
       </article>
     );
@@ -782,7 +867,8 @@ export function DocumentContent({
       {kind === "original" ? (
         <>
           <p>
-            <b>Вид обращения:</b> {c.appealType || (c.type === "control" ? "Жалоба" : "Возражение")}
+            <b>Вид обращения:</b>{" "}
+            {c.appealType || (c.type === "control" ? "Жалоба" : "Возражение")}
             <br />
             <b>
               {hasSeparateAuditObject(c)
@@ -793,30 +879,27 @@ export function DocumentContent({
             {c.org}
             <br />
             <b>
-              {hasSeparateAuditObject(c)
-                ? "БИН/ИИН заявителя"
-                : "БИН/ИИН"}
-              :
+              {hasSeparateAuditObject(c) ? "БИН/ИИН заявителя" : "БИН/ИИН"}:
             </b>{" "}
             {c.bin}
-            {hasSeparateAuditObject(c) &&
-              c.agendaDetails?.auditObjectName && (
-                <>
-                  <br />
-                  <b>Наименование объекта аудита:</b>{" "}
-                  {c.agendaDetails.auditObjectName}
-                  {c.agendaDetails.auditObjectBin && (
-                    <>
-                      <br />
-                      <b>БИН/ИИН:</b> {c.agendaDetails.auditObjectBin}
-                    </>
-                  )}
-                </>
-              )}
+            {hasSeparateAuditObject(c) && c.agendaDetails?.auditObjectName && (
+              <>
+                <br />
+                <b>Наименование объекта аудита:</b>{" "}
+                {c.agendaDetails.auditObjectName}
+                {c.agendaDetails.auditObjectBin && (
+                  <>
+                    <br />
+                    <b>БИН/ИИН:</b> {c.agendaDetails.auditObjectBin}
+                  </>
+                )}
+              </>
+            )}
             <br />
             <b>Номер возражения, жалобы, заявления:</b> {c.appealNumber || "—"}
             <br />
-            <b>Дата возражения, жалобы, заявления:</b> {formatDate(c.appealDate)}
+            <b>Дата возражения, жалобы, заявления:</b>{" "}
+            {formatDate(c.appealDate)}
             <br />
             <b>Местонахождение:</b> {c.address}
             <br />
@@ -827,7 +910,10 @@ export function DocumentContent({
             <br />
             <b>Дата получения документа:</b> {formatDate(c.document.received)}
             <br />
-            <b>Портал / цифровая система, по которой поступило уведомление:</b> {c.channel}
+            <b>
+              Портал / цифровая система, по которой поступило уведомление:
+            </b>{" "}
+            {c.channel}
           </p>
           {c.document.number && (
             <p>
@@ -836,24 +922,31 @@ export function DocumentContent({
               <b>Дата: {c.document.name}:</b> {formatDate(c.document.date)}
             </p>
           )}
-          {(agendaDetails?.procurementMethod || agendaDetails?.customerName || agendaDetails?.customerBin) && (
+          {(agendaDetails?.procurementMethod ||
+            agendaDetails?.customerName ||
+            agendaDetails?.customerBin) && (
             <p>
               <b>Сумма:</b> {formatMoney(c.amount)}
               <br />
               <b>Способ закупки:</b> {agendaDetails?.procurementMethod || "—"}
               <br />
-              <b>Наименование заказчика:</b> {agendaDetails?.customerName || "—"}
+              <b>Наименование заказчика:</b>{" "}
+              {agendaDetails?.customerName || "—"}
               <br />
               <b>БИН заказчика:</b> {agendaDetails?.customerBin || "—"}
             </p>
           )}
-          {(agendaDetails?.procurementNumber || agendaDetails?.lotNumber || agendaDetails?.procurementSubject) && (
+          {(agendaDetails?.procurementNumber ||
+            agendaDetails?.lotNumber ||
+            agendaDetails?.procurementSubject) && (
             <p>
-              <b>Номер государственной закупки:</b> {agendaDetails?.procurementNumber || "—"}
+              <b>Номер государственной закупки:</b>{" "}
+              {agendaDetails?.procurementNumber || "—"}
               <br />
               <b>Номер лота:</b> {agendaDetails?.lotNumber || "—"}
               <br />
-              <b>Предмет государственной закупки:</b> {agendaDetails?.procurementSubject || "—"}
+              <b>Предмет государственной закупки:</b>{" "}
+              {agendaDetails?.procurementSubject || "—"}
             </p>
           )}
           {decisionKindLabel && (
@@ -862,23 +955,43 @@ export function DocumentContent({
               {agendaDetails?.relatedDocumentNumber && (
                 <>
                   <br />
-                  <b>{agendaDetails.decisionKind === "prescription-audit" ? "Номер аудиторского отчета" : "Номер профилактического контроля"}:</b> {agendaDetails.relatedDocumentNumber}
+                  <b>
+                    {agendaDetails.decisionKind === "prescription-audit"
+                      ? "Номер аудиторского отчета"
+                      : "Номер профилактического контроля"}
+                    :
+                  </b>{" "}
+                  {agendaDetails.relatedDocumentNumber}
                 </>
               )}
               {agendaDetails?.relatedDocumentDate && (
                 <>
                   <br />
-                  <b>{agendaDetails.decisionKind === "prescription-audit" ? "Дата подписания аудиторского отчета" : "Дата подписания профилактического контроля"}:</b> {formatDate(agendaDetails.relatedDocumentDate)}
+                  <b>
+                    {agendaDetails.decisionKind === "prescription-audit"
+                      ? "Дата подписания аудиторского отчета"
+                      : "Дата подписания профилактического контроля"}
+                    :
+                  </b>{" "}
+                  {formatDate(agendaDetails.relatedDocumentDate)}
                 </>
               )}
             </p>
           )}
           <p>
-            <b>{c.appealType === "Заявление" ? "О чем заявление" : "Краткое описание"}:</b> {c.request}
+            <b>
+              {c.appealType === "Заявление"
+                ? "О чем заявление"
+                : "Краткое описание"}
+              :
+            </b>{" "}
+            {c.request}
             <br />
             <b>Требования заявителя:</b>{" "}
             {requirementFiles.length
-              ? requirementFiles.map((item) => item.filename || item.name).join(", ")
+              ? requirementFiles
+                  .map((item) => item.filename || item.name)
+                  .join(", ")
               : "—"}
           </p>
         </>
@@ -894,7 +1007,8 @@ export function DocumentContent({
             <b>Заявитель:</b> {c.applicant}
           </p>
           <p>
-            <b>Орган, чей документ обжалуется:</b> {auditAuthorityFullName(c.issuer)}
+            <b>Орган, чей документ обжалуется:</b>{" "}
+            {auditAuthorityFullName(c.issuer)}
             <br />
             <b>Исходный документ:</b> {c.document.name} № {c.document.number} от{" "}
             {formatDate(c.document.date)}
@@ -1118,7 +1232,7 @@ export function wordDocumentHtml({
   document,
 }: Pick<Parameters<typeof DocumentContent>[0], "c" | "kind" | "document">) {
   const css =
-    "body{font:12pt 'Times New Roman',serif;line-height:1;color:#111}p{white-space:pre-wrap;text-align:justify}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #111;padding:8px;vertical-align:top}.certificate-template{padding:20mm 15mm;text-align:justify}.certificate-template h1,.certificate-template h2{text-align:center;font-size:12pt}.certificate-template-intro{text-align:justify;text-indent:12mm}.certificate-template-explanation{text-align:center;font-style:italic}.certificate-template-point{break-inside:avoid}.certificate-template-point h3{text-align:center}.certificate-template-line{padding:2px 0}.certificate-template-line p{margin:4px 0}.certificate-members-table th{text-align:center}.certificate-point-votes-table th,.certificate-point-votes-table td{min-width:0;padding:5px;overflow-wrap:anywhere;word-break:break-word;white-space:normal;font-size:12pt;line-height:1}.certificate-point-votes-table th{text-align:center}.certificate-point-votes-table td{text-align:justify}.protocol-template-attendance-members>span{display:block}.protocol-template,.protocol-template *{font-size:12pt!important}"
+    "body{font:12pt 'Times New Roman',serif;line-height:1;color:#111}p{white-space:pre-wrap;text-align:justify}table{width:100%;border-collapse:collapse;table-layout:fixed}th,td{border:1px solid #111;padding:8px;vertical-align:top}.certificate-template{padding:20mm 15mm;text-align:justify}.certificate-template h1,.certificate-template h2{text-align:center;font-size:12pt}.certificate-template-intro{text-align:justify;text-indent:12mm}.certificate-template-explanation{text-align:center;font-style:italic}.certificate-template-point{break-inside:avoid}.certificate-template-point h3{text-align:center}.certificate-template-line{padding:2px 0}.certificate-template-line p{margin:4px 0}.certificate-members-table th{text-align:center}.certificate-point-votes-table th,.certificate-point-votes-table td{min-width:0;padding:5px;overflow-wrap:anywhere;word-break:break-word;white-space:normal;font-size:12pt;line-height:1}.certificate-point-votes-table th{text-align:center}.certificate-point-votes-table td{text-align:justify}.protocol-template-attendance-members>span{display:block}.protocol-template,.protocol-template *{font-size:12pt!important}";
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Справка</title><style>${css}</style></head><body>${renderToStaticMarkup(
     <DocumentContent c={c} kind={kind} document={document} />,
   )}</body></html>`;
