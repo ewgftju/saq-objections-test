@@ -1542,7 +1542,7 @@ export function applyAction(
         // при направлении окончательного ответа.
         number: String(form.get("number") || ""),
         receipt: String(form.get("receipt") || ""),
-        channel: text("channel", "Канал"),
+        channel: String(form.get("channel") || ""),
         appealCourt: String(form.get("appealCourt") || ""),
         appealProcedure: String(form.get("appealProcedure") || ""),
       };
