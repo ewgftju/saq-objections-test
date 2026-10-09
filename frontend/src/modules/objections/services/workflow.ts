@@ -141,14 +141,14 @@ function directedToDvgaOrKvga(c: ObjectionCase) {
 }
 
 function requiresEotinishDecisionProject(c: ObjectionCase) {
-  return (
-    c.channel === "E-Otinish" &&
-    [
-      "Жалоба на решение КВГА/ДВГА",
-      "Жалоба на действие/бездействие",
-      "Жалоба на акт о результате профилактического контроля",
-    ].includes(c.appealType || "")
-  );
+  // Для жалоб действует единый административный маршрут независимо от
+  // источника: портал, цифровая система или E-Otinish. После протокола
+  // обязательно формируются проект решения и проводится заслушивание.
+  return [
+    "Жалоба на уведомление",
+    "Жалоба на решение КВГА/ДВГА",
+    "Жалоба на действие/бездействие",
+  ].includes(c.appealType || "");
 }
 
 /** A member may vote differently on separate points. For the certificate we
@@ -1715,7 +1715,8 @@ export function applyAction(
           recipientRole,
           date,
           read: false,
-          text: `В ваш кабинет направлен подписанный окончательный ответ по обращению №${c.appealNumber || c.id}.`,
+          kind: "final-response",
+          text: `Направлен окончательный ответ на обращение №${c.appealNumber || c.id} от ${formatDate(c.appealDate || c.registered)}.`,
         });
       });
       break;
