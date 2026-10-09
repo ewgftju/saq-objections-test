@@ -547,8 +547,9 @@ export function actionForm(
         action === "create-decision-project"
           ? "Сформировать проект решения"
           : "Сформировать окончательный ответ";
+      if (action === "deliver")
+        fields.push(input("number", "Исходящий номер", "ИСХ-" + c.id));
       fields.push(
-        input("number", "Исходящий номер", "ИСХ-" + c.id),
         select(
           "channel",
           "Канал доставки",
