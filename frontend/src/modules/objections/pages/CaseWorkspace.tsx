@@ -315,7 +315,7 @@ export default function CaseWorkspace({
     c.status === "commission_members" ||
     c.status === "commission_voting";
   const isClosed = CLOSED.includes(c.status);
-  const currentExecutionDeadline = executionDeadline(c);
+  const currentExecutionDeadline = executionDeadline(c, role);
   const subjectRequest = c.requests.find(
     (request) =>
       request.template === "other" &&
