@@ -2146,6 +2146,10 @@ test("протокол формируется с выбранными участ
         .flatMap((point) => [
           [`protocolVote_${point.id}_protocol-member-1`, "accept"],
           [`protocolVote_${point.id}_protocol-member-2`, "reject"],
+          [
+            `protocolReason_${point.id}_protocol-member-1`,
+            `Отредактированное обоснование по пункту ${point.number}.`,
+          ],
         ]),
     ),
   });
@@ -2159,6 +2163,10 @@ test("протокол формируется с выбранными участ
   assert.equal(h.c.meeting?.audio, "");
   assert.deepEqual(h.state.recommendations, []);
   assert.equal(h.c.votes?.[h.c.issues.find((point) => point.disputed)!.id]?.yes, 1);
+  assert.equal(
+    h.c.votes?.[h.c.issues.find((point) => point.disputed)!.id]?.voteReasons?.["protocol-member-1"],
+    "Отредактированное обоснование по пункту 1.",
+  );
   const protocolHtml = renderToStaticMarkup(
     createElement(DocumentContent, {
       c: h.c,
@@ -2174,6 +2182,10 @@ test("протокол формируется с выбранными участ
   );
   assert.match(protocolHtml, /Председатель Апелляционной комиссии: ФИО<br\/>/);
   assert.match(protocolHtml, /Эксперт ОЮЛ «АЗК»: ФИО<br\/>/);
+  assert.match(
+    protocolHtml,
+    /Наименование органа, вынесшего обжалуемое решение:/,
+  );
   assert.doesNotMatch(
     protocolHtml,
     /Заместитель Председателя Апелляционной комиссии: Директор ДАВГА/,
@@ -2184,6 +2196,7 @@ test("протокол формируется с выбранными участ
     createElement(DocumentContent, { c: h.c, kind: "protocol" }),
   );
   assert.match(savedProtocolHtml, /Рекомендации: Направить замечания в орган аудита/);
+  assert.match(savedProtocolHtml, /Отредактированное обоснование по пункту 1\./);
 
   const changedPreviewHtml = renderToStaticMarkup(
     createElement(DocumentContent, {
@@ -2261,6 +2274,54 @@ test("номер регистрации заключения не заполня
   assert.equal(field?.value, "");
 });
 
+test("в приложении окончательного ответа отмечается решение большинством голосов", () => {
+  const h = harness(1);
+  h.c.status = "decided";
+  const [firstPoint, secondPoint] = h.c.issues.filter((point) => point.disputed);
+  firstPoint.final = "partial";
+  secondPoint.final = "partial";
+
+  h.run("deliver", "work", {
+    number: "ИСХ-1",
+    receipt: "КВ-1",
+    channel: "cabinet",
+    [`finalResponseMajority_${firstPoint.id}`]: "on",
+  });
+
+  assert.ok(
+    h.c.documents.some(
+      (document) =>
+        document.kind === "final-response" &&
+        document.name === "Проект окончательного ответа",
+    ),
+  );
+
+  assert.equal(
+    h.c.issues.find((point) => point.id === firstPoint.id)?.finalDecisionByMajority,
+    true,
+  );
+  assert.equal(
+    h.c.issues.find((point) => point.id === secondPoint.id)?.finalDecisionByMajority,
+    false,
+  );
+  const html = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "final-response" }),
+  );
+  assert.match(html, /решение частично удовлетворить большинством голосов\./);
+  assert.match(html, /решение частично удовлетворить\.<\/p>/);
+
+  h.run("approve-final-response", "director");
+  h.run("sign-final-response", "director");
+  assert.deepEqual(h.c.delivery?.recipientRoles, ["dvga", "subject"]);
+  assert.deepEqual(
+    h.state.notifications
+      .filter((notification) => notification.caseId === h.c.id)
+      .slice(-2)
+      .map((notification) => notification.recipientRole),
+    ["dvga", "subject"],
+  );
+});
+
 test("рекомендации направляются после окончательного ответа в выбранные кабинеты", () => {
   const h = harness();
   h.c.status = "completed";
@@ -2322,23 +2383,111 @@ test("жалоба из E-Otinish проходит проект решения �
   });
   assert.equal(h.c.status, "decision_project");
   assert.equal(nextAction(h.c)?.action, "create-decision-project");
-  assert.equal(actionForm("create-decision-project", h.c, h.state.date, {}).title, "Сформировать проект решения");
+  const decisionProjectForm = actionForm("create-decision-project", h.c, h.state.date, {});
+  assert.equal(decisionProjectForm.title, "Сформировать проект решения");
+  assert.equal(
+    decisionProjectForm.fields.some((field) => field.name === "number"),
+    false,
+  );
+  assert.equal(
+    decisionProjectForm.fields.some((field) => field.name === "receipt"),
+    false,
+  );
+  assert.equal(
+    decisionProjectForm.fields.some((field) => field.name === "channel"),
+    false,
+  );
+  assert.ok(
+    decisionProjectForm.fields.some((field) => field.name === "hearingDateTime"),
+  );
+  assert.ok(
+    decisionProjectForm.fields.some((field) => field.name === "hearingLocation"),
+  );
 
   h.run("create-decision-project", "work", {
-    number: "ПРЕО-1",
-    receipt: "КВ-ЭО-1",
-    channel: "eotinish",
+    hearingDateTime: "2026-09-16T10:30",
+    hearingLocation: "г. Астана, ул. Победы, 33",
+    [`finalResponseMajority_${h.c.issues.find((point) => point.disputed)!.id}`]: "on",
   });
   assert.equal(h.c.status, "decision_project_approval");
+  const projectHtml = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "decision-project" }),
+  );
+  assert.match(projectHtml, /решение удовлетворить большинством голосов\./);
   h.run("approve-decision-project", "director");
   assert.equal(h.c.status, "decision_project_signed");
+  h.c.channel = "SAQ";
   h.run("sign-decision-project", "director");
   assert.equal(h.c.status, "decision_project_eotinish");
+  assert.equal(h.c.hearing?.date, "2026-09-16T10:30");
+  assert.equal(h.c.hearing?.location, "г. Астана, ул. Победы, 33");
+  assert.equal(h.state.notifications.at(-1)?.kind, "hearing-notice");
   h.run("send-decision-project-eotinish", "work");
   assert.equal(h.c.status, "decision_project_hearing");
+  assert.deepEqual(h.c.decisionProject?.recipientRoles, ["subject"]);
+  assert.equal(
+    h.state.notifications.at(-1)?.kind,
+    "decision-project",
+  );
+  assert.equal(h.state.notifications.at(-1)?.recipientRole, "subject");
   h.run("hearing-after-decision-project", "work");
   assert.equal(h.c.status, "decided");
   assert.equal(nextAction(h.c)?.action, "deliver");
+});
+
+test("все виды жалоб проходят маршрут с проектом решения независимо от источника", () => {
+  [
+    "Жалоба на уведомление",
+    "Жалоба на решение КВГА/ДВГА",
+    "Жалоба на действие/бездействие",
+  ].forEach((appealType) => {
+    const h = harness(2);
+    h.c.appealType = appealType;
+    h.c.channel = "Веб-портал государственных закупок";
+    h.c.status = "protocol";
+    h.c.meeting = { date: "2026-09-10", number: "ПР-ЕД-1", audio: "" };
+    h.c.issues.filter((point) => point.disputed).forEach((point) => {
+      point.final = "accept";
+    });
+
+    h.run("sign", "commission", {
+      secretary: "on",
+      reason: "Решение комиссии сформировано.",
+      ...Object.fromEntries(h.c.members.map((member) => [`signed_${member.id}`, "on"])),
+    });
+
+    assert.equal(h.c.status, "decision_project", appealType);
+    assert.equal(nextAction(h.c)?.action, "create-decision-project", appealType);
+  });
+});
+
+test("направление уведомления о заслушивании вне SAQ фиксируется отдельно", () => {
+  const h = harness(2);
+  h.c.status = "decision_project_notice";
+  h.c.decisionProject = {
+    date: "2026-09-10",
+    number: "",
+    receipt: "",
+    channel: "",
+    appealCourt: "",
+    appealProcedure: "",
+    signed: "2026-09-11",
+  };
+  h.c.hearing = {
+    skip: false,
+    date: "2026-09-16T10:30",
+    location: "г. Астана, ул. Победы, 33",
+  };
+
+  h.run("record-decision-project-hearing-notice", "work", {
+    hearingNoticeChannel: "portal",
+    hearingNoticeSentAt: "2026-09-11T15:20",
+    hearingNoticeReference: "ИСХ-77",
+  });
+
+  assert.equal(h.c.status, "decision_project_hearing");
+  assert.equal(h.c.hearing.noticeChannel, "portal");
+  assert.equal(h.c.hearing.noticeReference, "ИСХ-77");
 });
 
 test("уведомления АК показывают новые опросы первыми и блокируют повторный ответ", () => {
