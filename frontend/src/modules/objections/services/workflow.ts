@@ -1,6 +1,6 @@
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
-import { formatDate, formatDateTime } from "../../../utils/dateFormat";
+import { formatDate } from "../../../utils/dateFormat";
 import type {
   Action,
   ActionOption,
@@ -75,11 +75,6 @@ function pendingOtherRequest(c: ObjectionCase) {
 
 function canSuspendReview(c: ObjectionCase) {
   return c.appealType !== "Жалоба на уведомление";
-}
-
-/** Обращение, поступившее через SAQ, создано из кабинета заявителя. */
-function hasSubjectSaqCabinet(c: ObjectionCase) {
-  return ["SAQ", "Кабинет субъекта SAQ"].includes(c.channel);
 }
 
 /**
@@ -382,11 +377,6 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     decision_project_eotinish: {
       action: "send-decision-project-eotinish",
       label: "Проект решения направлен через систему E-Otinish",
-      role: "work",
-    },
-    decision_project_notice: {
-      action: "record-decision-project-hearing-notice",
-      label: "Зафиксировать направление уведомления о заслушивании",
       role: "work",
     },
     decision_project_hearing: {
@@ -1546,12 +1536,6 @@ export function applyAction(
       break;
     }
     case "create-decision-project": {
-      const hearingDateTime = text(
-        "hearingDateTime",
-        "Дата и время заслушивания",
-      );
-      if (!hearingDateTime.includes("T"))
-        throw new Error("Укажите дату и время заслушивания");
       c.decisionProject = {
         date,
         // Для проекта решения исходящий номер не оформляется: его укажут
@@ -1561,11 +1545,6 @@ export function applyAction(
         channel: String(form.get("channel") || ""),
         appealCourt: String(form.get("appealCourt") || ""),
         appealProcedure: String(form.get("appealProcedure") || ""),
-      };
-      c.hearing = {
-        skip: false,
-        date: hearingDateTime,
-        location: text("hearingLocation", "Место проведения заслушивания"),
       };
       disputed(c).forEach((point) => {
         point.finalDecisionByMajority =
@@ -1588,29 +1567,8 @@ export function applyAction(
     case "sign-decision-project":
       if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
       c.status = "decision_project_eotinish";
-      c.decisionProject.signed = date;
-      if (!c.hearing?.date || !c.hearing.location)
-        throw new Error("Не указаны дата, время или место заслушивания");
       title = "Проект решения подписан";
       note = "Подписанный проект решения готов к направлению через E-Otinish.";
-      if (hasSubjectSaqCabinet(c)) {
-        c.decisionProject.recipientRoles = ["subject"];
-        c.hearing.notice = date;
-        c.hearing.noticeChannel = "Кабинет SAQ";
-        c.hearing.noticeSentAt = `${date}T09:00`;
-        c.hearing.noticeReference = "Уведомление SAQ";
-        note += " Уведомление о заслушивании направлено в личный кабинет заявителя SAQ.";
-        next.notifications.push({
-          id: `notification-${c.id}-${next.notifications.length + 1}`,
-          caseId: c.id,
-          recipient: c.org,
-          recipientRole: "subject",
-          date,
-          read: false,
-          kind: "hearing-notice",
-          text: `По вашему обращению назначено заслушивание. Дата: ${formatDateTime(c.hearing.date)}. Место: ${c.hearing.location}.`,
-        });
-      }
       doc("Подписанный проект решения", "decision-project", note);
       break;
     case "send-decision-project-eotinish":
@@ -1618,39 +1576,7 @@ export function applyAction(
       c.status = "decision_project_hearing";
       title = "Проект решения направлен через систему E-Otinish";
       note = "Направление проекта решения через E-Otinish зафиксировано.";
-      if (hasSubjectSaqCabinet(c)) {
-        title += " и в кабинет заявителя SAQ";
-        note += " Проект решения уже доступен в личном кабинете заявителя SAQ.";
-        next.notifications.push({
-          id: `notification-${c.id}-${next.notifications.length + 1}`,
-          caseId: c.id,
-          recipient: c.org,
-          recipientRole: "subject",
-          date,
-          read: false,
-          kind: "decision-project",
-          text: `Направлен проект решения по обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate || c.registered)}. Откройте обращение для ознакомления.`,
-        });
-      } else c.status = "decision_project_notice";
       doc("Проект решения направлен через E-Otinish", "decision-project", note);
-      break;
-    case "record-decision-project-hearing-notice":
-      if (!c.decisionProject?.signed || !c.hearing?.date)
-        throw new Error("Сначала подпишите проект решения и укажите заслушивание");
-      c.hearing.notice = date;
-      c.hearing.noticeChannel = text("hearingNoticeChannel", "Канал направления");
-      c.hearing.noticeSentAt = text(
-        "hearingNoticeSentAt",
-        "Дата и время направления",
-      );
-      c.hearing.noticeReference = text(
-        "hearingNoticeReference",
-        "Идентификатор / исходящий номер отправки",
-      );
-      c.status = "decision_project_hearing";
-      title = "Направление уведомления о заслушивании зафиксировано";
-      note = `Канал: ${c.hearing.noticeChannel}. Направлено: ${formatDateTime(c.hearing.noticeSentAt)}. Реквизит: ${c.hearing.noticeReference}.`;
-      doc("Уведомление о заслушивании", "hearing", note);
       break;
     case "hearing-after-decision-project":
       if (!c.decisionProject) throw new Error("Проект решения ещё не сформирован");
