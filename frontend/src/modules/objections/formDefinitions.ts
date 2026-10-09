@@ -549,18 +549,19 @@ export function actionForm(
           : "Сформировать окончательный ответ";
       if (action === "deliver")
         fields.push(input("number", "Исходящий номер", "ИСХ-" + c.id));
-      fields.push(
-        select(
-          "channel",
-          "Канал доставки",
-        [
-          ["eotinish", "E-Otinish"],
-          ["cabinet", "Кабинет SAQ"],
-          ["sed", "СЭД"],
-          ["post", "Почта"],
-        ],
-        ),
-      );
+      if (action === "deliver")
+        fields.push(
+          select(
+            "channel",
+            "Канал доставки",
+            [
+              ["eotinish", "E-Otinish"],
+              ["cabinet", "Кабинет SAQ"],
+              ["sed", "СЭД"],
+              ["post", "Почта"],
+            ],
+          ),
+        );
       if (action === "deliver")
         fields.push(input("receipt", "Квитанция отправки", "КВ-" + c.id));
       note =
