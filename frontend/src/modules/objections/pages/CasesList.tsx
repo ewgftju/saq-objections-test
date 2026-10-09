@@ -53,7 +53,6 @@ const HEARING_WAITING_STATUSES = [
   "decision_project_approval",
   "decision_project_signed",
   "decision_project_eotinish",
-  "decision_project_notice",
   "decision_project_hearing",
 ] as const;
 
@@ -102,14 +101,6 @@ function hasFinalResponseForRecipient(c: ObjectionCase, role: Role) {
   );
 }
 
-function hasDecisionProjectForRecipient(c: ObjectionCase, role: Role) {
-  return (
-    role === "subject" &&
-    Boolean(c.decisionProject?.recipientRoles?.includes(role)) &&
-    c.documents.some((document) => document.kind === "decision-project")
-  );
-}
-
 function normalizedAppealType(c: ObjectionCase) {
   return (c.appealType ?? TYPES[c.type])
     .replace("Возражение на уведомления", "Возражение на уведомление")
@@ -143,8 +134,7 @@ export default function CasesList({
       ? cases.filter(
           (c) =>
             c.requests.some(isRequestForSubject) ||
-            hasFinalResponseForRecipient(c, role) ||
-            hasDecisionProjectForRecipient(c, role),
+            hasFinalResponseForRecipient(c, role),
         )
     : cases;
   const recipientRequests = registryCases.flatMap((c) =>
