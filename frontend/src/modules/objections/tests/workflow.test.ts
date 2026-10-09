@@ -317,38 +317,56 @@ test("три исходных дела: разные сроки и перено�
   );
 });
 
-test("запрос в другой орган использует отдельный шаблон и сохраняет исполнителя", () => {
+test("направление запроса в другой орган фиксируется без кабинета SAQ", () => {
   const h = harness();
   screen(h);
   h.run("request-other", "work", {
     recipient: "Экспертная организация",
-    customRequestText: "Просим представить экспертное заключение.",
+    date: "2026-09-08",
+    registrationNumber: "ИСХ-45",
+    deliveryPath: "СЭД",
   });
   assert.deepEqual(h.c.requests.at(-1), {
     id: "request-1",
     recipient: "Экспертная организация",
     date: "2026-09-08",
-    text: "Запрос сформирован для Экспертная организация. Срок рассмотрения: 2026-09-10T18:00.",
-    deadline: "2026-09-10T18:00",
+    text: "Направление запроса в Экспертная организация зафиксировано: №ИСХ-45 от 08.09.2026, СЭД. Ответ ожидается.",
+    deadline: "",
     template: "other",
     author: DEMO_USER.fullName,
-    customText: "Просим представить экспертное заключение.",
+    registrationNumber: "ИСХ-45",
+    deliveryPath: "СЭД",
+    sent: "2026-09-08",
   });
   assert.equal(
     h.c.documents.some((document) => document.kind === "request-appendix"),
     false,
   );
-  const html = renderToStaticMarkup(
-    createElement(DocumentContent, {
+  const form = actionForm("request-other", h.c, h.state.date, {});
+  assert.equal(form.title, "Зафиксировать запрос через другую систему");
+  assert.deepEqual(
+    form.fields.map((field) => field.name),
+    ["date", "recipient", "registrationNumber", "deliveryPath"],
+  );
+  assert.throws(
+    () => h.run("send-request-approval", "work"),
+    /недоступно/,
+  );
+
+  h.run("request", "work", { recipient: "ДВГА по Атырауской области" });
+  h.run("send-request-approval", "work");
+  h.run("approve-request", "deputy", { approved: "on" });
+  h.run("sign-request", "director");
+  const processHtml = renderToStaticMarkup(
+    createElement(ConsiderationProcess, {
       c: h.c,
-      kind: "request",
-      document: h.c.documents[0],
+      role: "work",
+      onAction() {},
+      onHistory() {},
     }),
   );
-  assert.match(html, /Экспертная организация/);
-  assert.match(html, /Просим представить экспертное заключение/);
-  assert.match(html, new RegExp(DEMO_USER.fullName));
-  assert.throws(() => h.run("send-request-approval", "work"), /недоступно/);
+  assert.match(processHtml, /Экспертная организация/);
+  assert.match(processHtml, /Ответ ожидается/);
 });
 
 test("печатная форма запроса использует полный орган и первый абзац по виду обращения", () => {
