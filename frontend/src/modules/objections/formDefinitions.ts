@@ -547,6 +547,16 @@ export function actionForm(
         action === "create-decision-project"
           ? "Сформировать проект решения"
           : "Сформировать окончательный ответ";
+      if (action === "create-decision-project")
+        fields.push(
+          input(
+            "hearingDateTime",
+            "Дата и время заслушивания",
+            `${date}T09:00`,
+            "datetime-local",
+          ),
+          input("hearingLocation", "Место проведения заслушивания"),
+        );
       if (action === "deliver")
         fields.push(input("number", "Исходящий номер", "ИСХ-" + c.id));
       if (action === "deliver")
@@ -570,6 +580,26 @@ export function actionForm(
           : c.type === "control"
           ? "Статья 100 АППК: письменный результат заявителю и копия органу. Вручение фиксируется отдельно после направления."
           : "Оформление — 2 рабочих дня с решения; публикация закупочного решения — 1 рабочий день после направления. Для уведомления формируется заключение по структуре приложения 7. Вручение фиксируется отдельно.";
+      break;
+    case "record-decision-project-hearing-notice":
+      title = "Зафиксировать направление уведомления о заслушивании";
+      fields.push(
+        select("hearingNoticeChannel", "Канал направления", [
+          ["eotinish", "E-Otinish"],
+          ["portal", "Веб-портал"],
+          ["digital", "Цифровая система"],
+          ["other", "Другое"],
+        ]),
+        input(
+          "hearingNoticeSentAt",
+          "Дата и время направления",
+          `${date}T09:00`,
+          "datetime-local",
+        ),
+        input("hearingNoticeReference", "Идентификатор / исходящий номер отправки"),
+      );
+      note =
+        "Укажите реквизиты направления извещения заявителю, у которого нет кабинета SAQ. При необходимости приложите подтверждающий файл.";
       break;
     case "close-review":
       title = "Завершить рассмотрение";
