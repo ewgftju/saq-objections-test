@@ -2927,6 +2927,23 @@ test("все виды жалоб проходят маршрут с проект
   });
 });
 
+test("жалоба на уведомление формирует окончательный ответ, а не заключение", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.status = "decided";
+
+  assert.equal(nextAction(h.c)?.action, "deliver");
+  assert.equal(nextAction(h.c)?.label, "Сформировать окончательный ответ");
+
+  const definition = actionForm("deliver", h.c, h.state.date, {});
+  assert.equal(definition.title, "Сформировать окончательный ответ");
+  assert.ok(
+    !definition.fields.some(
+      (field) => field.name === "conclusionRegistrationNumber",
+    ),
+  );
+});
+
 test("уведомления АК показывают новые опросы первыми и блокируют повторный ответ", () => {
   const html = renderToStaticMarkup(
     createElement(NotificationsPage, {
