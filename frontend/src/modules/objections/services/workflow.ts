@@ -77,6 +77,11 @@ function canSuspendReview(c: ObjectionCase) {
   return c.appealType !== "Жалоба на уведомление";
 }
 
+/** Обращение, поступившее через SAQ, создано из кабинета заявителя. */
+function hasSubjectSaqCabinet(c: ObjectionCase) {
+  return ["SAQ", "Кабинет субъекта SAQ"].includes(c.channel);
+}
+
 /**
  * Рабочий орган фиксирует поступление один раз, только когда готовы ответы
  * на все направленные запросы. Для внешнего органа без кабинета SAQ
@@ -1576,6 +1581,21 @@ export function applyAction(
       c.status = "decision_project_hearing";
       title = "Проект решения направлен через систему E-Otinish";
       note = "Направление проекта решения через E-Otinish зафиксировано.";
+      if (hasSubjectSaqCabinet(c)) {
+        c.decisionProject.recipientRoles = ["subject"];
+        title += " и в кабинет заявителя SAQ";
+        note += " Проект решения направлен в личный кабинет заявителя SAQ.";
+        next.notifications.push({
+          id: `notification-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient: c.org,
+          recipientRole: "subject",
+          date,
+          read: false,
+          kind: "decision-project",
+          text: `Направлен проект решения по обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate || c.registered)}. Откройте обращение для ознакомления.`,
+        });
+      }
       doc("Проект решения направлен через E-Otinish", "decision-project", note);
       break;
     case "hearing-after-decision-project":
