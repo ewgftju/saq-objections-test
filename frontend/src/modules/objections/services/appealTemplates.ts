@@ -67,7 +67,11 @@ function actionInactionComplaintReference(c: ObjectionCase) {
     )
     .join("; ");
 
-  return `${applicantReference(c)}, касательно действий (бездействий) ${actions}`;
+  const procurement = c.agendaDetails?.procurementNumber
+    ? `, по государственной закупке № ${value(c.agendaDetails.procurementNumber)}, лот № ${value(c.agendaDetails.lotNumber)}, предмет: ${value(c.agendaDetails.procurementSubject)}`
+    : "";
+
+  return `${applicantReference(c)}, касательно действий (бездействий) ${actions}${procurement}`;
 }
 
 function statementReference(c: ObjectionCase) {
