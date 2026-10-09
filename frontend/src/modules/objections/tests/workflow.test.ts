@@ -114,10 +114,7 @@ function prepare(h: Harness, partial = false) {
             `authorityFinding_${point.id}`,
             "Нарушение, заполненное ДВГА (демо)",
           ],
-          [
-            `authorityResponse_${point.id}`,
-            "Мотивированный ответ ДВГА (демо)",
-          ],
+          [`authorityResponse_${point.id}`, "Мотивированный ответ ДВГА (демо)"],
         ]),
     ),
   );
@@ -187,7 +184,10 @@ test("три исходных дела: разные сроки и перено�
     "request_approval",
     "request_signed",
   ] as const) {
-    assert.equal(executionDeadline({ ...requestStepCase, status }), "2026-09-07");
+    assert.equal(
+      executionDeadline({ ...requestStepCase, status }),
+      "2026-09-07",
+    );
   }
   assert.equal(
     executionDeadline({ ...requestStepCase, status: "request_approved" }),
@@ -225,14 +225,20 @@ test("три исходных дела: разные сроки и перено�
     "decision_project_eotinish",
     "decision_project_hearing",
   ] as const) {
-    assert.equal(executionDeadline({ ...requestStepCase, status }), "2026-09-21");
+    assert.equal(
+      executionDeadline({ ...requestStepCase, status }),
+      "2026-09-21",
+    );
   }
   for (const status of [
     "decided",
     "final_response_approval",
     "final_response_signed",
   ] as const) {
-    assert.equal(executionDeadline({ ...requestStepCase, status }), "2026-09-24");
+    assert.equal(
+      executionDeadline({ ...requestStepCase, status }),
+      "2026-09-24",
+    );
   }
   assert.equal(
     executionDeadline({
@@ -259,7 +265,10 @@ test("три исходных дела: разные сроки и перено�
     20,
   );
   assert.equal(
-    reviewDuration({ ...state.cases[1], appealType: "Возражение на аудиторский отчет" }),
+    reviewDuration({
+      ...state.cases[1],
+      appealType: "Возражение на аудиторский отчет",
+    }),
     30,
   );
   assert.equal(addMonths("2026-08-31", 3), "2026-11-30");
@@ -280,8 +289,7 @@ test("запрос в другой орган использует отдель�
     id: "request-1",
     recipient: "Экспертная организация",
     date: "2026-09-08",
-    text:
-      "Запрос сформирован для Экспертная организация. Срок рассмотрения: 2026-09-10T18:00.",
+    text: "Запрос сформирован для Экспертная организация. Срок рассмотрения: 2026-09-10T18:00.",
     deadline: "2026-09-10T18:00",
     template: "other",
     author: DEMO_USER.fullName,
@@ -301,10 +309,7 @@ test("запрос в другой орган использует отдель�
   assert.match(html, /Экспертная организация/);
   assert.match(html, /Просим представить экспертное заключение/);
   assert.match(html, new RegExp(DEMO_USER.fullName));
-  assert.throws(
-    () => h.run("send-request-approval", "work"),
-    /недоступно/,
-  );
+  assert.throws(() => h.run("send-request-approval", "work"), /недоступно/);
 });
 
 test("печатная форма запроса использует полный орган и первый абзац по виду обращения", () => {
@@ -331,8 +336,14 @@ test("печатная форма запроса использует полны
   h.c.appealType = "Возражение на уведомления";
   assert.match(html(), new RegExp(fullDvga));
   assert.match(html(), /возражения от ГУ «Объект», ИИН\/БИН/);
-  assert.match(html(), /к уведомлению об устранении нарушений от 30\.08\.2026 года № Д-01, направленного по результатам камерального контроля/);
-  assert.match(html(), /в соответствии с пунктом 14 Положения об апелляционной комиссии/);
+  assert.match(
+    html(),
+    /к уведомлению об устранении нарушений от 30\.08\.2026 года № Д-01, направленного по результатам камерального контроля/,
+  );
+  assert.match(
+    html(),
+    /в соответствии с пунктом 14 Положения об апелляционной комиссии/,
+  );
   assert.match(
     html(),
     /Директор Департамента<br\/>апелляции по внутреннему<br\/>государственному аудиту/,
@@ -342,43 +353,67 @@ test("печатная форма запроса использует полны
 
   h.c.appealType = "Возражение на аудиторский отчет";
   assert.match(html(), /возражения от ГУ «Объект», БИН 000000000001, №/);
-  assert.match(html(), /на аудиторский отчет от 30\.08\.2026 года № Д-01, проведенный/);
+  assert.match(
+    html(),
+    /на аудиторский отчет от 30\.08\.2026 года № Д-01, проведенный/,
+  );
 
   h.c.appealType = "Заявление";
-  assert.match(html(), /заявления ГУ «Объект», просим в срок до 18:00 часов 10\.09\.2026/);
+  assert.match(
+    html(),
+    /заявления от ГУ «Объект», ИИН\/БИН 000000000001, № ВОЗ-2026-001 от 08\.09\.2026 года Отменить нарушения по пунктам 1 и 2 уведомления\. Пункт 3 не оспаривается, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы\./,
+  );
 
   h.c.appealType = "Жалоба на решение КВГА/ДВГА";
   h.c.agendaDetails = { decisionKind: "quality-control" };
-  assert.match(html(), /жалобы ГУ «Объект» на решение контроля качества от 30\.08\.2026 №Д-01/);
+  assert.match(
+    html(),
+    /жалобы ГУ «Объект» на решение контроля качества от 30\.08\.2026 №Д-01/,
+  );
 
   h.c.agendaDetails = {
     decisionKind: "prescription-preventive",
     relatedDocumentDate: "2026-08-28",
     relatedDocumentNumber: "ПК-33",
   };
-  assert.match(html(), /на предписание на акт о результате профилактического контроля от 28\.08\.2026 №ПК-33/);
+  assert.match(
+    html(),
+    /на предписание на акт о результате профилактического контроля от 28\.08\.2026 №ПК-33/,
+  );
 
   h.c.agendaDetails = {
     decisionKind: "prescription-audit",
     relatedDocumentDate: "2026-08-27",
     relatedDocumentNumber: "АО-33",
   };
-  assert.match(html(), /на предписание на аудиторский отчет от 27\.08\.2026 №АО-33/);
+  assert.match(
+    html(),
+    /на предписание от 27\.08\.2026 года № АО-33 по аудиторскому отчету, проведенный/,
+  );
 
   h.c.appealType = "Жалоба на действие/бездействие";
   h.c.agendaDetails = {};
-  assert.match(html(), /касательно действия\/бездействия .* на аудиторский отчет от 30\.08\.2026 №Д-01/);
+  assert.match(
+    html(),
+    /касательно действия\/бездействия .* на аудиторский отчет от 30\.08\.2026 №Д-01/,
+  );
 
   h.c.agendaDetails = {
     procurementNumber: "2026-77",
     lotNumber: "5",
     procurementSubject: "Поставка оборудования",
   };
-  assert.match(html(), /при рассмотрении обращения от 30\.08\.2026 №Д-01 по государственной закупке № 2026-77 \(лот №5\) на Поставка оборудования/);
+  assert.match(
+    html(),
+    /при рассмотрении обращения от 30\.08\.2026 №Д-01 по государственной закупке № 2026-77 \(лот №5\) на Поставка оборудования/,
+  );
 
   h.c.appealType = "Жалоба на решение КВГА/ДВГА";
   h.c.agendaDetails = { decisionKind: "preventive-control-act" };
-  assert.match(html(), /на акт о результате профилактического контроля .* от 30\.08\.2026 №Д-01/);
+  assert.match(
+    html(),
+    /на акт о результате профилактического контроля .* от 30\.08\.2026 №Д-01/,
+  );
 });
 
 test("справка и протокол используют часть шаблона для аудиторского отчета", () => {
@@ -423,7 +458,9 @@ test("жалоба на уведомление рассматривается б
 
   assert.equal(reviewDuration(h.c), 20);
   assert.equal(reviewDeadline(h.c), "2026-09-29");
-  assert.ok(!additionalActions(h.c).some((action) => action.action === "pause"));
+  assert.ok(
+    !additionalActions(h.c).some((action) => action.action === "pause"),
+  );
 
   const request = renderToStaticMarkup(
     createElement(DocumentContent, {
@@ -449,8 +486,14 @@ test("жалоба на уведомление рассматривается б
   assert.match(request, complaintDetails);
   assert.match(certificate, /поступила жалоба от ТОО «Заявитель»/);
   assert.match(certificate, complaintDetails);
-  assert.match(protocol, /Жалоба от ТОО «Заявитель», ИИН\/БИН 123456789012, № Ж-2026-01 от 01\.09\.2026 года, на уведомление об устранении нарушений от 28\.08\.2026 года № УВ-2026-01, проведенный/);
-  assert.match(agendaItemText(h.c), /Жалоба от ТОО «Заявитель», ИИН\/БИН 123456789012, № Ж-2026-01 от 01\.09\.2026 года, на уведомление об устранении нарушений от 28\.08\.2026 года № УВ-2026-01, проведенный/);
+  assert.match(
+    protocol,
+    /Жалоба от ТОО «Заявитель», ИИН\/БИН 123456789012, № Ж-2026-01 от 01\.09\.2026 года, на уведомление об устранении нарушений от 28\.08\.2026 года № УВ-2026-01, проведенный/,
+  );
+  assert.match(
+    agendaItemText(h.c),
+    /Жалоба от ТОО «Заявитель», ИИН\/БИН 123456789012, № Ж-2026-01 от 01\.09\.2026 года, на уведомление об устранении нарушений от 28\.08\.2026 года № УВ-2026-01, проведенный/,
+  );
 });
 
 test("исходное обращение использует реквизиты формы заполнения", () => {
@@ -478,7 +521,10 @@ test("исходное обращение использует реквизит�
   );
   assert.match(html, /Вид обращения:/);
   assert.match(html, /Номер возражения, жалобы, заявления:/);
-  assert.match(html, /Портал \/ цифровая система, по которой поступило уведомление:/);
+  assert.match(
+    html,
+    /Портал \/ цифровая система, по которой поступило уведомление:/,
+  );
   assert.match(html, /Вид обжалуемого решения:/);
   assert.match(html, /Требования\.pdf/);
   assert.doesNotMatch(html, /Орган, чей документ обжалуется:/);
@@ -639,7 +685,9 @@ test("запросы в ДВГА и КВГА формируются, напра�
   assert.match(materialsHtml, /<h4>Запрос в ДВГА<\/h4>/);
   assert.match(materialsHtml, /<h4>Запрос в КВГА<\/h4>/);
 
-  const kvgaRequest = h.c.requests.find((request) => request.recipient === "КВГА")!;
+  const kvgaRequest = h.c.requests.find(
+    (request) => request.recipient === "КВГА",
+  )!;
   const kvgaAppendix = h.c.documents.find(
     (document) =>
       document.kind === "request-appendix" &&
@@ -690,7 +738,8 @@ test("запросы в ДВГА и КВГА формируются, напра�
   assert.match(awaitingResponsesHtml, /<h4>Ответ ДВГА<\/h4>/);
   assert.match(awaitingResponsesHtml, /<h4>Ответ КВГА<\/h4>/);
   assert.equal(
-    [...awaitingResponsesHtml.matchAll(/Ожидается поступление ответа\./g)].length,
+    [...awaitingResponsesHtml.matchAll(/Ожидается поступление ответа\./g)]
+      .length,
     2,
   );
   assert.deepEqual(nextAction(h.c, "dvga"), {
@@ -755,7 +804,10 @@ test("запросы в ДВГА и КВГА формируются, напра�
       onUpload() {},
     }),
   );
-  assert.match(dvgaResponseHtml, /Приложение к запросу в ДВГА по Атырауской области/);
+  assert.match(
+    dvgaResponseHtml,
+    /Приложение к запросу в ДВГА по Атырауской области/,
+  );
   assert.equal(
     [...dvgaResponseHtml.matchAll(/Ожидается поступление ответа\./g)].length,
     1,
@@ -797,7 +849,13 @@ test("запросы в ДВГА и КВГА формируются, напра�
     }),
   );
   assert.match(dvgaDocumentsHtml, /Подтверждающий документ ДВГА\.pdf/);
-  const kvgaForm = actionForm("fill-request-response", h.c, h.state.date, {}, "kvga");
+  const kvgaForm = actionForm(
+    "fill-request-response",
+    h.c,
+    h.state.date,
+    {},
+    "kvga",
+  );
   assert.equal(
     kvgaForm.fields.find(
       (field) => field.name === `authorityFinding_${h.c.issues[0].id}`,
@@ -1259,7 +1317,9 @@ test("в других действиях нет отказа или оставл
     assert.ok(!actions.includes("withdraw"));
   }
   h.c.status = "materials";
-  assert.ok(!additionalActions(h.c).some((action) => action.action === "pause"));
+  assert.ok(
+    !additionalActions(h.c).some((action) => action.action === "pause"),
+  );
 });
 
 test("голосование членов АК и формирование протокола доступны параллельно", () => {
@@ -1386,12 +1446,17 @@ test("кабинет объекта получает возможность на
   });
 
   assert.ok(
-    !additionalActions(h.c).some((action) => action.action === "subject-response"),
+    !additionalActions(h.c).some(
+      (action) => action.action === "subject-response",
+    ),
   );
 
   h.run("send-request-approval", "work");
   h.c.requests.forEach((request) =>
-    h.run("approve-request", "deputy", { requestId: request.id, approved: "on" }),
+    h.run("approve-request", "deputy", {
+      requestId: request.id,
+      approved: "on",
+    }),
   );
   const subjectRequest = h.c.requests.find(
     (request) => request.saqRecipient === "subject",
@@ -1399,7 +1464,9 @@ test("кабинет объекта получает возможность на
   h.run("sign-request", "director", { requestId: subjectRequest.id });
 
   assert.ok(
-    additionalActions(h.c).some((action) => action.action === "subject-response"),
+    additionalActions(h.c).some(
+      (action) => action.action === "subject-response",
+    ),
   );
 });
 
@@ -1455,7 +1522,10 @@ test("внешний ответ можно зафиксировать до по�
   });
   h.run("send-request-approval", "work");
   h.c.requests.forEach((request) =>
-    h.run("approve-request", "deputy", { requestId: request.id, approved: "on" }),
+    h.run("approve-request", "deputy", {
+      requestId: request.id,
+      approved: "on",
+    }),
   );
   h.c.requests.forEach((request) =>
     h.run("sign-request", "director", { requestId: request.id }),
@@ -1523,8 +1593,14 @@ test("справка редактируется с созданием новой
     }),
   });
   assert.deepEqual(
-    additionalActions(h.c).find((action) => action.action === "edit-certificate"),
-    { action: "edit-certificate", label: "Редактировать справку", role: "work" },
+    additionalActions(h.c).find(
+      (action) => action.action === "edit-certificate",
+    ),
+    {
+      action: "edit-certificate",
+      label: "Редактировать справку",
+      role: "work",
+    },
   );
   assert.ok(
     !additionalActions(h.c).some((action) =>
@@ -1544,14 +1620,18 @@ test("справка редактируется с созданием новой
         ]),
     ),
   });
-  const certificates = h.c.documents.filter((document) => document.kind === "certificate");
+  const certificates = h.c.documents.filter(
+    (document) => document.kind === "certificate",
+  );
   assert.equal(certificates.length, 2);
   assert.equal(
     certificates.at(-1)?.name,
     "Справка: результаты голосования членов АК. Версия 2",
   );
   assert.equal(
-    certificates.at(-1)?.snapshot?.certificate?.davgaArgumentsByPoint?.[point.id],
+    certificates.at(-1)?.snapshot?.certificate?.davgaArgumentsByPoint?.[
+      point.id
+    ],
     "Уточнённые доводы ДАВГА",
   );
   const originalVersionHtml = renderToStaticMarkup(
@@ -1638,7 +1718,10 @@ test("дело открывает процесс, а одно действие �
     }),
   );
   assert.match(requestMaterialsHtml, /Запрос в ДВГА по Атырауской области/);
-  assert.match(requestMaterialsHtml, /Приложение к запросу в ДВГА по Атырауской области/);
+  assert.match(
+    requestMaterialsHtml,
+    /Приложение к запросу в ДВГА по Атырауской области/,
+  );
   assert.match(requestMaterialsHtml, /Запрос в ДВГА/);
   assert.doesNotMatch(requestMaterialsHtml, /Сформированные документы/);
   assert.ok(h.c.documents.some((document) => document.kind === "request"));
@@ -1661,8 +1744,14 @@ test("дело открывает процесс, а одно действие �
     requestHtml,
     /Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан/,
   );
-  assert.match(requestHtml, /возражения от ГУ «Управление образования», ИИН\/БИН 000000000001/);
-  assert.match(requestHtml, /просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы/);
+  assert.match(
+    requestHtml,
+    /возражения от ГУ «Управление образования», ИИН\/БИН 000000000001/,
+  );
+  assert.match(
+    requestHtml,
+    /просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы/,
+  );
   const appendixDocument = h.c.documents.find(
     (document) => document.kind === "request-appendix",
   )!;
@@ -1735,10 +1824,7 @@ test("справка формируется с отдельными довода
       h.c.issues
         .filter((point) => point.disputed)
         .flatMap((point) => [
-          [
-            `authorityFinding_${point.id}`,
-            "Нарушение, заполненное ДВГА",
-          ],
+          [`authorityFinding_${point.id}`, "Нарушение, заполненное ДВГА"],
           [`authorityResponse_${point.id}`, "Мотивированный ответ ДВГА"],
         ]),
     ),
@@ -1783,8 +1869,8 @@ test("справка формируется с отдельными довода
   assert.match(decisionStepsHtml, /Сформировать протокол заседания/);
   assert.match(decisionStepsHtml, /Подписать протокол заседания/);
   assert.deepEqual(
-    actionForm("analysis", h.c, "2026-09-10").fields
-      .filter((field) => field.type === "textarea")
+    actionForm("analysis", h.c, "2026-09-10")
+      .fields.filter((field) => field.type === "textarea")
       .map((field) => field.name),
     h.c.issues
       .filter((point) => point.disputed)
@@ -1836,7 +1922,10 @@ test("справка формируется с отдельными довода
   );
   assert.match(commissionMaterialsHtml, /<h4>Ответ ДВГА<\/h4>/);
   assert.doesNotMatch(commissionMaterialsHtml, /<h4>Запрос в ДВГА<\/h4>/);
-  assert.doesNotMatch(commissionMaterialsHtml, /<h4>Запрос в другие органы<\/h4>/);
+  assert.doesNotMatch(
+    commissionMaterialsHtml,
+    /<h4>Запрос в другие органы<\/h4>/,
+  );
   const commissionCabinetHtml = renderToStaticMarkup(
     createElement(CaseWorkspace, {
       c: h.c,
@@ -1851,41 +1940,36 @@ test("справка формируется с отдельными довода
   );
   assert.doesNotMatch(commissionCabinetHtml, /<h3>Процесс рассмотрения<\/h3>/);
   assert.match(commissionCabinetHtml, /<h4>Запрос в ДВГА<\/h4>/);
-  assert.doesNotMatch(commissionCabinetHtml, /<h4>Все документы обращения<\/h4>/);
+  assert.doesNotMatch(
+    commissionCabinetHtml,
+    /<h4>Все документы обращения<\/h4>/,
+  );
   assert.match(commissionCabinetHtml, /Ответ ДВГА/);
   // Состав поступает из опроса о присутствии; в сценарии подтверждены два участника.
   h.c.members = h.c.members.slice(0, 2);
-  h.run(
-    "commission-vote",
-    "commission",
-    {
-      commissionMember: "chair",
-      ...Object.fromEntries(
-        h.c.issues
-          .filter((point) => point.disputed)
-          .flatMap((point) => [
-            [`commissionVote_${point.id}`, "accept"],
-            [`commissionReason_${point.id}`, "Обоснование председателя"],
-          ]),
-      ),
-    },
-  );
+  h.run("commission-vote", "commission", {
+    commissionMember: "chair",
+    ...Object.fromEntries(
+      h.c.issues
+        .filter((point) => point.disputed)
+        .flatMap((point) => [
+          [`commissionVote_${point.id}`, "accept"],
+          [`commissionReason_${point.id}`, "Обоснование председателя"],
+        ]),
+    ),
+  });
   assert.equal(h.c.status, "commission_voting");
-  h.run(
-    "commission-vote",
-    "commission",
-    {
-      commissionMember: "deputy",
-      ...Object.fromEntries(
-        h.c.issues
-          .filter((point) => point.disputed)
-          .flatMap((point) => [
-            [`commissionVote_${point.id}`, "accept"],
-            [`commissionReason_${point.id}`, "Обоснование члена АК"],
-          ]),
-      ),
-    },
-  );
+  h.run("commission-vote", "commission", {
+    commissionMember: "deputy",
+    ...Object.fromEntries(
+      h.c.issues
+        .filter((point) => point.disputed)
+        .flatMap((point) => [
+          [`commissionVote_${point.id}`, "accept"],
+          [`commissionReason_${point.id}`, "Обоснование члена АК"],
+        ]),
+    ),
+  });
   assert.equal(h.c.status, "circulated");
   assert.equal(
     h.c.votes?.[h.c.issues.find((point) => point.disputed)!.id]?.voteReasons?.[
@@ -1936,7 +2020,10 @@ test("справка формируется с отдельными довода
       document: certificate,
     }),
   );
-  assert.match(html, /В Министерство финансов Республики Казахстан поступило возражение/);
+  assert.match(
+    html,
+    /В Министерство финансов Республики Казахстан поступило возражение/,
+  );
   assert.match(html, /Доводы ДВГА\/КВГА:/);
   assert.match(html, /ДВГА:<\/b> Нарушение, заполненное ДВГА/);
   assert.match(html, /Мотивированный ответ ДВГА\/КВГА:/);
@@ -1973,8 +2060,14 @@ test("повестка дня формируется по шаблону воз�
     }),
   );
   assert.match(html, /24\.09\.2026/);
-  assert.match(html, /Возражение от КГП «Городской центр услуг», БИН 123456789012, № В-17 от 09\.09\.2026 года/);
-  assert.match(html, /на аудиторский отчет от 02\.09\.2026 года № АО-2026-0062/);
+  assert.match(
+    html,
+    /Возражение от КГП «Городской центр услуг», БИН 123456789012, № В-17 от 09\.09\.2026 года/,
+  );
+  assert.match(
+    html,
+    /на аудиторский отчет от 02\.09\.2026 года № АО-2026-0062/,
+  );
   assert.match(
     html,
     /проведенный Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан/,
@@ -2026,7 +2119,7 @@ test("повестка дня выбирает шаблон по виду обр
   };
   assert.match(
     agendaItemText(h.c),
-    /на предписание Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан от 30\.08\.2026 №Д-01 по аудиторскому отчету №АО-33 от 28\.08\.2026/,
+    /на предписание от 28\.08\.2026 года № АО-33 по аудиторскому отчету, проведенный Департамент внутреннего государственного аудита по Атырауской области/,
   );
 
   h.c.agendaDetails = {
@@ -2055,7 +2148,97 @@ test("повестка дня выбирает шаблон по виду обр
   h.c.request = "о предоставлении разъяснения";
   assert.equal(
     agendaItemText(h.c),
-    "Заявление №В-18 от 09.09.2026 ГУ «Объект» ИИН/БИН 123456789012 о предоставлении разъяснения.",
+    "Заявление от ГУ «Объект», ИИН/БИН 123456789012, № В-18 от 09.09.2026 года о предоставлении разъяснения.",
+  );
+});
+
+test("шаблоны заявления и жалобы на предписание формируются по реквизитам обращения", () => {
+  const h = harness(0);
+  h.c.org = "ГУ «Объект»";
+  h.c.bin = "123456789012";
+  h.c.appealNumber = "З-19";
+  h.c.appealDate = "2026-09-10";
+  h.c.request = "о предоставлении разъяснения";
+  h.c.appealType = "Заявление";
+
+  const statementRequest = renderToStaticMarkup(
+    createElement(DocumentContent, {
+      c: h.c,
+      kind: "request",
+      requestPreview: {
+        recipient: "КВГА",
+        deadline: "2026-09-12T18:00",
+        template: "kvga",
+      },
+    }),
+  );
+  const statementCertificate = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "certificate" }),
+  );
+  const statementText =
+    "Заявление от ГУ «Объект», ИИН/БИН 123456789012, № З-19 от 10.09.2026 года о предоставлении разъяснения.";
+  assert.equal(agendaItemText(h.c), statementText);
+  assert.match(
+    statementCertificate,
+    new RegExp(
+      `поступило заявление от ${statementText.slice("Заявление от ".length)}`,
+    ),
+  );
+  assert.match(
+    statementRequest,
+    /заявления от ГУ «Объект», ИИН\/БИН 123456789012, № З-19 от 10\.09\.2026 года о предоставлении разъяснения, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы\./,
+  );
+  assert.match(
+    renderToStaticMarkup(
+      createElement(DocumentContent, { c: h.c, kind: "protocol" }),
+    ),
+    new RegExp(statementText),
+  );
+
+  h.c.appealType = "Жалоба на решение КВГА/ДВГА";
+  h.c.appealNumber = "Ж-20";
+  h.c.agendaDetails = {
+    decisionKind: "prescription-audit",
+    relatedDocumentDate: "2026-09-02",
+    relatedDocumentNumber: "ПР-09",
+  };
+  h.c.issuer = "ДВГА по Атырауской области";
+  const complaintText =
+    "Жалоба от ГУ «Объект», ИИН/БИН 123456789012, № Ж-20 от 10.09.2026 года, на предписание от 02.09.2026 года № ПР-09 по аудиторскому отчету, проведенный Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан.";
+  const complaintRequest = renderToStaticMarkup(
+    createElement(DocumentContent, {
+      c: h.c,
+      kind: "request",
+      requestPreview: {
+        recipient: "ДВГА",
+        deadline: "2026-09-12T18:00",
+        template: "dvga",
+      },
+    }),
+  );
+  const complaintCertificate = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "certificate" }),
+  );
+  assert.equal(agendaItemText(h.c), complaintText);
+  assert.match(
+    complaintCertificate,
+    new RegExp(
+      `поступила жалоба от ${complaintText.slice("Жалоба от ".length)}`,
+    ),
+  );
+  assert.match(
+    complaintRequest,
+    /жалобы от ГУ «Объект», ИИН\/БИН 123456789012, № Ж-20/,
+  );
+  assert.match(
+    complaintRequest,
+    /представить мотивированный ответ по каждому доводу возражения и подтверждающие документы\./,
+  );
+  assert.match(
+    renderToStaticMarkup(
+      createElement(DocumentContent, { c: h.c, kind: "protocol" }),
+    ),
+    new RegExp(complaintText),
   );
 });
 
@@ -2131,7 +2314,8 @@ test("протокол формируется с выбранными участ
     ["protocolDate", "meetingFormat", "secretary", "recommendations"],
   );
   assert.equal(
-    definition.fields.find((field) => field.name === "recommendations")?.required,
+    definition.fields.find((field) => field.name === "recommendations")
+      ?.required,
     false,
   );
   h.c.status = "meeting";
@@ -2155,16 +2339,18 @@ test("протокол формируется с выбранными участ
   });
   assert.deepEqual(
     h.c.members.map((member) => member.name),
-    [
-      "Председатель Апелляционной комиссии: ФИО",
-      "Эксперт ОЮЛ «АЗК»: ФИО",
-    ],
+    ["Председатель Апелляционной комиссии: ФИО", "Эксперт ОЮЛ «АЗК»: ФИО"],
   );
   assert.equal(h.c.meeting?.audio, "");
   assert.deepEqual(h.state.recommendations, []);
-  assert.equal(h.c.votes?.[h.c.issues.find((point) => point.disputed)!.id]?.yes, 1);
   assert.equal(
-    h.c.votes?.[h.c.issues.find((point) => point.disputed)!.id]?.voteReasons?.["protocol-member-1"],
+    h.c.votes?.[h.c.issues.find((point) => point.disputed)!.id]?.yes,
+    1,
+  );
+  assert.equal(
+    h.c.votes?.[h.c.issues.find((point) => point.disputed)!.id]?.voteReasons?.[
+      "protocol-member-1"
+    ],
     "Отредактированное обоснование по пункту 1.",
   );
   const protocolHtml = renderToStaticMarkup(
@@ -2195,8 +2381,14 @@ test("протокол формируется с выбранными участ
   const savedProtocolHtml = renderToStaticMarkup(
     createElement(DocumentContent, { c: h.c, kind: "protocol" }),
   );
-  assert.match(savedProtocolHtml, /Рекомендации: Направить замечания в орган аудита/);
-  assert.match(savedProtocolHtml, /Отредактированное обоснование по пункту 1\./);
+  assert.match(
+    savedProtocolHtml,
+    /Рекомендации: Направить замечания в орган аудита/,
+  );
+  assert.match(
+    savedProtocolHtml,
+    /Отредактированное обоснование по пункту 1\./,
+  );
 
   const changedPreviewHtml = renderToStaticMarkup(
     createElement(DocumentContent, {
@@ -2221,10 +2413,7 @@ test("протокол формируется с выбранными участ
       },
     }),
   );
-  assert.match(
-    changedPreviewHtml,
-    /РЕШЕНИЕ отказать в удовлетворении /,
-  );
+  assert.match(changedPreviewHtml, /РЕШЕНИЕ отказать в удовлетворении /);
 
   const disputedPoints = h.c.issues.filter((point) => point.disputed);
   disputedPoints[0].final = "reject";
@@ -2260,10 +2449,7 @@ test("протокол формируется с выбранными участ
       },
     }),
   );
-  assert.match(
-    rejectedProtocolHtml,
-    /РЕШЕНИЕ отказать в удовлетворении /,
-  );
+  assert.match(rejectedProtocolHtml, /РЕШЕНИЕ отказать в удовлетворении /);
 });
 
 test("номер регистрации заключения не заполняется автоматически", () => {
@@ -2277,7 +2463,9 @@ test("номер регистрации заключения не заполня
 test("в приложении окончательного ответа отмечается решение большинством голосов", () => {
   const h = harness(1);
   h.c.status = "decided";
-  const [firstPoint, secondPoint] = h.c.issues.filter((point) => point.disputed);
+  const [firstPoint, secondPoint] = h.c.issues.filter(
+    (point) => point.disputed,
+  );
   firstPoint.final = "partial";
   secondPoint.final = "partial";
 
@@ -2297,11 +2485,13 @@ test("в приложении окончательного ответа отме
   );
 
   assert.equal(
-    h.c.issues.find((point) => point.id === firstPoint.id)?.finalDecisionByMajority,
+    h.c.issues.find((point) => point.id === firstPoint.id)
+      ?.finalDecisionByMajority,
     true,
   );
   assert.equal(
-    h.c.issues.find((point) => point.id === secondPoint.id)?.finalDecisionByMajority,
+    h.c.issues.find((point) => point.id === secondPoint.id)
+      ?.finalDecisionByMajority,
     false,
   );
   const html = renderToStaticMarkup(
@@ -2348,20 +2538,26 @@ test("рекомендации направляются после оконча�
 
   assert.equal(h.state.recommendations.length, 2);
   assert.deepEqual(
-    h.state.recommendations.map((recommendation) => recommendation.recipientRole),
+    h.state.recommendations.map(
+      (recommendation) => recommendation.recipientRole,
+    ),
     ["dvga", "subject"],
   );
   assert.ok(
     h.state.recommendations.every(
-      (recommendation) => recommendation.dueDate === addWorkdays("2026-09-08", 30),
+      (recommendation) =>
+        recommendation.dueDate === addWorkdays("2026-09-08", 30),
     ),
   );
   assert.equal(
-    h.c.documents.filter((document) => document.kind === "recommendation").length,
+    h.c.documents.filter((document) => document.kind === "recommendation")
+      .length,
     2,
   );
   assert.equal(
-    h.state.notifications.filter((notification) => notification.kind === "recommendation").length,
+    h.state.notifications.filter(
+      (notification) => notification.kind === "recommendation",
+    ).length,
     2,
   );
 });
@@ -2372,18 +2568,27 @@ test("жалоба из E-Otinish проходит проект решения �
   h.c.channel = "E-Otinish";
   h.c.status = "protocol";
   h.c.meeting = { date: "2026-09-10", number: "ПР-ЭО-1", audio: "" };
-  h.c.issues.filter((point) => point.disputed).forEach((point) => {
-    point.final = "accept";
-  });
+  h.c.issues
+    .filter((point) => point.disputed)
+    .forEach((point) => {
+      point.final = "accept";
+    });
 
   h.run("sign", "commission", {
     secretary: "on",
     reason: "Решение комиссии сформировано.",
-    ...Object.fromEntries(h.c.members.map((member) => [`signed_${member.id}`, "on"])),
+    ...Object.fromEntries(
+      h.c.members.map((member) => [`signed_${member.id}`, "on"]),
+    ),
   });
   assert.equal(h.c.status, "decision_project");
   assert.equal(nextAction(h.c)?.action, "create-decision-project");
-  const decisionProjectForm = actionForm("create-decision-project", h.c, h.state.date, {});
+  const decisionProjectForm = actionForm(
+    "create-decision-project",
+    h.c,
+    h.state.date,
+    {},
+  );
   assert.equal(decisionProjectForm.title, "Сформировать проект решения");
   assert.equal(
     decisionProjectForm.fields.some((field) => field.name === "number"),
@@ -2399,7 +2604,8 @@ test("жалоба из E-Otinish проходит проект решения �
   );
 
   h.run("create-decision-project", "work", {
-    [`finalResponseMajority_${h.c.issues.find((point) => point.disputed)!.id}`]: "on",
+    [`finalResponseMajority_${h.c.issues.find((point) => point.disputed)!.id}`]:
+      "on",
   });
   assert.equal(h.c.status, "decision_project_approval");
   const projectHtml = renderToStaticMarkup(
@@ -2418,7 +2624,9 @@ test("жалоба из E-Otinish проходит проект решения �
   );
   assert.equal(hearingAssignmentForm.title, "Заслушивание назначено");
   assert.ok(
-    hearingAssignmentForm.fields.some((field) => field.name === "hearingDateTime"),
+    hearingAssignmentForm.fields.some(
+      (field) => field.name === "hearingDateTime",
+    ),
   );
   h.run("send-decision-project-eotinish", "work", {
     hearingDateTime: "2026-09-16T10:30",
@@ -2445,18 +2653,26 @@ test("все виды жалоб проходят маршрут с проект
     h.c.channel = "Веб-портал государственных закупок";
     h.c.status = "protocol";
     h.c.meeting = { date: "2026-09-10", number: "ПР-ЕД-1", audio: "" };
-    h.c.issues.filter((point) => point.disputed).forEach((point) => {
-      point.final = "accept";
-    });
+    h.c.issues
+      .filter((point) => point.disputed)
+      .forEach((point) => {
+        point.final = "accept";
+      });
 
     h.run("sign", "commission", {
       secretary: "on",
       reason: "Решение комиссии сформировано.",
-      ...Object.fromEntries(h.c.members.map((member) => [`signed_${member.id}`, "on"])),
+      ...Object.fromEntries(
+        h.c.members.map((member) => [`signed_${member.id}`, "on"]),
+      ),
     });
 
     assert.equal(h.c.status, "decision_project", appealType);
-    assert.equal(nextAction(h.c)?.action, "create-decision-project", appealType);
+    assert.equal(
+      nextAction(h.c)?.action,
+      "create-decision-project",
+      appealType,
+    );
   });
 });
 
