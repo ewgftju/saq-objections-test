@@ -311,7 +311,8 @@ export interface CaseNotification {
     | "agenda-signed"
     | "request-response"
     | "recommendation"
-    | "final-response";
+    | "final-response"
+    | "decision-project";
   attendancePollId?: string;
   commissionMemberId?: string;
   meetingId?: string;
