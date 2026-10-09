@@ -2410,8 +2410,24 @@ test("жалоба из E-Otinish проходит проект решения �
   assert.equal(h.c.status, "decision_project_signed");
   h.run("sign-decision-project", "director");
   assert.equal(h.c.status, "decision_project_eotinish");
-  h.run("send-decision-project-eotinish", "work");
+  const hearingAssignmentForm = actionForm(
+    "send-decision-project-eotinish",
+    h.c,
+    h.state.date,
+    {},
+  );
+  assert.equal(hearingAssignmentForm.title, "Заслушивание назначено");
+  assert.ok(
+    hearingAssignmentForm.fields.some((field) => field.name === "hearingDateTime"),
+  );
+  h.run("send-decision-project-eotinish", "work", {
+    hearingDateTime: "2026-09-16T10:30",
+    hearingLocation: "онлайн, Qosyl",
+    hearingNoticeChannel: "eotinish",
+    hearingNoticeDate: "2026-09-11",
+  });
   assert.equal(h.c.status, "decision_project_hearing");
+  assert.equal(h.c.hearing?.location, "онлайн, Qosyl");
   h.run("hearing-after-decision-project", "work");
   assert.equal(h.c.status, "decided");
   assert.equal(nextAction(h.c)?.action, "deliver");
