@@ -1077,7 +1077,10 @@ export default function ObjectionsModule() {
             onBack={() => model.navigate({ page: "registry" })}
             onTab={(tab) => model.navigate({ ...model.route, tab })}
             onAction={(action, role, requestId) => {
-              if (action === "record-external-response") {
+              if (
+                action === "record-external-response" ||
+                action === "send-decision-project-eotinish"
+              ) {
                 setDialog({ type: "action", action, requestId });
                 return;
               }
@@ -1109,7 +1112,6 @@ export default function ObjectionsModule() {
                 action === "sign-final-response" ||
                 action === "approve-decision-project" ||
                 action === "sign-decision-project" ||
-                action === "send-decision-project-eotinish" ||
                 action === "hearing-after-decision-project" ||
                 action === "approve-certificate" ||
                 action === "sign-certificate" ||
@@ -1183,8 +1185,6 @@ export default function ObjectionsModule() {
                       ? "Проект решения согласован"
                     : action === "sign-decision-project"
                       ? "Проект решения подписан"
-                    : action === "send-decision-project-eotinish"
-                      ? "Проект решения направлен через систему E-Otinish"
                     : action === "hearing-after-decision-project"
                       ? "Заслушивание проведено"
                     : action === "approve-certificate"
