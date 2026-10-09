@@ -68,13 +68,21 @@ export function filingDeadline(c: ObjectionCase) {
 
 export function reviewDuration(c: ObjectionCase) {
   if (c.appealType === "Возражение на аудиторский отчет") return 30;
-  if (c.appealType === "Жалоба на уведомление") return 20;
-  if (c.appealType === "Жалоба на действие/бездействие") return 20;
-  if (c.appealType === "Заявление") return 15;
   if (
-    (c.appealType === "Возражение на уведомления" ||
-      c.type === "notice") &&
-    c.channel === "Веб-портал государственных закупок"
+    [
+      "Жалоба на уведомление",
+      "Жалоба на решение КВГА/ДВГА",
+      "Жалоба на действие/бездействие",
+    ].includes(c.appealType || "")
+  )
+    return 20;
+  if (
+    [
+      "Возражение на уведомление",
+      "Возражение на уведомления",
+      "Заявление",
+    ].includes(c.appealType || "") ||
+    c.type === "notice"
   )
     return 15;
   return 30;
@@ -99,11 +107,12 @@ export function executionDeadline(c: ObjectionCase): string | null {
     )
   )
     return addWorkdays(c.document.received, 2);
-  if (["materials", "certificate_approval", "certificate_signed"].includes(c.status))
-    return addWorkdays(
-      addWorkdays(c.document.received, 5),
-      reviewPauseDays(c),
-    );
+  if (
+    ["materials", "certificate_approval", "certificate_signed"].includes(
+      c.status,
+    )
+  )
+    return addWorkdays(addWorkdays(c.document.received, 5), reviewPauseDays(c));
   if (
     [
       "certificate_approved",
@@ -118,7 +127,8 @@ export function executionDeadline(c: ObjectionCase): string | null {
   )
     return c.attendanceMeetingDate ?? c.agendaMeetingDate ?? null;
   if (c.status === "meeting") {
-    const meetingDate = c.attendanceMeetingDate ?? c.agendaMeetingDate ?? c.hearing?.date;
+    const meetingDate =
+      c.attendanceMeetingDate ?? c.agendaMeetingDate ?? c.hearing?.date;
     return meetingDate ? addWorkdays(meetingDate, 1) : null;
   }
   if (c.status === "protocol") {
