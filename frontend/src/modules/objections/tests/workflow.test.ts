@@ -191,7 +191,46 @@ test("три исходных дела: разные сроки и перено�
   }
   assert.equal(
     executionDeadline({ ...requestStepCase, status: "request_approved" }),
-    null,
+    "2026-09-07",
+  );
+  assert.equal(
+    executionDeadline({
+      ...requestStepCase,
+      status: "request_approved",
+      requests: [
+        {
+          id: "request-1",
+          recipient: "ДВГА по Атырауской области",
+          date: "2026-09-08",
+          sent: "2026-09-08",
+          text: "Запрос направлен",
+          deadline: "2026-09-10T18:00",
+          template: "dvga",
+        },
+      ],
+    }),
+    "2026-09-10",
+  );
+  assert.equal(
+    executionDeadline(
+      {
+        ...requestStepCase,
+        status: "request_approval",
+        requests: [
+          {
+            id: "request-2",
+            recipient: "ДВГА по Атырауской области",
+            date: "2026-09-08",
+            sent: "2026-09-08",
+            text: "Запрос направлен",
+            deadline: "2026-09-10T18:00",
+            template: "dvga",
+          },
+        ],
+      },
+      "dvga",
+    ),
+    "2026-09-10",
   );
   assert.equal(
     executionDeadline({
@@ -199,7 +238,7 @@ test("три исходных дела: разные сроки и перено�
       status: "materials",
       pauseDays: 3,
     }),
-    "2026-09-15",
+    "2026-09-10",
   );
   assert.equal(
     executionDeadline({
@@ -244,6 +283,7 @@ test("три исходных дела: разные сроки и перено�
     executionDeadline({
       ...requestStepCase,
       status: "protocol",
+      agendaMeetingDate: "2026-09-25",
       meeting: {
         date: "2026-09-25",
         number: "ПР-01",
@@ -639,6 +679,31 @@ test("ответ КВГА без внешних запросов автомат�
   assert.equal(h.c.status, "materials");
   assert.equal(h.c.requests[0].confirmed, "2026-09-08");
   assert.notEqual(nextAction(h.c)?.action, "position");
+});
+
+test("срок рассмотрения всех видов жалоб не приостанавливается при запросе", () => {
+  const complaintTypes = [
+    "Жалоба на уведомление",
+    "Жалоба на решение КВГА/ДВГА",
+    "Жалоба на действие/бездействие",
+  ];
+  for (const appealType of complaintTypes) {
+    const c = { ...harness().c, appealType, pauseDays: 5 };
+    assert.equal(reviewDeadline(c), reviewDeadline({ ...c, pauseDays: 0 }));
+    assert.ok(
+      !additionalActions(c).some((action) => action.action === "pause"),
+    );
+  }
+
+  const h = harness();
+  h.c.appealType = "Жалоба на решение КВГА/ДВГА";
+  screen(h);
+  h.run("request", "work", { recipient: "КВГА" });
+  h.run("send-request-approval", "work");
+  h.run("approve-request", "deputy", { approved: "on" });
+  h.run("sign-request", "director");
+  assert.equal(h.c.requestPauseStartedAt, undefined);
+  assert.match(h.state.notifications.at(-1)!.text, /не приостанавливается/);
 });
 
 test("фиксация ответа продлевает срок на период приостановления по запросу", () => {
@@ -2692,7 +2757,7 @@ test("в приложении окончательного ответа отме
   );
 });
 
-test("рекомендации направляются после окончательного ответа в выбранные кабинеты", () => {
+test("рекомендации доступны после завершения рассмотрения всех видов обращений", () => {
   const h = harness();
   h.c.status = "completed";
   h.c.delivery = {
@@ -2703,13 +2768,19 @@ test("рекомендации направляются после оконча�
     appealCourt: "",
     appealProcedure: "",
   };
-  h.c.documents.push({
-    name: "Подписанный окончательный ответ",
-    kind: "final-response",
-    text: "",
-    date: "2026-09-08",
-    author: "Директор ДАВГА",
-  });
+  for (const appealType of [
+    "Возражение на аудиторский отчет",
+    "Жалоба на уведомление",
+    "Жалоба на решение КВГА/ДВГА",
+    "Жалоба на действие/бездействие",
+    "Возражение на уведомление",
+    "Заявление",
+  ])
+    assert.ok(
+      additionalActions({ ...h.c, appealType }).some(
+        (action) => action.action === "send-recommendations",
+      ),
+    );
   const form = new FormData();
   form.append("recommendationRecipients", "dvga");
   form.append("recommendationRecipients", "subject");
