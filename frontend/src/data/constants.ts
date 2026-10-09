@@ -43,7 +43,6 @@ export const STATUS = {
   decision_project_approval: "Согласование проекта решения",
   decision_project_signed: "Подписание проекта решения",
   decision_project_eotinish: "Направление проекта решения через E-Otinish",
-  decision_project_notice: "Направление уведомления о заслушивании",
   decision_project_hearing: "Проведение заслушивания",
   decided: "Решение принято",
   final_response_approval: "Согласование окончательного ответа",
