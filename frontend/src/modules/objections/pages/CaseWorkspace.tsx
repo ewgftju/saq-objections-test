@@ -323,6 +323,8 @@ export default function CaseWorkspace({
       Boolean(request.sent) &&
       !request.responded,
   );
+  const projectAvailableToSubject =
+    role !== "subject" || c.decisionProject?.recipientRoles?.includes("subject");
   return (
     <>
       <div className="back-row">
@@ -722,7 +724,7 @@ export default function CaseWorkspace({
                   const decisionProject = c.documents
                     .filter((document) => document.kind === "decision-project")
                     .at(-1);
-                  return decisionProject ? (
+                  return decisionProject && projectAvailableToSubject ? (
                     <section className="request-documents-section">
                       <h4>Проект решения</h4>
                       <div className="request-documents-list">
