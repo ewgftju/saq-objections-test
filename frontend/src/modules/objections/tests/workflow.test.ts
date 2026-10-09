@@ -378,7 +378,7 @@ test("печатная форма запроса использует полны
   };
   assert.match(
     html(),
-    /на предписание на акт о результате профилактического контроля от 28\.08\.2026 №ПК-33/,
+    /на предписание по акту о результате профилактического контроля от 30\.08\.2026 года № Д-01, проведенный/,
   );
 
   h.c.agendaDetails = {
@@ -2129,7 +2129,7 @@ test("повестка дня выбирает шаблон по виду обр
   };
   assert.match(
     agendaItemText(h.c),
-    /на предписание Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан от 30\.08\.2026 №Д-01 по профилактическому контролю №ПК-33 от 27\.08\.2026/,
+    /на предписание по акту о результате профилактического контроля от 30\.08\.2026 года № Д-01, проведенный Департамент внутреннего государственного аудита по Атырауской области/,
   );
 
   h.c.agendaDetails = { decisionKind: "quality-control" };
@@ -2141,7 +2141,7 @@ test("повестка дня выбирает шаблон по виду обр
   h.c.agendaDetails = { decisionKind: "preventive-control-act" };
   assert.match(
     agendaItemText(h.c),
-    /на акт о результате профилактического контроля Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан от 30\.08\.2026 №Д-01/,
+    /на акт о результате профилактического контроля от 30\.08\.2026 года № Д-01, проведенный Департамент внутреннего государственного аудита по Атырауской области/,
   );
 
   h.c.appealType = "Заявление";
@@ -2239,6 +2239,63 @@ test("шаблоны заявления и жалобы на предписан�
       createElement(DocumentContent, { c: h.c, kind: "protocol" }),
     ),
     new RegExp(complaintText),
+  );
+});
+
+test("шаблоны подвидов профилактического контроля используют реквизиты решения", () => {
+  const h = harness(0);
+  h.c.appealType = "Жалоба на решение КВГА/ДВГА";
+  h.c.org = "ТОО «Заявитель»";
+  h.c.bin = "123456789012";
+  h.c.appealNumber = "Ж-21";
+  h.c.appealDate = "2026-09-11";
+  h.c.issuer = "ДВГА по Атырауской области";
+  const authority =
+    "Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан";
+
+  const checkTemplates = (
+    decisionKind: "prescription-preventive" | "preventive-control-act",
+    documentNumber: string,
+    documentDate: string,
+    subject: string,
+  ) => {
+    h.c.agendaDetails = { decisionKind };
+    h.c.document = { ...h.c.document, number: documentNumber, date: documentDate };
+    const reference = `ТОО «Заявитель», ИИН/БИН 123456789012, № Ж-21 от 11.09.2026 года, на ${subject} от ${documentDate.split("-").reverse().join(".")} года № ${documentNumber}, проведенный ${authority}`;
+    const request = renderToStaticMarkup(
+      createElement(DocumentContent, {
+        c: h.c,
+        kind: "request",
+        requestPreview: {
+          recipient: "ДВГА",
+          deadline: "2026-09-12T18:00",
+          template: "dvga",
+        },
+      }),
+    );
+    const certificate = renderToStaticMarkup(
+      createElement(DocumentContent, { c: h.c, kind: "certificate" }),
+    );
+    const protocol = renderToStaticMarkup(
+      createElement(DocumentContent, { c: h.c, kind: "protocol" }),
+    );
+    assert.equal(agendaItemText(h.c), `Жалоба от ${reference}.`);
+    assert.match(certificate, new RegExp(`поступила жалоба от ${reference}`));
+    assert.match(request, new RegExp(`жалобы от ${reference}, просим`));
+    assert.match(protocol, new RegExp(`Жалоба от ${reference}.`));
+  };
+
+  checkTemplates(
+    "prescription-preventive",
+    "ПР-11",
+    "2026-09-02",
+    "предписание по акту о результате профилактического контроля",
+  );
+  checkTemplates(
+    "preventive-control-act",
+    "АКТ-12",
+    "2026-09-03",
+    "акт о результате профилактического контроля",
   );
 });
 
