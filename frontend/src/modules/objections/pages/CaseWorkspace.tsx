@@ -1048,14 +1048,23 @@ export default function CaseWorkspace({
                 {c.hearing && (
                   <Notice>
                     <strong>Заслушивание</strong>
-                    <p>
-                      {c.hearing.skip
-                        ? `Не проводилось: ${c.hearing.reason}`
-                        : `Извещение ${formatDate(c.hearing.notice)} · Заслушивание ${formatDate(c.hearing.date)}`}
-                    </p>
+                    {c.hearing.skip ? (
+                      <p>Не проводилось: {c.hearing.reason}</p>
+                    ) : (
+                      <>
+                        <p>Дата и время: {formatDateTime(c.hearing.date)}</p>
+                        <p>Место или формат: {c.hearing.location || "—"}</p>
+                        <p>
+                          Уведомление направлено: {formatDate(c.hearing.notice)}
+                          {c.hearing.noticeChannel
+                            ? ` · ${c.hearing.noticeChannel}`
+                            : ""}
+                        </p>
+                      </>
+                    )}
                     {c.hearing.subject && <p>Заявитель: {c.hearing.subject}</p>}
                     {c.hearing.issuer && <p>Орган: {c.hearing.issuer}</p>}
-                    <p>{c.hearing.note}</p>
+                    {c.hearing.note && <p>{c.hearing.note}</p>}
                   </Notice>
                 )}
                 {c.result && !isClosed && (
