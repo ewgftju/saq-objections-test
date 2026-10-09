@@ -135,6 +135,7 @@ export function actionForm(
     action === "vote" ||
     action === "analysis" ||
     action === "assign-work-executor" ||
+    action === "send-decision-project-eotinish" ||
     action === "commission-vote" ||
     action === "fill-meeting-certificate" ||
     action === "edit-certificate"
@@ -570,6 +571,36 @@ export function actionForm(
           : c.type === "control"
           ? "Статья 100 АППК: письменный результат заявителю и копия органу. Вручение фиксируется отдельно после направления."
           : "Оформление — 2 рабочих дня с решения; публикация закупочного решения — 1 рабочий день после направления. Для уведомления формируется заключение по структуре приложения 7. Вручение фиксируется отдельно.";
+      break;
+    case "send-decision-project-eotinish":
+      title = "Заслушивание назначено";
+      fields.push(
+        input(
+          "hearingDateTime",
+          "Дата и время заслушивания",
+          `${date}T09:00`,
+          "datetime-local",
+        ),
+        input(
+          "hearingLocation",
+          "Место или формат проведения заслушивания",
+        ),
+        select("hearingNoticeChannel", "Канал отправки уведомления", [
+          ["eotinish", "E-Otinish"],
+          ["portal", "Веб-портал"],
+          ["digital", "Цифровая система"],
+          ["saq", "Кабинет SAQ"],
+          ["other", "Другое"],
+        ]),
+        input(
+          "hearingNoticeDate",
+          "Дата направления уведомления",
+          date,
+          "date",
+        ),
+      );
+      note =
+        "После сохранения извещение о заслушивании будет зафиксировано в карточке обращения.";
       break;
     case "close-review":
       title = "Завершить рассмотрение";
