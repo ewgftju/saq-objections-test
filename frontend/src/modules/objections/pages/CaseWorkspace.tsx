@@ -1047,14 +1047,21 @@ export default function CaseWorkspace({
                     <p>{c.memberPosition}</p>
                   </Notice>
                 )}
-                {c.hearing && (
+                {c.hearing && (!c.decisionProject || c.decisionProject.signed) && (
                   <Notice>
                     <strong>Заслушивание</strong>
                     <p>
                       {c.hearing.skip
                         ? `Не проводилось: ${c.hearing.reason}`
-                        : `Извещение ${formatDate(c.hearing.notice)} · Заслушивание ${formatDate(c.hearing.date)}`}
+                        : `Дата и время: ${formatDateTime(c.hearing.date)} · Место: ${c.hearing.location || "—"}`}
                     </p>
+                    {!c.hearing.skip && c.hearing.noticeChannel && (
+                      <p>
+                        Уведомление направлено: {formatDateTime(c.hearing.noticeSentAt || c.hearing.notice)}
+                        {` · ${c.hearing.noticeChannel}`}
+                        {c.hearing.noticeReference ? ` · ${c.hearing.noticeReference}` : ""}
+                      </p>
+                    )}
                     {c.hearing.subject && <p>Заявитель: {c.hearing.subject}</p>}
                     {c.hearing.issuer && <p>Орган: {c.hearing.issuer}</p>}
                     <p>{c.hearing.note}</p>
@@ -1231,10 +1238,12 @@ export default function CaseWorkspace({
                   <strong>{c.pauseDays} раб. дн.</strong>
                 </div>
               )}
-              {!isAuthorityRole(role) && c.hearing?.date && (
+              {!isAuthorityRole(role) &&
+                c.hearing?.date &&
+                (!c.decisionProject || c.decisionProject.signed) && (
                 <div className="support-row">
                   <span>Заслушивание</span>
-                  <strong>{formatDate(c.hearing.date)}</strong>
+                  <strong>{formatDateTime(c.hearing.date)}</strong>
                 </div>
               )}
               {c.delivery?.received && (
