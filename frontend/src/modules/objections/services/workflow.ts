@@ -154,6 +154,15 @@ function requiresEotinishDecisionProject(c: ObjectionCase) {
   return (c.appealType || "").trim().startsWith("Жалоба");
 }
 
+function requiresConclusion(c: ObjectionCase) {
+  const appealType = (c.appealType || "").trim();
+  return (
+    appealType === "Возражение на уведомление" ||
+    appealType === "Возражение на уведомления" ||
+    (!appealType && c.type === "notice")
+  );
+}
+
 /** A member may vote differently on separate points. For the certificate we
  * show one concise overall position: mixed votes are treated as partial. */
 function memberVoteOutcome(c: ObjectionCase, memberId: string): Outcome | "" {
@@ -393,12 +402,12 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     },
     decided: {
       action:
-        c.type === "notice" &&
+        requiresConclusion(c) &&
         c.documents.some((document) => document.kind === "conclusion")
           ? "close-review"
           : "deliver",
       label:
-        c.type === "notice"
+        requiresConclusion(c)
           ? c.documents.some((document) => document.kind === "conclusion")
             ? "Завершить рассмотрение"
             : "Вложить заключение"
@@ -1716,7 +1725,7 @@ export function applyAction(
       // The upload screen for a notice sends no delivery requisites: it only
       // stores the conclusion and leaves the case open for explicit closing.
       // Keep the former requisites flow for saved/legacy actions.
-      if (c.type === "notice" && !form.get("sent")) {
+      if (requiresConclusion(c) && !form.get("sent")) {
         const registrationDate = text(
           "conclusionRegistrationDate",
           "Дата регистрации",
@@ -1742,7 +1751,7 @@ export function applyAction(
         // Keep optional legacy values so older saved actions continue to render.
         appealCourt: String(form.get("appealCourt") || ""),
         appealProcedure: String(form.get("appealProcedure") || ""),
-        published: c.type === "notice" ? date : null,
+        published: requiresConclusion(c) ? date : null,
       };
       disputed(c).forEach((point) => {
         point.finalDecisionByMajority =
@@ -1756,7 +1765,7 @@ export function applyAction(
           "Окончательный ответ сформирован и ожидает согласования.",
       );
       doc(
-        c.type === "notice"
+        requiresConclusion(c)
           ? "Заключение по результатам рассмотрения возражения"
           : "Письменный результат рассмотрения",
         "result",
@@ -1861,7 +1870,7 @@ export function applyAction(
       break;
     }
     case "close-review":
-      if (c.type !== "notice")
+      if (!requiresConclusion(c))
         throw new Error(
           "Закрытие доступно только для возражения на уведомление",
         );
