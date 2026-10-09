@@ -1,4 +1,4 @@
-import type { ObjectionCase } from "../../../types";
+import type { ObjectionCase, Role } from "../../../types";
 export const holidays = ["2026-08-31", "2026-10-26", "2026-12-16"];
 export function dateObject(s: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s || ""))
@@ -89,7 +89,7 @@ export function reviewDuration(c: ObjectionCase) {
 }
 
 export function reviewPauseDays(c: ObjectionCase) {
-  return c.appealType === "Жалоба на уведомление" ? 0 : c.pauseDays;
+  return c.appealType?.trim().startsWith("Жалоба") ? 0 : c.pauseDays;
 }
 
 export function reviewDeadline(c: ObjectionCase) {
@@ -100,7 +100,24 @@ export function reviewDeadline(c: ObjectionCase) {
 }
 
 /** Deadline for the action currently assigned at a process stage. */
-export function executionDeadline(c: ObjectionCase): string | null {
+function authorityResponseDeadline(c: ObjectionCase, role?: Role) {
+  const authority = role === "kvga" ? "КВГА" : role === "dvga" ? "ДВГА" : "";
+  return c.requests
+    .filter(
+      (request) =>
+        Boolean(request.sent) &&
+        /ДВГА|КВГА/i.test(request.recipient) &&
+        (!authority || request.recipient.toUpperCase().includes(authority)),
+    )
+    .map((request) => addWorkdays(request.sent!, 2))
+    .sort()[0];
+}
+
+export function executionDeadline(c: ObjectionCase, role?: Role): string | null {
+  if (role === "dvga" || role === "kvga") {
+    const deadline = authorityResponseDeadline(c, role);
+    if (deadline) return deadline;
+  }
   if (
     ["accepted", "requested", "request_approval", "request_signed"].includes(
       c.status,
@@ -108,11 +125,21 @@ export function executionDeadline(c: ObjectionCase): string | null {
   )
     return addWorkdays(c.document.received, 2);
   if (
+    [
+      "request_approved",
+      "response_approval",
+      "response_signed",
+      "response_ready",
+    ].includes(c.status)
+  ) {
+    return authorityResponseDeadline(c) ?? addWorkdays(c.document.received, 2);
+  }
+  if (
     ["materials", "certificate_approval", "certificate_signed"].includes(
       c.status,
     )
   )
-    return addWorkdays(addWorkdays(c.document.received, 5), reviewPauseDays(c));
+    return addWorkdays(c.document.received, 5);
   if (
     [
       "certificate_approved",
@@ -132,8 +159,8 @@ export function executionDeadline(c: ObjectionCase): string | null {
     return meetingDate ? addWorkdays(meetingDate, 1) : null;
   }
   if (c.status === "protocol") {
-    const projectReceived = c.meeting?.projectReceived;
-    return projectReceived ? addWorkdays(projectReceived, 1) : null;
+    const meetingDate = c.attendanceMeetingDate ?? c.agendaMeetingDate;
+    return meetingDate ? addWorkdays(meetingDate, 1) : null;
   }
   if (
     [
