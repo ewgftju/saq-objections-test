@@ -70,7 +70,6 @@ const OBJECTION_STAGES: ProcessStage[] = [
       "decision_project_approval",
       "decision_project_signed",
       "decision_project_eotinish",
-      "decision_project_notice",
       "decision_project_hearing",
       "delivered",
       "completed",
@@ -164,9 +163,8 @@ const TASK_HELP: Partial<Record<Action, string>> = {
   "create-decision-project":
     "Сформируйте проект решения по той же форме, что и окончательный ответ. Далее он будет согласован и подписан.",
   "approve-decision-project": "Проверьте сформированный проект решения и согласуйте его для подписания.",
-  "sign-decision-project": "Подпишите согласованный проект решения. Заявителю с кабинетом SAQ сразу поступит извещение о заслушивании.",
+  "sign-decision-project": "Подпишите согласованный проект решения для направления через E-Otinish.",
   "send-decision-project-eotinish": "Подтвердите направление подписанного проекта решения через систему E-Otinish.",
-  "record-decision-project-hearing-notice": "Зафиксируйте направление извещения о заслушивании через внешнюю систему.",
   "hearing-after-decision-project": "Зафиксируйте проведение заслушивания. После этого станет доступно формирование окончательного ответа.",
   "approve-final-response": "Проверьте сформированный окончательный ответ и согласуйте его для подписания.",
   "sign-final-response": "Подпишите согласованный окончательный ответ. После подписи рассмотрение будет завершено.",
