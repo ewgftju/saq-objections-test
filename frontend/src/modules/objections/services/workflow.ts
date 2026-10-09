@@ -1541,7 +1541,7 @@ export function applyAction(
         // Для проекта решения исходящий номер не оформляется: его укажут
         // при направлении окончательного ответа.
         number: String(form.get("number") || ""),
-        receipt: text("receipt", "Квитанция отправки"),
+        receipt: String(form.get("receipt") || ""),
         channel: text("channel", "Канал"),
         appealCourt: String(form.get("appealCourt") || ""),
         appealProcedure: String(form.get("appealProcedure") || ""),
