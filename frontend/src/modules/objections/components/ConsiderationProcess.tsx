@@ -92,6 +92,13 @@ const DECISION_SUBSTEPS = [
   "Подписать протокол заседания",
 ] as const;
 
+const EXECUTION_SUBSTEPS = [
+  "Сформировать проект решения",
+  "Зафиксировать заслушивание",
+  "Зафиксировать проведение заслушивания",
+  "Мотивированный ответ",
+] as const;
+
 function requestSubstep(status: CaseStatus) {
   if (["accepted", "requested", "forwarded"].includes(status)) return 0;
   if (status === "request_approval") return 1;
@@ -116,6 +123,22 @@ function analysisSubstep(status: CaseStatus) {
 function decisionSubstep(status: CaseStatus) {
   if (status === "meeting") return 0;
   if (status === "protocol") return 1;
+  return null;
+}
+
+function executionSubstep(status: CaseStatus) {
+  if (
+    [
+      "decision_project",
+      "decision_project_approval",
+      "decision_project_signed",
+    ].includes(status)
+  )
+    return 0;
+  if (status === "decision_project_eotinish") return 1;
+  if (status === "decision_project_hearing") return 2;
+  if (["decided", "final_response_approval", "final_response_signed"].includes(status))
+    return 3;
   return null;
 }
 
@@ -261,6 +284,7 @@ export default function ConsiderationProcess({
   const currentRequestSubstep = requestSubstep(c.status);
   const currentAnalysisSubstep = analysisSubstep(c.status);
   const currentDecisionSubstep = decisionSubstep(c.status);
+  const currentExecutionSubstep = executionSubstep(c.status);
   const workRequestStatus =
     role === "work" &&
     (c.status === "request_approval" || c.status === "request_signed");
@@ -356,6 +380,21 @@ export default function ConsiderationProcess({
                   key={label}
                   aria-current={
                     index === currentDecisionSubstep ? "step" : undefined
+                  }
+                >
+                  <span>{index + 1}</span>
+                  {label}
+                </li>
+              ))}
+            </ol>
+          )}
+          {currentExecutionSubstep !== null && (
+            <ol className="process-substeps" aria-label="Шаги этапа исполнения">
+              {EXECUTION_SUBSTEPS.map((label, index) => (
+                <li
+                  key={label}
+                  aria-current={
+                    index === currentExecutionSubstep ? "step" : undefined
                   }
                 >
                   <span>{index + 1}</span>
