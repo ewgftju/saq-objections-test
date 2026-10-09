@@ -218,8 +218,12 @@ export default function ObjectionsModule() {
       "",
     );
   };
-  const sendAttendancePoll = (cases: ObjectionCase[], dateTime: string) => {
-    if (!cases.length || !dateTime) return;
+  const sendAttendancePoll = (
+    cases: ObjectionCase[],
+    dateTime: string,
+    formatAndPlace: string,
+  ) => {
+    if (!cases.length || !dateTime || !formatAndPlace) return;
     const next = structuredClone(model.state);
     // The poll identifier is also used by notifications.  Do not derive it
     // only from the array length: saved demo data from an earlier session can
@@ -232,6 +236,7 @@ export default function ObjectionsModule() {
     next.attendancePolls.push({
       id: pollId,
       dateTime,
+      formatAndPlace,
       caseIds: cases.map((item) => item.id),
       sentAt: next.date,
       responses,
@@ -252,7 +257,7 @@ export default function ObjectionsModule() {
         id: `${pollId}-${member.id}`,
         caseId: cases[0].id,
         recipient: member.name,
-        text: `Укажите, будете ли присутствовать на заседании ${formatDateTime(dateTime)}.`,
+        text: `Укажите, будете ли присутствовать на заседании ${formatDateTime(dateTime)}. Формат и место проведения: ${formatAndPlace}.`,
         date: next.date,
         read: false,
         kind: "attendance-poll",
@@ -268,7 +273,7 @@ export default function ObjectionsModule() {
         date: next.date,
         actor: ROLES.work,
         title: "Направлен опрос о присутствии на заседании",
-        text: `Дата и время заседания: ${formatDateTime(dateTime)}. Опрос направлен членам АК и их и.о.`,
+        text: `Дата и время заседания: ${formatDateTime(dateTime)}. Формат и место проведения: ${formatAndPlace}. Опрос направлен членам АК и их и.о.`,
       });
     });
     model.commit(next, "Опрос о присутствии направлен членам АК и их и.о.");
@@ -374,7 +379,7 @@ export default function ObjectionsModule() {
     return localDate.toISOString().slice(0, 10);
   };
 
-  const createMeeting = (dateTime: string) => {
+  const createMeeting = (dateTime: string, formatAndPlace: string) => {
     const next = structuredClone(model.state);
     const meetingDate = dateTime.slice(0, 10);
     next.meetings ??= [];
@@ -387,6 +392,7 @@ export default function ObjectionsModule() {
     next.attendancePolls.push({
       id: pollId,
       dateTime,
+      formatAndPlace,
       caseIds: [],
       sentAt: next.date,
       responses,
@@ -396,6 +402,7 @@ export default function ObjectionsModule() {
       id: "meeting-" + Date.now(),
       number,
       dateTime,
+      formatAndPlace,
       caseIds: [],
       pollId,
       agendaHtml: agendaDocumentHtml([], meetingDate),
@@ -415,7 +422,14 @@ export default function ObjectionsModule() {
         date: next.date,
         actor: ROLES.work,
         title: "Обращение включено в заседание",
-        text: "Заседание №" + number + ": " + formatDateTime(dateTime) + ".",
+        text:
+          "Заседание №" +
+          number +
+          ": " +
+          formatDateTime(dateTime) +
+          ". Формат и место проведения: " +
+          formatAndPlace +
+          ".",
       });
     });
     COMMISSION_ATTENDANCE_MEMBERS.forEach((member) => {
@@ -424,7 +438,12 @@ export default function ObjectionsModule() {
         caseId: readyCases[0]?.id || "",
         recipient: member.name,
         recipientRole: "commission",
-        text: "Укажите, будете ли присутствовать на заседании " + formatDateTime(dateTime) + ".",
+        text:
+          "Укажите, будете ли присутствовать на заседании " +
+          formatDateTime(dateTime) +
+          ". Формат и место проведения: " +
+          formatAndPlace +
+          ".",
         date: next.date,
         read: false,
         kind: "attendance-poll",
@@ -861,7 +880,13 @@ export default function ObjectionsModule() {
       throw new Error("Вложите хотя бы один полученный файл");
     if (action === "subject-response" && !files.length)
       throw new Error("Вложите хотя бы один файл ответа");
-    if (action === "deliver" && c.type === "notice" && !files.length)
+    if (
+      action === "deliver" &&
+      ["Возражение на уведомление", "Возражение на уведомления"].includes(
+        (c.appealType || "").trim(),
+      ) &&
+      !files.length
+    )
       throw new Error("Вложите хотя бы один файл заключения");
     for (const file of files) {
       if (file.size > 2 * 1024 * 1024)
@@ -1336,7 +1361,14 @@ export default function ObjectionsModule() {
                 setDialogError("Укажите дату и время заседания");
                 return;
               }
-              createMeeting(dateTime);
+              const formatAndPlace = String(
+                new FormData(event.currentTarget).get("formatAndPlace") || "",
+              ).trim();
+              if (!formatAndPlace) {
+                setDialogError("Укажите формат и место проведения заседания");
+                return;
+              }
+              createMeeting(dateTime, formatAndPlace);
             }}
           >
             <Notice>
@@ -1350,6 +1382,17 @@ export default function ObjectionsModule() {
                 type="datetime-local"
                 required
                 defaultValue={model.state.date + "T10:00"}
+              />
+            </label>
+            <label className="field">
+              <span>
+                Формат и место проведения заседания{" "}
+                <b className="required">*</b>
+              </span>
+              <input
+                name="formatAndPlace"
+                required
+                placeholder="Например: офлайн, г. Астана, ул. Победы, 33"
               />
             </label>
             {dialogError && <p className="form-error">{dialogError}</p>}
@@ -1406,7 +1449,14 @@ export default function ObjectionsModule() {
                 setDialogError("Укажите дату и время проведения заседания");
                 return;
               }
-              sendAttendancePoll(dialog.cases, dateTime);
+              const formatAndPlace = String(
+                new FormData(event.currentTarget).get("formatAndPlace") || "",
+              ).trim();
+              if (!formatAndPlace) {
+                setDialogError("Укажите формат и место проведения заседания");
+                return;
+              }
+              sendAttendancePoll(dialog.cases, dateTime, formatAndPlace);
             }}
           >
             <p>
@@ -1422,6 +1472,17 @@ export default function ObjectionsModule() {
                 type="datetime-local"
                 required
                 defaultValue={`${model.state.date}T10:00`}
+              />
+            </label>
+            <label className="field">
+              <span>
+                Формат и место проведения заседания{" "}
+                <b className="required">*</b>
+              </span>
+              <input
+                name="formatAndPlace"
+                required
+                placeholder="Например: офлайн, г. Астана, ул. Победы, 33"
               />
             </label>
             {dialogError && <p className="form-error">{dialogError}</p>}
