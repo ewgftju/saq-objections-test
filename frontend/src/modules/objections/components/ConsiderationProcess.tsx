@@ -275,17 +275,7 @@ export default function ConsiderationProcess({
       "response_ready",
     ].includes(c.status);
   const sentRequests = c.requests.filter((request) => Boolean(request.sent));
-  const sentInternalRequests = sentRequests.filter(
-    (request) => request.template !== "other" || Boolean(request.saqRecipient),
-  );
-  const pendingExternalRequests = c.requests.filter(
-    (request) =>
-      request.template === "other" &&
-      !request.saqRecipient &&
-      Boolean(request.sent) &&
-      !request.responded,
-  );
-  const pendingResponses = sentInternalRequests.filter(
+  const pendingResponses = sentRequests.filter(
     (request) => !request.responded,
   ).length;
   const awaitingAttendancePoll = c.status === "certificate_approved";
@@ -473,54 +463,6 @@ export default function ConsiderationProcess({
           </div>
         </div>
       )}
-      {inRequestFormationStage && pendingExternalRequests.length > 0 && (
-        <Notice tone="amber">
-          <div className="request-response-heading">
-            <div>
-              <span className="request-response-eyebrow">
-                Запросы через другую систему
-              </span>
-              <strong>Ожидание ответов</strong>
-            </div>
-            <span className="request-response-summary">
-              Ожидают ответа: <b>{pendingExternalRequests.length}</b>
-            </span>
-          </div>
-          <ul className="request-response-status-list">
-            {pendingExternalRequests.map((request) => (
-              <li className="is-pending" key={request.id}>
-                <span className="request-response-marker" aria-hidden="true">
-                  …
-                </span>
-                <span className="request-response-recipient">
-                  <strong>{request.recipient}</strong>
-                  <small>
-                    Направлен {formatDate(request.sent)}
-                    {request.registrationNumber
-                      ? ` · №${request.registrationNumber}`
-                      : ""}
-                  </small>
-                </span>
-                <span className="response-pending">
-                  <span className="response-status-dot" aria-hidden="true" />
-                  Ответ ожидается
-                </span>
-                {(role === "demo-superuser" || role === "work") && (
-                  <Button
-                    className="request-response-action"
-                    primary
-                    onClick={() =>
-                      onAction("record-external-response", "work", request.id)
-                    }
-                  >
-                    Вложить ответ
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Notice>
-      )}
       {workRequestStatus ? (
         <Notice tone="amber">
           <div className="request-response-heading">
@@ -680,12 +622,17 @@ export default function ConsiderationProcess({
               </span>
             </div>
             <ul className="request-response-status-list">
-              {sentInternalRequests.map((request) => {
+              {sentRequests.map((request) => {
                 const recipient =
                   request.recipient ||
                   (request.saqRecipient === "subject"
                     ? "Кабинет Объекта"
                     : "Адресат запроса");
+                const canAttachExternalResponse =
+                  (role === "demo-superuser" || role === "work") &&
+                  request.template === "other" &&
+                  !request.saqRecipient &&
+                  !request.responded;
                 return (
                   <li
                     className={request.responded ? "is-received" : "is-pending"}
@@ -716,6 +663,21 @@ export default function ConsiderationProcess({
                         ? `Ответ получен ${formatDate(request.responded)}`
                         : "Ответ ожидается"}
                     </span>
+                    {canAttachExternalResponse && (
+                      <Button
+                        className="request-response-action"
+                        primary
+                        onClick={() =>
+                          onAction(
+                            "record-external-response",
+                            "work",
+                            request.id,
+                          )
+                        }
+                      >
+                        Вложить ответ
+                      </Button>
+                    )}
                   </li>
                 );
               })}
