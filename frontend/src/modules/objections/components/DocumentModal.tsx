@@ -21,6 +21,7 @@ import {
 } from "../services/decisions";
 import {
   agendaOrProtocolIntro,
+  auditAuthorityTemplateName,
   certificateTemplateIntro,
   requestTemplateIntro,
 } from "../services/appealTemplates";
@@ -56,13 +57,13 @@ function requestIntro(c: ObjectionCase, deadline: string) {
     `, просим в срок до 18:00 часов ${deadlineDate} представить мотивированный ответ по каждому доводу ${appeal} с приложением подтверждающих документов.`;
 
   if (appealType === "Возражение на уведомления")
-    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, направленного по результатам камерального контроля ${auditAuthorityFullName(c.issuer)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, направленного по результатам камерального контроля ${auditAuthorityTemplateName(c)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
 
   if (appealType === "Жалоба на уведомление")
-    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, на уведомление об устранении нарушений от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, проведенный ${auditAuthorityFullName(c.issuer)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы от ${c.org}, ИИН/БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, на уведомление об устранении нарушений от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, проведенный ${auditAuthorityTemplateName(c)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
 
   if (appealType === "Возражение на аудиторский отчет")
-    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения от ${c.org}, БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, на аудиторский отчет от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, проведенный ${auditAuthorityFullName(c.issuer)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения от ${c.org}, БИН ${c.bin || "—"}, № ${c.appealNumber || "—"} от ${formatDate(c.appealDate || c.filed)} года, на аудиторский отчет от ${formatDate(c.document.date)} года № ${c.document.number || "—"}, проведенный ${auditAuthorityTemplateName(c)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
 
   if (appealType === "Жалоба на решение КВГА/ДВГА") {
     if (
@@ -73,14 +74,14 @@ function requestIntro(c: ObjectionCase, deadline: string) {
     if (details?.decisionKind === "administrative-act")
       return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на административный акт от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
     if (details?.decisionKind === "preventive-control-act")
-      return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на акт о результате профилактического контроля ${auditAuthorityFullName(c.issuer)} от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
+      return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на акт о результате профилактического контроля ${auditAuthorityTemplateName(c)} от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
     if (details?.decisionKind === "prescription-preventive")
       return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на предписание на акт о результате профилактического контроля от ${formatDate(details.relatedDocumentDate)} №${details.relatedDocumentNumber || "—"}${finish("жалобы")}`;
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} на предписание на аудиторский отчет от ${formatDate(details?.relatedDocumentDate)} №${details?.relatedDocumentNumber || "—"}${finish("жалобы")}`;
   }
 
   if (appealType === "Жалоба на действие/бездействие") {
-    const authority = auditAuthorityFullName(c.issuer);
+    const authority = auditAuthorityTemplateName(c);
     if (details?.procurementNumber)
       return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} касательно действия/бездействия ${authority} при рассмотрении обращения от ${formatDate(c.document.date)} №${c.document.number || "—"} по государственной закупке № ${details.procurementNumber} (лот №${details.lotNumber || "—"}) на ${details.procurementSubject || "—"}${finish("жалобы")}`;
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} касательно действия/бездействия ${authority} на аудиторский отчет от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
@@ -102,7 +103,7 @@ function certificateIntro(c: ObjectionCase) {
   const date = formatDate(c.appealDate || c.filed);
   const sourceDate = formatDate(c.document.date);
   const sourceNumber = c.document.number || "—";
-  const authority = auditAuthorityFullName(c.issuer);
+  const authority = auditAuthorityTemplateName(c);
   const applicant = `${c.org}, ИИН/БИН ${c.bin}`;
 
   if (appealType === "Жалоба на акт о результате профилактического контроля")
@@ -715,8 +716,8 @@ export function DocumentContent({
       (snapshot.appealType === "Жалоба на уведомление"
         ? `Жалоба от ${snapshot.org}, ИИН/БИН ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на уведомление об устранении нарушений от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityFullName(snapshot.issuer)}.`
         : snapshot.appealType === "Возражение на аудиторский отчет"
-          ? `Возражение от ${snapshot.org}, БИН ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на аудиторский отчет от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityFullName(snapshot.issuer)}.`
-          : `Возражение «${snapshot.org}», БИН ${snapshot.bin} от ${formatDate(snapshot.appealDate || snapshot.filed)} года №${snapshot.appealNumber || snapshot.document.number} к уведомлению ${auditAuthorityFullName(snapshot.issuer)} от ${formatDate(snapshot.document.date)} года №${snapshot.document.number}.`);
+          ? `Возражение от ${snapshot.org}, БИН ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на аудиторский отчет от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityTemplateName(snapshot)}.`
+          : `Возражение «${snapshot.org}», БИН ${snapshot.bin} от ${formatDate(snapshot.appealDate || snapshot.filed)} года №${snapshot.appealNumber || snapshot.document.number} к уведомлению ${auditAuthorityTemplateName(snapshot)} от ${formatDate(snapshot.document.date)} года №${snapshot.document.number}.`);
     return (
       <article className="print-document protocol-template">
         <h1>
