@@ -386,8 +386,9 @@ export default function ActionModal({
   const formRef = useRef<HTMLFormElement>(null);
   const [requestAttachments, setRequestAttachments] = useState<File[]>([]);
   const [conclusionFiles, setConclusionFiles] = useState<File[]>([]);
-  const [recommendationRecipients, setRecommendationRecipients] = useState<string[]>([]);
-  const [selectedRecommendationRecipient, setSelectedRecommendationRecipient] = useState("");
+  const [recommendationChannel, setRecommendationChannel] = useState<
+    "saq" | "external"
+  >("saq");
   const [requestTab, setRequestTab] = useState<"form" | "print">("form");
   const definition = actionForm(action, c, date, values, role);
   const activeCommissionVoter = commissionMemberId
@@ -413,11 +414,11 @@ export default function ActionModal({
   const customRequestText =
     isOtherRequest ? values.customRequestText ?? "" : undefined;
   const protocolMembers = c.members;
-  const recommendationRecipientField = definition.fields.find(
-    (field) => field.name === "recommendationRecipients",
-  );
   const recommendationTextField = definition.fields.find(
     (field) => field.name === "recommendationText",
+  );
+  const recommendationDueDateField = definition.fields.find(
+    (field) => field.name === "recommendationDueDate",
   );
   const authorityRequestForResponse = c.requests.find(
     (request) =>
@@ -717,63 +718,100 @@ export default function ActionModal({
         ) : action === "send-recommendations" ? (
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
-            <label className="field">
-              <span>
-                Кому направить рекомендацию <span className="required">*</span>
-              </span>
-              <select
-                className="recommendation-recipient-select"
-                value={selectedRecommendationRecipient}
-                onChange={(event) => {
-                  const value = event.currentTarget.value;
-                  if (!value) return;
-                  setRecommendationRecipients((current) =>
-                    current.includes(value) ? current : [...current, value],
-                  );
-                  setSelectedRecommendationRecipient("");
-                }}
-              >
-                <option value="">Выберите кабинет</option>
-                {recommendationRecipientField?.options
-                  ?.filter(([value]) => !recommendationRecipients.includes(value))
-                  .map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              <small>Можно выбрать несколько кабинетов.</small>
-              {recommendationRecipients.map((recipient) => {
-                const label = recommendationRecipientField?.options?.find(
-                  ([value]) => value === recipient,
-                )?.[1] || recipient;
-                return (
-                  <span className="badge blue notification-new-badge" key={recipient}>
-                    {label}{" "}
-                    <button
-                      type="button"
-                      className="text-button"
-                      onClick={() =>
-                        setRecommendationRecipients((current) =>
-                          current.filter((item) => item !== recipient),
-                        )
-                      }
-                    >
-                      ×
-                    </button>
+            <div className="form-grid">
+              <label className="field">
+                <span>
+                  Способ направления <span className="required">*</span>
+                </span>
+                <select
+                  name="recommendationChannel"
+                  value={recommendationChannel}
+                  onChange={(event) =>
+                    setRecommendationChannel(
+                      event.currentTarget.value === "external" ? "external" : "saq",
+                    )
+                  }
+                >
+                  <option value="saq">В кабинет SAQ</option>
+                  <option value="external">Через другую систему</option>
+                </select>
+              </label>
+              {recommendationChannel === "saq" ? (
+                <label className="field">
+                  <span>
+                    Кому направить рекомендацию <span className="required">*</span>
                   </span>
-                );
-              })}
-              {recommendationRecipients.map((recipient) => (
+                  <input
+                    name="recommendationSaqRecipient"
+                    list="recommendation-saq-recipients"
+                    placeholder="Начните вводить название кабинета"
+                    required
+                  />
+                  <datalist id="recommendation-saq-recipients">
+                    <option value="Кабинет ДВГА" />
+                    <option value="Кабинет КВГА" />
+                    <option value="Кабинет Объекта" />
+                    <option value="Кабинет вышестоящего органа" />
+                  </datalist>
+                  <small>Найдите получателя по названию кабинета SAQ.</small>
+                </label>
+              ) : (
+                <>
+                  <label className="field">
+                    <span>
+                      Кому направлена рекомендация <span className="required">*</span>
+                    </span>
+                    <input name="recommendationExternalRecipient" required />
+                  </label>
+                  <label className="field">
+                    <span>
+                      Способ отправки <span className="required">*</span>
+                    </span>
+                    <select name="recommendationDeliveryPath" required defaultValue="">
+                      <option value="" disabled>Выберите способ</option>
+                      <option value="E-Otinish">E-Otinish</option>
+                      <option value="СЭД">СЭД</option>
+                      <option value="Портал / цифровая система">Портал / цифровая система</option>
+                      <option value="Почтовая связь">Почтовая связь</option>
+                      <option value="Вручение нарочно">Вручение нарочно</option>
+                    </select>
+                  </label>
+                  <label className="field">
+                    <span>
+                      Номер направления <span className="required">*</span>
+                    </span>
+                    <input name="recommendationRegistrationNumber" required />
+                  </label>
+                  <label className="field">
+                    <span>
+                      Дата направления рекомендации <span className="required">*</span>
+                    </span>
+                    <input name="recommendationSentAt" type="date" defaultValue={date} required />
+                  </label>
+                </>
+              )}
+              <label className="field">
+                <span>
+                  Срок исполнения рекомендации <span className="required">*</span>
+                </span>
                 <input
-                  key={`input-${recipient}`}
-                  type="hidden"
-                  name="recommendationRecipients"
-                  value={recipient}
+                  name="recommendationDueDate"
+                  type="date"
+                  defaultValue={recommendationDueDateField?.value || ""}
+                  required
                 />
-              ))}
-            </label>
+              </label>
+            </div>
             {recommendationTextField && <Field field={recommendationTextField} />}
+            <label className="field">
+              <span>Вложить файл</span>
+              <input
+                type="file"
+                name="recommendationFiles"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+              />
+              <small>Необязательное вложение до 2 МБ.</small>
+            </label>
           </>
         ) : action === "deliver" || action === "create-decision-project" ? (
           <>

@@ -1,6 +1,12 @@
 import { Button, Notice } from "../../../components/ui";
 import { ROLES, STATUS } from "../../../data/constants";
-import type { Action, CaseStatus, ObjectionCase, Role } from "../../../types";
+import type {
+  Action,
+  CaseRecommendation,
+  CaseStatus,
+  ObjectionCase,
+  Role,
+} from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import {
   additionalActions,
@@ -218,6 +224,69 @@ function RequestResponsesPanel({
   );
 }
 
+function RecommendationStatusPanel({
+  recommendations,
+}: {
+  recommendations: CaseRecommendation[];
+}) {
+  if (!recommendations.length) return null;
+  const labels: Record<CaseRecommendation["status"], string> = {
+    sent: "Направлена",
+    answered: "Ответ получен",
+    executed: "Исполнена",
+    returned: "Возвращена на доработку",
+  };
+  return (
+    <Notice tone="amber">
+      <div className="request-response-heading">
+        <div>
+          <span className="request-response-eyebrow">Информационный блок</span>
+          <strong>Рекомендации</strong>
+        </div>
+        <span className="request-response-summary">
+          Всего: <b>{recommendations.length}</b>
+        </span>
+      </div>
+      <ul className="request-response-status-list">
+        {recommendations.map((recommendation) => (
+          <li
+            className={
+              recommendation.status === "executed" ? "is-received" : "is-pending"
+            }
+            key={recommendation.id}
+          >
+            <span className="request-response-marker" aria-hidden="true">
+              {recommendation.status === "executed" ? "✓" : "…"}
+            </span>
+            <span className="request-response-recipient">
+              <strong>{recommendation.recipient}</strong>
+              <small>{recommendation.channel === "external" ? "Через другую систему" : "Кабинет SAQ"}</small>
+            </span>
+            <span className="request-response-dates">
+              <small>
+                Дата направления: {formatDate(recommendation.sentAt || recommendation.createdAt)}
+              </small>
+              <small>
+                Срок исполнения: {formatDate(recommendation.revisionDueDate || recommendation.dueDate)}
+              </small>
+            </span>
+            <span
+              className={
+                recommendation.status === "executed"
+                  ? "response-received"
+                  : "response-pending"
+              }
+            >
+              <span className="response-status-dot" aria-hidden="true" />
+              {labels[recommendation.status]}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Notice>
+  );
+}
+
 function analysisSubstep(status: CaseStatus) {
   if (status === "materials") return 0;
   if (status === "certificate_approval") return 1;
@@ -322,12 +391,14 @@ export default function ConsiderationProcess({
   role,
   onAction,
   onHistory,
+  recommendations = [],
   hideStages = false,
 }: {
   c: ObjectionCase;
   role: Role;
   onAction: (action: Action, role: Role, requestId?: string) => void;
   onHistory: () => void;
+  recommendations?: CaseRecommendation[];
   /** Члены АК работают только с задачей по делу, без служебной схемы процесса. */
   hideStages?: boolean;
 }) {
@@ -350,12 +421,16 @@ export default function ConsiderationProcess({
       option.action !== "fill-meeting-certificate" &&
       option.action !== "supplement" &&
       option.action !== "court" &&
-      option.action !== "receipt",
+      option.action !== "receipt" &&
+      option.action !== "send-recommendations",
   );
   const extras = inRequestFormationStage
     ? availableExtras.filter((option) => option.action === "supplement")
     : availableExtras;
   const lastEvent = c.history.at(-1);
+  const caseRecommendations = recommendations.filter(
+    (recommendation) => recommendation.caseId === c.id,
+  );
   const taskTitle =
     next?.action === "position"
       ? "Зафиксировать полученный ответ"
@@ -379,6 +454,9 @@ export default function ConsiderationProcess({
   const currentDecisionSubstep = decisionSubstep(c.status);
   const currentExecutionSubstep = executionSubstep(c.status);
   const canPerformNextAction = role === "demo-superuser" || role === next?.role;
+  const canSendRecommendations =
+    (role === "demo-superuser" || role === "work") &&
+    (Boolean(c.meeting?.signed) || c.status === "completed");
   const requestActionsVisible =
     inRequestFormationStage && (role === "demo-superuser" || role === "work");
   // Запросы могут потребоваться и после того, как первые уже направлены.
@@ -594,8 +672,7 @@ export default function ConsiderationProcess({
                 Заполнить справку
               </Button>
             )}
-            {(role === "demo-superuser" || role === "work") &&
-              c.status === "completed" && (
+            {canSendRecommendations && (
                 <Button
                   primary
                   onClick={() => onAction("send-recommendations", "work")}
@@ -646,6 +723,21 @@ export default function ConsiderationProcess({
           </p>
         </Notice>
       ) : null}
+      {!next && canSendRecommendations && (
+        <div className="consideration-task recommendation-action-panel">
+          <div>
+            <span className="consideration-eyebrow">Рекомендации</span>
+            <h4>Направить рекомендацию</h4>
+            <p>Можно направить новую рекомендацию и после завершения рассмотрения.</p>
+          </div>
+          <div className="consideration-task-action">
+            <Button primary onClick={() => onAction("send-recommendations", "work")}>
+              Направить рекомендации
+            </Button>
+          </div>
+        </div>
+      )}
+      <RecommendationStatusPanel recommendations={caseRecommendations} />
       {inRequestFormationStage && (
         <div className="request-responses-panel">
           <RequestResponsesPanel c={c} role={role} onAction={onAction} />
