@@ -369,6 +369,33 @@ test("направление запроса в другой орган фикс�
   assert.match(processHtml, /Ответ ожидается/);
 });
 
+test("запрос в кабинет SAQ формируется отдельно от внешней фиксации", () => {
+  const h = harness();
+  screen(h);
+  const form = actionForm("request-saq", h.c, h.state.date, {});
+  assert.equal(form.title, "Сформировать запрос в кабинет SAQ");
+  assert.deepEqual(
+    form.fields.map((field) => field.name),
+    ["saqRecipient", "customRequestText"],
+  );
+
+  h.run("request-saq", "work", {
+    saqRecipient: "subject",
+    customRequestText: "Представьте пояснения и подтверждающие документы.",
+  });
+  assert.deepEqual(h.c.requests.at(-1), {
+    id: "request-1",
+    recipient: "Кабинет Объекта SAQ",
+    date: "2026-09-08",
+    text: "Запрос сформирован для Кабинет Объекта SAQ. Срок рассмотрения: 2026-09-10T18:00.",
+    deadline: "2026-09-10T18:00",
+    template: "other",
+    saqRecipient: "subject",
+    author: DEMO_USER.fullName,
+    customText: "Представьте пояснения и подтверждающие документы.",
+  });
+});
+
 test("печатная форма запроса использует полный орган и первый абзац по виду обращения", () => {
   const h = harness();
   h.c.org = "ГУ «Объект»";
