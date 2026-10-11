@@ -139,7 +139,13 @@ export interface CaseRecommendation {
   id: string;
   text: string;
   recipient: string;
-  status: "sent" | "executed";
+  /** Канал направления: кабинет SAQ либо внешняя система. */
+  channel?: "saq" | "external";
+  /**
+   * Направлена → ответ получен → исполнена / возвращена на доработку.
+   * Для записей, созданных до обновления, отсутствие поля означает «saq».
+   */
+  status: "sent" | "answered" | "executed" | "returned";
   answer: string;
   executionResult?: string;
   caseId: string;
@@ -150,8 +156,16 @@ export interface CaseRecommendation {
   recipientRole?: Role;
   /** Дата направления вместе с окончательным ответом. */
   sentAt?: string;
-  /** Срок исполнения: 30 рабочих дней с даты направления. */
+  /** Указанный рабочим органом срок исполнения. */
   dueDate?: string;
+  /** Способ, номер и дата фиксации внешнего направления. */
+  deliveryPath?: string;
+  registrationNumber?: string;
+  /** Дата поступления ответа адресата. */
+  answeredAt?: string;
+  /** Срок, установленный при возврате ответа на доработку. */
+  revisionDueDate?: string;
+  returnedAt?: string;
   executedAt?: string;
 }
 
@@ -178,6 +192,8 @@ export interface CaseDocument {
   dataUrl?: string;
   filename?: string;
   requestId?: string;
+  /** Рекомендация, к которой относится приложенный документ. */
+  recommendationId?: string;
   snapshot?: {
     issues: ViolationPoint[];
     result: CaseResult | null;
@@ -331,6 +347,7 @@ export interface CaseNotification {
     | "agenda-signed"
     | "request-response"
     | "recommendation"
+    | "recommendation-response"
     | "final-response";
   attendancePollId?: string;
   commissionMemberId?: string;
