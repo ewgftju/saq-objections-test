@@ -223,7 +223,7 @@ export interface RequestDraft {
   savedAt: string;
 }
 
-export type RequestDraftKind = "request" | "request-other";
+export type RequestDraftKind = "request" | "request-saq" | "request-other";
 
 export interface CertificateMemberPosition {
   id: string;
@@ -479,6 +479,7 @@ export type Action =
   | "screen"
   | "assign-work-executor"
   | "request"
+  | "request-saq"
   | "request-other"
   | "send-request-approval"
   | "approve-request"
