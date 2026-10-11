@@ -464,12 +464,6 @@ export default function ConsiderationProcess({
                 Направить на согласование
               </Button>
             </div>
-            {!requestFormingAvailable && (
-              <small>
-                Формирование новых запросов завершено: ниже доступна информация
-                по ранее направленным запросам.
-              </small>
-            )}
           </div>
         </div>
       )}
@@ -528,7 +522,7 @@ export default function ConsiderationProcess({
             <strong>{workRequestStatusOwner}</strong>.
           </p>
         </Notice>
-      ) : next ? (
+      ) : next && !requestActionsVisible ? (
         <div className="consideration-task">
           <div>
             <span className="consideration-eyebrow">Текущая задача</span>
@@ -702,7 +696,7 @@ export default function ConsiderationProcess({
             подтвердили присутствие на заседании.
           </p>
         </Notice>
-      ) : (
+      ) : !requestActionsVisible ? (
         <Notice tone={c.status === "completed" ? "green" : "amber"}>
           <strong>{STATUS[c.status]}</strong>
           <p>
@@ -711,7 +705,7 @@ export default function ConsiderationProcess({
               : "Рассмотрение по существу не продолжается. Основание сохранено в истории и документах дела."}
           </p>
         </Notice>
-      )}
+      ) : null}
       {lastEvent && (
         <div className="consideration-last-event">
           <span>
