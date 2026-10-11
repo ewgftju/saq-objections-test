@@ -372,6 +372,8 @@ test("направление запроса в другой орган фикс�
   assert.match(processHtml, /Экспертная организация/);
   assert.match(processHtml, /Ответ ожидается/);
   assert.match(processHtml, /Вложить ответ/);
+  assert.match(processHtml, /Действия по запросам/);
+  assert.doesNotMatch(processHtml, /Сначала сформируйте обязательный запрос/);
 });
 
 test("запрос в кабинет SAQ формируется отдельно от внешней фиксации", () => {
