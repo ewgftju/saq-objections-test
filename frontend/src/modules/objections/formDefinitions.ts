@@ -650,14 +650,21 @@ export function actionForm(
     case "send-recommendations":
       title = "Направить рекомендации";
       fields.push(
-        {
-          name: "recommendationRecipients",
-          label: "Кому направить рекомендацию",
-          type: "select",
-          options: RECOMMENDATION_RECIPIENT_OPTIONS,
-          multiple: true,
-          required: true,
-        },
+        select(
+          "recommendationChannel",
+          "Способ направления",
+          [
+            ["saq", "В кабинет SAQ"],
+            ["external", "Через другую систему"],
+          ],
+          "saq",
+        ),
+        input(
+          "recommendationDueDate",
+          "Срок исполнения рекомендации",
+          addWorkdays(date, 30),
+          "date",
+        ),
         area(
           "recommendationText",
           "Текст рекомендации",
@@ -665,7 +672,7 @@ export function actionForm(
         ),
       );
       note =
-        "Выберите один или несколько кабинетов SAQ. Текст перенесён из протокола и при необходимости может быть изменён.";
+        "Текст перенесён из протокола и при необходимости может быть изменён. Для каждого адресата создаётся отдельная рекомендация.";
       break;
     case "receipt":
       title = "Подтверждение вручения результата";
