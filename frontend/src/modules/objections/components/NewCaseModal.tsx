@@ -4,6 +4,7 @@ import { makeCase } from "../../../data/objections";
 import type { CaseType, DemoState } from "../../../types";
 import { dateObject } from "../services/deadlines";
 import { required } from "../services/workflow";
+import { nextCaseNumber } from "../services/caseNumbering";
 import { Field } from "./ActionModal";
 
 const AUDIT_ORGAN_OPTIONS = [
@@ -284,24 +285,11 @@ export default function NewCaseModal({
               throw new Error(
                 "БИН/ИИН объекта аудита должен содержать 12 цифр",
               );
-            const numberPrefix =
-              selectedAppealType.label === "Заявление"
-                ? "З"
-                : selectedAppealType.label.startsWith("Возражение")
-                  ? "В"
-                  : "Ж";
-            const year = filed.slice(0, 4);
-            const counter =
-              Math.max(
-                0,
-                ...state.cases.map((item) => {
-                  const match = item.id.match(
-                    new RegExp(`^${numberPrefix}-${year}-(\\d+)$`),
-                  );
-                  return match ? Number(match[1]) : 0;
-                }),
-              ) + 1;
-            const id = `${numberPrefix}-${year}-${String(counter).padStart(3, "0")}`;
+            const id = nextCaseNumber(
+              state.cases,
+              selectedAppealType.label,
+              filed,
+            );
             const c = makeCase({
               id,
               type,
