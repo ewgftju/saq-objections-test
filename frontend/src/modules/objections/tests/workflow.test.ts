@@ -1815,6 +1815,7 @@ test("дело открывает процесс, а одно действие �
   assert.match(requestFormationHtml, /Согласование запроса/);
   assert.match(requestFormationHtml, /Подписание запроса/);
   assert.match(requestFormationHtml, /Ожидание ответа/);
+  assert.doesNotMatch(requestFormationHtml, /Текущая задача/);
   primaryAction(process())!();
   assert.deepEqual(selected, { action: "request", role: "work" });
   assert.match(
