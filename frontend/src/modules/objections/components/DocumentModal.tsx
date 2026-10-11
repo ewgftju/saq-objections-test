@@ -714,7 +714,7 @@ export function DocumentContent({
     const protocolIntro =
       agendaOrProtocolIntro(snapshot) ||
       (snapshot.appealType === "Жалоба на уведомление"
-        ? `Жалоба от ${snapshot.org}, ИИН/БИН ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на уведомление об устранении нарушений от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityFullName(snapshot.issuer)}.`
+        ? `Жалоба от ${snapshot.org}, ИИН/БИН ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на уведомление об устранении нарушений от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityTemplateName(snapshot)}.`
         : snapshot.appealType === "Возражение на аудиторский отчет"
           ? `Возражение от ${snapshot.org}, БИН ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на аудиторский отчет от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityTemplateName(snapshot)}.`
           : `Возражение «${snapshot.org}», БИН ${snapshot.bin} от ${formatDate(snapshot.appealDate || snapshot.filed)} года №${snapshot.appealNumber || snapshot.document.number} к уведомлению ${auditAuthorityTemplateName(snapshot)} от ${formatDate(snapshot.document.date)} года №${snapshot.document.number}.`);
