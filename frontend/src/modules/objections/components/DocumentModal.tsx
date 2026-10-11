@@ -35,6 +35,7 @@ function hasSeparateAuditObject(c: ObjectionCase) {
     "Возражение на аудиторский отчет",
     "Жалоба на действие/бездействие",
     "Жалоба на решение КВГА/ДВГА",
+    "Заявление",
   ].includes(c.appealType || "");
 }
 
@@ -227,6 +228,10 @@ export function DocumentContent({
   const requirementFiles = c.documents.filter(
     (item) =>
       item.kind === "attachment" && item.text === "Требования заявителя",
+  );
+  const powerOfAttorney = c.documents.find(
+    (item) =>
+      item.kind === "attachment" && item.text === "Доверенность представителя",
   );
   if (kind === "request" && request && request.template === "other")
     return (
@@ -895,6 +900,19 @@ export function DocumentContent({
                 )}
               </>
             )}
+            {c.agendaDetails?.applicantIsAuditObjectRepresentative && (
+              <>
+                <br />
+                <b>Заявитель является представителем объекта аудита:</b> Да
+                {powerOfAttorney && (
+                  <>
+                    <br />
+                    <b>Доверенность:</b>{" "}
+                    {powerOfAttorney.filename || powerOfAttorney.name}
+                  </>
+                )}
+              </>
+            )}
             <br />
             <b>Номер возражения, жалобы, заявления:</b> {c.appealNumber || "—"}
             <br />
@@ -915,6 +933,23 @@ export function DocumentContent({
             </b>{" "}
             {c.channel}
           </p>
+          {agendaDetails?.actionAppealAuthorities?.length ? (
+            <p>
+              <b>Обжалуемые действия/бездействие:</b>
+              {agendaDetails.actionAppealAuthorities.map((item, index) => (
+                <span key={`${item.issuer}-${item.documentNumber}-${index}`}>
+                  <br />
+                  <b>Орган аудита (КВГА/ДВГА) {index + 1}:</b> {item.issuer}
+                  <br />
+                  <b>Номер первичного обращения в ДВГА/КВГА {index + 1}:</b>{" "}
+                  {item.documentNumber}
+                  <br />
+                  <b>Дата первичного обращения в ДВГА/КВГА {index + 1}:</b>{" "}
+                  {formatDate(item.documentDate)}
+                </span>
+              ))}
+            </p>
+          ) : null}
           {c.document.number && (
             <p>
               <b>Номер: {c.document.name}:</b> {c.document.number}
