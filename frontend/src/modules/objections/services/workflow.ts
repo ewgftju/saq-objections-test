@@ -456,6 +456,45 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       label: "Направить ответ",
       role: "subject",
     });
+  const requestStageStatuses: ObjectionCase["status"][] = [
+    "accepted",
+    "requested",
+    "request_approval",
+    "request_signed",
+    "request_approved",
+    "response_approval",
+    "response_signed",
+    "response_ready",
+  ];
+  const canAddRequest = requestStageStatuses.includes(c.status);
+  const hasDraftRequests = c.requests.some(
+    (request) => !request.sent && !request.approved,
+  );
+  if (canAddRequest) {
+    options.push(
+      {
+        action: "request",
+        label: "Сформировать запрос в ДВГА/КВГА",
+        role: "work",
+      },
+      {
+        action: "request-saq",
+        label: "Сформировать запрос в кабинет SAQ",
+        role: "work",
+      },
+      {
+        action: "request-other",
+        label: "Зафиксировать запрос через другую систему",
+        role: "work",
+      },
+    );
+    if (directedToDvgaOrKvga(c) && hasDraftRequests)
+      options.push({
+        action: "send-request-approval",
+        label: "Направить на согласование",
+        role: "work",
+      });
+  }
   const active =
     !CLOSED.includes(c.status) &&
     !["protocol", "decided", "delivered", "court"].includes(c.status);
@@ -464,30 +503,6 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       options.push({
         action: "record-external-response",
         label: "Вложить ответ другого органа",
-        role: "work",
-      });
-    if (c.status === "accepted") {
-      options.push({
-        action: "request-saq",
-        label: "Сформировать запрос в кабинет SAQ",
-        role: "work",
-      });
-      options.push({
-        action: "request-other",
-        label: "Зафиксировать запрос через другую систему",
-        role: "work",
-      });
-      if (directedToDvgaOrKvga(c))
-        options.push({
-          action: "send-request-approval",
-          label: "Направить на согласование",
-          role: "work",
-        });
-    }
-    if (c.status === "requested")
-      options.push({
-        action: "request",
-        label: "Сформировать ещё один запрос",
         role: "work",
       });
     options.push({
@@ -774,10 +789,16 @@ export function applyAction(
         throw new Error(
           "Сначала сформируйте обязательный запрос в ДВГА/КВГА и приложение к нему",
         );
+      if (!c.requests.some((request) => !request.sent && !request.approved))
+        throw new Error("Нет новых сформированных запросов для согласования");
+      const isAdditionalBatch = c.requests.some((request) => request.sent);
       c.status = "request_approval";
-      title = "Сформированные запросы направлены на согласование";
-      note =
-        "Все сформированные запросы и приложения направлены заместителю директора ДАВГА.";
+      title = isAdditionalBatch
+        ? "Новые запросы направлены на согласование"
+        : "Сформированные запросы направлены на согласование";
+      note = isAdditionalBatch
+        ? "Новые сформированные запросы и приложения направлены заместителю директора ДАВГА."
+        : "Сформированные запросы и приложения направлены заместителю директора ДАВГА.";
       next.notifications.push({
         id: `notification-${c.id}-${next.notifications.length + 1}`,
         caseId: c.id,
