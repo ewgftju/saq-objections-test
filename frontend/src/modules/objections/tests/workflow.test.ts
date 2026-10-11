@@ -120,7 +120,6 @@ function prepare(h: Harness, partial = false) {
   );
   h.run("approve-response", "dvga");
   h.run("sign-response", "dvga");
-  h.run("position", "work");
   analysis(h, partial);
   h.run("members", "work", {
     shared: "on",
@@ -333,6 +332,7 @@ test("направление запроса в другой орган фикс�
     text: "Направление запроса в Экспертная организация зафиксировано: №ИСХ-45 от 08.09.2026, СЭД. Ответ ожидается.",
     deadline: "",
     template: "other",
+    lifecycleStatus: "waiting_response",
     author: DEMO_USER.fullName,
     registrationNumber: "ИСХ-45",
     deliveryPath: "СЭД",
@@ -370,7 +370,8 @@ test("направление запроса в другой орган фикс�
     }),
   );
   assert.match(processHtml, /Экспертная организация/);
-  assert.match(processHtml, /Ответ ожидается/);
+  assert.match(processHtml, /Ожидается ответ/);
+  assert.match(processHtml, /Запросы и ответы/);
   assert.match(processHtml, /Вложить ответ/);
   assert.match(processHtml, /Действия по запросам/);
   assert.doesNotMatch(processHtml, /Сначала сформируйте обязательный запрос/);
@@ -398,6 +399,7 @@ test("запрос в кабинет SAQ формируется отдельно
     deadline: "2026-09-10T18:00",
     template: "other",
     saqRecipient: "subject",
+    lifecycleStatus: "draft",
     author: DEMO_USER.fullName,
     customText: "Представьте пояснения и подтверждающие документы.",
   });
@@ -652,11 +654,6 @@ test("ответ ДВГА доступен после согласования, 
       (notification) => notification.recipient === "ДВГА",
     ),
   );
-  assert.ok(
-    h.state.notifications.some(
-      (notification) => notification.recipient === h.c.org,
-    ),
-  );
   const notificationsHtml = renderToStaticMarkup(
     createElement(NotificationsPage, {
       notifications: h.state.notifications,
@@ -667,7 +664,7 @@ test("ответ ДВГА доступен после согласования, 
   assert.match(notificationsHtml, /ВОЗ-77 от 08\.09\.2026/);
 });
 
-test("ответ КВГА сначала фиксируется инициатором", () => {
+test("каждый запрос ожидает собственный ответ, после последнего ответа начинается анализ", () => {
   const h = harness();
   screen(h);
   h.run("request", "work", { recipient: "КВГА" });
@@ -696,14 +693,21 @@ test("ответ КВГА сначала фиксируется инициато
   assert.equal(h.c.status, "response_signed");
   assert.equal(nextAction(h.c)?.action, "sign-response");
   h.run("sign-response", "kvga");
-  assert.equal(h.c.status, "response_ready");
-  assert.equal(nextAction(h.c)?.action, "position");
-  h.run("position", "work");
   assert.equal(h.c.status, "request_approved");
-  assert.equal(h.c.requests[0].confirmed, "2026-09-08");
-  assert.equal(nextAction(h.c)?.action, "position");
-  h.run("position", "work");
+  assert.equal(h.c.requests[0].lifecycleStatus, "response_received");
+  const external = h.c.requests.find(
+    (request) => request.recipient === "Экспертная организация",
+  )!;
+  h.run("record-external-response", "work", {
+    externalRequestId: external.id,
+    date: "2026-09-11",
+    responseRegistrationNumber: "ВХ-101",
+  });
   assert.equal(h.c.status, "materials");
+  assert.equal(
+    h.c.requests.find((request) => request.id === external.id)?.lifecycleStatus,
+    "response_received",
+  );
 });
 
 test("ответ КВГА без внешних запросов автоматически переводит обращение на материалы", () => {
@@ -779,8 +783,7 @@ test("фиксация ответа продлевает срок на пери�
     ),
   );
   h.run("approve-response", "kvga");
-  h.run("sign-response", "kvga");
-  h.run("position", "work", { date: "2026-09-11" });
+  h.run("sign-response", "kvga", { date: "2026-09-11" });
   assert.equal(h.c.pauseDays, 3);
   assert.equal(reviewDeadline(h.c), "2026-09-29");
   assert.notEqual(reviewDeadline(h.c), deadlineBeforePause);
@@ -829,8 +832,13 @@ test("запросы в ДВГА и КВГА формируются, напра�
   );
 
   h.run("send-request-approval", "work");
-  h.run("approve-request", "deputy", { approved: "on" });
-  h.run("sign-request", "director");
+  const requestIds = h.c.requests.map((request) => request.id);
+  requestIds.forEach((requestId) =>
+    h.run("approve-request", "deputy", { requestId, approved: "on" }),
+  );
+  requestIds.forEach((requestId) =>
+    h.run("sign-request", "director", { requestId }),
+  );
   assert.ok(h.c.requests.every((request) => request.sent === h.state.date));
   assert.ok(
     h.state.notifications.some(
@@ -999,7 +1007,6 @@ test("запросы в ДВГА и КВГА формируются, напра�
   });
   h.run("approve-response", "dvga");
   h.run("sign-response", "dvga");
-  h.run("position", "work");
   assert.deepEqual(nextAction(h.c), {
     action: "fill-request-response",
     label: "Заполнить ответ ДВГА/КВГА",
@@ -1008,7 +1015,6 @@ test("запросы в ДВГА и КВГА формируются, напра�
   h.run("fill-request-response", "kvga", response);
   h.run("approve-response", "kvga");
   h.run("sign-response", "kvga");
-  h.run("position", "work");
   assert.equal(h.c.status, "materials");
 });
 
@@ -1256,14 +1262,20 @@ test("дополнение и внешний запрос меняют срок�
   });
   assert.notEqual(reviewDeadline(h.c), base);
   assert.equal(h.c.extensionDays, 15);
-  h.run("pause", "work", {
+  h.run("request-other", "work", {
     recipient: "Другой орган",
-    text: "Сведения",
-    notified: "on",
+    date: "2026-09-08",
+    registrationNumber: "ИСХ-11",
+    deliveryPath: "СЭД",
   });
-  h.run("resume", "work", { date: "2026-09-11", text: "Ответ" });
+  const externalRequest = h.c.requests.at(-1)!;
+  h.run("record-external-response", "work", {
+    externalRequestId: externalRequest.id,
+    date: "2026-09-11",
+    responseRegistrationNumber: "ВХ-11",
+  });
   assert.equal(h.c.pauseDays, 3);
-  assert.equal(h.c.status, "accepted");
+  assert.equal(h.c.status, "materials");
   const control = harness(2);
   screen(control);
   control.run("supplement", "work", {
@@ -1550,9 +1562,9 @@ test("рабочий орган видит статусы ответов по н
       onHistory() {},
     }),
   );
-  assert.match(html, /Ожидание ответов/);
+  assert.match(html, /Запросы и ответы/);
   assert.match(html, /ДВГА по Атырауской области/);
-  assert.match(html, /Ответ ожидается/);
+  assert.match(html, /Ожидается ответ/);
   assert.match(html, /Кабинет Объекта/);
   assert.match(html, /Ответ получен/);
 });
@@ -1564,7 +1576,7 @@ test("кабинет объекта получает возможность на
     recipient: "КВГА",
     deadline: "2026-09-10T18:00",
   });
-  h.run("request-other", "work", {
+  h.run("request-saq", "work", {
     saqRecipient: "subject",
     customRequestText: "Предоставить пояснения и документы.",
   });
@@ -1576,7 +1588,7 @@ test("кабинет объекта получает возможность на
   );
 
   h.run("send-request-approval", "work");
-  h.c.requests.forEach((request) =>
+  h.c.requests.filter((request) => !request.sent).forEach((request) =>
     h.run("approve-request", "deputy", {
       requestId: request.id,
       approved: "on",
@@ -1645,13 +1657,13 @@ test("внешний ответ можно зафиксировать до по�
     customRequestText: "Просим предоставить заключение.",
   });
   h.run("send-request-approval", "work");
-  h.c.requests.forEach((request) =>
+  h.c.requests.filter((request) => !request.sent).forEach((request) =>
     h.run("approve-request", "deputy", {
       requestId: request.id,
       approved: "on",
     }),
   );
-  h.c.requests.forEach((request) =>
+  h.c.requests.filter((request) => !request.sent).forEach((request) =>
     h.run("sign-request", "director", { requestId: request.id }),
   );
   const external = h.c.requests.find(
@@ -1661,6 +1673,7 @@ test("внешний ответ можно зафиксировать до по�
   h.run("record-external-response", "work", {
     externalRequestId: external.id,
     date: "2026-09-09",
+    responseRegistrationNumber: "ВХ-21",
   });
   assert.equal(
     h.c.requests.find((request) => request.id === external.id)?.responded,
@@ -1974,7 +1987,6 @@ test("справка формируется с отдельными довода
   );
   h.run("approve-response", "dvga");
   h.run("sign-response", "dvga");
-  h.run("position", "work");
   h.run(
     "analysis",
     "work",
