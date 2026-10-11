@@ -4,9 +4,11 @@ import { formatDate } from "../../../utils/dateFormat";
 import type {
   Action,
   ActionOption,
+  CaseRequest,
   DemoState,
   ObjectionCase,
   Outcome,
+  RequestLifecycleStatus,
   Role,
 } from "../../../types";
 import {
@@ -50,9 +52,36 @@ function authorityRole(recipient: string): Role {
   return isKvgaRequest(recipient) ? "kvga" : "dvga";
 }
 
+function isActiveRequest(request: CaseRequest) {
+  return !request.cancelled;
+}
+
+export const REQUEST_LIFECYCLE_LABELS: Record<RequestLifecycleStatus, string> = {
+  draft: "Черновик",
+  approval: "На согласовании",
+  signature: "На подписании",
+  waiting_response: "Ожидается ответ",
+  response_received: "Ответ получен",
+};
+
+/**
+ * Запросы хранят собственный статус, а для сохранённых ранее карточек
+ * рассчитываем его по уже имеющимся датам и реквизитам.
+ */
+export function requestLifecycleStatus(
+  request: CaseRequest,
+): RequestLifecycleStatus {
+  if (request.lifecycleStatus) return request.lifecycleStatus;
+  if (request.responseSigned || request.responded) return "response_received";
+  if (request.sent) return "waiting_response";
+  if (request.approved) return "signature";
+  return "draft";
+}
+
 function authorityRequestsForRole(c: ObjectionCase, role?: Role) {
   return c.requests.filter(
     (request) =>
+      isActiveRequest(request) &&
       isDvgaOrKvgaRequest(request.recipient) &&
       Boolean(request.sent) &&
       ((role !== "dvga" && role !== "kvga") ||
@@ -69,32 +98,29 @@ function pendingDvgaOrKvgaRequest(c: ObjectionCase, role?: Role) {
 function pendingOtherRequest(c: ObjectionCase) {
   return c.requests.find(
     (request) =>
+      isActiveRequest(request) &&
       request.template === "other" &&
       !request.saqRecipient &&
-      Boolean(request.sent) &&
-      !request.responded,
+      requestLifecycleStatus(request) === "waiting_response",
   );
 }
 
 function canSuspendReview(c: ObjectionCase) {
-  return !c.appealType?.trim().startsWith("Жалоба");
+  return (c.appealType || "").trim().startsWith("Возражение");
 }
 
-/**
- * Рабочий орган фиксирует поступление один раз, только когда готовы ответы
- * на все направленные запросы. Для внешнего органа без кабинета SAQ
- * поступление подтверждается этим единым действием вручную.
- */
+/** Все направленные и не отменённые запросы должны получить ответ.
+ * Для органа без кабинета SAQ ответ переводится в этот статус действием
+ * «Вложить ответ»; ответы из кабинетов SAQ фиксируются системой. */
 function allResponsesReadyForConfirmation(c: ObjectionCase) {
+  const requests = c.requests.filter(
+    (request) => isActiveRequest(request) && Boolean(request.sent),
+  );
   return (
-    c.requests.length > 0 &&
-    c.requests.every((request) => {
-      if (isDvgaOrKvgaRequest(request.recipient))
-        return Boolean(request.responseSigned);
-      if (request.template === "other" && request.saqRecipient === "subject")
-        return Boolean(request.responded);
-      return true;
-    })
+    requests.length > 0 &&
+    requests.every(
+      (request) => requestLifecycleStatus(request) === "response_received",
+    )
   );
 }
 
@@ -104,32 +130,27 @@ function allResponsesReadyForConfirmation(c: ObjectionCase) {
 function requestRoutingStatus(
   c: ObjectionCase,
 ): ObjectionCase["status"] | null {
-  if (!c.requests.some((request) => !request.sent)) return null;
-  return c.requests.some((request) => !request.sent && !request.approved)
+  const requests = c.requests.filter(isActiveRequest);
+  if (!requests.some((request) => !request.sent)) return null;
+  return requests.some((request) => !request.sent && !request.approved)
     ? "request_approval"
     : "request_signed";
 }
 
-/** Когда все ответы пришли в кабинеты SAQ, фиксировать их вручную не нужно:
- * система сразу переводит обращение на следующий этап. */
+/** Когда получен последний требуемый ответ, система сразу переводит
+ * обращение к анализу и завершает приостановление срока, если оно применимо. */
 function allResponsesReceived(c: ObjectionCase) {
-  return (
-    allResponsesReadyForConfirmation(c) &&
-    c.requests.every(
-      (request) =>
-        request.template !== "other" ||
-        Boolean(request.saqRecipient) ||
-        Boolean(request.responded),
-    )
-  );
+  return allResponsesReadyForConfirmation(c);
 }
 
 function advanceAfterResponses(c: ObjectionCase, date: string) {
   if (!allResponsesReceived(c)) return null;
 
-  c.requests.forEach((request) => {
-    request.confirmed ||= date;
-  });
+  c.requests
+    .filter((request) => isActiveRequest(request) && request.sent)
+    .forEach((request) => {
+      request.confirmed ||= date;
+    });
 
   let pausedDays = 0;
   if (c.requestPauseStartedAt && canSuspendReview(c)) {
@@ -142,7 +163,9 @@ function advanceAfterResponses(c: ObjectionCase, date: string) {
 }
 
 function directedToDvgaOrKvga(c: ObjectionCase) {
-  return c.requests.some((request) => isDvgaOrKvgaRequest(request.recipient));
+  return c.requests.some(
+    (request) => isActiveRequest(request) && isDvgaOrKvgaRequest(request.recipient),
+  );
 }
 
 function requiresEotinishDecisionProject(c: ObjectionCase) {
@@ -216,10 +239,7 @@ function authorityStatus(c: ObjectionCase): ObjectionCase["status"] | null {
     return "response_approval";
   if (requests.some((request) => !request.responseSigned))
     return "response_signed";
-  if (requests.some((request) => !request.confirmed))
-    return allResponsesReadyForConfirmation(c)
-      ? "response_ready"
-      : "request_approved";
+  if (requests.length && !allResponsesReceived(c)) return "request_approved";
   return null;
 }
 
@@ -238,16 +258,9 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     "response_ready",
   ].includes(c.status);
   if (authorityInProgress) {
-    if (pendingOtherRequest(c)) return null;
-    if (role === "work") {
-      if (allResponsesReadyForConfirmation(c))
-        return { action: "position", label: "Ответ получен", role: "work" };
-      return null;
-    }
+    if (role === "work") return null;
     const authorityAction = role ? null : authorityResponseAction(c);
     if (authorityAction) return authorityAction;
-    if (allResponsesReadyForConfirmation(c))
-      return { action: "position", label: "Ответ получен", role: "work" };
   }
   if (c.status === "request_approval") {
     const hasUnapprovedRequests = c.requests.some(
@@ -307,9 +320,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       label: "Подписать запрос",
       role: "director",
     },
-    request_approved: allResponsesReadyForConfirmation(c)
-      ? { action: "position", label: "Ответ получен", role: "work" }
-      : undefined,
+    request_approved: undefined,
     certificate_approval: {
       action: "approve-certificate",
       label: "Согласовать справку",
@@ -448,7 +459,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
         request.template === "other" &&
         request.saqRecipient === "subject" &&
         Boolean(request.sent) &&
-        !request.responded,
+        requestLifecycleStatus(request) === "waiting_response",
     )
   )
     options.push({
@@ -468,7 +479,9 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   ];
   const canAddRequest = requestStageStatuses.includes(c.status);
   const hasDraftRequests = c.requests.some(
-    (request) => !request.sent && !request.approved,
+    (request) =>
+      isActiveRequest(request) &&
+      requestLifecycleStatus(request) === "draft",
   );
   if (canAddRequest) {
     options.push(
@@ -510,15 +523,6 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       label: "Дополнение к возражению",
       role: "work",
     });
-    if (
-      canSuspendReview(c) &&
-      !["paused", "materials", "meeting"].includes(c.status)
-    )
-      options.push({
-        action: "pause",
-        label: "Внешний запрос / приостановление",
-        role: "work",
-      });
     if (["commission_voting", "meeting"].includes(c.status)) {
       options.push({
         action: "vote",
@@ -722,6 +726,7 @@ export function applyAction(
         text: note,
         deadline,
         template: "dvga",
+        lifecycleStatus: "draft",
         author: String(form.get("executor") || DEMO_USER.fullName),
       });
       doc(`Запрос в ${recipient}`, "request", note, requestId);
@@ -750,6 +755,7 @@ export function applyAction(
         deadline,
         template: "other",
         saqRecipient,
+        lifecycleStatus: "draft",
         author: DEMO_USER.fullName,
         customText,
       });
@@ -758,14 +764,14 @@ export function applyAction(
     }
     case "request-other": {
       const recipient = text("recipient", "Кому направлен запрос");
-      const sent = text("date", "Дата направления запроса");
+      const sent = String(form.get("date") || date);
       dateObject(sent);
-      const registrationNumber = text(
-        "registrationNumber",
-        "Номер регистрации запроса",
-      );
-      const deliveryPath = text("deliveryPath", "Путь направления запроса");
+      const registrationNumber = String(form.get("registrationNumber") || "").trim();
+      const deliveryPath = String(form.get("deliveryPath") || "").trim();
       const requestId = `request-${c.requests.length + 1}`;
+      const firstSentRequest = !c.requests.some(
+        (request) => isActiveRequest(request) && Boolean(request.sent),
+      );
       note = `Направление запроса в ${recipient} зафиксировано: №${registrationNumber} от ${formatDate(sent)}, ${deliveryPath}. Ответ ожидается.`;
       c.requests.push({
         id: requestId,
@@ -774,6 +780,7 @@ export function applyAction(
         text: note,
         deadline: "",
         template: "other",
+        lifecycleStatus: "waiting_response",
         author: DEMO_USER.fullName,
         registrationNumber,
         deliveryPath,
@@ -782,6 +789,17 @@ export function applyAction(
       doc(`Запрос в ${recipient}`, "request", note, requestId);
       if (canSuspendReview(c) && !c.requestPauseStartedAt)
         c.requestPauseStartedAt = sent;
+      if (firstSentRequest)
+        next.notifications.push({
+          id: `notification-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient: c.org,
+          date: sent,
+          read: false,
+          text: canSuspendReview(c)
+            ? `По Вашему обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующий орган. Срок рассмотрения обращения приостанавливается до поступления последнего требуемого ответа.`
+            : `По Вашему обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующий орган. Срок рассмотрения обращения не приостанавливается.`,
+        });
       break;
     }
     case "send-request-approval": {
@@ -791,6 +809,13 @@ export function applyAction(
         );
       if (!c.requests.some((request) => !request.sent && !request.approved))
         throw new Error("Нет новых сформированных запросов для согласования");
+      c.requests.forEach((request) => {
+        if (
+          isActiveRequest(request) &&
+          requestLifecycleStatus(request) === "draft"
+        )
+          request.lifecycleStatus = "approval";
+      });
       const isAdditionalBatch = c.requests.some((request) => request.sent);
       c.status = "request_approval";
       title = isAdditionalBatch
@@ -825,6 +850,7 @@ export function applyAction(
       if (!request) throw new Error("Выберите запрос для согласования");
       if (request.approved) throw new Error("Этот запрос уже согласован");
       request.approved = date;
+      request.lifecycleStatus = "signature";
       const remainingRequests = c.requests.filter(
         (item) => !item.sent && !item.approved,
       );
@@ -862,6 +888,7 @@ export function applyAction(
       if (!request.approved) throw new Error("Сначала согласуйте этот запрос");
       const firstSignedRequest = c.requests.every((item) => !item.sent);
       request.sent = date;
+      request.lifecycleStatus = "waiting_response";
       if (isDvgaOrKvgaRequest(request.recipient))
         next.notifications.push({
           id: `notification-${c.id}-${next.notifications.length + 1}`,
@@ -892,7 +919,7 @@ export function applyAction(
           read: false,
           text: canSuspendReview(c)
             ? `По Вашему обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения обращения приостанавливается на период до поступления ответа на указанный запрос.`
-            : `По Вашей жалобе №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения жалобы не приостанавливается.`,
+            : `По Вашему обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения обращения не приостанавливается.`,
         });
       }
       const unapprovedRequests = c.requests.filter(
@@ -903,8 +930,8 @@ export function applyAction(
         ? unapprovedRequests.length
           ? "request_approval"
           : "request_signed"
-        : allResponsesReadyForConfirmation(c)
-          ? "response_ready"
+        : allResponsesReceived(c)
+          ? "materials"
           : "request_approved";
       title = `Запрос в ${request.recipient} подписан`;
       note = remainingSignedRequests.length
@@ -1183,14 +1210,15 @@ export function applyAction(
       );
       if (!request) throw new Error("Нет согласованного ответа для подписания");
       request.responseSigned = date;
+      request.lifecycleStatus = "response_received";
       const pausedDays = advanceAfterResponses(c, date);
       if (pausedDays === null)
         c.status =
-          requestRoutingStatus(c) || authorityStatus(c) || "response_ready";
+          requestRoutingStatus(c) || authorityStatus(c) || "request_approved";
       title = "Ответ ДВГА/КВГА подписан";
       note =
         pausedDays === null
-          ? "Подписанный ответ готов к фиксации рабочим органом."
+          ? "Ответ получен в кабинете SAQ. Обращение ожидает ответы по остальным направленным запросам."
           : "Все ответы поступили в SAQ. Обращение автоматически переведено на этап «Материалы».";
       if (pausedDays && pausedDays > 0)
         note += ` Срок рассмотрения продлён на ${pausedDays} раб. дн.`;
@@ -1251,6 +1279,10 @@ export function applyAction(
           "Выберите подписанный запрос другого органа, ожидающий ответа",
         );
       request.responded = date;
+      request.responseRegistrationNumber = String(
+        form.get("responseRegistrationNumber") || "",
+      ).trim();
+      request.lifecycleStatus = "response_received";
       const pausedDays = advanceAfterResponses(c, date);
       title = `Ответ ${request.recipient} зафиксирован`;
       note =
@@ -1274,9 +1306,8 @@ export function applyAction(
       );
       if (!request) throw new Error("Нет запроса, ожидающего ответа Объекта");
       request.responded = date;
+      request.lifecycleStatus = "response_received";
       const pausedDays = advanceAfterResponses(c, date);
-      if (pausedDays === null && allResponsesReadyForConfirmation(c))
-        c.status = "response_ready";
       title = "Ответ направлен рабочему органу";
       note =
         pausedDays === null
