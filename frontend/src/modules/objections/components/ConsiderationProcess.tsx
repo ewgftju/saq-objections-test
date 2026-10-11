@@ -83,7 +83,6 @@ const REQUEST_SUBSTEPS = [
   "Согласование запроса",
   "Подписание запроса",
   "Ожидание ответа",
-  "Фиксация получения ответа",
 ] as const;
 
 const ANALYSIS_SUBSTEPS = [
@@ -109,12 +108,16 @@ function requestSubstep(status: CaseStatus) {
   if (status === "request_approval") return 1;
   if (status === "request_signed") return 2;
   if (
-    ["request_approved", "response_approval", "response_signed"].includes(
+    [
+      "request_approved",
+      "response_approval",
+      "response_signed",
+      "response_ready",
+    ].includes(
       status,
     )
   )
     return 3;
-  if (status === "response_ready") return 4;
   return null;
 }
 
@@ -492,7 +495,7 @@ export default function ConsiderationProcess({
       {requestActionsVisible && (
         <div className="consideration-task">
           <div>
-            <span className="consideration-eyebrow">Действия по запросам</span>
+            <span className="consideration-eyebrow">Текущая задача</span>
             <h4>Формирование и направление запросов</h4>
             <p className="consideration-owner">
               Исполнитель: <strong>{ROLES.work}</strong>
@@ -536,7 +539,6 @@ export default function ConsiderationProcess({
           </div>
         </div>
       )}
-      <RequestResponsesPanel c={c} role={role} onAction={onAction} />
       {next && !requestActionsVisible ? (
         <div className="consideration-task">
           <div>
@@ -644,6 +646,11 @@ export default function ConsiderationProcess({
           </p>
         </Notice>
       ) : null}
+      {inRequestFormationStage && (
+        <div className="request-responses-panel">
+          <RequestResponsesPanel c={c} role={role} onAction={onAction} />
+        </div>
+      )}
       {lastEvent && (
         <div className="consideration-last-event">
           <span>
