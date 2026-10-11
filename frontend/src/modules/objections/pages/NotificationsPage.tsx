@@ -93,9 +93,12 @@ export default function NotificationsPage({
                         >
                           {notification.read ? "Ответ направлен" : "Ответить"}
                         </Button>
-                      ) : notification.kind === "recommendation" ? (
+                      ) : notification.kind === "recommendation" ||
+                        notification.kind === "recommendation-response" ? (
                         <Button primary onClick={onOpenRecommendations}>
-                          Открыть рекомендации
+                          {notification.kind === "recommendation-response"
+                            ? "Проверить ответ"
+                            : "Открыть рекомендации"}
                         </Button>
                       ) : notification.kind === "agenda-sign" ? (
                         <Button

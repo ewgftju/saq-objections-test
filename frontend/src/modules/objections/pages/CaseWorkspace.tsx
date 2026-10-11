@@ -4,6 +4,7 @@ import { CLOSED, OUTCOMES, STATUS, TYPES } from "../../../data/constants";
 import type {
   Action,
   CaseDocument,
+  CaseRecommendation,
   CaseTab,
   ObjectionCase,
   Role,
@@ -274,6 +275,7 @@ export default function CaseWorkspace({
   c,
   tab,
   role,
+  recommendations = [],
   onBack,
   onTab,
   onAction,
@@ -283,6 +285,7 @@ export default function CaseWorkspace({
   c: ObjectionCase;
   tab: CaseTab;
   role: Role;
+  recommendations?: CaseRecommendation[];
   onBack: () => void;
   onTab: (tab: CaseTab) => void;
   onAction: (action: Action, role: Role, requestId?: string) => void;
@@ -634,6 +637,7 @@ export default function CaseWorkspace({
                   <ConsiderationProcess
                     c={c}
                     role={role}
+                    recommendations={recommendations}
                     onAction={onAction}
                     onHistory={() => onTab("history")}
                     hideStages
@@ -669,6 +673,7 @@ export default function CaseWorkspace({
                   <ConsiderationProcess
                     c={c}
                     role={role}
+                    recommendations={recommendations}
                     onAction={onAction}
                     onHistory={() => onTab("history")}
                     hideStages={["commission", "dvga", "kvga"].includes(role)}
@@ -739,7 +744,8 @@ export default function CaseWorkspace({
                             >
                               Скачать Word
                             </Button>
-                            {(role === "demo-superuser" || role === "work") && c.type !== "notice" && (
+                            {(role === "demo-superuser" || role === "work") &&
+                              (Boolean(c.meeting?.signed) || c.status === "completed") && (
                               <Button
                                 primary
                                 onClick={() => onAction("send-recommendations", "work")}
@@ -755,7 +761,12 @@ export default function CaseWorkspace({
                 })()}
                 {(() => {
                   const recommendations = c.documents.filter(
-                    (document) => document.kind === "recommendation",
+                    (document) =>
+                      [
+                        "recommendation",
+                        "recommendation-attachment",
+                        "recommendation-response-attachment",
+                      ].includes(document.kind),
                   );
                   return recommendations.length ? (
                     <section className="request-documents-section">
@@ -763,10 +774,28 @@ export default function CaseWorkspace({
                       <div className="request-documents-list">
                         {recommendations.map((document) => (
                           <div className="request-document-row" key={`${document.name}-${document.date}`}>
-                            <span>{document.name}</span>
-                            <Button onClick={() => onDocument(document.kind, document)}>
-                              Просмотр
-                            </Button>
+                            <span>
+                              {document.name}
+                              {document.kind === "recommendation-attachment" && (
+                                <small>Вложение к рекомендации</small>
+                              )}
+                              {document.kind === "recommendation-response-attachment" && (
+                                <small>Вложение к ответу на рекомендацию</small>
+                              )}
+                            </span>
+                            {document.dataUrl ? (
+                              <a
+                                className="button"
+                                href={document.dataUrl}
+                                download={document.filename || document.name}
+                              >
+                                Скачать
+                              </a>
+                            ) : (
+                              <Button onClick={() => onDocument(document.kind, document)}>
+                                Просмотр
+                              </Button>
+                            )}
                           </div>
                         ))}
                       </div>
