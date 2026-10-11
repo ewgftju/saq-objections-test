@@ -468,6 +468,11 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       });
     if (c.status === "accepted") {
       options.push({
+        action: "request-saq",
+        label: "Сформировать запрос в кабинет SAQ",
+        role: "work",
+      });
+      options.push({
         action: "request-other",
         label: "Зафиксировать запрос через другую систему",
         role: "work",
@@ -711,6 +716,29 @@ export function applyAction(
         `Приложение к запросу в ${recipient}.`,
         requestId,
       );
+      break;
+    }
+    case "request-saq": {
+      const saqRecipient = text("saqRecipient", "Получатель SAQ") as Role;
+      if (saqRecipient !== "subject")
+        throw new Error("Выберите получателя с кабинетом SAQ");
+      const recipient = "Кабинет Объекта SAQ";
+      const customText = text("customRequestText", "Текст запроса");
+      const deadline = `${addWorkdays(date, 2)}T18:00`;
+      const requestId = `request-${c.requests.length + 1}`;
+      note = `Запрос сформирован для ${recipient}. Срок рассмотрения: ${deadline}.`;
+      c.requests.push({
+        id: requestId,
+        recipient,
+        date,
+        text: note,
+        deadline,
+        template: "other",
+        saqRecipient,
+        author: DEMO_USER.fullName,
+        customText,
+      });
+      doc(`Запрос в ${recipient}`, "request", note, requestId);
       break;
     }
     case "request-other": {
