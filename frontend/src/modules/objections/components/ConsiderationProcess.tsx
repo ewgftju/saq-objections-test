@@ -521,6 +521,11 @@ export default function ConsiderationProcess({
               </Button>
             )}
             {c.status === "accepted" && (
+              <Button primary onClick={() => onAction("request-saq", "work")}>
+                Сформировать запрос в кабинет SAQ
+              </Button>
+            )}
+            {c.status === "accepted" && (
               <Button primary onClick={() => onAction("request-other", "work")}>
                 Зафиксировать запрос через другую систему
               </Button>
@@ -555,7 +560,8 @@ export default function ConsiderationProcess({
             {c.status === "accepted" && (
               <small>
                 Сначала сформируйте обязательный запрос в ДВГА/КВГА, затем при
-                необходимости зафиксируйте запрос во внешний орган и направьте
+                необходимости сформируйте запрос в кабинет SAQ или
+                зафиксируйте направление через другую систему, затем направьте
                 запрос в ДВГА/КВГА на согласование.
               </small>
             )}
