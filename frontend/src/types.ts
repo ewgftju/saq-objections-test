@@ -206,6 +206,12 @@ export interface CaseRequest {
   /** Реквизиты направления запроса во внешней системе. */
   registrationNumber?: string;
   deliveryPath?: string;
+  /** Независимый жизненный цикл каждого направленного запроса. */
+  lifecycleStatus?: RequestLifecycleStatus;
+  /** Реквизиты полученного ответа, если он зафиксирован рабочим органом. */
+  responseRegistrationNumber?: string;
+  /** Отменённые запросы не учитываются при переходе к анализу. */
+  cancelled?: string;
   /** Дата согласования отдельного запроса директором ДАВГА. */
   approved?: string;
   sent?: string;
@@ -216,6 +222,13 @@ export interface CaseRequest {
   responseSigned?: string;
   confirmed?: string;
 }
+
+export type RequestLifecycleStatus =
+  | "draft"
+  | "approval"
+  | "signature"
+  | "waiting_response"
+  | "response_received";
 
 /** Черновик электронной формы запроса до фиксации действия. */
 export interface RequestDraft {
