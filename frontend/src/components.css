@@ -1496,6 +1496,14 @@
   color: var(--muted);
   font-size: 12px;
 }
+.request-response-dates {
+  display: grid;
+  flex: 1 1 185px;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
 .request-status-owner {
   margin: 14px 0 0;
   color: var(--muted);
@@ -1594,6 +1602,7 @@
   .request-response-heading { flex-direction: column; gap: 8px; }
   .request-response-status-list li { align-items: flex-start; flex-wrap: wrap; }
   .request-response-recipient { flex: 1 1 calc(100% - 36px); }
+  .request-response-dates { margin-left: 36px; }
   .response-received,
   .response-pending { margin-left: 36px; }
   .request-response-action { margin-left: 36px; }
