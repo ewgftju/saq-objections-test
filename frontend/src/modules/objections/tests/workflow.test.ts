@@ -1823,7 +1823,7 @@ test("дело открывает процесс, а одно действие �
   );
   assert.match(
     renderToStaticMarkup(process()),
-    /Сформировать запрос в другой орган/,
+    /Зафиксировать запрос через другую систему/,
   );
   h.run("request", "work", {
     recipient: "ДВГА по Атырауской области",
@@ -1915,6 +1915,24 @@ test("дело открывает процесс, а одно действие �
   const workProcessHtml = renderToStaticMarkup(process());
   assert.match(workProcessHtml, /Ожидание ответа на запрос/);
   assert.doesNotMatch(workProcessHtml, /Заполнить ответ ДВГА\/КВГА/);
+  assert.match(workProcessHtml, /Сформировать запрос в кабинет SAQ/);
+  assert.doesNotMatch(
+    workProcessHtml,
+    /Формирование новых запросов завершено/,
+  );
+
+  h.run("request-saq", "work", {
+    saqRecipient: "subject",
+    customRequestText: "Просим представить дополнительные документы.",
+  });
+  assert.equal(h.c.status, "request_approved");
+  h.run("send-request-approval", "work");
+  assert.equal(h.c.status, "request_approval");
+  assert.equal(
+    h.c.requests.at(-1)?.recipient,
+    "Кабинет Объекта SAQ",
+  );
+  assert.equal(h.c.requests.at(-1)?.approved, undefined);
 
   const control = harness(2);
   screen(control);
