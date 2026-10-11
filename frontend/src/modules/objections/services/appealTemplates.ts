@@ -78,8 +78,28 @@ function statementReference(c: ObjectionCase) {
   return `${applicantReference(c)} ${inlineValue(c.request)}`;
 }
 
+/**
+ * В ранних обращениях значение хранилось во множественном числе. Новая форма
+ * использует единственное число — оба значения должны получать один шаблон.
+ */
+function isNoticeObjection(c: ObjectionCase) {
+  return (
+    ["Возражение на уведомление", "Возражение на уведомления"].includes(
+      c.appealType || "",
+    ) ||
+    (!c.appealType && c.type === "notice")
+  );
+}
+
+function noticeObjectionReference(c: ObjectionCase) {
+  return `${applicantReference(c)}, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${value(c.document.number)}, направленного по результатам камерального контроля ${auditAuthorityFullName(c.issuer)}`;
+}
+
 /** Text shared by the agenda and protocol templates for the specified appeal kinds. */
 export function agendaOrProtocolIntro(c: ObjectionCase) {
+  if (isNoticeObjection(c))
+    return `Возражение от ${noticeObjectionReference(c)}.`;
+
   if (c.appealType === "Заявление")
     return withPeriod(`Заявление от ${statementReference(c)}`);
 
@@ -94,6 +114,9 @@ export function agendaOrProtocolIntro(c: ObjectionCase) {
 
 /** Standard body of the request to КВГА/ДВГА for the specified appeal kinds. */
 export function requestTemplateIntro(c: ObjectionCase) {
+  if (isNoticeObjection(c))
+    return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения от ${noticeObjectionReference(c)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
+
   if (c.appealType === "Заявление")
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан заявления от ${statementReference(c)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы.`;
 
@@ -110,6 +133,9 @@ export function requestTemplateIntro(c: ObjectionCase) {
 
 /** First paragraph of the certificate for the specified appeal kinds. */
 export function certificateTemplateIntro(c: ObjectionCase) {
+  if (isNoticeObjection(c))
+    return `В Министерства финансов Республики Казахстан поступило возражение от ${noticeObjectionReference(c)}.`;
+
   if (c.appealType === "Заявление")
     return withPeriod(
       `В Министерство финансов Республики Казахстан поступило заявление от ${statementReference(c)}`,
