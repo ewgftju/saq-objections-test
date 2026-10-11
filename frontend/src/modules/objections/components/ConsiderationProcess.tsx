@@ -275,11 +275,17 @@ export default function ConsiderationProcess({
       "response_ready",
     ].includes(c.status);
   const sentRequests = c.requests.filter((request) => Boolean(request.sent));
+  const sentInternalRequests = sentRequests.filter(
+    (request) => request.template !== "other" || Boolean(request.saqRecipient),
+  );
   const pendingExternalRequests = c.requests.filter(
     (request) =>
-      request.template === "other" && Boolean(request.sent) && !request.responded,
+      request.template === "other" &&
+      !request.saqRecipient &&
+      Boolean(request.sent) &&
+      !request.responded,
   );
-  const pendingResponses = sentRequests.filter(
+  const pendingResponses = sentInternalRequests.filter(
     (request) => !request.responded,
   ).length;
   const awaitingAttendancePoll = c.status === "certificate_approved";
@@ -311,6 +317,13 @@ export default function ConsiderationProcess({
         ? "Заместитель директора ДАВГА"
         : "Директор ДАВГА";
   const canPerformNextAction = role === "demo-superuser" || role === next?.role;
+  const requestActionsVisible =
+    inRequestFormationStage && (role === "demo-superuser" || role === "work");
+  const requestFormingAvailable = c.status === "accepted";
+  const hasAuthorityRequest = c.requests.some(
+    (request) =>
+      request.template === "dvga" || /ДВГА|КВГА/i.test(request.recipient),
+  );
 
   return (
     <section
@@ -411,6 +424,103 @@ export default function ConsiderationProcess({
           )}
         </>
       )}
+      {requestActionsVisible && (
+        <div className="consideration-task">
+          <div>
+            <span className="consideration-eyebrow">Действия по запросам</span>
+            <h4>Формирование и направление запросов</h4>
+            <p className="consideration-owner">
+              Исполнитель: <strong>{ROLES.work}</strong>
+            </p>
+          </div>
+          <div className="consideration-task-action">
+            <div className="request-actions">
+              <Button
+                primary
+                disabled={!requestFormingAvailable}
+                onClick={() => onAction("request", "work")}
+              >
+                Сформировать запрос в ДВГА/КВГА
+              </Button>
+              <Button
+                primary
+                disabled={!requestFormingAvailable}
+                onClick={() => onAction("request-saq", "work")}
+              >
+                Сформировать запрос в кабинет SAQ
+              </Button>
+              <Button
+                primary
+                disabled={!requestFormingAvailable}
+                onClick={() => onAction("request-other", "work")}
+              >
+                Зафиксировать запрос через другую систему
+              </Button>
+              <Button
+                primary
+                disabled={!requestFormingAvailable || !hasAuthorityRequest}
+                onClick={() => onAction("send-request-approval", "work")}
+              >
+                Направить на согласование
+              </Button>
+            </div>
+            {!requestFormingAvailable && (
+              <small>
+                Формирование новых запросов завершено: ниже доступна информация
+                по ранее направленным запросам.
+              </small>
+            )}
+          </div>
+        </div>
+      )}
+      {inRequestFormationStage && pendingExternalRequests.length > 0 && (
+        <Notice tone="amber">
+          <div className="request-response-heading">
+            <div>
+              <span className="request-response-eyebrow">
+                Запросы через другую систему
+              </span>
+              <strong>Ожидание ответов</strong>
+            </div>
+            <span className="request-response-summary">
+              Ожидают ответа: <b>{pendingExternalRequests.length}</b>
+            </span>
+          </div>
+          <ul className="request-response-status-list">
+            {pendingExternalRequests.map((request) => (
+              <li className="is-pending" key={request.id}>
+                <span className="request-response-marker" aria-hidden="true">
+                  …
+                </span>
+                <span className="request-response-recipient">
+                  <strong>{request.recipient}</strong>
+                  <small>
+                    Направлен {formatDate(request.sent)}
+                    {request.registrationNumber
+                      ? ` · №${request.registrationNumber}`
+                      : ""}
+                  </small>
+                </span>
+                <span className="response-pending">
+                  <span className="response-status-dot" aria-hidden="true" />
+                  Ответ ожидается
+                </span>
+                {(role === "demo-superuser" || role === "work") && (
+                  <Button
+                    className="request-response-action"
+                    primary
+                    onClick={() =>
+                      onAction("record-external-response", "work", request.id)
+                    }
+                  >
+                    Вложить ответ
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </Notice>
+      )}
       {workRequestStatus ? (
         <Notice tone="amber">
           <div className="request-response-heading">
@@ -493,6 +603,7 @@ export default function ConsiderationProcess({
                 ))}
               </div>
             ) : canPerformNextAction ? (
+              next.action !== "request" &&
               (next.action !== "commission-vote" ||
                 role === "demo-superuser" ||
                 role === "commission") && (
@@ -520,16 +631,6 @@ export default function ConsiderationProcess({
                 Заполнить справку
               </Button>
             )}
-            {c.status === "accepted" && (
-              <Button primary onClick={() => onAction("request-saq", "work")}>
-                Сформировать запрос в кабинет SAQ
-              </Button>
-            )}
-            {c.status === "accepted" && (
-              <Button primary onClick={() => onAction("request-other", "work")}>
-                Зафиксировать запрос через другую систему
-              </Button>
-            )}
             {(role === "demo-superuser" || role === "work") &&
               c.status === "completed" && (
                 <Button
@@ -539,43 +640,8 @@ export default function ConsiderationProcess({
                   Направить рекомендации
                 </Button>
               )}
-            {c.status === "accepted" && (
-              <Button
-                primary
-                disabled={
-                  !c.requests.some(
-                    (request) =>
-                      request.template === "dvga" ||
-                      /ДВГА|КВГА/i.test(request.recipient),
-                  )
-                }
-                onClick={() => onAction("send-request-approval", "work")}
-              >
-                Направить на согласование
-              </Button>
-            )}
             {role !== "demo-superuser" && role !== next.role && (
               <small>Действие выполняет {taskOwner}.</small>
-            )}
-            {c.status === "accepted" && (
-              <small>
-                Сначала сформируйте обязательный запрос в ДВГА/КВГА, затем при
-                необходимости сформируйте запрос в кабинет SAQ или
-                зафиксируйте направление через другую систему, затем направьте
-                запрос в ДВГА/КВГА на согласование.
-              </small>
-            )}
-            {c.status === "accepted" && pendingExternalRequests.length > 0 && (
-              <Notice tone="amber">
-                <strong>Запросы через другую систему</strong>
-                {pendingExternalRequests.map((request) => (
-                  <p key={request.id}>
-                    {request.recipient}: <b>Ответ ожидается</b>
-                    {request.registrationNumber &&
-                      ` (№${request.registrationNumber} от ${formatDate(request.sent)})`}
-                  </p>
-                ))}
-              </Notice>
             )}
           </div>
         </div>
@@ -614,17 +680,12 @@ export default function ConsiderationProcess({
               </span>
             </div>
             <ul className="request-response-status-list">
-              {sentRequests.map((request) => {
+              {sentInternalRequests.map((request) => {
                 const recipient =
                   request.recipient ||
                   (request.saqRecipient === "subject"
                     ? "Кабинет Объекта"
                     : "Адресат запроса");
-                const canAttachExternalResponse =
-                  (role === "demo-superuser" || role === "work") &&
-                  request.template === "other" &&
-                  !request.saqRecipient &&
-                  !request.responded;
                 return (
                   <li
                     className={request.responded ? "is-received" : "is-pending"}
@@ -655,21 +716,6 @@ export default function ConsiderationProcess({
                         ? `Ответ получен ${formatDate(request.responded)}`
                         : "Ответ ожидается"}
                     </span>
-                    {canAttachExternalResponse && (
-                      <Button
-                        className="request-response-action"
-                        primary
-                        onClick={() =>
-                          onAction(
-                            "record-external-response",
-                            "work",
-                            request.id,
-                          )
-                        }
-                      >
-                        Вложить ответ
-                      </Button>
-                    )}
                   </li>
                 );
               })}
