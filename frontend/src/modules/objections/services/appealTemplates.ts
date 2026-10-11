@@ -102,7 +102,7 @@ export function auditAuthorityTemplateName(
   const appealType = c.appealType || "";
   const grammaticalCase: AuditAuthorityCase =
     isNoticeObjection(c) ||
-    ["Возражение на аудиторский отчет", "Жалоба на решение КВГА/ДВГА"].includes(
+    ["Возражение на аудиторский отчет", "Жалоба на уведомление", "Жалоба на решение КВГА/ДВГА"].includes(
       appealType,
     )
       ? "instrumental"
