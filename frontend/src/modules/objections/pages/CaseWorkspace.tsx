@@ -291,11 +291,22 @@ export default function CaseWorkspace({
 }) {
   const [issuesExpanded, setIssuesExpanded] = useState(true);
   const agendaDetails = c.agendaDetails;
+  const isActionComplaint = c.appealType === "Жалоба на действие/бездействие";
+  const actionAppealAuthorities = agendaDetails?.actionAppealAuthorities || [];
+  const requirementFiles = c.documents.filter(
+    (document) =>
+      document.kind === "attachment" && document.text === "Требования заявителя",
+  );
+  const powerOfAttorney = c.documents.find(
+    (document) =>
+      document.kind === "attachment" && document.text === "Доверенность представителя",
+  );
   const hasSeparateAuditObject = [
     "Жалоба на уведомление",
     "Возражение на аудиторский отчет",
     "Жалоба на действие/бездействие",
     "Жалоба на решение КВГА/ДВГА",
+    "Заявление",
   ].includes(c.appealType || "");
   const decisionKindLabel =
     agendaDetails?.decisionKind === "prescription-audit"
@@ -331,7 +342,7 @@ export default function CaseWorkspace({
         </button>
       </div>
       <PageHeading
-        title={`${c.type === "control" ? "Жалоба" : "Возражение"} ${c.id}`}
+        title={`${c.appealType || "Обращение"} ${c.id}`}
         subtitle={c.org}
         action={
           <>
@@ -394,6 +405,7 @@ export default function CaseWorkspace({
                     label="Вид обращения"
                     value={c.appealType ?? TYPES[c.type]}
                   />
+                  <Fact label="Номер обращения в системе" value={c.id} />
                   <Fact
                     label={
                       hasSeparateAuditObject
@@ -420,11 +432,27 @@ export default function CaseWorkspace({
                   />
                   <Fact label="Местонахождение" value={c.address} />
                   <Fact label="Представитель" value={c.applicant} />
-                  <Fact
-                    label="Орган аудита (КВГА/ДВГА)"
-                    value={c.issuer}
-                    wide
-                  />
+                  {agendaDetails?.applicantIsAuditObjectRepresentative && (
+                    <Fact
+                      label="Заявитель является представителем объекта аудита"
+                      value="Да"
+                      wide
+                    />
+                  )}
+                  {powerOfAttorney && (
+                    <Fact
+                      label="Доверенность"
+                      value={powerOfAttorney.filename || powerOfAttorney.name}
+                      wide
+                    />
+                  )}
+                  {!isActionComplaint && (
+                    <Fact
+                      label="Орган аудита (КВГА/ДВГА)"
+                      value={c.issuer}
+                      wide
+                    />
+                  )}
                   <Fact
                     label="Дата получения документа"
                     value={formatDate(c.document.received)}
@@ -434,18 +462,36 @@ export default function CaseWorkspace({
                     value={c.channel}
                     wide
                   />
-                  {c.document.number && (
+                  {!isActionComplaint && c.document.number && (
                     <Fact
                       label={`Номер: ${c.document.name}`}
                       value={c.document.number}
                     />
                   )}
-                  {c.document.number && (
+                  {!isActionComplaint && c.document.number && (
                     <Fact
                       label={`Дата: ${c.document.name}`}
                       value={formatDate(c.document.date)}
                     />
                   )}
+                  {actionAppealAuthorities.flatMap((item, index) => [
+                    <Fact
+                      key={`action-issuer-${index}`}
+                      label={`Орган аудита (КВГА/ДВГА) ${index + 1}`}
+                      value={item.issuer}
+                      wide
+                    />,
+                    <Fact
+                      key={`action-number-${index}`}
+                      label={`Номер первичного обращения в ДВГА/КВГА ${index + 1}`}
+                      value={item.documentNumber}
+                    />,
+                    <Fact
+                      key={`action-date-${index}`}
+                      label={`Дата первичного обращения в ДВГА/КВГА ${index + 1}`}
+                      value={formatDate(item.documentDate)}
+                    />,
+                  ])}
                   {c.type === "notice" && (
                     <Fact
                       label="Сумма, тенге"
@@ -524,6 +570,15 @@ export default function CaseWorkspace({
                           : "Дата подписания профилактического контроля"
                       }
                       value={formatDate(agendaDetails.relatedDocumentDate)}
+                    />
+                  )}
+                  {requirementFiles.length > 0 && (
+                    <Fact
+                      label="Требования заявителя"
+                      value={requirementFiles
+                        .map((document) => document.filename || document.name)
+                        .join(", ")}
+                      wide
                     />
                   )}
                   <Fact
