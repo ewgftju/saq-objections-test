@@ -334,7 +334,7 @@ export default function ActionModal({
   onClose: () => void;
 }) {
   const [values, setValues] = useState<FormValues>(() => {
-    if (action === "request")
+    if (action === "request" || action === "request-saq")
       return { ...(c.requestDrafts?.[action]?.values || {}) };
     if (action === "analysis") return { ...(c.analysisDraft?.values || {}) };
     if (action === "fill-meeting-certificate") {
@@ -393,9 +393,9 @@ export default function ActionModal({
   const activeCommissionVoter = commissionMemberId
     ? c.members.find((member) => member.id === commissionMemberId)
     : undefined;
-  const isRequest = action === "request";
+  const isRequest = action === "request" || action === "request-saq";
   const isAnalysis = action === "analysis";
-  const isOtherRequest = action === "request-other";
+  const isOtherRequest = action === "request-saq";
   const requestDeadline =
     values.deadline ||
     definition.fields.find((field) => field.name === "deadline")?.value ||
