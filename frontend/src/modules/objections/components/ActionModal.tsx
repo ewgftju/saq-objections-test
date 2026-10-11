@@ -499,6 +499,7 @@ export default function ActionModal({
         action === "fill-meeting-certificate" ||
         action === "position" ||
         action === "subject-response" ||
+        action === "request-other" ||
         action === "deliver" ||
         action === "create-decision-project" ||
         action === "send-decision-project-eotinish"
@@ -636,6 +637,49 @@ export default function ActionModal({
                 }}
               />
             </div>
+          </>
+        ) : action === "request-other" ? (
+          <>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            <div className="form-grid">
+              {definition.fields.map((field) => (
+                <Field key={field.name} field={field} />
+              ))}
+            </div>
+            <label className="field request-attachments-field">
+              <span>Вложить документ</span>
+              <input
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                multiple
+                onChange={(event) => {
+                  const files = Array.from(event.currentTarget.files || []);
+                  if (files.length)
+                    setRequestAttachments((current) => [...current, ...files]);
+                  event.currentTarget.value = "";
+                }}
+              />
+              <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
+              {requestAttachments.length > 0 && (
+                <div className="request-attachments-list">
+                  {requestAttachments.map((file, index) => (
+                    <div key={`${file.name}-${index}`}>
+                      <span>{file.name}</span>
+                      <Button
+                        type="button"
+                        onClick={() =>
+                          setRequestAttachments((current) =>
+                            current.filter((_, itemIndex) => itemIndex !== index),
+                          )
+                        }
+                      >
+                        Удалить
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </label>
           </>
         ) : action === "deliver" && c.type === "notice" ? (
           <>
