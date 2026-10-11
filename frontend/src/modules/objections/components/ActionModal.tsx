@@ -795,20 +795,32 @@ export default function ActionModal({
                       ? "Решение по оспариваемым пунктам"
                       : "Итоговый результат по оспариваемым пунктам"}
                   </span>
-                  {disputed(c).map((point) => (
-                    <label className="checkbox-row" key={point.id}>
-                      <input
-                        type="checkbox"
-                        name={`finalResponseMajority_${point.id}`}
-                        defaultChecked={
-                          Object.hasOwn(values, `finalResponseMajority_${point.id}`)
-                            ? values[`finalResponseMajority_${point.id}`] === "on"
-                            : point.finalDecisionByMajority
-                        }
-                      />
-                      <span>По п. {point.number} — с большинством голосов</span>
-                    </label>
-                  ))}
+                  {disputed(c).map((point) => {
+                    const inheritedFromDecisionProject =
+                      action === "deliver" && Boolean(c.decisionProject);
+                    const checked = inheritedFromDecisionProject
+                      ? Boolean(point.finalDecisionByMajority)
+                      : Object.hasOwn(
+                            values,
+                            `finalResponseMajority_${point.id}`,
+                          )
+                        ? values[`finalResponseMajority_${point.id}`] === "on"
+                        : Boolean(point.finalDecisionByMajority);
+                    return (
+                      <label className="checkbox-row" key={point.id}>
+                        <input
+                          type="checkbox"
+                          name={`finalResponseMajority_${point.id}`}
+                          checked={inheritedFromDecisionProject ? checked : undefined}
+                          defaultChecked={
+                            inheritedFromDecisionProject ? undefined : checked
+                          }
+                          disabled={inheritedFromDecisionProject}
+                        />
+                        <span>По п. {point.number} — с большинством голосов</span>
+                      </label>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -819,7 +831,9 @@ export default function ActionModal({
                 finalResponseMajorityByPoint={Object.fromEntries(
                   disputed(c).map((point) => [
                     point.id,
-                    Object.hasOwn(values, `finalResponseMajority_${point.id}`)
+                    action === "deliver" && c.decisionProject
+                      ? Boolean(point.finalDecisionByMajority)
+                      : Object.hasOwn(values, `finalResponseMajority_${point.id}`)
                       ? values[`finalResponseMajority_${point.id}`] === "on"
                       : Boolean(point.finalDecisionByMajority),
                   ]),
