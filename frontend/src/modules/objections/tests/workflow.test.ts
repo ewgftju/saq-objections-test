@@ -41,6 +41,7 @@ import { caseCsv } from "../../../utils/download";
 import { pathForRoute, routeFromPath } from "../routing";
 import { DEMO_USER } from "../../../config";
 import { actionForm } from "../formDefinitions";
+import { nextCaseNumber } from "../services/caseNumbering";
 
 function harness(index = 0) {
   let state = initialState();
@@ -339,12 +340,8 @@ test("направление запроса в другой орган фикс�
     sent: "2026-09-08",
   });
   assert.equal(
-    h.c.documents.some(
-      (document) =>
-        document.name === "Запрос в Экспертная организация" &&
-        document.requestId === "request-1",
-    ),
-    true,
+    h.c.documents.some((document) => document.requestId === "request-1"),
+    false,
   );
   const form = actionForm("request-other", h.c, h.state.date, {});
   assert.equal(form.title, "Зафиксировать запрос через другую систему");
@@ -373,7 +370,7 @@ test("направление запроса в другой орган фикс�
   assert.match(processHtml, /Ожидается ответ/);
   assert.match(processHtml, /Запросы и ответы/);
   assert.match(processHtml, /Вложить ответ/);
-  assert.match(processHtml, /Действия по запросам/);
+  assert.match(processHtml, /Текущая задача/);
   assert.doesNotMatch(processHtml, /Сначала сформируйте обязательный запрос/);
 });
 
@@ -630,6 +627,90 @@ test("исходное обращение использует реквизит�
   assert.match(html, /Требования\.pdf/);
   assert.doesNotMatch(html, /Орган, чей документ обжалуется:/);
   assert.doesNotMatch(html, /<b>Адресат:<\/b>/);
+});
+
+test("карточка обращения выводит все заполненные реквизиты", () => {
+  const h = harness(2);
+  h.c.id = "Ж-2026-012";
+  h.c.appealType = "Жалоба на действие/бездействие";
+  h.c.agendaDetails = {
+    auditObjectName: "КГУ «Объект аудита»",
+    auditObjectBin: "123456789012",
+    applicantIsAuditObjectRepresentative: true,
+    procurementNumber: "ГЗ-001",
+    lotNumber: "1",
+    procurementSubject: "Услуги",
+    actionAppealAuthorities: [
+      {
+        issuer: "ДВГА по Атырауской области",
+        documentNumber: "ДВГА-11",
+        documentDate: "2026-09-01",
+      },
+      {
+        issuer: "КВГА",
+        documentNumber: "КВГА-12",
+        documentDate: "2026-09-02",
+      },
+    ],
+  };
+  h.c.documents.push(
+    {
+      name: "Доверенность.pdf",
+      filename: "Доверенность.pdf",
+      kind: "attachment",
+      text: "Доверенность представителя",
+      date: h.state.date,
+      author: "Заявитель",
+    },
+    {
+      name: "Требования.pdf",
+      filename: "Требования.pdf",
+      kind: "attachment",
+      text: "Требования заявителя",
+      date: h.state.date,
+      author: "Заявитель",
+    },
+  );
+  const html = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c: h.c,
+      tab: "overview",
+      role: "work",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  assert.match(html, /Номер обращения в системе/);
+  assert.match(html, /Ж-2026-012/);
+  assert.match(html, /Заявитель является представителем объекта аудита/);
+  assert.match(html, /Доверенность\.pdf/);
+  assert.match(html, /ДВГА-11/);
+  assert.match(html, /КВГА-12/);
+  assert.match(html, /Требования\.pdf/);
+});
+
+test("системный номер обращения использует общий счётчик по всем видам", () => {
+  const cases = [
+    { id: "В-2026-004" },
+    { id: "Ж-2026-011" },
+    { id: "ВОЗ-2026-018" },
+    { id: "З-2025-099" },
+  ];
+  assert.equal(
+    nextCaseNumber(cases, "Возражение на уведомление", "2026-10-11"),
+    "В-2026-019",
+  );
+  assert.equal(
+    nextCaseNumber(cases, "Жалоба на уведомление", "2026-10-11"),
+    "Ж-2026-019",
+  );
+  assert.equal(
+    nextCaseNumber(cases, "Заявление", "2026-10-11"),
+    "З-2026-019",
+  );
 });
 
 test("ответ ДВГА доступен после согласования, даже если создан запрос в другой орган", () => {
@@ -1828,7 +1909,7 @@ test("дело открывает процесс, а одно действие �
   assert.match(requestFormationHtml, /Согласование запроса/);
   assert.match(requestFormationHtml, /Подписание запроса/);
   assert.match(requestFormationHtml, /Ожидание ответа/);
-  assert.doesNotMatch(requestFormationHtml, /Текущая задача/);
+  assert.match(requestFormationHtml, /Текущая задача/);
   primaryAction(process())!();
   assert.deepEqual(selected, { action: "request", role: "work" });
   assert.match(
