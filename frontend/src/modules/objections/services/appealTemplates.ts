@@ -1,6 +1,9 @@
 import type { ObjectionCase } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
-import { auditAuthorityFullName } from "../../../utils/auditAuthority";
+import {
+  auditAuthorityFullName,
+  type AuditAuthorityCase,
+} from "../../../utils/auditAuthority";
 
 function value(text?: string) {
   return text?.trim() || "—";
@@ -20,14 +23,14 @@ function applicantReference(c: ObjectionCase) {
 
 function prescriptionAuditReference(c: ObjectionCase) {
   const details = c.agendaDetails;
-  return `${applicantReference(c)}, на предписание от ${formatDate(details?.relatedDocumentDate)} года № ${value(details?.relatedDocumentNumber)} по аудиторскому отчету, проведенный ${auditAuthorityFullName(c.issuer)}`;
+  return `${applicantReference(c)}, на предписание от ${formatDate(details?.relatedDocumentDate)} года № ${value(details?.relatedDocumentNumber)} по аудиторскому отчету, проведенный ${auditAuthorityTemplateName(c)}`;
 }
 
 function decisionComplaintReference(c: ObjectionCase) {
   if (c.appealType !== "Жалоба на решение КВГА/ДВГА") return undefined;
 
   const kind = c.agendaDetails?.decisionKind;
-  const document = `от ${formatDate(c.document.date)} года № ${value(c.document.number)}, проведенный ${auditAuthorityFullName(c.issuer)}`;
+  const document = `от ${formatDate(c.document.date)} года № ${value(c.document.number)}, проведенный ${auditAuthorityTemplateName(c)}`;
 
   if (["prescription-audit", "prescription"].includes(kind || ""))
     return prescriptionAuditReference(c);
@@ -63,7 +66,7 @@ function actionInactionComplaintReference(c: ObjectionCase) {
   const actions = appeals
     .map(
       (item) =>
-        `${auditAuthorityFullName(item.issuer)} при рассмотрении обращения №${value(item.documentNumber)} от ${formatDate(item.documentDate)}`,
+        `${auditAuthorityTemplateName(c, item.issuer)} при рассмотрении обращения №${value(item.documentNumber)} от ${formatDate(item.documentDate)}`,
     )
     .join("; ");
 
@@ -82,7 +85,7 @@ function statementReference(c: ObjectionCase) {
  * В ранних обращениях значение хранилось во множественном числе. Новая форма
  * использует единственное число — оба значения должны получать один шаблон.
  */
-function isNoticeObjection(c: ObjectionCase) {
+function isNoticeObjection(c: Pick<ObjectionCase, "appealType" | "type">) {
   return (
     ["Возражение на уведомление", "Возражение на уведомления"].includes(
       c.appealType || "",
@@ -91,8 +94,27 @@ function isNoticeObjection(c: ObjectionCase) {
   );
 }
 
+/** Склонение названия органа определяется видом обращения. */
+export function auditAuthorityTemplateName(
+  c: Pick<ObjectionCase, "appealType" | "type" | "issuer">,
+  issuer = c.issuer,
+) {
+  const appealType = c.appealType || "";
+  const grammaticalCase: AuditAuthorityCase =
+    isNoticeObjection(c) ||
+    ["Возражение на аудиторский отчет", "Жалоба на решение КВГА/ДВГА"].includes(
+      appealType,
+    )
+      ? "instrumental"
+      : appealType === "Жалоба на действие/бездействие"
+        ? "genitive"
+        : "nominative";
+
+  return auditAuthorityFullName(issuer, grammaticalCase);
+}
+
 function noticeObjectionReference(c: ObjectionCase) {
-  return `${applicantReference(c)}, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${value(c.document.number)}, направленного по результатам камерального контроля ${auditAuthorityFullName(c.issuer)}`;
+  return `${applicantReference(c)}, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${value(c.document.number)}, направленного по результатам камерального контроля ${auditAuthorityTemplateName(c)}`;
 }
 
 /** Text shared by the agenda and protocol templates for the specified appeal kinds. */
