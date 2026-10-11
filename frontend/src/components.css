@@ -1420,6 +1420,9 @@
   line-height: 1.5;
   margin-top: 10px;
 }
+.request-responses-panel {
+  margin-top: 14px;
+}
 .request-response-status-list {
   display: grid;
   gap: 10px;
