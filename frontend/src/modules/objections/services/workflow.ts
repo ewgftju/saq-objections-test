@@ -1811,10 +1811,13 @@ export function applyAction(
         appealProcedure: String(form.get("appealProcedure") || ""),
         published: requiresConclusion(c) ? date : null,
       };
-      disputed(c).forEach((point) => {
-        point.finalDecisionByMajority =
-          form.get(`finalResponseMajority_${point.id}`) === "on";
-      });
+      // Для жалоб итог по большинству фиксируется в проекте решения.
+      // Окончательный ответ воспроизводит эти значения и не заменяет их.
+      if (!c.decisionProject)
+        disputed(c).forEach((point) => {
+          point.finalDecisionByMajority =
+            form.get(`finalResponseMajority_${point.id}`) === "on";
+        });
       c.status = "final_response_approval";
       doc(
         "Проект окончательного ответа",
