@@ -538,6 +538,51 @@ test("справка и протокол используют часть шаб�
   );
 });
 
+test("возражение на уведомление использует единый шаблон во всех документах", () => {
+  const h = harness();
+  h.c.appealType = "Возражение на уведомление";
+  h.c.org = "ГУ «Объект»";
+  h.c.bin = "000000000001";
+  h.c.issuer = "ДВГА по Атырауской области";
+  h.c.appealNumber = "В-2026-001";
+  h.c.appealDate = "2026-09-08";
+  h.c.document = { ...h.c.document, number: "Д-01", date: "2026-08-30" };
+  const requestPreview = {
+    recipient: "ДВГА по Атырауской области",
+    deadline: "2026-09-10T18:00",
+    template: "dvga" as const,
+  };
+  const request = renderToStaticMarkup(
+    createElement(DocumentContent, {
+      c: h.c,
+      kind: "request",
+      requestPreview,
+    }),
+  );
+  const certificate = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "certificate" }),
+  );
+  const protocol = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "protocol" }),
+  );
+  const agenda = agendaItemText(h.c);
+  const details =
+    "от ГУ «Объект», ИИН/БИН 000000000001, № В-2026-001 от 08.09.2026 года, к уведомлению об устранении нарушений от 30.08.2026 года № Д-01, направленного по результатам камерального контроля Департамент внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан.";
+
+  assert.match(
+    request,
+    new RegExp(
+      `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан возражения ${details.slice(0, -1)}, просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы\\.`,
+    ),
+  );
+  assert.match(
+    certificate,
+    new RegExp(`В Министерства финансов Республики Казахстан поступило возражение ${details}`),
+  );
+  assert.equal(agenda, `Возражение ${details}`);
+  assert.match(protocol, new RegExp(`Возражение ${details}`));
+});
+
 test("жалоба на уведомление рассматривается без приостановления и использует свои шаблоны", () => {
   const h = harness();
   h.c.appealType = "Жалоба на уведомление";
