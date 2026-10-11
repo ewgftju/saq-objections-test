@@ -786,7 +786,6 @@ export function applyAction(
         deliveryPath,
         sent,
       });
-      doc(`Запрос в ${recipient}`, "request", note, requestId);
       if (canSuspendReview(c) && !c.requestPauseStartedAt)
         c.requestPauseStartedAt = sent;
       if (firstSentRequest)
