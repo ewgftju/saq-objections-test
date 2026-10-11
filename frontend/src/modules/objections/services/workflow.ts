@@ -105,6 +105,12 @@ function pendingOtherRequest(c: ObjectionCase) {
   );
 }
 
+/** Рекомендации можно направлять сразу после подписания протокола и позднее,
+ * в том числе после завершения рассмотрения. */
+function recommendationsAvailable(c: ObjectionCase) {
+  return Boolean(c.meeting?.signed) || c.status === "completed";
+}
+
 function canSuspendReview(c: ObjectionCase) {
   return (c.appealType || "").trim().startsWith("Возражение");
 }
@@ -549,7 +555,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
         role: "work",
       });
   }
-  if (c.status === "completed") {
+  if (recommendationsAvailable(c)) {
     options.push({
       action: "send-recommendations",
       label: "Направить рекомендации",
@@ -1901,50 +1907,89 @@ export function applyAction(
       });
       break;
     case "send-recommendations": {
-      if (c.status !== "completed")
+      if (!recommendationsAvailable(c))
         throw new Error(
-          "Рекомендации можно направить после завершения рассмотрения",
+          "Рекомендации можно направить после подписания протокола",
         );
       const recommendationText = text(
         "recommendationText",
         "Текст рекомендации",
       );
-      const allowedRecipients: Role[] = ["dvga", "kvga", "subject", "higher"];
-      const recipientRoles = [
-        ...new Set(
-          form
-            .getAll("recommendationRecipients")
-            .map((value) => String(value))
-            .filter((value): value is Role =>
-              allowedRecipients.includes(value as Role),
-            ),
-        ),
-      ];
-      if (!recipientRoles.length)
-        throw new Error("Выберите хотя бы один кабинет-получатель");
-      const sentAt = c.delivery?.date || date;
-      const dueDate = addWorkdays(sentAt, 30);
-      recipientRoles.forEach((recipientRole) => {
-        const recipient = ROLES[recipientRole];
-        next.recommendations.push({
-          id: `recommendation-${c.id}-${next.recommendations.length + 1}`,
-          text: recommendationText,
-          recipient,
-          recipientRole,
-          status: "sent",
-          answer: "",
-          caseId: c.id,
-          caseReference: c.appealNumber || c.id,
-          executor: c.assignee,
-          createdAt: sentAt,
-          sentAt,
-          dueDate,
-        });
-        doc(
-          `Рекомендация для ${recipient}`,
-          "recommendation",
-          `${recommendationText}\n\nКому направлена: ${recipient}.\nДата направления: ${formatDate(sentAt)}.\nСрок исполнения: ${formatDate(dueDate)}.`,
-        );
+      const channel =
+        String(form.get("recommendationChannel") || "saq") === "external"
+          ? "external"
+          : "saq";
+      const dueDate = text(
+        "recommendationDueDate",
+        "Срок исполнения рекомендации",
+      );
+      dateObject(dueDate);
+      const saqRecipients: Record<string, Role> = {
+        dvga: "dvga",
+        kvga: "kvga",
+        subject: "subject",
+        higher: "higher",
+        "Кабинет ДВГА": "dvga",
+        "Кабинет КВГА": "kvga",
+        "Кабинет Объекта": "subject",
+        "Кабинет вышестоящего органа": "higher",
+      };
+      const recipientValue = String(
+        form.get(
+          channel === "saq"
+            ? "recommendationSaqRecipient"
+            : "recommendationExternalRecipient",
+        ) || "",
+      ).trim();
+      const recipientRole =
+        channel === "saq" ? saqRecipients[recipientValue] : undefined;
+      if (channel === "saq" && !recipientRole)
+        throw new Error("Выберите получателя из кабинетов SAQ");
+      if (channel === "external" && !recipientValue)
+        throw new Error("Заполните поле «Кому направлена рекомендация»");
+      const sentAt =
+        channel === "external"
+          ? text("recommendationSentAt", "Дата направления рекомендации")
+          : date;
+      dateObject(sentAt);
+      if (dueDate < sentAt)
+        throw new Error("Срок исполнения не может быть раньше даты направления");
+      const recipient = recipientRole ? ROLES[recipientRole] : recipientValue;
+      const deliveryPath =
+        channel === "external"
+          ? text("recommendationDeliveryPath", "Способ отправки")
+          : undefined;
+      const registrationNumber =
+        channel === "external"
+          ? text("recommendationRegistrationNumber", "Номер направления")
+          : undefined;
+      next.recommendations.push({
+        id: `recommendation-${c.id}-${next.recommendations.length + 1}`,
+        text: recommendationText,
+        recipient,
+        recipientRole,
+        channel,
+        status: "sent",
+        answer: "",
+        caseId: c.id,
+        caseReference: c.appealNumber || c.id,
+        executor: c.assignee,
+        createdAt: date,
+        sentAt,
+        dueDate,
+        deliveryPath,
+        registrationNumber,
+      });
+      doc(
+        `Рекомендация для ${recipient}`,
+        "recommendation",
+        `${recommendationText}\n\nКому направлена: ${recipient}.\nДата направления: ${formatDate(sentAt)}.\nСрок исполнения: ${formatDate(dueDate)}.${
+          channel === "external"
+            ? `\nСпособ отправки: ${deliveryPath}.\nНомер направления: ${registrationNumber}.`
+            : ""
+        }`,
+      );
+      if (recipientRole) {
         next.notifications.push({
           id: `recommendation-${c.id}-${next.notifications.length + 1}`,
           caseId: c.id,
@@ -1955,9 +2000,16 @@ export function applyAction(
           kind: "recommendation",
           text: `Направлена рекомендация по обращению №${c.appealNumber || c.id}. Срок исполнения — ${formatDate(dueDate)}.`,
         });
-      });
-      title = "Рекомендации направлены";
-      note = `Рекомендации направлены: ${recipientRoles.map((recipientRole) => ROLES[recipientRole]).join(", ")}. Срок исполнения — ${formatDate(dueDate)}.`;
+      }
+      title =
+        channel === "external"
+          ? "Направление рекомендации зафиксировано"
+          : "Рекомендация направлена";
+      note = `${
+        channel === "external"
+          ? "Направление рекомендации зафиксировано"
+          : "Рекомендация направлена"
+      }: ${recipient}. Срок исполнения — ${formatDate(dueDate)}.`;
       break;
     }
     case "close-review":
