@@ -111,6 +111,11 @@ const EXTERNAL_REQUEST_PATH_OPTIONS = [
   ["Вручение нарочно", "Вручение нарочно"],
 ] as const satisfies FormField["options"];
 
+const SAQ_RECIPIENT_OPTIONS = [
+  ["", "Выберите получателя SAQ"],
+  ["subject", "Кабинет Объекта SAQ"],
+] as const satisfies FormField["options"];
+
 const RECOMMENDATION_RECIPIENT_OPTIONS = [
   ["dvga", "Кабинет ДВГА"],
   ["kvga", "Кабинет КВГА"],
@@ -144,6 +149,7 @@ export function actionForm(
   const day = input("date", "Дата действия", date, "date");
   let fields: FormField[] =
     action === "request" ||
+    action === "request-saq" ||
     action === "vote" ||
     action === "analysis" ||
     action === "assign-work-executor" ||
@@ -227,6 +233,18 @@ export function actionForm(
           ...input("executor", "Исполнитель", values.executor || DEMO_USER.fullName),
           readOnly: true,
         },
+      );
+      break;
+    case "request-saq":
+      title = "Сформировать запрос в кабинет SAQ";
+      fields.push(
+        select(
+          "saqRecipient",
+          "Получатель SAQ",
+          SAQ_RECIPIENT_OPTIONS,
+          values.saqRecipient || "",
+        ),
+        area("customRequestText", "Текст запроса", values.customRequestText || ""),
       );
       break;
     case "request-other":
