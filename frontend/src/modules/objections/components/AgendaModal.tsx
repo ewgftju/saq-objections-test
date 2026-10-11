@@ -3,8 +3,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { Button, Modal } from "../../../components/ui";
 import type { ObjectionCase } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
-import { auditAuthorityFullName } from "../../../utils/auditAuthority";
-import { agendaOrProtocolIntro } from "../services/appealTemplates";
+import {
+  agendaOrProtocolIntro,
+  auditAuthorityTemplateName,
+} from "../services/appealTemplates";
 
 function value(text?: string) {
   return text?.trim() || "—";
@@ -38,7 +40,7 @@ export function agendaItemText(c: ObjectionCase) {
         : "");
   const common = `${value(c.org)} ИИН/БИН ${value(c.bin)}`;
   const executor = value(c.assignee);
-  const issuer = auditAuthorityFullName(c.issuer);
+  const issuer = auditAuthorityTemplateName(c);
 
   if (appealType === "Возражение на уведомления") {
     return `Возражение от ${value(c.org)}, ИИН/БИН ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${value(c.document.number)}, направленного по результатам камерального контроля ${issuer}.`;
