@@ -839,7 +839,7 @@ export default function ObjectionsModule() {
       form.set("commissionMember", activeCommissionMember.id);
     }
     if (
-        !["position", "record-external-response", "fill-request-response", "request", "request-saq", "deliver", "subject-response"].includes(
+        !["position", "record-external-response", "fill-request-response", "request", "request-saq", "request-other", "deliver", "subject-response"].includes(
         action,
       )
     ) {
@@ -865,7 +865,7 @@ export default function ObjectionsModule() {
     }
     const files = form
       .getAll(
-        ["request", "request-saq"].includes(action)
+        ["request", "request-saq", "request-other"].includes(action)
           ? "requestAttachments"
           : action === "deliver"
             ? "conclusionFiles"
@@ -939,10 +939,10 @@ export default function ObjectionsModule() {
           : undefined;
     const next = applyAction(model.state, c.id, action, model.role, form);
     const updated = next.cases.find((item) => item.id === c.id)!;
-    if (action === "request" || action === "request-saq")
-      delete updated.requestDrafts?.[action];
+    if (["request", "request-saq", "request-other"].includes(action))
+      delete updated.requestDrafts?.[action as RequestDraftKind];
     const responseRequestId =
-      ["request", "request-saq"].includes(action)
+      ["request", "request-saq", "request-other"].includes(action)
         ? updated.requests.at(-1)?.id
         : responseRequestIdBeforeAction;
     if (attached.length) {
@@ -951,7 +951,7 @@ export default function ObjectionsModule() {
           name: file.name,
           filename: file.name,
           kind:
-            ["request", "request-saq"].includes(action)
+            ["request", "request-saq", "request-other"].includes(action)
               ? "request-attachment"
               : action === "deliver"
                 ? "conclusion"
@@ -961,8 +961,10 @@ export default function ObjectionsModule() {
                 ? "subject-response-attachment"
               : "response-attachment",
           text:
-            ["request", "request-saq"].includes(action)
-              ? "Приложение исполнителя рабочего органа к запросу"
+            ["request", "request-saq", "request-other"].includes(action)
+              ? action === "request-other"
+                ? "Документ по запросу, направленному через другую систему"
+                : "Приложение исполнителя рабочего органа к запросу"
               : action === "deliver"
                 ? "Заключение по обращению"
               : action === "fill-request-response"
@@ -980,8 +982,10 @@ export default function ObjectionsModule() {
         date: next.date,
         actor: ROLES[model.role],
         title:
-          ["request", "request-saq"].includes(action)
-            ? "Вложены приложения к запросу"
+          ["request", "request-saq", "request-other"].includes(action)
+            ? action === "request-other"
+              ? "Вложены документы к запросу через другую систему"
+              : "Вложены приложения к запросу"
             : action === "deliver"
               ? "Вложено заключение по обращению"
             : action === "fill-request-response"
@@ -994,10 +998,14 @@ export default function ObjectionsModule() {
     }
     model.commit(
       next,
-      ["request", "request-saq"].includes(action)
+      ["request", "request-saq", "request-other"].includes(action)
         ? attached.length
-          ? "Запрос и приложения сохранены"
-          : "Запрос сохранён"
+          ? action === "request-other"
+            ? "Запрос через другую систему и документы сохранены"
+            : "Запрос и приложения сохранены"
+          : action === "request-other"
+            ? "Направление запроса через другую систему зафиксировано"
+            : "Запрос сохранён"
         : action === "fill-request-response"
         ? "Ответ ДВГА/КВГА и вложения сохранены"
         : action === "subject-response"
