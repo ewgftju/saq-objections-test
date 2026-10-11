@@ -309,10 +309,16 @@ export default function ConsiderationProcess({
   const canPerformNextAction = role === "demo-superuser" || role === next?.role;
   const requestActionsVisible =
     inRequestFormationStage && (role === "demo-superuser" || role === "work");
-  const requestFormingAvailable = c.status === "accepted";
+  // Запросы могут потребоваться и после того, как первые уже направлены.
+  // Пока обращение находится на этапе «Запрос», рабочий орган может добавить
+  // новый запрос и запустить для него отдельный маршрут согласования.
+  const requestFormingAvailable = inRequestFormationStage;
   const hasAuthorityRequest = c.requests.some(
     (request) =>
       request.template === "dvga" || /ДВГА|КВГА/i.test(request.recipient),
+  );
+  const hasDraftRequests = c.requests.some(
+    (request) => !request.sent && !request.approved,
   );
 
   return (
@@ -448,7 +454,11 @@ export default function ConsiderationProcess({
               </Button>
               <Button
                 primary
-                disabled={!requestFormingAvailable || !hasAuthorityRequest}
+                disabled={
+                  !requestFormingAvailable ||
+                  !hasAuthorityRequest ||
+                  !hasDraftRequests
+                }
                 onClick={() => onAction("send-request-approval", "work")}
               >
                 Направить на согласование
