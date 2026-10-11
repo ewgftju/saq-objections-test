@@ -3,6 +3,8 @@ const KVGA =
 const DVGA_SUFFIX =
   "Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан";
 
+export type AuditAuthorityCase = "nominative" | "instrumental" | "genitive";
+
 const FULL_AUDIT_AUTHORITIES: Record<string, string> = {
   КВГА: KVGA,
   "ДВГА по Акмолинской области": `Департамент внутреннего государственного аудита по Акмолинской области ${DVGA_SUFFIX}`,
@@ -28,7 +30,22 @@ const FULL_AUDIT_AUTHORITIES: Record<string, string> = {
 };
 
 /** Полное наименование выводится только в печатных формах. */
-export function auditAuthorityFullName(value?: string) {
+export function auditAuthorityFullName(
+  value?: string,
+  grammaticalCase: AuditAuthorityCase = "nominative",
+) {
   const name = value?.trim() || "";
-  return FULL_AUDIT_AUTHORITIES[name] || name || "—";
+  const fullName = FULL_AUDIT_AUTHORITIES[name] || name || "—";
+
+  if (grammaticalCase === "instrumental")
+    return fullName
+      .replace(/^Комитет /, "Комитетом ")
+      .replace(/^Департамент /, "Департаментом ");
+
+  if (grammaticalCase === "genitive")
+    return fullName
+      .replace(/^Комитет /, "Комитета ")
+      .replace(/^Департамент /, "Департамента ");
+
+  return fullName;
 }
