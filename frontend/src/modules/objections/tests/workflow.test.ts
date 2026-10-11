@@ -2828,6 +2828,56 @@ test("в приложении окончательного ответа отме
   );
 });
 
+test("мотивированный ответ наследует отметку большинства из проекта решения", () => {
+  const h = harness(1);
+  const [firstPoint, secondPoint] = h.c.issues.filter(
+    (point) => point.disputed,
+  );
+  firstPoint.final = "partial";
+  secondPoint.final = "partial";
+  h.c.status = "decision_project";
+
+  h.run("create-decision-project", "work", {
+    [`finalResponseMajority_${firstPoint.id}`]: "on",
+  });
+  assert.equal(
+    h.c.issues.find((point) => point.id === firstPoint.id)
+      ?.finalDecisionByMajority,
+    true,
+  );
+  assert.equal(
+    h.c.issues.find((point) => point.id === secondPoint.id)
+      ?.finalDecisionByMajority,
+    false,
+  );
+
+  // В форме мотивированного ответа прежние значения формы не должны менять
+  // зафиксированный в проекте решения признак большинства.
+  h.c.status = "decided";
+  h.run("deliver", "work", {
+    number: "ИСХ-2",
+    receipt: "КВ-2",
+    channel: "cabinet",
+    [`finalResponseMajority_${secondPoint.id}`]: "on",
+  });
+
+  assert.equal(
+    h.c.issues.find((point) => point.id === firstPoint.id)
+      ?.finalDecisionByMajority,
+    true,
+  );
+  assert.equal(
+    h.c.issues.find((point) => point.id === secondPoint.id)
+      ?.finalDecisionByMajority,
+    false,
+  );
+  const html = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "final-response" }),
+  );
+  assert.match(html, /решение частично удовлетворить большинством голосов\./);
+  assert.match(html, /решение частично удовлетворить\.<\/p>/);
+});
+
 test("рекомендации доступны после завершения рассмотрения всех видов обращений", () => {
   const h = harness();
   h.c.status = "completed";
