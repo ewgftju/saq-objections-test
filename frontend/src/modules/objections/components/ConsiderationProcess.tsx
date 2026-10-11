@@ -2,7 +2,12 @@ import { Button, Notice } from "../../../components/ui";
 import { ROLES, STATUS } from "../../../data/constants";
 import type { Action, CaseStatus, ObjectionCase, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
-import { additionalActions, nextAction } from "../services/workflow";
+import {
+  additionalActions,
+  nextAction,
+  requestLifecycleStatus,
+  REQUEST_LIFECYCLE_LABELS,
+} from "../services/workflow";
 
 type ProcessStage = {
   label: string;
@@ -111,6 +116,103 @@ function requestSubstep(status: CaseStatus) {
     return 3;
   if (status === "response_ready") return 4;
   return null;
+}
+
+function requestKind(request: ObjectionCase["requests"][number]) {
+  if (request.template === "dvga" || /ДВГА|КВГА/i.test(request.recipient))
+    return "Запрос в КВГА/ДВГА";
+  if (request.saqRecipient) return "Запрос в кабинет SAQ";
+  return "Запрос через другую систему";
+}
+
+function responseDate(request: ObjectionCase["requests"][number]) {
+  return request.responded || request.responseSigned;
+}
+
+function RequestResponsesPanel({
+  c,
+  role,
+  onAction,
+}: {
+  c: ObjectionCase;
+  role: Role;
+  onAction: (action: Action, role: Role, requestId?: string) => void;
+}) {
+  const requests = c.requests.filter((request) => !request.cancelled);
+  if (!requests.length) return null;
+  const received = requests.filter(
+    (request) => requestLifecycleStatus(request) === "response_received",
+  ).length;
+  return (
+    <Notice tone="amber">
+      <div className="request-response-heading">
+        <div>
+          <span className="request-response-eyebrow">Информационный блок</span>
+          <strong>Запросы и ответы</strong>
+        </div>
+        <span className="request-response-summary">
+          Ответов получено: <b>{received}/{requests.length}</b>
+        </span>
+      </div>
+      <ul className="request-response-status-list">
+        {requests.map((request) => {
+          const status = requestLifecycleStatus(request);
+          const answerDate = responseDate(request);
+          const canAttachExternalResponse =
+            (role === "demo-superuser" || role === "work") &&
+            request.template === "other" &&
+            !request.saqRecipient &&
+            status === "waiting_response";
+          return (
+            <li
+              className={status === "response_received" ? "is-received" : "is-pending"}
+              key={request.id}
+            >
+              <span className="request-response-marker" aria-hidden="true">
+                {status === "response_received" ? "✓" : "…"}
+              </span>
+              <span className="request-response-recipient">
+                <strong>{requestKind(request)}</strong>
+                <small>Кому: {request.recipient}</small>
+              </span>
+              <span className="request-response-dates">
+                <small>
+                  Дата направления: {request.sent ? formatDate(request.sent) : "—"}
+                </small>
+                <small>
+                  Дата ответа: {answerDate ? formatDate(answerDate) : "—"}
+                  {request.responseRegistrationNumber
+                    ? `, №${request.responseRegistrationNumber}`
+                    : ""}
+                </small>
+              </span>
+              <span
+                className={
+                  status === "response_received"
+                    ? "response-received"
+                    : "response-pending"
+                }
+              >
+                <span className="response-status-dot" aria-hidden="true" />
+                {REQUEST_LIFECYCLE_LABELS[status]}
+              </span>
+              {canAttachExternalResponse && (
+                <Button
+                  className="request-response-action"
+                  primary
+                  onClick={() =>
+                    onAction("record-external-response", "work", request.id)
+                  }
+                >
+                  Вложить ответ
+                </Button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Notice>
+  );
 }
 
 function analysisSubstep(status: CaseStatus) {
@@ -266,18 +368,6 @@ export default function ConsiderationProcess({
   const meetingCertificateAvailable =
     (role === "demo-superuser" || role === "work") &&
     ["commission_voting", "circulated"].includes(c.status);
-  const awaitingAuthorityResponse =
-    (role === "demo-superuser" || role === "work") &&
-    [
-      "request_approved",
-      "response_approval",
-      "response_signed",
-      "response_ready",
-    ].includes(c.status);
-  const sentRequests = c.requests.filter((request) => Boolean(request.sent));
-  const pendingResponses = sentRequests.filter(
-    (request) => !request.responded,
-  ).length;
   const awaitingAttendancePoll = c.status === "certificate_approved";
   const materialsAvailableForCommission = c.status === "documents_review";
   const meetingCompletionAvailable = !!c.certificate?.memberPositions.length;
@@ -285,27 +375,6 @@ export default function ConsiderationProcess({
   const currentAnalysisSubstep = analysisSubstep(c.status);
   const currentDecisionSubstep = decisionSubstep(c.status);
   const currentExecutionSubstep = executionSubstep(c.status);
-  const workRequestStatus =
-    role === "work" &&
-    (c.status === "request_approval" || c.status === "request_signed");
-  const pendingApprovals = c.requests.filter(
-    (request) => !request.sent && !request.approved,
-  );
-  const pendingSignatures = c.requests.filter(
-    (request) => request.approved && !request.sent,
-  );
-  const workRequestStatusLabel =
-    pendingApprovals.length && pendingSignatures.length
-      ? "На согласовании и подписании"
-      : pendingApprovals.length
-        ? "На согласовании"
-        : "На подписании";
-  const workRequestStatusOwner =
-    pendingApprovals.length && pendingSignatures.length
-      ? "Заместитель директора ДАВГА и директор ДАВГА"
-      : pendingApprovals.length
-        ? "Заместитель директора ДАВГА"
-        : "Директор ДАВГА";
   const canPerformNextAction = role === "demo-superuser" || role === next?.role;
   const requestActionsVisible =
     inRequestFormationStage && (role === "demo-superuser" || role === "work");
@@ -467,62 +536,8 @@ export default function ConsiderationProcess({
           </div>
         </div>
       )}
-      {workRequestStatus ? (
-        <Notice tone="amber">
-          <div className="request-response-heading">
-            <div>
-              <span className="request-response-eyebrow">
-                Запросы направлены
-              </span>
-              <strong>{workRequestStatusLabel}</strong>
-            </div>
-            <span className="request-response-summary">
-              Ожидают действия:{" "}
-              <b>{pendingApprovals.length + pendingSignatures.length}</b>
-            </span>
-          </div>
-          <ul className="request-response-status-list">
-            {c.requests.map((request) => {
-              const responseReceived = Boolean(request.responded);
-              const status = responseReceived
-                ? `Ответ получен ${formatDate(request.responded)}`
-                : request.sent
-                  ? "Ответ ожидается"
-                  : request.approved
-                    ? "На подписании"
-                    : "На согласовании";
-              return (
-                <li
-                  className={responseReceived ? "is-received" : "is-pending"}
-                  key={request.id}
-                >
-                  <span className="request-response-marker" aria-hidden="true">
-                    {responseReceived ? "✓" : "…"}
-                  </span>
-                  <span className="request-response-recipient">
-                    <strong>{request.recipient}</strong>
-                    <small>Направлен {formatDate(request.date)}</small>
-                  </span>
-                  <span
-                    className={
-                      responseReceived
-                        ? "response-received"
-                        : "response-pending"
-                    }
-                  >
-                    <span className="response-status-dot" aria-hidden="true" />
-                    {status}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-          <p className="request-status-owner">
-            Действие выполняется в кабинете:{" "}
-            <strong>{workRequestStatusOwner}</strong>.
-          </p>
-        </Notice>
-      ) : next && !requestActionsVisible ? (
+      <RequestResponsesPanel c={c} role={role} onAction={onAction} />
+      {next && !requestActionsVisible ? (
         <div className="consideration-task">
           <div>
             <span className="consideration-eyebrow">Текущая задача</span>
@@ -611,83 +626,6 @@ export default function ConsiderationProcess({
             </small>
           </div>
         </div>
-      ) : awaitingAuthorityResponse ? (
-        <>
-          <Notice tone="amber">
-            <div className="request-response-heading">
-              <div>
-                <span className="request-response-eyebrow">
-                  Запросы направлены
-                </span>
-                <strong>Ожидание ответов</strong>
-              </div>
-              <span className="request-response-summary">
-                Ожидают ответа: <b>{pendingResponses}</b>
-              </span>
-            </div>
-            <ul className="request-response-status-list">
-              {sentRequests.map((request) => {
-                const recipient =
-                  request.recipient ||
-                  (request.saqRecipient === "subject"
-                    ? "Кабинет Объекта"
-                    : "Адресат запроса");
-                const canAttachExternalResponse =
-                  (role === "demo-superuser" || role === "work") &&
-                  request.template === "other" &&
-                  !request.saqRecipient &&
-                  !request.responded;
-                return (
-                  <li
-                    className={request.responded ? "is-received" : "is-pending"}
-                    key={request.id}
-                  >
-                    <span
-                      className="request-response-marker"
-                      aria-hidden="true"
-                    >
-                      {request.responded ? "✓" : "…"}
-                    </span>
-                    <span className="request-response-recipient">
-                      <strong>{recipient}</strong>
-                      <small>Направлен {formatDate(request.sent)}</small>
-                    </span>
-                    <span
-                      className={
-                        request.responded
-                          ? "response-received"
-                          : "response-pending"
-                      }
-                    >
-                      <span
-                        className="response-status-dot"
-                        aria-hidden="true"
-                      />
-                      {request.responded
-                        ? `Ответ получен ${formatDate(request.responded)}`
-                        : "Ответ ожидается"}
-                    </span>
-                    {canAttachExternalResponse && (
-                      <Button
-                        className="request-response-action"
-                        primary
-                        onClick={() =>
-                          onAction(
-                            "record-external-response",
-                            "work",
-                            request.id,
-                          )
-                        }
-                      >
-                        Вложить ответ
-                      </Button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </Notice>
-        </>
       ) : materialsAvailableForCommission ? (
         <Notice>
           <strong>Материалы доступны членам АК</strong>
