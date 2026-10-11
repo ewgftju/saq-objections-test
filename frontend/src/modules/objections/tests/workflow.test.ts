@@ -339,8 +339,12 @@ test("направление запроса в другой орган фикс�
     sent: "2026-09-08",
   });
   assert.equal(
-    h.c.documents.some((document) => document.kind === "request-appendix"),
-    false,
+    h.c.documents.some(
+      (document) =>
+        document.name === "Запрос в Экспертная организация" &&
+        document.requestId === "request-1",
+    ),
+    true,
   );
   const form = actionForm("request-other", h.c, h.state.date, {});
   assert.equal(form.title, "Зафиксировать запрос через другую систему");
@@ -367,6 +371,7 @@ test("направление запроса в другой орган фикс�
   );
   assert.match(processHtml, /Экспертная организация/);
   assert.match(processHtml, /Ответ ожидается/);
+  assert.match(processHtml, /Вложить ответ/);
 });
 
 test("запрос в кабинет SAQ формируется отдельно от внешней фиксации", () => {
