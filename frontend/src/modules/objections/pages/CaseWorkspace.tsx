@@ -21,6 +21,7 @@ import {
   executionDeadline,
   reviewDeadline,
 } from "../services/deadlines";
+import { applicantIdentifierType } from "../services/appealTemplates";
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
@@ -419,9 +420,11 @@ export default function CaseWorkspace({
                   />
                   <Fact
                     label={
-                      hasSeparateAuditObject
-                        ? "БИН/ИИН заявителя"
-                        : "БИН/ИИН"
+                      c.applicantIdentifierType
+                        ? `${applicantIdentifierType(c)} заявителя`
+                        : hasSeparateAuditObject
+                          ? "БИН/ИИН заявителя"
+                          : "БИН/ИИН"
                     }
                     value={c.bin}
                   />

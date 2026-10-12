@@ -3,6 +3,7 @@ import { Button, PageHeading } from "../../../components/ui";
 import { CLOSED, STATUS, TYPES } from "../../../data/constants";
 import type { CaseStatus, ObjectionCase, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
+import { applicantIdentifierType } from "../services/appealTemplates";
 import { executionDeadline, reviewDeadline } from "../services/deadlines";
 
 const APPEAL_TYPE_OPTIONS = [
@@ -496,7 +497,9 @@ export default function CasesList({
                   </td>
                   <td>
                     <strong>{c.org}</strong>
-                    <span className="subline">БИН {c.bin}</span>
+                    <span className="subline">
+                      {applicantIdentifierType(c, "БИН")} {c.bin}
+                    </span>
                   </td>
                   <td>
                     {normalizedAppealType(c)}
