@@ -1,7 +1,11 @@
 import { useRef, useState } from "react";
 import { Button, Modal, Notice } from "../../../components/ui";
 import { makeCase } from "../../../data/objections";
-import type { CaseType, DemoState } from "../../../types";
+import type {
+  ApplicantIdentifierType,
+  CaseType,
+  DemoState,
+} from "../../../types";
 import { dateObject } from "../services/deadlines";
 import { required } from "../services/workflow";
 import { nextCaseNumber } from "../services/caseNumbering";
@@ -96,6 +100,8 @@ export default function NewCaseModal({
   onClose: () => void;
 }) {
   const [appealType, setAppealType] = useState<string>(APPEAL_TYPES[0].value);
+  const [applicantIdentifierType, setApplicantIdentifierType] =
+    useState<ApplicantIdentifierType>("БИН");
   const [pointIds, setPointIds] = useState(["point1"]);
   const nextPointId = useRef(2);
   const [actionAppealIds, setActionAppealIds] = useState(["actionAppeal1"]);
@@ -171,9 +177,7 @@ export default function NewCaseModal({
   const applicantNameLabel = hasSeparateAuditObject
     ? "Наименование объекта заявителя"
     : "Наименование объекта аудита/заявителя";
-  const applicantBinLabel = hasSeparateAuditObject
-    ? "БИН/ИИН заявителя"
-    : "БИН/ИИН";
+  const applicantIdentifierLabel = `${applicantIdentifierType} заявителя`;
   const updateRequirementFiles = (files: File[]) => {
     if (!files.length) return;
     setRequirementFiles((current) => {
@@ -232,9 +236,11 @@ export default function NewCaseModal({
               throw new Error("Вложите доверенность представителя");
             const get = (name: string, label: string) =>
               required(data, name, label);
-            const bin = get("bin", applicantBinLabel);
+            const bin = get("bin", applicantIdentifierLabel);
             if (!/^\d{12}$/.test(bin))
-              throw new Error(`${applicantBinLabel} должен содержать 12 цифр`);
+              throw new Error(
+                `${applicantIdentifierLabel} должен содержать 12 цифр`,
+              );
             const appealDate = get(
               "appealDate",
               "Дата возражения, жалобы, заявления",
@@ -301,6 +307,7 @@ export default function NewCaseModal({
               appealDate,
               org: get("org", applicantNameLabel),
               bin,
+              applicantIdentifierType,
               address: get("address", "Местонахождение"),
               applicant: String(data.get("applicant") || "").trim(),
               registered: state.date,
@@ -518,10 +525,28 @@ export default function NewCaseModal({
               required: true,
             }}
           />
+          <label className="field">
+            <span>
+              Тип идентификатора заявителя
+              <span className="required"> *</span>
+            </span>
+            <select
+              name="applicantIdentifierType"
+              value={applicantIdentifierType}
+              onChange={(event) =>
+                setApplicantIdentifierType(
+                  event.target.value as ApplicantIdentifierType,
+                )
+              }
+            >
+              <option value="БИН">БИН</option>
+              <option value="ИИН">ИИН</option>
+            </select>
+          </label>
           <Field
             field={{
               name: "bin",
-              label: applicantBinLabel,
+              label: applicantIdentifierLabel,
               type: "text",
               required: true,
             }}

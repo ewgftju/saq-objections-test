@@ -4,6 +4,7 @@ import { Button, Modal } from "../../../components/ui";
 import type { ObjectionCase } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import {
+  applicantIdentifierType,
   agendaOrProtocolIntro,
   auditAuthorityTemplateName,
 } from "../services/appealTemplates";
@@ -38,20 +39,20 @@ export function agendaItemText(c: ObjectionCase) {
       : c.type === "audit"
         ? "Возражение на аудиторский отчет"
         : "");
-  const common = `${value(c.org)} ИИН/БИН ${value(c.bin)}`;
+  const common = `${value(c.org)} ${applicantIdentifierType(c)} ${value(c.bin)}`;
   const executor = value(c.assignee);
   const issuer = auditAuthorityTemplateName(c);
 
   if (appealType === "Возражение на уведомления") {
-    return `Возражение от ${value(c.org)}, ИИН/БИН ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${value(c.document.number)}, направленного по результатам камерального контроля ${issuer}.`;
+    return `Возражение от ${value(c.org)}, ${applicantIdentifierType(c)} ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года, к уведомлению об устранении нарушений от ${formatDate(c.document.date)} года № ${value(c.document.number)}, направленного по результатам камерального контроля ${issuer}.`;
   }
 
   if (appealType === "Жалоба на уведомление") {
-    return `Жалоба от ${value(c.org)}, ИИН/БИН ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года, на уведомление об устранении нарушений от ${formatDate(c.document.date)} года № ${value(c.document.number)}, проведенный ${issuer}.`;
+    return `Жалоба от ${value(c.org)}, ${applicantIdentifierType(c)} ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года, на уведомление об устранении нарушений от ${formatDate(c.document.date)} года № ${value(c.document.number)}, проведенный ${issuer}.`;
   }
 
   if (appealType === "Возражение на аудиторский отчет") {
-    return `Возражение от ${value(c.org)}, БИН ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года, на аудиторский отчет от ${formatDate(c.document.date)} года № ${value(c.document.number)}, проведенный ${issuer}.`;
+    return `Возражение от ${value(c.org)}, ${applicantIdentifierType(c, "БИН")} ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года, на аудиторский отчет от ${formatDate(c.document.date)} года № ${value(c.document.number)}, проведенный ${issuer}.`;
   }
 
   if (appealType === "Жалоба на действие/бездействие") {
