@@ -1,4 +1,5 @@
 export type CaseType = "notice" | "audit" | "control";
+export type ApplicantIdentifierType = "ИИН" | "БИН";
 export type Role =
   | "work"
   | "deputy"
@@ -394,6 +395,8 @@ export interface ObjectionCase {
   appealDate?: string;
   org: string;
   bin: string;
+  /** Тип идентификатора заявителя, выбранный при создании обращения. */
+  applicantIdentifierType?: ApplicantIdentifierType;
   address: string;
   applicant: string;
   registered: string;
@@ -471,6 +474,7 @@ export type NewCaseInput = Pick<
   | "appealDate"
   | "org"
   | "bin"
+  | "applicantIdentifierType"
   | "address"
   | "applicant"
   | "registered"
