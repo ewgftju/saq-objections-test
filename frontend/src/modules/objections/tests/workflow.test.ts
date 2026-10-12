@@ -43,6 +43,11 @@ import { pathForRoute, routeFromPath } from "../routing";
 import { DEMO_USER } from "../../../config";
 import { actionForm } from "../formDefinitions";
 import { nextCaseNumber } from "../services/caseNumbering";
+import {
+  agendaOrProtocolIntro,
+  certificateTemplateIntro,
+  requestTemplateIntro,
+} from "../services/appealTemplates";
 
 function harness(index = 0) {
   let state = initialState();
@@ -3282,4 +3287,15 @@ test("уведомления АК показывают новые опросы �
   assert.ok(html.indexOf("Новый опрос") < html.indexOf("Старый опрос"));
   assert.match(html, /Ответ направлен/);
   assert.match(html, /disabled=""/);
+});
+
+test("печатные формы выводят выбранный тип идентификатора заявителя", () => {
+  const h = harness();
+  h.c.applicantIdentifierType = "ИИН";
+
+  [
+    requestTemplateIntro(h.c),
+    certificateTemplateIntro(h.c),
+    agendaOrProtocolIntro(h.c),
+  ].forEach((text) => assert.match(text || "", /ИИН 000000000001/));
 });
