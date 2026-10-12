@@ -17,8 +17,19 @@ function inlineValue(text?: string) {
   return value(text).replace(/[.]+$/, "");
 }
 
-function applicantReference(c: ObjectionCase) {
-  return `${value(c.org)}, ИИН/БИН ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года`;
+/**
+ * В старых карточках тип идентификатора не сохранялся. Для них выводится
+ * прежнее обозначение, если конкретный шаблон не задаёт иной резервный тип.
+ */
+export function applicantIdentifierType(
+  c: Pick<ObjectionCase, "applicantIdentifierType">,
+  legacyFallback = "ИИН/БИН",
+) {
+  return c.applicantIdentifierType || legacyFallback;
+}
+
+export function applicantReference(c: ObjectionCase) {
+  return `${value(c.org)}, ${applicantIdentifierType(c)} ${value(c.bin)}, № ${value(c.appealNumber)} от ${formatDate(c.appealDate || c.filed)} года`;
 }
 
 function prescriptionAuditReference(c: ObjectionCase) {
