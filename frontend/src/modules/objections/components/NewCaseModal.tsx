@@ -145,6 +145,7 @@ export default function NewCaseModal({
     isDecisionComplaint ||
     appealType === "statement";
   const supportsRepresentativeConfirmation =
+    isNotice ||
     isAudit ||
     isDecisionComplaint ||
     isActionComplaint ||
@@ -236,6 +237,8 @@ export default function NewCaseModal({
               throw new Error("Вложите доверенность представителя");
             const get = (name: string, label: string) =>
               required(data, name, label);
+            const optional = (name: string) =>
+              String(data.get(name) ?? "").trim();
             const bin = get("bin", applicantIdentifierLabel);
             if (!/^\d{12}$/.test(bin))
               throw new Error(
@@ -369,7 +372,7 @@ export default function NewCaseModal({
                         "procurementNumber",
                         "Номер закупки",
                       ),
-                      lotNumber: get("lotNumber", "Номер лота"),
+                      lotNumber: optional("lotNumber"),
                       procurementSubject: get(
                         "procurementSubject",
                         "Предмет государственной закупки",
@@ -381,18 +384,10 @@ export default function NewCaseModal({
                       decisionKind,
                       ...((decisionKind === "prescription-audit" ||
                         decisionKind === "prescription-preventive") && {
-                        relatedDocumentNumber: get(
+                        relatedDocumentNumber: optional(
                           "relatedDocumentNumber",
-                          decisionKind === "prescription-audit"
-                            ? "Номер аудиторского отчета"
-                            : "Номер профилактического контроля",
                         ),
-                        relatedDocumentDate: get(
-                          "relatedDocumentDate",
-                          decisionKind === "prescription-audit"
-                            ? "Дата подписания аудиторского отчета"
-                            : "Дата подписания профилактического контроля",
-                        ),
+                        relatedDocumentDate: optional("relatedDocumentDate"),
                       }),
                     }
                   : {}),
@@ -867,7 +862,7 @@ export default function NewCaseModal({
                     name: "lotNumber",
                     label: "Номер лота",
                     type: "text",
-                    required: true,
+                    required: false,
                   }}
                 />
                 <Field
@@ -923,7 +918,7 @@ export default function NewCaseModal({
                         ? "Номер аудиторского отчета"
                         : "Номер профилактического контроля",
                     type: "text",
-                    required: true,
+                    required: false,
                   }}
                 />
                 <Field
@@ -934,8 +929,7 @@ export default function NewCaseModal({
                         ? "Дата подписания аудиторского отчета"
                         : "Дата подписания профилактического контроля",
                     type: "date",
-                    value: state.date,
-                    required: true,
+                    required: false,
                   }}
                 />
               </div>

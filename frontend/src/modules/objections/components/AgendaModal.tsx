@@ -58,7 +58,8 @@ export function agendaItemText(c: ObjectionCase) {
   if (appealType === "Жалоба на действие/бездействие") {
     if (!details?.procurementNumber)
       return `Жалоба ${appealReference(c)} ${common} касательно действия/бездействия ${issuer} на аудиторский отчет ${documentReference(c)}`;
-    return `Жалоба ${appealReference(c)} ${common} касательно действия/бездействия ${issuer} при рассмотрении обращения ${documentReference(c)} по государственной закупке ${numbered(details.procurementNumber)} (лот ${numbered(details.lotNumber)}) на ${value(details.procurementSubject)} (${executor})`;
+    const lot = details.lotNumber ? ` (лот ${numbered(details.lotNumber)})` : "";
+    return `Жалоба ${appealReference(c)} ${common} касательно действия/бездействия ${issuer} при рассмотрении обращения ${documentReference(c)} по государственной закупке ${numbered(details.procurementNumber)}${lot} на ${value(details.procurementSubject)} (${executor})`;
   }
 
   if (appealType === "Жалоба на решение КВГА/ДВГА") {

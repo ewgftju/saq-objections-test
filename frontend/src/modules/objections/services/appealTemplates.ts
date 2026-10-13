@@ -82,7 +82,17 @@ function actionInactionComplaintReference(c: ObjectionCase) {
     .join("; ");
 
   const procurement = c.agendaDetails?.procurementNumber
-    ? `, по государственной закупке № ${value(c.agendaDetails.procurementNumber)}, лот № ${value(c.agendaDetails.lotNumber)}, предмет: ${value(c.agendaDetails.procurementSubject)}`
+    ? `, ${[
+        `по государственной закупке № ${value(c.agendaDetails.procurementNumber)}`,
+        c.agendaDetails.lotNumber
+          ? `лот № ${value(c.agendaDetails.lotNumber)}`
+          : "",
+        c.agendaDetails.procurementSubject
+          ? `предмет: ${value(c.agendaDetails.procurementSubject)}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(", ")}`
     : "";
 
   return `${applicantReference(c)}, касательно действий (бездействий) ${actions}${procurement}`;

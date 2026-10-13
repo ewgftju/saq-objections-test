@@ -83,8 +83,10 @@ function requestIntro(c: ObjectionCase, deadline: string) {
 
   if (appealType === "Жалоба на действие/бездействие") {
     const authority = auditAuthorityTemplateName(c);
-    if (details?.procurementNumber)
-      return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} касательно действия/бездействия ${authority} при рассмотрении обращения от ${formatDate(c.document.date)} №${c.document.number || "—"} по государственной закупке № ${details.procurementNumber} (лот №${details.lotNumber || "—"}) на ${details.procurementSubject || "—"}${finish("жалобы")}`;
+    if (details?.procurementNumber) {
+      const lot = details.lotNumber ? ` (лот №${details.lotNumber})` : "";
+      return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} касательно действия/бездействия ${authority} при рассмотрении обращения от ${formatDate(c.document.date)} №${c.document.number || "—"} по государственной закупке № ${details.procurementNumber}${lot} на ${details.procurementSubject || "—"}${finish("жалобы")}`;
+    }
     return `В связи с поступлением на рассмотрение Апелляционной комиссии Министерства финансов Республики Казахстан жалобы ${c.org} касательно действия/бездействия ${authority} на аудиторский отчет от ${formatDate(c.document.date)} №${c.document.number || "—"}${finish("жалобы")}`;
   }
 
@@ -111,8 +113,10 @@ function certificateIntro(c: ObjectionCase) {
     return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, на акт о результате профилактического контроля ${authority} от ${sourceDate} № ${sourceNumber}.`;
 
   if (appealType === "Жалоба на действие/бездействие") {
-    if (details?.procurementNumber)
-      return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, касательно действия/бездействия ${authority} при рассмотрении обращения от ${sourceDate} № ${sourceNumber} по государственной закупке № ${details.procurementNumber}, лот № ${details.lotNumber || "—"}, предмет: ${details.procurementSubject || "—"}.`;
+    if (details?.procurementNumber) {
+      const lot = details.lotNumber ? `, лот № ${details.lotNumber}` : "";
+      return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, касательно действия/бездействия ${authority} при рассмотрении обращения от ${sourceDate} № ${sourceNumber} по государственной закупке № ${details.procurementNumber}${lot}, предмет: ${details.procurementSubject || "—"}.`;
+    }
     return `В Министерство финансов Республики Казахстан поступила жалоба № ${number} от ${date} ${applicant}, касательно действия/бездействия ${authority} по аудиторскому отчёту от ${sourceDate} № ${sourceNumber}.`;
   }
 
@@ -976,8 +980,12 @@ export function DocumentContent({
             <p>
               <b>Номер государственной закупки:</b>{" "}
               {agendaDetails?.procurementNumber || "—"}
-              <br />
-              <b>Номер лота:</b> {agendaDetails?.lotNumber || "—"}
+              {agendaDetails?.lotNumber && (
+                <>
+                  <br />
+                  <b>Номер лота:</b> {agendaDetails.lotNumber}
+                </>
+              )}
               <br />
               <b>Предмет государственной закупки:</b>{" "}
               {agendaDetails?.procurementSubject || "—"}
