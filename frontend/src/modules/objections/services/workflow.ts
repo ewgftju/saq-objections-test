@@ -177,12 +177,13 @@ function directedToDvgaOrKvga(c: ObjectionCase) {
 }
 
 function requiresEotinishDecisionProject(c: ObjectionCase) {
-  // Для жалоб действует единый административный маршрут независимо от
+  // Для жалоб и заявлений действует единый административный маршрут независимо от
   // источника: портал, цифровая система или E-Otinish. После протокола
   // обязательно формируются проект решения и проводится заслушивание.
-  // Проверяем сам вид обращения, а не его технический тип: это также
-  // включает сохранённые карточки со старым наименованием вида жалобы.
-  return (c.appealType || "").trim().startsWith("Жалоба");
+  // Проверяем сам вид обращения, а не его технический тип: это также включает
+  // сохранённые карточки со старым наименованием вида жалобы.
+  const appealType = (c.appealType || "").trim();
+  return appealType.startsWith("Жалоба") || appealType === "Заявление";
 }
 
 function cameThroughSaq(c: ObjectionCase) {
@@ -446,7 +447,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     final_response_approval: {
       action: "approve-final-response",
       label: "Согласовать ответ",
-      role: "director",
+      role: "deputy",
     },
     final_response_signed: {
       action: "sign-final-response",
@@ -1736,7 +1737,9 @@ export function applyAction(
       });
       c.status = "decision_project_approval";
       doc(
-        "Проект решения по жалобе",
+        c.appealType === "Заявление"
+          ? "Проект решения по заявлению"
+          : "Проект решения по жалобе",
         "decision-project",
         c.result?.reason || "",
       );

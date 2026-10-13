@@ -804,12 +804,12 @@ export default function ConsiderationProcess({
       {(role === "demo-superuser" || role === "work") && (
         <DecisionProjectApprovalPanel c={c} />
       )}
-      {inRequestFormationStage && (
+      {!hideStages && inRequestFormationStage && (
         <div className="request-responses-panel">
           <RequestResponsesPanel c={c} role={role} onAction={onAction} />
         </div>
       )}
-      {lastEvent && (
+      {!hideStages && lastEvent && (
         <div className="consideration-last-event">
           <span>
             <span className="muted">Последнее событие: </span>
@@ -820,7 +820,7 @@ export default function ConsiderationProcess({
           </button>
         </div>
       )}
-      {currentStatus !== "received" && extras.length > 0 && (
+      {!hideStages && currentStatus !== "received" && extras.length > 0 && (
         <details className="consideration-extras">
           <summary>Другие действия по делу</summary>
           <div>

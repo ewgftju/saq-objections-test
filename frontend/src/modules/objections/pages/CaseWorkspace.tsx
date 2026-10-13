@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button, Notice, PageHeading } from "../../../components/ui";
 import { CLOSED, OUTCOMES, STATUS, TYPES } from "../../../data/constants";
 import type {
@@ -32,13 +32,13 @@ function Fact({
   wide = false,
 }: {
   label: string;
-  value?: string;
+  value?: ReactNode;
   wide?: boolean;
 }) {
   return (
     <div className={`fact ${wide ? "full" : ""}`}>
       <span>{label}</span>
-      <strong>{value || "—"}</strong>
+      <strong>{value ?? "—"}</strong>
     </div>
   );
 }
@@ -432,6 +432,14 @@ export default function CaseWorkspace({
     "Жалоба на решение КВГА/ДВГА",
     "Заявление",
   ].includes(c.appealType || "");
+  const supportsRepresentativeConfirmation = [
+    "Жалоба на уведомление",
+    "Возражение на уведомление",
+    "Возражение на аудиторский отчет",
+    "Жалоба на действие/бездействие",
+    "Жалоба на решение КВГА/ДВГА",
+    "Заявление",
+  ].includes(c.appealType || "");
   const decisionKindLabel =
     agendaDetails?.decisionKind === "prescription-audit"
       ? "Предписание на аудиторский отчет"
@@ -455,7 +463,7 @@ export default function CaseWorkspace({
     isRequestForAuthority(request, role),
   );
   const authorityHasPendingRequest = authorityRequests.some(
-    (request) => !request.responded,
+    (request) => !request.responseSigned,
   );
   const subjectRequest = c.requests.find(
     (request) =>
@@ -475,10 +483,6 @@ export default function CaseWorkspace({
   const recipientLimited = isAuthorityRole(role) || role === "subject";
   const commissionCurrentTaskHidden =
     role === "commission" && commissionMeetingCompleted;
-  const recipientHasActiveTask =
-    authorityHasPendingRequest ||
-    Boolean(subjectRequest) ||
-    subjectCanCommentOnDecisionProject;
   return (
     <>
       <div className="back-row">
@@ -491,12 +495,14 @@ export default function CaseWorkspace({
         subtitle={c.org}
         action={
           <>
-            {(!recipientLimited || recipientHasActiveTask) && (
+            {!recipientLimited && (
               <span className="badge blue">{STATUS[c.status]}</span>
             )}
-            <Button onClick={() => onDocument("original")}>
-              Исходное обращение
-            </Button>
+            {!recipientLimited && (
+              <Button onClick={() => onDocument("original")}>
+                Исходное обращение
+              </Button>
+            )}
           </>
         }
       />
@@ -518,8 +524,7 @@ export default function CaseWorkspace({
             )
               .filter(
                 ([value]) =>
-                  !recipientLimited ||
-                  !["documents", "history"].includes(value),
+                  !recipientLimited || value === "review",
               )
               .map(([value, label]) => (
                 <button
@@ -535,10 +540,9 @@ export default function CaseWorkspace({
               ))}
           </div>
           <div className="card-body">
-            {tab === "overview" && (
+            {tab === "overview" && !recipientLimited && (
               <>
-                {role !== "subject" &&
-                  (!isAuthorityRole(role) || authorityHasPendingRequest) &&
+                {(!isAuthorityRole(role) || authorityHasPendingRequest) &&
                   !commissionCurrentTaskHidden && (
                     <div className="consideration-entry">
                       <div>
@@ -593,17 +597,34 @@ export default function CaseWorkspace({
                   />
                   <Fact label="Местонахождение" value={c.address} />
                   <Fact label="Представитель" value={c.applicant} />
-                  {agendaDetails?.applicantIsAuditObjectRepresentative && (
+                  {supportsRepresentativeConfirmation && (
                     <Fact
                       label="Заявитель является представителем объекта аудита"
-                      value="Да"
+                      value={
+                        agendaDetails?.applicantIsAuditObjectRepresentative
+                          ? "Да"
+                          : "Нет"
+                      }
                       wide
                     />
                   )}
                   {powerOfAttorney && (
                     <Fact
                       label="Доверенность"
-                      value={powerOfAttorney.filename || powerOfAttorney.name}
+                      value={
+                        powerOfAttorney.dataUrl ? (
+                          <a
+                            href={powerOfAttorney.dataUrl}
+                            download={
+                              powerOfAttorney.filename || powerOfAttorney.name
+                            }
+                          >
+                            {powerOfAttorney.filename || powerOfAttorney.name}
+                          </a>
+                        ) : (
+                          powerOfAttorney.filename || powerOfAttorney.name
+                        )
+                      }
                       wide
                     />
                   )}
@@ -739,9 +760,21 @@ export default function CaseWorkspace({
                   {requirementFiles.length > 0 && (
                     <Fact
                       label="Требования заявителя"
-                      value={requirementFiles
-                        .map((document) => document.filename || document.name)
-                        .join(", ")}
+                      value={requirementFiles.map((document, index) => (
+                        <span key={`${document.filename}-${index}`}>
+                          {index > 0 && ", "}
+                          {document.dataUrl ? (
+                            <a
+                              href={document.dataUrl}
+                              download={document.filename || document.name}
+                            >
+                              {document.filename || document.name}
+                            </a>
+                          ) : (
+                            document.filename || document.name
+                          )}
+                        </span>
+                      ))}
                       wide
                     />
                   )}
@@ -1621,7 +1654,7 @@ export default function CaseWorkspace({
             )}
           </div>
         </section>
-        <aside className="right-column">
+        {!recipientLimited && <aside className="right-column">
           <section className="card right-card">
             <div className="card-head">
               <h3>Сроки</h3>
@@ -1714,7 +1747,7 @@ export default function CaseWorkspace({
               </p>
             </div>
           </section>
-        </aside>
+        </aside>}
       </div>
     </>
   );

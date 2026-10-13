@@ -593,7 +593,8 @@ export function actionForm(
       title =
         action === "create-decision-project"
           ? "Сформировать проект решения"
-          : (c.appealType || "").trim().startsWith("Жалоба")
+          : (c.appealType || "").trim().startsWith("Жалоба") ||
+              (c.appealType || "").trim() === "Заявление"
             ? "Сформировать мотивированный ответ"
             : "Сформировать окончательный ответ";
       if (action === "deliver")
