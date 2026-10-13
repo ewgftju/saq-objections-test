@@ -1,4 +1,4 @@
-import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
+import { Button, Icon, Modal, Notice, PageHeading } from "../../../components/ui";
 import { agendaItemText } from "../components/AgendaModal";
 import { AgendaResultsTable } from "../components/AgendaResultsModal";
 import { useState } from "react";
@@ -403,13 +403,22 @@ export function SessionsPage({
               </Button>
             }
           />
-          <section className="card">
-            <div className="facts">
-              <div className="fact">
+          <section className="card meeting-access-card">
+            <div className="meeting-access-card-head">
+              <div className="meeting-access-card-icon">
+                <Icon name="sessions" />
+              </div>
+              <div>
+                <p className="meeting-access-card-eyebrow">Информация о заседании</p>
+                <h3>Параметры проведения</h3>
+              </div>
+            </div>
+            <div className="meeting-access-details">
+              <div className="meeting-access-detail">
                 <span>Дата и время проведения</span>
                 <strong>{formatDateTime(selectedMeeting.dateTime)}</strong>
               </div>
-              <div className="fact full">
+              <div className="meeting-access-detail">
                 <span>Формат и место проведения</span>
                 <strong>{selectedMeeting.formatAndPlace || "—"}</strong>
               </div>
