@@ -482,7 +482,9 @@ export default function CaseWorkspace({
     );
   const recipientLimited = isAuthorityRole(role) || role === "subject";
   const commissionCurrentTaskHidden =
-    role === "commission" && commissionMeetingCompleted;
+    role === "commission" &&
+    commissionMeetingCompleted &&
+    c.status !== "protocol";
   return (
     <>
       <div className="back-row">

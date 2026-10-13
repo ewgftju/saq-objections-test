@@ -12,7 +12,10 @@ import type {
   ViolationPoint,
 } from "../../../types";
 import { formatDate, formatMoney } from "../../../utils/dateFormat";
-import { auditAuthorityFullName } from "../../../utils/auditAuthority";
+import {
+  auditAuthorityFullName,
+  auditAuthorityKazakhName,
+} from "../../../utils/auditAuthority";
 import { downloadFile } from "../../../utils/download";
 import { DEMO_USER } from "../../../config";
 import {
@@ -657,7 +660,7 @@ export function DocumentContent({
         <article className="print-document final-response-template">
           <div className="final-response-recipient">
             <p>{snapshot.org}</p>
-            <p>{auditAuthorityFullName(snapshot.issuer)}</p>
+            <p>{auditAuthorityKazakhName(snapshot.issuer)}</p>
           </div>
           <div className="final-response-body">
             <p>{kazakhDecisionIntro(snapshot)}</p>

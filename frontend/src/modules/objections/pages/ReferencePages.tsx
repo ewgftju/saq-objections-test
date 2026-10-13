@@ -323,6 +323,8 @@ export function SessionsPage({
   const [sessionsTab, setSessionsTab] = useState<"meetings" | "excluded">(
     "meetings",
   );
+  const canViewExcludedCases = role !== "commission";
+  const visibleSessionsTab = canViewExcludedCases ? sessionsTab : "meetings";
   const [isAddingCase, setIsAddingCase] = useState(false);
   const [caseIdToAdd, setCaseIdToAdd] = useState("");
   const [selectedCaseIds, setSelectedCaseIds] = useState<Set<string>>(
@@ -385,12 +387,12 @@ export function SessionsPage({
   if (selectedMeeting) {
     const activeMemberResponse =
       selectedPoll?.responses[activeCommissionMemberId || ""];
-    const activeMemberWillNotAttend =
-      role === "commission" && activeMemberResponse === "no";
+    const activeMemberHasNoMeetingAccess =
+      role === "commission" && activeMemberResponse !== "yes";
     const hideAgendaUntilSigned =
       role === "commission" && !selectedMeeting.agendaSigned;
 
-    if (activeMemberWillNotAttend) {
+    if (activeMemberHasNoMeetingAccess) {
       return (
         <>
           <PageHeading
@@ -888,7 +890,7 @@ export function SessionsPage({
         subtitle="Карточки заседаний, опрос членов АК и повестка дня"
         action={
           (role === "demo-superuser" || role === "work") &&
-          sessionsTab === "meetings" ? (
+          visibleSessionsTab === "meetings" ? (
             <Button primary onClick={onCreateMeeting}>
               + Создать заседание
             </Button>
@@ -902,34 +904,42 @@ export function SessionsPage({
       >
         <button
           type="button"
-          className={sessionsTab === "meetings" ? "active" : ""}
+          className={visibleSessionsTab === "meetings" ? "active" : ""}
           onClick={() => setSessionsTab("meetings")}
         >
           Заседания
         </button>
-        <button
-          type="button"
-          className={sessionsTab === "excluded" ? "active" : ""}
-          onClick={() => setSessionsTab("excluded")}
-        >
-          Не включённые в заседание
-          {excludedCases.length > 0 && (
-            <span className="session-tab-badge">{excludedCases.length}</span>
-          )}
-        </button>
+        {canViewExcludedCases && (
+          <button
+            type="button"
+            className={visibleSessionsTab === "excluded" ? "active" : ""}
+            onClick={() => setSessionsTab("excluded")}
+          >
+            Не включённые в заседание
+            {excludedCases.length > 0 && (
+              <span className="session-tab-badge">{excludedCases.length}</span>
+            )}
+          </button>
+        )}
       </div>
-      {sessionsTab === "meetings" ? (
+      {visibleSessionsTab === "meetings" ? (
         <section className="card">
           <div className="table-scroll">
             <table className="registry-table">
               <thead>
                 <tr>
-                  <th>Заседание</th>
+                  {role !== "commission" && <th>Заседание</th>}
                   <th>Дата и время</th>
-                  <th>Обращения</th>
-                  <th>Опрос</th>
-                  <th>Повестка дня</th>
-                  <th>Заседание проведено</th>
+                  {role === "commission" ? (
+                    <th>Формат и место проведения</th>
+                  ) : (
+                    <>
+                      <th>Обращения</th>
+                      <th>Опрос</th>
+                      <th>Повестка дня</th>
+                      <th>Заседание проведено</th>
+                    </>
+                  )}
                   <th />
                 </tr>
               </thead>
@@ -948,47 +958,55 @@ export function SessionsPage({
                     ).length;
                     return (
                       <tr key={meeting.id}>
-                        <td>№ {meeting.number}</td>
+                        {role !== "commission" && <td>№ {meeting.number}</td>}
                         <td>
                           {formatDateTime(meeting.dateTime)}
-                          {meeting.formatAndPlace && (
+                          {role !== "commission" && meeting.formatAndPlace && (
                             <small className="muted">
                               {" "}
                               {meeting.formatAndPlace}
                             </small>
                           )}
                         </td>
-                        <td>{meeting.caseIds.length}</td>
-                        <td>{poll ? "Подтвердили: " + yes : "Не направлен"}</td>
-                        <td>
-                          <span
-                            className={
-                              "badge " +
-                              (meeting.agendaSigned ? "green" : "amber")
-                            }
-                          >
-                            {meeting.agendaSigned
-                              ? "Подписана"
-                              : "Ожидает подписания"}
-                          </span>
-                        </td>
-                        <td>
-                          {meeting.completed ? (
-                            <span className="badge green">Проведено</span>
-                          ) : role === "demo-superuser" || role === "work" ? (
-                            <Button
-                              disabled={
-                                !meeting.agendaSigned ||
-                                date < meeting.dateTime.slice(0, 10)
-                              }
-                              onClick={() => onCompleteMeeting(meeting.id)}
-                            >
-                              Заседание проведено
-                            </Button>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
+                        {role === "commission" ? (
+                          <td>{meeting.formatAndPlace || "—"}</td>
+                        ) : (
+                          <>
+                            <td>{meeting.caseIds.length}</td>
+                            <td>
+                              {poll ? "Подтвердили: " + yes : "Не направлен"}
+                            </td>
+                            <td>
+                              <span
+                                className={
+                                  "badge " +
+                                  (meeting.agendaSigned ? "green" : "amber")
+                                }
+                              >
+                                {meeting.agendaSigned
+                                  ? "Подписана"
+                                  : "Ожидает подписания"}
+                              </span>
+                            </td>
+                            <td>
+                              {meeting.completed ? (
+                                <span className="badge green">Проведено</span>
+                              ) : role === "demo-superuser" || role === "work" ? (
+                                <Button
+                                  disabled={
+                                    !meeting.agendaSigned ||
+                                    date < meeting.dateTime.slice(0, 10)
+                                  }
+                                  onClick={() => onCompleteMeeting(meeting.id)}
+                                >
+                                  Заседание проведено
+                                </Button>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                          </>
+                        )}
                         <td>
                           <Button
                             onClick={() => setSelectedMeetingId(meeting.id)}
@@ -1001,7 +1019,7 @@ export function SessionsPage({
                   })}
                 {!meetings.length && (
                   <tr>
-                    <td colSpan={7}>
+                    <td colSpan={role === "commission" ? 3 : 7}>
                       <div className="empty-state">
                         <h3>Заседания ещё не созданы</h3>
                         <p>
