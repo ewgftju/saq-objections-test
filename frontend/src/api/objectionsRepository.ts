@@ -57,11 +57,26 @@ export function createDemoRepository(
           value.version < 5 && migrated.status === "received"
             ? { ...migrated, status: "accepted" as const }
             : migrated;
-        // Polls are appended when the working body sends them. The latest
-        // sent poll must take precedence even if its meeting date is earlier.
-        const latestAttendancePoll = (value.attendancePolls || [])
-          .filter((poll) => poll.caseIds.includes(c.id))
-          .at(-1);
+        // The participants belong to the meeting that currently contains the
+        // case. Earlier polls can remain in storage after rescheduling and
+        // must not replace answers from the current meeting.
+        const matchingMeeting = (value.meetings || [])
+          .filter(
+            (meeting) =>
+              meeting.caseIds.includes(c.id) &&
+              (!normalized.attendanceMeetingDate ||
+                meeting.dateTime.slice(0, 10) ===
+                  normalized.attendanceMeetingDate),
+          )
+          .sort((left, right) => right.dateTime.localeCompare(left.dateTime))
+          .at(0);
+        const latestAttendancePoll = matchingMeeting
+          ? (value.attendancePolls || []).find(
+              (poll) => poll.id === matchingMeeting.pollId,
+            )
+          : (value.attendancePolls || [])
+              .filter((poll) => poll.caseIds.includes(c.id))
+              .at(-1);
         const attendanceMembers = latestAttendancePoll
           ? COMMISSION_ATTENDANCE_MEMBERS
               .filter((member) => latestAttendancePoll.responses[member.id] === "yes")

@@ -83,6 +83,35 @@ function applyDefaultAttendanceChair(poll: CommissionAttendancePoll) {
   }
 }
 
+/**
+ * Returns the poll of the meeting that currently contains the case.  A case
+ * can retain earlier polls after it was rescheduled, so the last item in the
+ * poll array is not a reliable source of the actual meeting participants.
+ */
+function currentPollForCase(
+  c: ObjectionCase,
+  attendancePolls: CommissionAttendancePoll[],
+  meetings: CommissionMeeting[] = [],
+) {
+  const matchingMeeting = meetings
+    .filter(
+      (meeting) =>
+        meeting.caseIds.includes(c.id) &&
+        (!c.attendanceMeetingDate ||
+          meeting.dateTime.slice(0, 10) === c.attendanceMeetingDate),
+    )
+    .sort((left, right) => right.dateTime.localeCompare(left.dateTime))
+    .at(0);
+  const meetingPoll = matchingMeeting
+    ? attendancePolls.find((poll) => poll.id === matchingMeeting.pollId)
+    : undefined;
+
+  return (
+    meetingPoll ||
+    attendancePolls.filter((poll) => poll.caseIds.includes(c.id)).at(-1)
+  );
+}
+
 function recalculateVotesForChair(c: ObjectionCase) {
   const chairId = presidingChairId(c.members);
   if (!chairId || !c.votes) return;
@@ -110,16 +139,15 @@ function syncPollParticipants(
   cases: ObjectionCase[],
   attendancePolls: CommissionAttendancePoll[],
   poll: CommissionAttendancePoll,
+  meetings: CommissionMeeting[] = [],
 ) {
   const participants = participantsFromPoll(poll);
   poll.caseIds.forEach((caseId) => {
-    const latestPoll = attendancePolls
-      .filter((item) => item.caseIds.includes(caseId))
-      .at(-1);
-    // A late response to an older poll must not replace the participants of
-    // the newly scheduled meeting.
-    if (latestPoll?.id !== poll.id) return;
     const target = cases.find((item) => item.id === caseId);
+    // A late response to an earlier poll must not replace the participants
+    // of the meeting in which the case is currently included.
+    if (!target || currentPollForCase(target, attendancePolls, meetings)?.id !== poll.id)
+      return;
     if (target) {
       target.members = participants.map((member) => ({ ...member }));
       recalculateVotesForChair(target);
@@ -168,9 +196,11 @@ export default function ObjectionsModule() {
       (member) => member.id === model.state.activeCommissionMemberId,
     ) || COMMISSION_ATTENDANCE_MEMBERS[0];
   const commissionCanOpenCase = (caseId: string) =>
-    model.state.attendancePolls
-      .filter((poll) => poll.caseIds.includes(caseId))
-      .at(-1)?.responses[activeCommissionMember.id] === "yes";
+    currentPollForCase(
+      model.state.cases.find((item) => item.id === caseId)!,
+      model.state.attendancePolls,
+      model.state.meetings,
+    )?.responses[activeCommissionMember.id] === "yes";
   const subjectCanOpenCase = (item: ObjectionCase) =>
     item.requests.some(
       (request) =>
@@ -266,6 +296,7 @@ export default function ObjectionsModule() {
       next.cases,
       next.attendancePolls,
       next.attendancePolls.at(-1)!,
+      next.meetings,
     );
     COMMISSION_ATTENDANCE_MEMBERS.forEach((member) => {
       next.notifications.push({
@@ -316,7 +347,7 @@ export default function ObjectionsModule() {
     }
     poll.responses[memberId] = response;
     applyDefaultAttendanceChair(poll);
-    syncPollParticipants(next.cases, next.attendancePolls, poll);
+    syncPollParticipants(next.cases, next.attendancePolls, poll, next.meetings);
     advanceCasesAfterAttendancePoll(next.cases, poll, next.date);
     notification.read = true;
     poll.caseIds.forEach((caseId) => {
@@ -357,7 +388,7 @@ export default function ObjectionsModule() {
       changedBy: DEMO_USER.fullName,
       changedAt: next.date,
     };
-    syncPollParticipants(next.cases, next.attendancePolls, poll);
+    syncPollParticipants(next.cases, next.attendancePolls, poll, next.meetings);
     advanceCasesAfterAttendancePoll(next.cases, poll, next.date);
     next.notifications.forEach((notification) => {
       if (
@@ -386,7 +417,7 @@ export default function ObjectionsModule() {
     );
     if (!poll || !member || poll.responses[memberId] !== "yes") return;
     poll.chairId = memberId;
-    syncPollParticipants(next.cases, next.attendancePolls, poll);
+    syncPollParticipants(next.cases, next.attendancePolls, poll, next.meetings);
     model.commit(
       next,
       `${member.name} отмечен как Председатель АК/И.О. Председателя АК.`,
@@ -532,7 +563,7 @@ export default function ObjectionsModule() {
         text: "Заседание №" + meeting.number + ".",
       });
     });
-    syncPollParticipants(next.cases, next.attendancePolls, poll);
+    syncPollParticipants(next.cases, next.attendancePolls, poll, next.meetings);
     model.commit(
       next,
       ids.size === 1
@@ -616,7 +647,7 @@ export default function ObjectionsModule() {
             "."
           : "."),
     });
-    syncPollParticipants(next.cases, next.attendancePolls, poll);
+    syncPollParticipants(next.cases, next.attendancePolls, poll, next.meetings);
     model.commit(next, "Обращение добавлено в заседание.");
   };
 
@@ -690,8 +721,8 @@ export default function ObjectionsModule() {
         meeting.dateTime.slice(0, 10),
       );
     });
-    syncPollParticipants(next.cases, next.attendancePolls, fromPoll);
-    syncPollParticipants(next.cases, next.attendancePolls, toPoll);
+    syncPollParticipants(next.cases, next.attendancePolls, fromPoll, next.meetings);
+    syncPollParticipants(next.cases, next.attendancePolls, toPoll, next.meetings);
     model.commit(
       next,
       ids.length === 1
