@@ -736,7 +736,6 @@ export default function ObjectionsModule() {
     ) {
       return;
     }
-    previewWordDocument("Повестка дня №" + meeting.number, meeting.agendaHtml);
     meeting.agendaSigned = true;
     meeting.agendaSignedAt = next.date;
     const meetingCases = meeting.caseIds
@@ -1406,6 +1405,12 @@ export default function ObjectionsModule() {
               date={model.state.date}
               tab={model.route.tab || "review"}
               role={model.role}
+              commissionMeetingCompleted={Boolean(
+                model.state.meetings?.some(
+                  (meeting) =>
+                    meeting.completed && meeting.caseIds.includes(c.id),
+                ),
+              )}
               recommendations={model.state.recommendations}
               onBack={() => model.navigate({ page: "registry" })}
               onTab={(tab) => model.navigate({ ...model.route, tab })}

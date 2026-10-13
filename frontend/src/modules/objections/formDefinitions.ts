@@ -234,7 +234,11 @@ export function actionForm(
         ),
         deadline,
         {
-          ...input("executor", "Исполнитель", values.executor || DEMO_USER.fullName),
+          ...input(
+            "executor",
+            "Исполнитель",
+            values.executor || DEMO_USER.fullName,
+          ),
           readOnly: true,
         },
       );
@@ -248,7 +252,11 @@ export function actionForm(
           SAQ_RECIPIENT_OPTIONS,
           values.saqRecipient || "",
         ),
-        area("customRequestText", "Текст запроса", values.customRequestText || ""),
+        area(
+          "customRequestText",
+          "Текст запроса",
+          values.customRequestText || "",
+        ),
       );
       break;
     case "request-other":
@@ -261,7 +269,11 @@ export function actionForm(
           "Номер регистрации запроса",
           values.registrationNumber || "",
         ),
-        select("deliveryPath", "Путь направления запроса", EXTERNAL_REQUEST_PATH_OPTIONS),
+        select(
+          "deliveryPath",
+          "Путь направления запроса",
+          EXTERNAL_REQUEST_PATH_OPTIONS,
+        ),
       );
       note =
         "Укажите реквизиты запроса, направленного во внешней системе в орган без кабинета SAQ.";
@@ -279,10 +291,7 @@ export function actionForm(
           "Запрос",
           c.requests
             .filter((request) => !request.sent && !request.approved)
-            .map((request) => [
-              request.id,
-              `Запрос в ${request.recipient}`,
-            ]),
+            .map((request) => [request.id, `Запрос в ${request.recipient}`]),
         ),
         check("approved", "Запрос и приложение согласованы"),
       );
@@ -296,7 +305,7 @@ export function actionForm(
           !request.responded &&
           (request.recipient.toUpperCase().includes("ДВГА") ||
             request.recipient.toUpperCase().includes("КВГА")) &&
-          (role !== "dvga" && role !== "kvga" ||
+          ((role !== "dvga" && role !== "kvga") ||
             (role === "kvga"
               ? request.recipient.toUpperCase().includes("КВГА")
               : request.recipient.toUpperCase().includes("ДВГА"))),
@@ -346,13 +355,17 @@ export function actionForm(
       break;
     case "subject-response":
       title = "Направить ответ";
-      note = "Вложите ответ на запрос. После отправки он поступит в кабинет рабочего органа.";
+      note =
+        "Вложите ответ на запрос. После отправки он поступит в кабинет рабочего органа.";
       break;
     case "analysis":
       title = "Сформировать справку";
       for (const point of disputed(c)) {
         fields.push(
-          heading(`davgaArgumentsHeading_${point.id}`, `Оспариваемый пункт ${point.number}`),
+          heading(
+            `davgaArgumentsHeading_${point.id}`,
+            `Оспариваемый пункт ${point.number}`,
+          ),
           area(
             `davgaArguments_${point.id}`,
             "Доводы ДАВГА",
@@ -500,8 +513,7 @@ export function actionForm(
       break;
     case "commission-vote":
       title = "Проголосовать";
-      note =
-        "Выберите результат голосования по каждому оспариваемому пункту.";
+      note = "Выберите результат голосования по каждому оспариваемому пункту.";
       break;
     case "fill-meeting-certificate":
       title = "Заполнить справку";
@@ -572,13 +584,10 @@ export function actionForm(
         title = "Вложить заключение";
         fields.push(
           input("conclusionRegistrationDate", "Дата регистрации", date, "date"),
-          input(
-            "conclusionRegistrationNumber",
-            "Номер регистрации",
-            "",
-          ),
+          input("conclusionRegistrationNumber", "Номер регистрации", ""),
         );
-        note = "Вложите заключение по обращению. После сохранения станет доступно закрытие рассмотрения.";
+        note =
+          "Вложите заключение по обращению. После сохранения станет доступно закрытие рассмотрения.";
         break;
       }
       title =
@@ -591,25 +600,19 @@ export function actionForm(
         fields.push(input("number", "Исходящий номер", "ИСХ-" + c.id));
       if (action === "deliver")
         fields.push(
-          select(
-            "channel",
-            "Канал доставки",
-            [
-              ["eotinish", "E-Otinish"],
-              ["cabinet", "Кабинет SAQ"],
-              ["sed", "СЭД"],
-              ["post", "Почта"],
-            ],
-          ),
+          select("channel", "Канал доставки", [
+            ["eotinish", "E-Otinish"],
+            ["cabinet", "Кабинет SAQ"],
+            ["sed", "СЭД"],
+            ["post", "Почта"],
+          ]),
         );
-      if (action === "deliver")
-        fields.push(input("receipt", "Квитанция отправки", "КВ-" + c.id));
       note =
         action === "create-decision-project"
           ? "Проект решения формируется по той же печатной форме, что и окончательный ответ. После сохранения он будет направлен на согласование и подписание."
           : c.type === "control"
-          ? "Статья 100 АППК: письменный результат заявителю и копия органу. Вручение фиксируется отдельно после направления."
-          : "Оформление — 2 рабочих дня с решения; публикация закупочного решения — 1 рабочий день после направления. Для уведомления формируется заключение по структуре приложения 7. Вручение фиксируется отдельно.";
+            ? "Статья 100 АППК: письменный результат заявителю и копия органу. Вручение фиксируется отдельно после направления."
+            : "Оформление — 2 рабочих дня с решения; публикация закупочного решения — 1 рабочий день после направления. Для уведомления формируется заключение по структуре приложения 7. Вручение фиксируется отдельно.";
       break;
     case "send-decision-project-eotinish":
       title = "Назначить заслушивание";
@@ -620,10 +623,7 @@ export function actionForm(
           `${date}T09:00`,
           "datetime-local",
         ),
-        input(
-          "hearingLocation",
-          "Место или формат проведения заслушивания",
-        ),
+        input("hearingLocation", "Место или формат проведения заслушивания"),
         select("hearingNoticeChannel", "Канал отправки уведомления", [
           ["eotinish", "E-Otinish"],
           ["portal", "Веб-портал"],
@@ -668,13 +668,23 @@ export function actionForm(
     case "submit-decision-project-comment":
       title = "Направить замечание к проекту решения";
       fields.push(area("projectComment", "Замечание к проекту решения"));
-      note = "Замечание будет направлено рабочему органу и станет основанием для назначения заслушивания.";
+      note =
+        "Замечание будет направлено рабочему органу и станет основанием для назначения заслушивания.";
       break;
     case "record-external-decision-project-comment":
       title = "Зафиксировать замечание к проекту решения";
       fields.push(
-        input("projectCommentReceivedAt", "Дата поступления замечания", date, "date"),
-        select("projectCommentChannel", "Канал поступления", EXTERNAL_REQUEST_PATH_OPTIONS),
+        input(
+          "projectCommentReceivedAt",
+          "Дата поступления замечания",
+          date,
+          "date",
+        ),
+        select(
+          "projectCommentChannel",
+          "Канал поступления",
+          EXTERNAL_REQUEST_PATH_OPTIONS,
+        ),
         {
           name: "projectCommentRegistrationNumber",
           label: "Регистрационный номер",
@@ -683,16 +693,19 @@ export function actionForm(
         },
         area("projectComment", "Замечание к проекту решения"),
       );
-      note = "Вложение файла необязательно. После фиксации станет доступно назначение заслушивания.";
+      note =
+        "Вложение файла необязательно. После фиксации станет доступно назначение заслушивания.";
       break;
     case "proceed-to-final-response":
       title = "Перейти на этап «Мотивированный ответ»";
       fields.push(area("reason", "Причина перехода"));
-      note = "Переход доступен после истечения 2 рабочих дней для замечаний, если замечание не поступило.";
+      note =
+        "Переход доступен после истечения 2 рабочих дней для замечаний, если замечание не поступило.";
       break;
     case "close-review":
       title = "Завершить рассмотрение";
-      note = "Заключение по обращению вложено. Подтвердите завершение рассмотрения.";
+      note =
+        "Заключение по обращению вложено. Подтвердите завершение рассмотрения.";
       break;
     case "approve-final-response":
       title = "Согласовать ответ";
@@ -723,7 +736,9 @@ export function actionForm(
         area(
           "recommendationText",
           "Текст рекомендации",
-          c.meeting?.recommendations === "—" ? "" : c.meeting?.recommendations || "",
+          c.meeting?.recommendations === "—"
+            ? ""
+            : c.meeting?.recommendations || "",
         ),
       );
       note =
@@ -856,18 +871,18 @@ export function actionForm(
         ? "Сохранить"
         : action === "approve-request"
           ? "Согласовать запрос"
-        : action === "analysis"
-          ? "Сформировать справку"
-        : action === "create-decision-project"
-        ? "Сформировать проект решения"
-        : action === "deliver"
-        ? requiresConclusion(c)
-          ? "Вложить заключение"
-          : "Сформировать окончательный ответ"
-        : action === "close-review"
-          ? "Завершить рассмотрение"
-          : action === "send-recommendations"
-            ? "Направить уведомление"
-          : "Зафиксировать действие",
+          : action === "analysis"
+            ? "Сформировать справку"
+            : action === "create-decision-project"
+              ? "Сформировать проект решения"
+              : action === "deliver"
+                ? requiresConclusion(c)
+                  ? "Вложить заключение"
+                  : "Сформировать окончательный ответ"
+                : action === "close-review"
+                  ? "Завершить рассмотрение"
+                  : action === "send-recommendations"
+                    ? "Направить уведомление"
+                    : "Зафиксировать действие",
   };
 }

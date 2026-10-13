@@ -56,13 +56,14 @@ function isActiveRequest(request: CaseRequest) {
   return !request.cancelled;
 }
 
-export const REQUEST_LIFECYCLE_LABELS: Record<RequestLifecycleStatus, string> = {
-  draft: "Черновик",
-  approval: "На согласовании",
-  signature: "На подписании",
-  waiting_response: "Ожидается ответ",
-  response_received: "Ответ получен",
-};
+export const REQUEST_LIFECYCLE_LABELS: Record<RequestLifecycleStatus, string> =
+  {
+    draft: "Черновик",
+    approval: "На согласовании",
+    signature: "На подписании",
+    waiting_response: "Ожидается ответ",
+    response_received: "Ответ получен",
+  };
 
 /**
  * Запросы хранят собственный статус, а для сохранённых ранее карточек
@@ -170,7 +171,8 @@ function advanceAfterResponses(c: ObjectionCase, date: string) {
 
 function directedToDvgaOrKvga(c: ObjectionCase) {
   return c.requests.some(
-    (request) => isActiveRequest(request) && isDvgaOrKvgaRequest(request.recipient),
+    (request) =>
+      isActiveRequest(request) && isDvgaOrKvgaRequest(request.recipient),
   );
 }
 
@@ -432,14 +434,13 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
         c.documents.some((document) => document.kind === "conclusion")
           ? "close-review"
           : "deliver",
-      label:
-        requiresConclusion(c)
-          ? c.documents.some((document) => document.kind === "conclusion")
-            ? "Завершить рассмотрение"
-            : "Вложить заключение"
-          : requiresEotinishDecisionProject(c)
-            ? "Сформировать мотивированный ответ"
-            : "Сформировать окончательный ответ",
+      label: requiresConclusion(c)
+        ? c.documents.some((document) => document.kind === "conclusion")
+          ? "Завершить рассмотрение"
+          : "Вложить заключение"
+        : requiresEotinishDecisionProject(c)
+          ? "Сформировать мотивированный ответ"
+          : "Сформировать окончательный ответ",
       role: c.selfReview ? "dvga" : reviewer,
     },
     final_response_approval: {
@@ -523,8 +524,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   const canAddRequest = requestStageStatuses.includes(c.status);
   const hasDraftRequests = c.requests.some(
     (request) =>
-      isActiveRequest(request) &&
-      requestLifecycleStatus(request) === "draft",
+      isActiveRequest(request) && requestLifecycleStatus(request) === "draft",
   );
   if (canAddRequest) {
     options.push(
@@ -809,7 +809,9 @@ export function applyAction(
       const recipient = text("recipient", "Кому направлен запрос");
       const sent = String(form.get("date") || date);
       dateObject(sent);
-      const registrationNumber = String(form.get("registrationNumber") || "").trim();
+      const registrationNumber = String(
+        form.get("registrationNumber") || "",
+      ).trim();
       const deliveryPath = String(form.get("deliveryPath") || "").trim();
       const requestId = `request-${c.requests.length + 1}`;
       const firstSentRequest = !c.requests.some(
@@ -1781,7 +1783,8 @@ export function applyAction(
       } else {
         c.status = "decision_project_delivery";
         title = "Проект решения подписан";
-        note = "Зафиксируйте направление проекта решения через внешнюю систему.";
+        note =
+          "Зафиксируйте направление проекта решения через внешнюю систему.";
       }
       doc("Подписанный проект решения", "decision-project", note);
       break;
@@ -1789,7 +1792,9 @@ export function applyAction(
       if (!c.decisionProject)
         throw new Error("Проект решения ещё не сформирован");
       if (cameThroughSaq(c))
-        throw new Error("Для обращения из SAQ проект решения направляется автоматически");
+        throw new Error(
+          "Для обращения из SAQ проект решения направляется автоматически",
+        );
       const sentAt = text("projectSentDate", "Дата отправки");
       dateObject(sentAt);
       const deliveryPath = text("projectDeliveryPath", "Способ отправки");
@@ -1799,7 +1804,9 @@ export function applyAction(
         receivedAt: sentAt,
         commentsDeadline: addWorkdays(sentAt, 2),
         deliveryPath,
-        registrationNumber: String(form.get("projectRegistrationNumber") || "").trim() || undefined,
+        registrationNumber:
+          String(form.get("projectRegistrationNumber") || "").trim() ||
+          undefined,
       };
       c.status = "decision_project_comments";
       title = "Направление проекта решения зафиксировано";
@@ -1810,15 +1817,22 @@ export function applyAction(
       if (!cameThroughSaq(c) || !c.decisionProjectRouting)
         throw new Error("Замечание из кабинета SAQ недоступно");
       if (date > c.decisionProjectRouting.commentsDeadline)
-        throw new Error("Срок для направления замечаний к проекту решения истёк");
+        throw new Error(
+          "Срок для направления замечаний к проекту решения истёк",
+        );
       const commentText = text("projectComment", "Замечание к проекту решения");
       c.decisionProjectRouting.commentReceivedAt = date;
       c.decisionProjectRouting.commentChannel = "Кабинет SAQ";
       c.decisionProjectRouting.commentText = commentText;
       c.status = "decision_project_eotinish";
       title = "Замечание к проекту решения направлено";
-      note = "Замечание поступило рабочему органу. Доступно назначение заслушивания.";
-      doc("Замечание к проекту решения", "decision-project-comment", commentText);
+      note =
+        "Замечание поступило рабочему органу. Доступно назначение заслушивания.";
+      doc(
+        "Замечание к проекту решения",
+        "decision-project-comment",
+        commentText,
+      );
       next.notifications.push({
         id: `decision-project-comment-${c.id}-${next.notifications.length + 1}`,
         caseId: c.id,
@@ -1832,28 +1846,45 @@ export function applyAction(
     }
     case "record-external-decision-project-comment": {
       if (cameThroughSaq(c) || !c.decisionProjectRouting)
-        throw new Error("Для обращения из SAQ замечание поступает автоматически");
-      const receivedAt = text("projectCommentReceivedAt", "Дата поступления замечания");
+        throw new Error(
+          "Для обращения из SAQ замечание поступает автоматически",
+        );
+      const receivedAt = text(
+        "projectCommentReceivedAt",
+        "Дата поступления замечания",
+      );
       dateObject(receivedAt);
       const commentText = text("projectComment", "Замечание к проекту решения");
       c.decisionProjectRouting.commentReceivedAt = receivedAt;
-      c.decisionProjectRouting.commentChannel = text("projectCommentChannel", "Канал поступления");
+      c.decisionProjectRouting.commentChannel = text(
+        "projectCommentChannel",
+        "Канал поступления",
+      );
       c.decisionProjectRouting.commentRegistrationNumber =
-        String(form.get("projectCommentRegistrationNumber") || "").trim() || undefined;
+        String(form.get("projectCommentRegistrationNumber") || "").trim() ||
+        undefined;
       c.decisionProjectRouting.commentText = commentText;
       c.status = "decision_project_eotinish";
       title = "Замечание к проекту решения зафиксировано";
       note = "Замечание зарегистрировано. Доступно назначение заслушивания.";
-      doc("Замечание к проекту решения", "decision-project-comment", commentText);
+      doc(
+        "Замечание к проекту решения",
+        "decision-project-comment",
+        commentText,
+      );
       break;
     }
     case "proceed-to-final-response": {
       if (!c.decisionProjectRouting)
         throw new Error("Сначала зафиксируйте направление проекта решения");
       if (c.decisionProjectRouting.commentReceivedAt)
-        throw new Error("По поступившему замечанию необходимо назначить заслушивание");
+        throw new Error(
+          "По поступившему замечанию необходимо назначить заслушивание",
+        );
       if (date <= c.decisionProjectRouting.commentsDeadline)
-        throw new Error(`Срок для замечаний действует до ${c.decisionProjectRouting.commentsDeadline}`);
+        throw new Error(
+          `Срок для замечаний действует до ${c.decisionProjectRouting.commentsDeadline}`,
+        );
       const reason = text("reason", "Причина перехода");
       c.hearing = { skip: true, reason };
       c.status = "decided";
@@ -1865,7 +1896,9 @@ export function applyAction(
       if (!c.decisionProject)
         throw new Error("Проект решения ещё не сформирован");
       if (!c.decisionProjectRouting?.commentReceivedAt)
-        throw new Error("Заслушивание назначается после поступления замечания к проекту решения");
+        throw new Error(
+          "Заслушивание назначается после поступления замечания к проекту решения",
+        );
       const hearingDateTime = text(
         "hearingDateTime",
         "Дата и время заслушивания",
@@ -1913,7 +1946,8 @@ export function applyAction(
       if (c.hearing) c.hearing.held = date;
       c.status = "decided";
       title = "Заслушивание проведено";
-      note = "Протокол заслушивания вложен. Обращение переведено к формированию мотивированного ответа.";
+      note =
+        "Протокол заслушивания вложен. Обращение переведено к формированию мотивированного ответа.";
       break;
     case "forward": {
       checked(form, "materials");
@@ -1996,7 +2030,9 @@ export function applyAction(
       c.delivery = {
         date,
         number: text("number", "Исходящий номер"),
-        receipt: text("receipt", "Квитанция отправки"),
+        // The receipt is no longer collected with the final response.
+        // Preserve it only when replaying legacy form data.
+        receipt: String(form.get("receipt") || "").trim(),
         channel: text("channel", "Канал"),
         // These requisites are no longer filled in the final-response form.
         // Keep optional legacy values so older saved actions continue to render.
@@ -2110,7 +2146,9 @@ export function applyAction(
           : date;
       dateObject(sentAt);
       if (dueDate < sentAt)
-        throw new Error("Срок исполнения не может быть раньше даты направления");
+        throw new Error(
+          "Срок исполнения не может быть раньше даты направления",
+        );
       const recipient = recipientRole ? ROLES[recipientRole] : recipientValue;
       const deliveryPath =
         channel === "external"

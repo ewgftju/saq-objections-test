@@ -390,6 +390,7 @@ export default function CaseWorkspace({
   date,
   tab,
   role,
+  commissionMeetingCompleted = false,
   recommendations = [],
   onBack,
   onTab,
@@ -402,6 +403,7 @@ export default function CaseWorkspace({
   date?: string;
   tab: CaseTab;
   role: Role;
+  commissionMeetingCompleted?: boolean;
   recommendations?: CaseRecommendation[];
   onBack: () => void;
   onTab: (tab: CaseTab) => void;
@@ -471,6 +473,8 @@ export default function CaseWorkspace({
         date <= c.decisionProjectRouting.commentsDeadline,
     );
   const recipientLimited = isAuthorityRole(role) || role === "subject";
+  const commissionCurrentTaskHidden =
+    role === "commission" && commissionMeetingCompleted;
   const recipientHasActiveTask =
     authorityHasPendingRequest ||
     Boolean(subjectRequest) ||
@@ -534,7 +538,8 @@ export default function CaseWorkspace({
             {tab === "overview" && (
               <>
                 {role !== "subject" &&
-                  (!isAuthorityRole(role) || authorityHasPendingRequest) && (
+                  (!isAuthorityRole(role) || authorityHasPendingRequest) &&
+                  !commissionCurrentTaskHidden && (
                     <div className="consideration-entry">
                       <div>
                         <strong>Рассмотрение обращения</strong>
@@ -855,7 +860,7 @@ export default function CaseWorkspace({
                         </div>
                       </section>
                     )
-                  ) : (
+                  ) : commissionCurrentTaskHidden ? null : (
                     <ConsiderationProcess
                       c={c}
                       date={date}
