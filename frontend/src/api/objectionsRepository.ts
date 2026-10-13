@@ -1,4 +1,8 @@
-import { COMMISSION_ATTENDANCE_MEMBERS, seed } from "../data/objections";
+import {
+  COMMISSION_ATTENDANCE_MEMBERS,
+  seed,
+  sharedAuditObjection,
+} from "../data/objections";
 import type { DemoState, Role } from "../types";
 import { formatDate } from "../utils/dateFormat";
 import { presidingChairId } from "../modules/objections/services/decisions";
@@ -10,7 +14,7 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 11;
+const CURRENT_VERSION = 12;
 
 // Version 6 distinguishes incoming SAQ appeals from manually created appeals.
 
@@ -40,7 +44,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -215,6 +219,10 @@ export function createDemoRepository(
                 }));
             })
           : [];
+      const sharedCase = sharedAuditObjection();
+      const casesWithSharedCase = cases.some((c) => c.id === sharedCase.id)
+        ? cases
+        : [sharedCase, ...cases];
       return {
         ...value,
         version: CURRENT_VERSION,
@@ -224,7 +232,7 @@ export function createDemoRepository(
         attendancePolls: value.attendancePolls || [],
         activeCommissionMemberId:
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
-        cases,
+        cases: casesWithSharedCase,
       };
     },
     save(state) {
