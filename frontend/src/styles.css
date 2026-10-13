@@ -854,6 +854,12 @@ td .subline {
   border-color: #d2e6d4;
   border-left-color: var(--green);
 }
+.notice.red {
+  background: #fff3f2;
+  border-color: #efc3bd;
+  border-left-color: #c43d31;
+  color: #8f241d;
+}
 .notice p {
   margin-top: 5px;
 }

@@ -274,6 +274,7 @@ function AuthorityRequestMaterials({
 
 export default function CaseWorkspace({
   c,
+  date,
   tab,
   role,
   recommendations = [],
@@ -284,6 +285,8 @@ export default function CaseWorkspace({
   onUpload,
 }: {
   c: ObjectionCase;
+  /** Текущая дата демонстрационного календаря SAQ. */
+  date?: string;
   tab: CaseTab;
   role: Role;
   recommendations?: CaseRecommendation[];
@@ -338,6 +341,14 @@ export default function CaseWorkspace({
       Boolean(request.sent) &&
       !request.responded,
   );
+  const subjectCanCommentOnDecisionProject =
+    c.status === "decision_project_comments" &&
+    c.decisionProjectRouting?.channel === "saq" &&
+    Boolean(
+      !date ||
+        !c.decisionProjectRouting.commentsDeadline ||
+        date <= c.decisionProjectRouting.commentsDeadline,
+    );
   return (
     <>
       <div className="back-row">
@@ -639,6 +650,7 @@ export default function CaseWorkspace({
                 <>
                   <ConsiderationProcess
                     c={c}
+                    date={date}
                     role={role}
                     recommendations={recommendations}
                     onAction={onAction}
@@ -658,16 +670,39 @@ export default function CaseWorkspace({
                     <div className="consideration-task">
                       <div>
                         <span className="consideration-eyebrow">Текущая задача</span>
-                        <h4>Направить ответ на запрос</h4>
-                        <p>Вложите ответ и направьте его в кабинет рабочего органа.</p>
+                        <h4>
+                          {subjectCanCommentOnDecisionProject
+                            ? "Направить замечание к проекту решения"
+                            : "Направить ответ на запрос"}
+                        </h4>
+                        <p>
+                          {subjectCanCommentOnDecisionProject
+                            ? "Замечание будет направлено рабочему органу для назначения заслушивания."
+                            : "Вложите ответ и направьте его в кабинет рабочего органа."}
+                        </p>
                       </div>
                       <div className="consideration-task-action">
                         <Button
                           primary
-                          disabled={!subjectRequest}
-                          onClick={() => onAction("subject-response", role)}
+                          disabled={
+                            subjectCanCommentOnDecisionProject
+                              ? false
+                              : !subjectRequest
+                          }
+                          onClick={() =>
+                            onAction(
+                              subjectCanCommentOnDecisionProject
+                                ? "submit-decision-project-comment"
+                                : "subject-response",
+                              role,
+                            )
+                          }
                         >
-                          {subjectRequest ? "Направить ответ" : "Ответ направлен"}
+                          {subjectCanCommentOnDecisionProject
+                            ? "Направить замечание"
+                            : subjectRequest
+                              ? "Направить ответ"
+                              : "Ответ направлен"}
                         </Button>
                       </div>
                     </div>
@@ -675,6 +710,7 @@ export default function CaseWorkspace({
                 ) : (
                   <ConsiderationProcess
                     c={c}
+                    date={date}
                     role={role}
                     recommendations={recommendations}
                     onAction={onAction}

@@ -405,6 +405,7 @@ const TASK_HELP: Partial<Record<Action, string>> = {
 
 export default function ConsiderationProcess({
   c,
+  date,
   role,
   onAction,
   onHistory,
@@ -412,6 +413,8 @@ export default function ConsiderationProcess({
   hideStages = false,
 }: {
   c: ObjectionCase;
+  /** Текущая дата демонстрационного календаря SAQ. */
+  date?: string;
   role: Role;
   onAction: (action: Action, role: Role, requestId?: string) => void;
   onHistory: () => void;
@@ -470,6 +473,11 @@ export default function ConsiderationProcess({
   const currentAnalysisSubstep = analysisSubstep(c.status);
   const currentDecisionSubstep = decisionSubstep(c.status);
   const currentExecutionSubstep = executionSubstep(c.status);
+  const commentsDeadline = c.decisionProjectRouting?.commentsDeadline;
+  const commentsDeadlineExpired =
+    c.status === "decision_project_comments" &&
+    !c.decisionProjectRouting?.commentReceivedAt &&
+    Boolean(date && commentsDeadline && date > commentsDeadline);
   const canPerformNextAction = role === "demo-superuser" || role === next?.role;
   const canSendRecommendations =
     (role === "demo-superuser" || role === "work") &&
@@ -729,6 +737,22 @@ export default function ConsiderationProcess({
             Доступ к карточке обращения открыт членам комиссии, которые
             подтвердили присутствие на заседании.
           </p>
+        </Notice>
+      ) : c.status === "decision_project_comments" && commentsDeadline ? (
+        <Notice tone={commentsDeadlineExpired ? "red" : "amber"}>
+          <strong>Ожидание замечаний к проекту решения</strong>
+          <p>
+            Срок ожидания замечаний к проекту решения: до {formatDate(commentsDeadline)}
+            {" "}— 2 рабочих дня с даты направления проекта решения.
+          </p>
+          {commentsDeadlineExpired ? (
+            <p>
+              Срок ожидания замечаний к проекту решения истек. Перейдите к
+              формированию мотивированного ответа.
+            </p>
+          ) : (
+            <p>Замечание к проекту решения пока не поступило.</p>
+          )}
         </Notice>
       ) : !requestActionsVisible ? (
         <Notice tone={c.status === "completed" ? "green" : "amber"}>

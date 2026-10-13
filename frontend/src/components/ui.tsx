@@ -42,7 +42,7 @@ export function Notice({
   tone = "",
 }: {
   children: ReactNode;
-  tone?: "" | "amber" | "green";
+  tone?: "" | "amber" | "green" | "red";
 }) {
   return <div className={`notice ${tone}`}>{children}</div>;
 }

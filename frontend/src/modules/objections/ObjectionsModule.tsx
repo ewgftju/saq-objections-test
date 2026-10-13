@@ -1297,6 +1297,7 @@ export default function ObjectionsModule() {
           ) : (
           <CaseWorkspace
             c={c}
+            date={model.state.date}
             tab={model.route.tab || "review"}
             role={model.role}
             recommendations={model.state.recommendations}

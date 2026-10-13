@@ -3416,6 +3416,30 @@ test("без замечаний по проекту решения рабочи�
   assert.match(h.c.hearing?.reason || "", /не поступили/);
 });
 
+test("истечение срока ожидания замечаний выделяется красным в информационном блоке", () => {
+  const h = harness(2);
+  h.c.status = "decision_project_comments";
+  h.c.decisionProjectRouting = {
+    channel: "saq",
+    sentAt: "2026-09-08",
+    receivedAt: "2026-09-08",
+    commentsDeadline: "2026-09-10",
+  };
+
+  const html = renderToStaticMarkup(
+    createElement(ConsiderationProcess, {
+      c: h.c,
+      date: "2026-09-11",
+      role: "work",
+      onAction: () => undefined,
+      onHistory: () => undefined,
+    }),
+  );
+  assert.match(html, /notice red/);
+  assert.match(html, /Срок ожидания замечаний к проекту решения истек/);
+  assert.match(html, /Перейдите к формированию мотивированного ответа/);
+});
+
 test("все виды жалоб проходят маршрут с проектом решения независимо от источника", () => {
   [
     "Жалоба на уведомление",
