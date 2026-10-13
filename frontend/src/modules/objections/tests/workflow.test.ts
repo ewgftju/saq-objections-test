@@ -29,7 +29,11 @@ import {
   pointOutcomeFromVotes,
   remainingIssues,
 } from "../services/decisions";
-import { DocumentContent } from "../components/DocumentModal";
+import {
+  appendixPageCount,
+  DocumentContent,
+  kazakhDecisionIntro,
+} from "../components/DocumentModal";
 import { AgendaDocument, agendaItemText } from "../components/AgendaModal";
 import AgendaResultsModal from "../components/AgendaResultsModal";
 import { SessionsPage } from "../pages/ReferencePages";
@@ -3003,6 +3007,97 @@ test("номер регистрации заключения не заполня
     (item) => item.name === "conclusionRegistrationNumber",
   );
   assert.equal(field?.value, "");
+});
+
+test("мотивированный ответ и проект решения формируются на казахском языке", () => {
+  const h = harness();
+  h.c.appealDate = "2026-10-13";
+  h.c.appealNumber = "В-2026-15";
+
+  h.c.appealType = "Возражение на аудиторский отчет";
+  assert.equal(
+    kazakhDecisionIntro(h.c),
+    "Қазақстан Республикасы Қаржы министрлігінің апелляциялық комиссиясы 13.10.2026 жылғы В-2026-15 қарсылықты қарап, келесіні хабарлайды.",
+  );
+
+  h.c.appealType = "Жалоба на уведомление";
+  assert.equal(
+    kazakhDecisionIntro(h.c),
+    "Қазақстан Республикасы Қаржы министрлігінің (бұдан әрі – Министрлік) апелляциялық комиссиясы 13.10.2026 жылғы В-2026-15 шағымды қарап, келесіні хабарлайды.",
+  );
+
+  h.c.appealType = "Заявление";
+  assert.equal(
+    kazakhDecisionIntro(h.c),
+    "Қазақстан Республикасы Қаржы министрлігінің (бұдан әрі – Министрлік) апелляциялық комиссиясы 13.10.2026 жылғы В-2026-15 өтінішті қарап, келесіні хабарлайды.",
+  );
+
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.issues.filter((point) => point.disputed).forEach((point) => {
+    point.final = "partial";
+  });
+
+  const finalHtml = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "final-response" }),
+  );
+  const projectHtml = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "decision-project" }),
+  );
+
+  assert.match(finalHtml, /қарсылықты ішінара қанағаттандыру туралы шешім қабылдады/);
+  assert.match(finalHtml, /91-бабының 6-тармағына сәйкес/);
+  assert.match(projectHtml, /қарсылықты ішінара қанағаттандыру туралы шешім қабылдады/);
+  assert.match(projectHtml, /73-бабына сәйкес алдын ала шешімге/);
+  assert.doesNotMatch(projectHtml, /91-бабының 6-тармағына сәйкес/);
+
+  (
+    [
+      ["accept", "қанағаттандыру"],
+      ["partial", "ішінара қанағаттандыру"],
+      ["refuse", "қараудан бас тарту"],
+      ["reject", "қанағаттандырудан бас тарту"],
+    ] as const
+  ).forEach(([outcome, label]) => {
+    h.c.issues.filter((point) => point.disputed).forEach((point) => {
+      point.final = outcome;
+    });
+    const html = renderToStaticMarkup(
+      createElement(DocumentContent, { c: h.c, kind: "final-response" }),
+    );
+    assert.match(html, new RegExp(`қарсылықты ${label} туралы шешім қабылдады`));
+  });
+
+  assert.equal(
+    appendixPageCount([
+      {
+        number: "1",
+        title: "Қысқа мәтін",
+        reason: "Негіздеме",
+        decision: "қанағаттандыру",
+        decidedByMajority: false,
+      },
+      {
+        number: "2",
+        title: "Қысқа мәтін",
+        reason: "Негіздеме",
+        decision: "қанағаттандыру",
+        decidedByMajority: false,
+      },
+    ]),
+    1,
+  );
+  assert.equal(
+    appendixPageCount([
+      {
+        number: "1",
+        title: "Негіздеме ".repeat(500),
+        reason: "Толық мәтін ".repeat(500),
+        decision: "қанағаттандыру",
+        decidedByMajority: false,
+      },
+    ]) > 1,
+    true,
+  );
 });
 
 test("в приложении окончательного ответа отмечается решение большинством голосов", () => {

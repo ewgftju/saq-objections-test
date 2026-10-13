@@ -865,7 +865,11 @@ export default function ActionModal({
             <div hidden={requestTab !== "print"} className="request-print-preview">
               <DocumentContent
                 c={c}
-                kind="final-response"
+                kind={
+                  action === "create-decision-project"
+                    ? "decision-project"
+                    : "final-response"
+                }
                 finalResponseMajorityByPoint={Object.fromEntries(
                   disputed(c).map((point) => [
                     point.id,

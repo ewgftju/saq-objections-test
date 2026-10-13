@@ -8,6 +8,8 @@ import type {
   CaseRequest,
   CommissionMember,
   ObjectionCase,
+  Outcome,
+  ViolationPoint,
 } from "../../../types";
 import { formatDate, formatMoney } from "../../../utils/dateFormat";
 import { auditAuthorityFullName } from "../../../utils/auditAuthority";
@@ -39,6 +41,66 @@ function hasSeparateAuditObject(c: ObjectionCase) {
     "Жалоба на решение КВГА/ДВГА",
     "Заявление",
   ].includes(c.appealType || "");
+}
+
+const KAZAKH_OUTCOMES: Record<Outcome, string> = {
+  accept: "қанағаттандыру",
+  partial: "ішінара қанағаттандыру",
+  reject: "қанағаттандырудан бас тарту",
+  refuse: "қараудан бас тарту",
+};
+
+function appealDateAndNumber(c: ObjectionCase) {
+  return `${formatDate(c.appealDate || c.filed)} жылғы ${c.appealNumber || "—"}`;
+}
+
+/** Первый абзац мотивированного ответа и проекта решения. */
+export function kazakhDecisionIntro(c: ObjectionCase) {
+  const appealReference = appealDateAndNumber(c);
+
+  if (c.appealType === "Возражение на аудиторский отчет")
+    return `Қазақстан Республикасы Қаржы министрлігінің апелляциялық комиссиясы ${appealReference} қарсылықты қарап, келесіні хабарлайды.`;
+
+  if (c.appealType?.startsWith("Жалоба"))
+    return `Қазақстан Республикасы Қаржы министрлігінің (бұдан әрі – Министрлік) апелляциялық комиссиясы ${appealReference} шағымды қарап, келесіні хабарлайды.`;
+
+  if (c.appealType === "Заявление")
+    return `Қазақстан Республикасы Қаржы министрлігінің (бұдан әрі – Министрлік) апелляциялық комиссиясы ${appealReference} өтінішті қарап, келесіні хабарлайды.`;
+
+  return "Қазақстан Республикасы Қаржы министрлігінің (бұдан әрі – Министрлік) апелляциялық комиссиясының қарауына Ішкі мемлекеттік аудит комитетінен жүргізілген аудиторлық есепте көрсетілген бұзушылықтарға түскен қарсылықты қарап, келесіні хабарлайды.";
+}
+
+type AppendixPageItem = Pick<ViolationPoint, "number" | "title"> & {
+  reason: string;
+  decision: string;
+  decidedByMajority: boolean;
+};
+
+/**
+ * Приложение печатается с постоянными полями A4. Количество страниц
+ * определяется по объёму текста его пунктов, а не по количеству пунктов.
+ */
+export function appendixPageCount(items: AppendixPageItem[]) {
+  const pageCapacity = 2_000;
+  let pages = 1;
+  let used = 180; // заголовок «Қосымша» и верхний отступ первой страницы
+
+  items.forEach((item) => {
+    const body = `${item.number} ${item.title} ${item.reason} ${item.decision}${item.decidedByMajority ? " majority" : ""}`;
+    let weight = 150 + Math.ceil(body.length * 1.15);
+
+    if (used + weight > pageCapacity && used > 180) {
+      pages += 1;
+      used = 0;
+    }
+    const overflow = weight - (pageCapacity - used);
+    if (overflow > 0) {
+      pages += Math.ceil(overflow / pageCapacity);
+      used = overflow % pageCapacity || pageCapacity;
+    } else used += weight;
+  });
+
+  return Math.max(1, pages);
 }
 
 function requestIntro(c: ObjectionCase, deadline: string) {
@@ -550,7 +612,46 @@ export function DocumentContent({
     const decision = outcome
       ? OUTCOMES[outcome].toLocaleLowerCase("ru-RU")
       : snapshot.result?.label?.toLocaleLowerCase("ru-RU") || "—";
+    const kazakhDecision = outcome
+      ? KAZAKH_OUTCOMES[outcome]
+      : "қанағаттандырудан бас тарту";
     const disputedIssues = snapshot.issues.filter((point) => point.disputed);
+    const appendixPoints: AppendixPageItem[] = disputedIssues.map((point) => {
+      const pointVotes = snapshot.votes?.[point.id];
+      const winningOutcome =
+        pointOutcomeFromVotes(pointVotes?.votes || {}, pointVotes?.chair) ||
+        point.final ||
+        point.proposal;
+      const winningReasonMemberId = Object.entries(
+        pointVotes?.votes || {},
+      ).find(
+        ([memberId, vote]) =>
+          normalizeVoteChoice(vote) === winningOutcome &&
+          Boolean(pointVotes?.voteReasons?.[memberId]?.trim()),
+      )?.[0];
+      const reason =
+        (winningReasonMemberId &&
+          pointVotes?.voteReasons?.[winningReasonMemberId]) ||
+        snapshot.result?.reason ||
+        "—";
+      const pointDecision = winningOutcome
+        ? OUTCOMES[winningOutcome].toLocaleLowerCase("ru-RU")
+        : decision;
+      const decidedByMajority =
+        finalResponseMajorityByPoint?.[point.id] ??
+        point.finalDecisionByMajority ??
+        false;
+
+      return {
+        number: point.number,
+        title: point.title,
+        reason,
+        decision: pointDecision,
+        decidedByMajority,
+      };
+    });
+    const appendixPages = appendixPageCount(appendixPoints);
+    const isDecisionProject = kind === "decision-project";
     return (
       <div className="final-response-document">
         <article className="print-document final-response-template">
@@ -559,28 +660,31 @@ export function DocumentContent({
             <p>{auditAuthorityFullName(snapshot.issuer)}</p>
           </div>
           <div className="final-response-body">
-            <p>
-              Қазақстан Республикасы Қаржы министрлігінің (бұдан әрі –
-              Министрлік) апелляциялық комиссиясының қарауына Ішкі мемлекеттік
-              аудит комитетінен жүргізілген аудиторлық есепте көрсетілген
-              бұзушылықтарға түскен қарсылықты қарап, келесіні хабарлайды.
-            </p>
+            <p>{kazakhDecisionIntro(snapshot)}</p>
             <p>
               Заңның 58-4-бабының 2-тармағына сәйкес, қарсылық мемлекеттік аудит
               объектісі даулайтын мәселелер шегінде қаралады.
             </p>
             <p>
               Апелляциялық комиссия отырысында дауыс беру қорытындысы бойынша
-              қарсылықты {decision} туралы шешім қабылдады.
+              қарсылықты {kazakhDecision} туралы шешім қабылдады.
             </p>
-            <p>
-              Жауаппен келіспеген жағдайда, Сіз Қазақстан Республикасы Әкімшілік
-              рәсімдік-процестік кодексінің 91-бабының 6-тармағына сәйкес
-              шешімге шағым жасауға құқылысыз. Екінші мекенжайға мәлімет және
-              жұмыс үшін жолданады.
-            </p>
+            {isDecisionProject ? (
+              <p>
+                Сіз Қазақстан Республикасы Әкімшілік рәсімдік – процестік
+                кодексінің 73-бабына сәйкес алдын ала шешімге өз ұстанымыңызды
+                білдіруге құқылысыз.
+              </p>
+            ) : (
+              <p>
+                Жауаппен келіспеген жағдайда, Сіз Қазақстан Республикасы
+                Әкімшілік рәсімдік-процестік кодексінің 91-бабының 6-тармағына
+                сәйкес шешімге шағым жасауға құқылысыз. Екінші мекенжайға
+                мәлімет және жұмыс үшін жолданады.
+              </p>
+            )}
             <p className="final-response-attachment-note">
-              Қосымша: {Math.max(1, disputedIssues.length)} парақта.
+              Қосымша: {appendixPages} парақта.
             </p>
           </div>
           <div className="final-response-signature">
@@ -600,43 +704,20 @@ export function DocumentContent({
         </article>
         <article className="print-document final-response-template final-response-appendix">
           <h2>Қосымша</h2>
-          {disputedIssues.map((point) => {
-            const pointVotes = snapshot.votes?.[point.id];
-            const winningOutcome =
-              pointOutcomeFromVotes(
-                pointVotes?.votes || {},
-                pointVotes?.chair,
-              ) ||
-              point.final ||
-              point.proposal;
-            const winningReasonMemberId = Object.entries(
-              pointVotes?.votes || {},
-            ).find(
-              ([memberId, vote]) =>
-                normalizeVoteChoice(vote) === winningOutcome &&
-                Boolean(pointVotes?.voteReasons?.[memberId]?.trim()),
-            )?.[0];
-            const pointReason =
-              (winningReasonMemberId &&
-                pointVotes?.voteReasons?.[winningReasonMemberId]) ||
-              snapshot.result?.reason ||
-              "—";
-            const pointDecision = winningOutcome
-              ? OUTCOMES[winningOutcome].toLocaleLowerCase("ru-RU")
-              : decision;
-            const decidedByMajority =
-              finalResponseMajorityByPoint?.[point.id] ??
-              point.finalDecisionByMajority;
+          {appendixPoints.map((point) => {
             return (
-              <section className="final-response-appendix-point" key={point.id}>
+              <section
+                className="final-response-appendix-point"
+                key={`${point.number}-${point.title}`}
+              >
                 <p className="final-response-point-title">
                   - по п. {point.number}:
                 </p>
-                <p className="final-response-point-reason">{pointReason}.</p>
+                <p className="final-response-point-reason">{point.reason}.</p>
                 <p className="final-response-point-decision">
                   На основании вышеизложенного, Апелляционной комиссией принято
-                  решение {pointDecision}
-                  {decidedByMajority ? " большинством голосов" : ""}.
+                  решение {point.decision}
+                  {point.decidedByMajority ? " большинством голосов" : ""}.
                 </p>
               </section>
             );
