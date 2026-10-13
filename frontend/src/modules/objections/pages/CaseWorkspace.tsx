@@ -783,15 +783,6 @@ export default function CaseWorkspace({
                             >
                               Скачать Word
                             </Button>
-                            {(role === "demo-superuser" || role === "work") &&
-                              (Boolean(c.meeting?.signed) || c.status === "completed") && (
-                              <Button
-                                primary
-                                onClick={() => onAction("send-recommendations", "work")}
-                              >
-                                Направить рекомендации
-                              </Button>
-                            )}
                           </div>
                         </div>
                       </div>

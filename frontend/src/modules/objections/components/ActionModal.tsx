@@ -36,6 +36,40 @@ function appendixDocumentHtml(c: ObjectionCase, document: NonNullable<ObjectionC
 </style></head><body>${content}</body></html>`;
 }
 
+function finalResponsePrintHtml(
+  c: ObjectionCase,
+  finalResponseMajorityByPoint: Record<string, boolean>,
+) {
+  const content = renderToStaticMarkup(
+    <DocumentContent
+      c={c}
+      kind="final-response"
+      finalResponseMajorityByPoint={finalResponseMajorityByPoint}
+    />,
+  );
+  return `<!doctype html>
+<html lang="kk"><head><meta charset="utf-8"><title>Окончательный ответ</title>
+<style>
+  @page { size: A4; margin: 18mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; color: #111; font-family: "Times New Roman", Times, serif; font-size: 12pt; line-height: 1.35; }
+  .print-document { min-height: 260mm; padding: 0; }
+  .final-response-recipient { width: 54%; margin: 0 0 46px auto; }
+  .final-response-recipient p { margin: 0 0 8px; }
+  .final-response-body p { margin: 0 0 10px; text-align: justify; text-indent: 12mm; }
+  .final-response-attachment-note { margin-top: 30px !important; text-indent: 0 !important; }
+  .final-response-signature { display: grid; grid-template-columns: 1fr auto; gap: 26px; align-items: end; margin: 60px 0 35px; }
+  .final-response-signature span { max-width: 320px; }
+  .final-response-executor { font-size: 10pt; line-height: 1.25; }
+  .final-response-appendix { break-before: page; page-break-before: always; }
+  .final-response-appendix h2 { font-size: 14pt; font-style: italic; }
+  .final-response-appendix-point { margin: 26px 0; }
+  .final-response-point-title { font-weight: 700; }
+  .final-response-point-reason, .final-response-point-decision { text-align: justify; text-indent: 12mm; }
+  .final-response-point-decision { margin-top: 12px; }
+</style></head><body>${content}</body></html>`;
+}
+
 export function Field({
   field,
   disabled = false,
@@ -487,6 +521,29 @@ export default function ActionModal({
       "text/html;charset=utf-8",
     );
   };
+  const printFinalResponse = () => {
+    const finalResponseMajorityByPoint = Object.fromEntries(
+      disputed(c).map((point) => [
+        point.id,
+        c.decisionProject
+          ? Boolean(point.finalDecisionByMajority)
+          : Object.hasOwn(values, `finalResponseMajority_${point.id}`)
+            ? values[`finalResponseMajority_${point.id}`] === "on"
+            : Boolean(point.finalDecisionByMajority),
+      ]),
+    );
+    const popup = window.open("", "_blank");
+    if (!popup) {
+      setError(
+        "Браузер заблокировал окно печати. Разрешите всплывающие окна и повторите попытку.",
+      );
+      return;
+    }
+    popup.document.write(finalResponsePrintHtml(c, finalResponseMajorityByPoint));
+    popup.document.close();
+    popup.focus();
+    popup.print();
+  };
   return (
     <Modal
       title={definition.title}
@@ -866,6 +923,13 @@ export default function ActionModal({
               )}
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
+              {action === "deliver" && (
+                <div className="actions request-print-actions">
+                  <Button type="button" primary onClick={printFinalResponse}>
+                    Печать / PDF
+                  </Button>
+                </div>
+              )}
               <DocumentContent
                 c={c}
                 kind={
