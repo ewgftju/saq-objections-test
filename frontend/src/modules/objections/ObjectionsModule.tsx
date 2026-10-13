@@ -35,7 +35,10 @@ import {
   presidingChairId,
 } from "./services/decisions";
 import { applyAction } from "./services/workflow";
-import { casesEligibleForMeeting, useObjectionsModel } from "./useObjectionsModel";
+import {
+  casesEligibleForMeeting,
+  useObjectionsModel,
+} from "./useObjectionsModel";
 import { formatDateTime } from "../../utils/dateFormat";
 
 type DialogState =
@@ -51,27 +54,27 @@ type DialogState =
 
 function participantsFromPoll(poll: CommissionAttendancePoll) {
   const chairId = presidingChairId(
-    COMMISSION_ATTENDANCE_MEMBERS
-      .filter((member) => poll.responses[member.id] === "yes")
-      .map((member) => ({ id: member.id, present: true })),
+    COMMISSION_ATTENDANCE_MEMBERS.filter(
+      (member) => poll.responses[member.id] === "yes",
+    ).map((member) => ({ id: member.id, present: true })),
   );
-  return COMMISSION_ATTENDANCE_MEMBERS
-    .filter((member) => poll.responses[member.id] === "yes")
-    .map((member) => ({
-      id: member.id,
-      name: member.name,
-      present: true,
-      isChair: member.id === chairId,
-      recused: false,
-      reason: "",
-    }));
+  return COMMISSION_ATTENDANCE_MEMBERS.filter(
+    (member) => poll.responses[member.id] === "yes",
+  ).map((member) => ({
+    id: member.id,
+    name: member.name,
+    present: true,
+    isChair: member.id === chairId,
+    recused: false,
+    reason: "",
+  }));
 }
 
 function applyDefaultAttendanceChair(poll: CommissionAttendancePoll) {
   const chairId = presidingChairId(
-    COMMISSION_ATTENDANCE_MEMBERS
-      .filter((member) => poll.responses[member.id] === "yes")
-      .map((member) => ({ id: member.id, present: true })),
+    COMMISSION_ATTENDANCE_MEMBERS.filter(
+      (member) => poll.responses[member.id] === "yes",
+    ).map((member) => ({ id: member.id, present: true })),
   );
   if (chairId) {
     poll.chairId = chairId;
@@ -83,20 +86,24 @@ function applyDefaultAttendanceChair(poll: CommissionAttendancePoll) {
 function recalculateVotesForChair(c: ObjectionCase) {
   const chairId = presidingChairId(c.members);
   if (!chairId || !c.votes) return;
-  c.issues.filter((point) => point.disputed).forEach((point) => {
-    const result = c.votes?.[point.id];
-    if (!result?.votes) return;
-    result.chair = chairId;
-    const allVoted = c.members.every((member) =>
-      Boolean(normalizeVoteChoice(result.votes?.[member.id])),
-    );
-    const outcome = allVoted ? pointOutcomeFromVotes(result.votes, chairId) : "";
-    result.approved = outcome === "accept";
-    if (outcome) {
-      point.proposal = outcome;
-      point.final = outcome;
-    }
-  });
+  c.issues
+    .filter((point) => point.disputed)
+    .forEach((point) => {
+      const result = c.votes?.[point.id];
+      if (!result?.votes) return;
+      result.chair = chairId;
+      const allVoted = c.members.every((member) =>
+        Boolean(normalizeVoteChoice(result.votes?.[member.id])),
+      );
+      const outcome = allVoted
+        ? pointOutcomeFromVotes(result.votes, chairId)
+        : "";
+      result.approved = outcome === "accept";
+      if (outcome) {
+        point.proposal = outcome;
+        point.final = outcome;
+      }
+    });
 }
 
 function syncPollParticipants(
@@ -156,9 +163,10 @@ export default function ObjectionsModule() {
   const [dialogError, setDialogError] = useState("");
   const [uploading, setUploading] = useState(false);
   const c = model.state.cases.find((item) => item.id === model.route.caseId);
-  const activeCommissionMember = COMMISSION_ATTENDANCE_MEMBERS.find(
-    (member) => member.id === model.state.activeCommissionMemberId,
-  ) || COMMISSION_ATTENDANCE_MEMBERS[0];
+  const activeCommissionMember =
+    COMMISSION_ATTENDANCE_MEMBERS.find(
+      (member) => member.id === model.state.activeCommissionMemberId,
+    ) || COMMISSION_ATTENDANCE_MEMBERS[0];
   const commissionCanOpenCase = (caseId: string) =>
     model.state.attendancePolls
       .filter((poll) => poll.caseIds.includes(caseId))
@@ -195,7 +203,9 @@ export default function ObjectionsModule() {
       return;
     }
     if (model.role === "subject" && !subjectCanOpenCase(c)) {
-      model.setToast("В кабинет заявителя поступают запросы, проект решения и подписанные окончательные ответы.");
+      model.setToast(
+        "В кабинет заявителя поступают запросы, проект решения и подписанные окончательные ответы.",
+      );
       return;
     }
     const shouldMarkRead =
@@ -221,10 +231,7 @@ export default function ObjectionsModule() {
     model.navigate({ page: "notifications" });
   };
   const setActiveCommissionMember = (memberId: string) => {
-    model.commit(
-      { ...model.state, activeCommissionMemberId: memberId },
-      "",
-    );
+    model.commit({ ...model.state, activeCommissionMemberId: memberId }, "");
   };
   const sendAttendancePoll = (
     cases: ObjectionCase[],
@@ -299,7 +306,9 @@ export default function ObjectionsModule() {
     const memberId = notification?.commissionMemberId;
     if (!pollId || !memberId) return;
     const poll = next.attendancePolls.find((item) => item.id === pollId);
-    const member = COMMISSION_ATTENDANCE_MEMBERS.find((item) => item.id === memberId);
+    const member = COMMISSION_ATTENDANCE_MEMBERS.find(
+      (item) => item.id === memberId,
+    );
     if (!poll || !member) return;
     if (notification.read || poll.responses[memberId] !== "pending") {
       close();
@@ -315,7 +324,10 @@ export default function ObjectionsModule() {
       target?.history.push({
         date: next.date,
         actor: member.name,
-        title: response === "yes" ? "Подтверждено присутствие" : "Отказ от участия в заседании",
+        title:
+          response === "yes"
+            ? "Подтверждено присутствие"
+            : "Отказ от участия в заседании",
         text: `Ответ на опрос о заседании ${formatDateTime(poll.dateTime)}: ${response === "yes" ? "Да" : "Нет"}.`,
       });
     });
@@ -364,15 +376,14 @@ export default function ObjectionsModule() {
         text: `${member.name}: ${response === "yes" ? "Да" : "Нет"}.`,
       });
     });
-    model.commit(
-      next,
-      `Статус участия члена АК «${member.name}» сохранён.`,
-    );
+    model.commit(next, `Статус участия члена АК «${member.name}» сохранён.`);
   };
   const selectAttendanceChair = (pollId: string, memberId: string) => {
     const next = structuredClone(model.state);
     const poll = next.attendancePolls.find((item) => item.id === pollId);
-    const member = COMMISSION_ATTENDANCE_MEMBERS.find((item) => item.id === memberId);
+    const member = COMMISSION_ATTENDANCE_MEMBERS.find(
+      (item) => item.id === memberId,
+    );
     if (!poll || !member || poll.responses[memberId] !== "yes") return;
     poll.chairId = memberId;
     syncPollParticipants(next.cases, next.attendancePolls, poll);
@@ -465,13 +476,21 @@ export default function ObjectionsModule() {
       caseId: readyCases[0]?.id || "",
       recipient: ROLES.director,
       recipientRole: "director",
-      text: "Подпишите повестку дня заседания №" + number + " на " + formatDateTime(dateTime) + ".",
+      text:
+        "Подпишите повестку дня заседания №" +
+        number +
+        " на " +
+        formatDateTime(dateTime) +
+        ".",
       date: meetingNotificationDate(dateTime),
       read: false,
       kind: "agenda-sign",
       meetingId: meeting.id,
     });
-    model.commit(next, "Карточка заседания создана. Опрос направлен членам АК.");
+    model.commit(
+      next,
+      "Карточка заседания создана. Опрос направлен членам АК.",
+    );
     close();
   };
 
@@ -482,7 +501,9 @@ export default function ObjectionsModule() {
       ? next.attendancePolls.find((item) => item.id === meeting.pollId)
       : undefined;
     if (!meeting || !poll || meeting.agendaSigned) return;
-    const ids = new Set(caseIds.filter((caseId) => meeting.caseIds.includes(caseId)));
+    const ids = new Set(
+      caseIds.filter((caseId) => meeting.caseIds.includes(caseId)),
+    );
     if (!ids.size) return;
 
     meeting.caseIds = meeting.caseIds.filter((id) => !ids.has(id));
@@ -576,9 +597,9 @@ export default function ObjectionsModule() {
       selectedCases,
       meeting.dateTime.slice(0, 10),
     );
-    target.excludedFromMeetingIds = (target.excludedFromMeetingIds || []).filter(
-      (id) => id !== meeting.id,
-    );
+    target.excludedFromMeetingIds = (
+      target.excludedFromMeetingIds || []
+    ).filter((id) => id !== meeting.id);
     target.attendanceMeetingDate = meeting.dateTime.slice(0, 10);
     target.history.push({
       date: next.date,
@@ -605,7 +626,9 @@ export default function ObjectionsModule() {
     caseIds: string[],
   ) => {
     const next = structuredClone(model.state);
-    const fromMeeting = next.meetings?.find((item) => item.id === fromMeetingId);
+    const fromMeeting = next.meetings?.find(
+      (item) => item.id === fromMeetingId,
+    );
     const toMeeting = next.meetings?.find((item) => item.id === toMeetingId);
     const fromPoll = fromMeeting
       ? next.attendancePolls.find((item) => item.id === fromMeeting.pollId)
@@ -624,7 +647,9 @@ export default function ObjectionsModule() {
     ) {
       return;
     }
-    const ids = caseIds.filter((caseId) => fromMeeting.caseIds.includes(caseId));
+    const ids = caseIds.filter((caseId) =>
+      fromMeeting.caseIds.includes(caseId),
+    );
     if (!ids.length) return;
 
     const movedIds = new Set(ids);
@@ -636,7 +661,10 @@ export default function ObjectionsModule() {
       const target = next.cases.find((item) => item.id === caseId);
       if (!target) return;
       target.transferredFromMeetingIds = [
-        ...new Set([...(target.transferredFromMeetingIds || []), fromMeeting.id]),
+        ...new Set([
+          ...(target.transferredFromMeetingIds || []),
+          fromMeeting.id,
+        ]),
       ];
       target.attendanceMeetingDate = toMeeting.dateTime.slice(0, 10);
       target.history.push({
@@ -682,7 +710,8 @@ export default function ObjectionsModule() {
     if (!meeting || meeting.agendaSigned) return;
     const index = meeting.caseIds.indexOf(caseId);
     const nextIndex = direction === "up" ? index - 1 : index + 1;
-    if (index < 0 || nextIndex < 0 || nextIndex >= meeting.caseIds.length) return;
+    if (index < 0 || nextIndex < 0 || nextIndex >= meeting.caseIds.length)
+      return;
     [meeting.caseIds[index], meeting.caseIds[nextIndex]] = [
       meeting.caseIds[nextIndex],
       meeting.caseIds[index],
@@ -724,7 +753,12 @@ export default function ObjectionsModule() {
         caseId: meeting.caseIds[0],
         recipient: member.name,
         recipientRole: "commission",
-        text: "Подписана повестка дня заседания №" + meeting.number + " на " + formatDateTime(meeting.dateTime) + ".",
+        text:
+          "Подписана повестка дня заседания №" +
+          meeting.number +
+          " на " +
+          formatDateTime(meeting.dateTime) +
+          ".",
         date: next.date,
         read: false,
         kind: "agenda-signed",
@@ -746,15 +780,22 @@ export default function ObjectionsModule() {
         date: next.date,
         actor: ROLES.director,
         title: "Повестка дня подписана",
-        text: "Повестка заседания №" + meeting.number + " направлена членам АК.",
+        text:
+          "Повестка заседания №" + meeting.number + " направлена членам АК.",
       });
     });
     next.notifications.forEach((notification) => {
-      if (notification.kind === "agenda-sign" && notification.meetingId === meeting.id) {
+      if (
+        notification.kind === "agenda-sign" &&
+        notification.meetingId === meeting.id
+      ) {
         notification.read = true;
       }
     });
-    model.commit(next, "Повестка дня подписана и направлена в кабинеты членов АК.");
+    model.commit(
+      next,
+      "Повестка дня подписана и направлена в кабинеты членов АК.",
+    );
   };
 
   const completeMeeting = (meetingId: string) => {
@@ -847,9 +888,21 @@ export default function ObjectionsModule() {
       form.set("commissionMember", activeCommissionMember.id);
     }
     if (
-        !["position", "record-external-response", "fill-request-response", "request", "request-saq", "request-other", "deliver", "subject-response", "send-recommendations", "record-decision-project-delivery", "submit-decision-project-comment", "record-external-decision-project-comment", "hearing-after-decision-project"].includes(
-        action,
-      )
+      ![
+        "position",
+        "record-external-response",
+        "fill-request-response",
+        "request",
+        "request-saq",
+        "request-other",
+        "deliver",
+        "subject-response",
+        "send-recommendations",
+        "record-decision-project-delivery",
+        "submit-decision-project-comment",
+        "record-external-decision-project-comment",
+        "hearing-after-decision-project",
+      ].includes(action)
     ) {
       if (action === "review-commission-documents") {
         const next = applyAction(model.state, c.id, action, model.role, form);
@@ -858,9 +911,14 @@ export default function ObjectionsModule() {
           .filter((item) => item.caseIds.includes(c.id))
           .at(-1);
         if (!poll || !participantsFromPoll(poll).length)
-          throw new Error("Для заседания нужен хотя бы один подтверждённый ответ «Да» в опросе о присутствии");
+          throw new Error(
+            "Для заседания нужен хотя бы один подтверждённый ответ «Да» в опросе о присутствии",
+          );
         updated.members = participantsFromPoll(poll);
-        model.commit(next, "Материалы изучены. Состав участников определён по опросу о присутствии.");
+        model.commit(
+          next,
+          "Материалы изучены. Состав участников определён по опросу о присутствии.",
+        );
       } else if (action === "analysis") {
         const next = applyAction(model.state, c.id, action, model.role, form);
         const updated = next.cases.find((item) => item.id === c.id)!;
@@ -879,16 +937,19 @@ export default function ObjectionsModule() {
             ? "conclusionFiles"
             : action === "subject-response"
               ? "subjectResponseFiles"
-            : action === "send-recommendations"
-              ? "recommendationFiles"
-              : action === "hearing-after-decision-project"
-                ? "hearingProtocolFiles"
-            : "responseFiles",
+              : action === "send-recommendations"
+                ? "recommendationFiles"
+                : action === "hearing-after-decision-project"
+                  ? "hearingProtocolFiles"
+                  : "responseFiles",
       )
       .filter(
         (item): item is File => item instanceof File && item.name.length > 0,
       );
-    if (["position", "record-external-response"].includes(action) && !files.length)
+    if (
+      ["position", "record-external-response"].includes(action) &&
+      !files.length
+    )
       throw new Error("Вложите хотя бы один полученный файл");
     if (action === "subject-response" && !files.length)
       throw new Error("Вложите хотя бы один файл ответа");
@@ -915,8 +976,10 @@ export default function ObjectionsModule() {
         (file) =>
           new Promise<{ file: File; dataUrl: string }>((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = () => resolve({ file, dataUrl: String(reader.result) });
-            reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+            reader.onload = () =>
+              resolve({ file, dataUrl: String(reader.result) });
+            reader.onerror = () =>
+              reject(new Error("Не удалось прочитать файл"));
             reader.readAsDataURL(file);
           }),
       ),
@@ -927,7 +990,7 @@ export default function ObjectionsModule() {
             (request) =>
               !request.responded &&
               request.template !== "other" &&
-              (model.role !== "dvga" && model.role !== "kvga" ||
+              ((model.role !== "dvga" && model.role !== "kvga") ||
                 (model.role === "kvga"
                   ? request.recipient.toUpperCase().includes("КВГА")
                   : request.recipient.toUpperCase().includes("ДВГА"))),
@@ -941,26 +1004,30 @@ export default function ObjectionsModule() {
             )?.id
           : action === "record-external-response"
             ? String(form.get("externalRequestId") || "")
-          : action === "position"
-          ? c.requests.find(
-              (request) =>
-                request.template === "other" && !request.confirmed,
-            )?.id ||
-            c.requests.find(
-              (request) => request.responded && !request.confirmed,
-            )?.id ||
-            c.requests.find(
-              (request) => !request.responded && request.template === "other",
-            )?.id
-          : undefined;
+            : action === "position"
+              ? c.requests.find(
+                  (request) =>
+                    request.template === "other" && !request.confirmed,
+                )?.id ||
+                c.requests.find(
+                  (request) => request.responded && !request.confirmed,
+                )?.id ||
+                c.requests.find(
+                  (request) =>
+                    !request.responded && request.template === "other",
+                )?.id
+              : undefined;
     const next = applyAction(model.state, c.id, action, model.role, form);
     const updated = next.cases.find((item) => item.id === c.id)!;
     if (["request", "request-saq", "request-other"].includes(action))
       delete updated.requestDrafts?.[action as RequestDraftKind];
-    const responseRequestId =
-      ["request", "request-saq", "request-other"].includes(action)
-        ? updated.requests.at(-1)?.id
-        : responseRequestIdBeforeAction;
+    const responseRequestId = [
+      "request",
+      "request-saq",
+      "request-other",
+    ].includes(action)
+      ? updated.requests.at(-1)?.id
+      : responseRequestIdBeforeAction;
     const recommendationId =
       action === "send-recommendations"
         ? next.recommendations.at(-1)?.id
@@ -970,44 +1037,48 @@ export default function ObjectionsModule() {
         ...attached.map(({ file, dataUrl }) => ({
           name: file.name,
           filename: file.name,
-          kind:
-            ["request", "request-saq", "request-other"].includes(action)
-              ? "request-attachment"
-              : action === "deliver"
-                ? "conclusion"
+          kind: ["request", "request-saq", "request-other"].includes(action)
+            ? "request-attachment"
+            : action === "deliver"
+              ? "conclusion"
               : action === "fill-request-response"
-              ? "authority-response-attachment"
-              : action === "subject-response"
-                ? "subject-response-attachment"
-              : action === "send-recommendations"
-                ? "recommendation-attachment"
-              : action === "hearing-after-decision-project"
-                ? "hearing-protocol-attachment"
-              : action === "record-decision-project-delivery"
-                ? "decision-project-delivery-attachment"
-              : ["submit-decision-project-comment", "record-external-decision-project-comment"].includes(action)
-                ? "decision-project-comment-attachment"
-              : "response-attachment",
-          text:
-            ["request", "request-saq", "request-other"].includes(action)
-              ? action === "request-other"
-                ? "Документ по запросу, направленному через другую систему"
-                : "Приложение исполнителя рабочего органа к запросу"
-              : action === "deliver"
-                ? "Заключение по обращению"
+                ? "authority-response-attachment"
+                : action === "subject-response"
+                  ? "subject-response-attachment"
+                  : action === "send-recommendations"
+                    ? "recommendation-attachment"
+                    : action === "hearing-after-decision-project"
+                      ? "hearing-protocol-attachment"
+                      : action === "record-decision-project-delivery"
+                        ? "decision-project-delivery-attachment"
+                        : [
+                              "submit-decision-project-comment",
+                              "record-external-decision-project-comment",
+                            ].includes(action)
+                          ? "decision-project-comment-attachment"
+                          : "response-attachment",
+          text: ["request", "request-saq", "request-other"].includes(action)
+            ? action === "request-other"
+              ? "Документ по запросу, направленному через другую систему"
+              : "Приложение исполнителя рабочего органа к запросу"
+            : action === "deliver"
+              ? "Заключение по обращению"
               : action === "fill-request-response"
-              ? "Подтверждающий документ ДВГА/КВГА"
-              : action === "subject-response"
-                ? "Ответ Объекта на запрос"
-              : action === "send-recommendations"
-                ? "Вложение к рекомендации"
-              : action === "hearing-after-decision-project"
-                ? "Протокол заслушивания"
-              : action === "record-decision-project-delivery"
-                ? "Подтверждение направления проекта решения"
-              : ["submit-decision-project-comment", "record-external-decision-project-comment"].includes(action)
-                ? "Вложение к замечанию на проект решения"
-              : "Полученный ответ на запрос",
+                ? "Подтверждающий документ ДВГА/КВГА"
+                : action === "subject-response"
+                  ? "Ответ Объекта на запрос"
+                  : action === "send-recommendations"
+                    ? "Вложение к рекомендации"
+                    : action === "hearing-after-decision-project"
+                      ? "Протокол заслушивания"
+                      : action === "record-decision-project-delivery"
+                        ? "Подтверждение направления проекта решения"
+                        : [
+                              "submit-decision-project-comment",
+                              "record-external-decision-project-comment",
+                            ].includes(action)
+                          ? "Вложение к замечанию на проект решения"
+                          : "Полученный ответ на запрос",
           author: ROLES[model.role],
           date: next.date,
           dataUrl,
@@ -1018,26 +1089,28 @@ export default function ObjectionsModule() {
       updated.history.push({
         date: next.date,
         actor: ROLES[model.role],
-        title:
-          ["request", "request-saq", "request-other"].includes(action)
-            ? action === "request-other"
-              ? "Вложены документы к запросу через другую систему"
-              : "Вложены приложения к запросу"
-            : action === "deliver"
-              ? "Вложено заключение по обращению"
+        title: ["request", "request-saq", "request-other"].includes(action)
+          ? action === "request-other"
+            ? "Вложены документы к запросу через другую систему"
+            : "Вложены приложения к запросу"
+          : action === "deliver"
+            ? "Вложено заключение по обращению"
             : action === "fill-request-response"
-            ? "Вложены документы ДВГА/КВГА"
-            : action === "subject-response"
-              ? "Вложен ответ Объекта"
-            : action === "send-recommendations"
-              ? "Вложен файл к рекомендации"
-            : action === "hearing-after-decision-project"
-              ? "Вложен протокол заслушивания"
-            : action === "record-decision-project-delivery"
-              ? "Вложено подтверждение направления проекта решения"
-            : ["submit-decision-project-comment", "record-external-decision-project-comment"].includes(action)
-              ? "Вложен файл к замечанию на проект решения"
-            : "Вложены полученные файлы",
+              ? "Вложены документы ДВГА/КВГА"
+              : action === "subject-response"
+                ? "Вложен ответ Объекта"
+                : action === "send-recommendations"
+                  ? "Вложен файл к рекомендации"
+                  : action === "hearing-after-decision-project"
+                    ? "Вложен протокол заслушивания"
+                    : action === "record-decision-project-delivery"
+                      ? "Вложено подтверждение направления проекта решения"
+                      : [
+                            "submit-decision-project-comment",
+                            "record-external-decision-project-comment",
+                          ].includes(action)
+                        ? "Вложен файл к замечанию на проект решения"
+                        : "Вложены полученные файлы",
         text: attached.map(({ file }) => file.name).join(", "),
       });
     }
@@ -1052,28 +1125,31 @@ export default function ObjectionsModule() {
             ? "Направление запроса через другую систему зафиксировано"
             : "Запрос сохранён"
         : action === "fill-request-response"
-        ? "Ответ ДВГА/КВГА и вложения сохранены"
-        : action === "subject-response"
-          ? "Ответ Объекта направлен рабочему органу"
-        : action === "deliver"
-          ? "Заключение по обращению вложено"
-        : action === "send-recommendations"
-          ? attached.length
-            ? "Рекомендация и вложение сохранены"
-            : "Рекомендация сохранена"
-        : action === "hearing-after-decision-project"
-          ? "Протокол заслушивания вложен. Переход к мотивированному ответу выполнен"
-        : action === "record-external-response"
-          ? "Ответ другого органа и вложения сохранены"
-        : action === "record-decision-project-delivery"
-          ? attached.length
-            ? "Направление проекта решения и подтверждающий файл сохранены"
-            : "Направление проекта решения зафиксировано"
-        : ["submit-decision-project-comment", "record-external-decision-project-comment"].includes(action)
-          ? attached.length
-            ? "Замечание к проекту решения и вложения сохранены"
-            : "Замечание к проекту решения сохранено"
-        : "Полученный ответ и вложения сохранены",
+          ? "Ответ ДВГА/КВГА и вложения сохранены"
+          : action === "subject-response"
+            ? "Ответ Объекта направлен рабочему органу"
+            : action === "deliver"
+              ? "Заключение по обращению вложено"
+              : action === "send-recommendations"
+                ? attached.length
+                  ? "Рекомендация и вложение сохранены"
+                  : "Рекомендация сохранена"
+                : action === "hearing-after-decision-project"
+                  ? "Протокол заслушивания вложен. Переход к мотивированному ответу выполнен"
+                  : action === "record-external-response"
+                    ? "Ответ другого органа и вложения сохранены"
+                    : action === "record-decision-project-delivery"
+                      ? attached.length
+                        ? "Направление проекта решения и подтверждающий файл сохранены"
+                        : "Направление проекта решения зафиксировано"
+                      : [
+                            "submit-decision-project-comment",
+                            "record-external-decision-project-comment",
+                          ].includes(action)
+                        ? attached.length
+                          ? "Замечание к проекту решения и вложения сохранены"
+                          : "Замечание к проекту решения сохранено"
+                        : "Полученный ответ и вложения сохранены",
     );
   }
 
@@ -1095,8 +1171,10 @@ export default function ObjectionsModule() {
         (file) =>
           new Promise<{ file: File; dataUrl: string }>((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = () => resolve({ file, dataUrl: String(reader.result) });
-            reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+            reader.onload = () =>
+              resolve({ file, dataUrl: String(reader.result) });
+            reader.onerror = () =>
+              reject(new Error("Не удалось прочитать файл"));
             reader.readAsDataURL(file);
           }),
       ),
@@ -1112,7 +1190,9 @@ export default function ObjectionsModule() {
     )
       throw new Error("Ответ может направить только адресат рекомендации");
     if (recommendation.channel === "external")
-      throw new Error("Ответ по внешней рекомендации фиксируется вне кабинета SAQ");
+      throw new Error(
+        "Ответ по внешней рекомендации фиксируется вне кабинета SAQ",
+      );
     if (!["sent", "returned"].includes(recommendation.status))
       throw new Error("Ответ по этой рекомендации уже направлен");
     recommendation.answer = answer;
@@ -1120,7 +1200,9 @@ export default function ObjectionsModule() {
     recommendation.status = "answered";
     recommendation.answeredAt = next.date;
     recommendation.revisionDueDate = undefined;
-    const caseItem = next.cases.find((item) => item.id === recommendation.caseId);
+    const caseItem = next.cases.find(
+      (item) => item.id === recommendation.caseId,
+    );
     if (!caseItem) throw new Error("Обращение не найдено");
     if (attached.length) {
       caseItem.documents.push(
@@ -1171,7 +1253,9 @@ export default function ObjectionsModule() {
       throw new Error("Нет ответа на рекомендацию для принятия");
     recommendation.status = "executed";
     recommendation.executedAt = next.date;
-    const caseItem = next.cases.find((item) => item.id === recommendation.caseId);
+    const caseItem = next.cases.find(
+      (item) => item.id === recommendation.caseId,
+    );
     if (caseItem)
       caseItem.history.push({
         date: next.date,
@@ -1202,7 +1286,9 @@ export default function ObjectionsModule() {
     recommendation.revisionDueDate = revisionDueDate;
     recommendation.dueDate = revisionDueDate;
     recommendation.returnedAt = next.date;
-    const caseItem = next.cases.find((item) => item.id === recommendation.caseId);
+    const caseItem = next.cases.find(
+      (item) => item.id === recommendation.caseId,
+    );
     if (!caseItem) throw new Error("Обращение не найдено");
     caseItem.history.push({
       date: next.date,
@@ -1259,15 +1345,19 @@ export default function ObjectionsModule() {
       route={model.route}
       date={model.state.date}
       role={model.role}
-      unreadNotifications={model.state.notifications.filter(
-        (notification) =>
-          !notification.read &&
-          (model.role !== "commission" ||
-            notification.commissionMemberId === activeCommissionMember.id),
-      ).length}
+      unreadNotifications={
+        model.state.notifications.filter(
+          (notification) =>
+            !notification.read &&
+            (model.role !== "commission" ||
+              notification.commissionMemberId === activeCommissionMember.id),
+        ).length
+      }
       onRoleChange={model.setRole}
       onNavigate={(next) =>
-        next.page === "notifications" ? openNotifications() : model.navigate(next)
+        next.page === "notifications"
+          ? openNotifications()
+          : model.navigate(next)
       }
       onClock={() => setDialog({ type: "clock" })}
       onReset={() => setDialog({ type: "reset" })}
@@ -1280,7 +1370,9 @@ export default function ObjectionsModule() {
         <CasesList
           cases={
             model.role === "commission"
-              ? model.state.cases.filter((item) => commissionCanOpenCase(item.id))
+              ? model.state.cases.filter((item) =>
+                  commissionCanOpenCase(item.id),
+                )
               : model.state.cases
           }
           date={model.state.date}
@@ -1309,149 +1401,156 @@ export default function ObjectionsModule() {
               запросы, проекты решений и подписанные окончательные ответы.
             </Notice>
           ) : (
-          <CaseWorkspace
-            c={c}
-            date={model.state.date}
-            tab={model.route.tab || "review"}
-            role={model.role}
-            recommendations={model.state.recommendations}
-            onBack={() => model.navigate({ page: "registry" })}
-            onTab={(tab) => model.navigate({ ...model.route, tab })}
-            onAction={(action, role, requestId) => {
-              if (
-                action === "record-external-response" ||
-                action === "send-decision-project-eotinish" ||
-                action === "record-decision-project-delivery" ||
-                action === "submit-decision-project-comment" ||
-                action === "record-external-decision-project-comment" ||
-                action === "proceed-to-final-response" ||
-                action === "hearing-after-decision-project"
-              ) {
-                setDialog({ type: "action", action, requestId });
-                return;
-              }
-              if (
-                action === "assign-work-executor" ||
-                action === "commission-vote" ||
-                action === "vote" ||
-                action === "fill-meeting-certificate"
-              ) {
+            <CaseWorkspace
+              c={c}
+              date={model.state.date}
+              tab={model.route.tab || "review"}
+              role={model.role}
+              recommendations={model.state.recommendations}
+              onBack={() => model.navigate({ page: "registry" })}
+              onTab={(tab) => model.navigate({ ...model.route, tab })}
+              onAction={(action, role, requestId) => {
+                if (
+                  action === "record-external-response" ||
+                  action === "send-decision-project-eotinish" ||
+                  action === "record-decision-project-delivery" ||
+                  action === "submit-decision-project-comment" ||
+                  action === "record-external-decision-project-comment" ||
+                  action === "proceed-to-final-response" ||
+                  action === "hearing-after-decision-project"
+                ) {
+                  setDialog({ type: "action", action, requestId });
+                  return;
+                }
+                if (
+                  action === "assign-work-executor" ||
+                  action === "commission-vote" ||
+                  action === "vote" ||
+                  action === "fill-meeting-certificate"
+                ) {
+                  if (model.role !== "demo-superuser") model.setRole(role);
+                  setDialog({ type: "action", action });
+                  return;
+                }
+                if (action === "approve-request") {
+                  const form = new FormData();
+                  form.set("approved", "on");
+                  form.set("requestId", requestId || "");
+                  const next = applyAction(
+                    model.state,
+                    c.id,
+                    action,
+                    role,
+                    form,
+                  );
+                  model.commit(next, "Запрос согласован");
+                  return;
+                }
+                if (
+                  action === "screen" ||
+                  action === "send-request-approval" ||
+                  action === "sign-request" ||
+                  action === "approve-response" ||
+                  action === "sign-response" ||
+                  action === "approve-final-response" ||
+                  action === "sign-final-response" ||
+                  action === "approve-decision-project" ||
+                  action === "sign-decision-project" ||
+                  action === "approve-certificate" ||
+                  action === "sign-certificate" ||
+                  action === "review-commission-documents" ||
+                  action === "members" ||
+                  action === "sign"
+                ) {
+                  const form = new FormData();
+                  if (action === "screen") {
+                    form.set("identity", "on");
+                    form.set("document", "on");
+                    form.set("grounds", "on");
+                    form.set("competence", "on");
+                    form.set(
+                      "assignee",
+                      c.assignee === "Не назначен"
+                        ? "Исполнитель ДАВГА"
+                        : c.assignee,
+                    );
+                    form.set("authority", c.authority);
+                    form.set(
+                      "basis",
+                      "Реквизиты обращения проверены, обращение принято к рассмотрению.",
+                    );
+                    if (c.type === "control")
+                      form.set(
+                        "actEffect",
+                        "Обращение принято к рассмотрению в общем порядке.",
+                      );
+                  }
+                  if (action === "members") {
+                    form.set("meetingConducted", "on");
+                  }
+                  if (action === "sign") {
+                    form.set("secretary", "on");
+                    c.members
+                      .filter((member) => member.present)
+                      .forEach((member) =>
+                        form.set(`signed_${member.id}`, "on"),
+                      );
+                    form.set(
+                      "reason",
+                      "Результаты голосования членов АК зафиксированы в протоколе.",
+                    );
+                  }
+                  if (action === "sign-request") {
+                    form.set("requestId", requestId || "");
+                  }
+                  const next = applyAction(
+                    model.state,
+                    c.id,
+                    action,
+                    model.role === "demo-superuser" ? model.role : role,
+                    form,
+                  );
+                  model.commit(
+                    next,
+                    action === "screen"
+                      ? "Обращение принято к рассмотрению"
+                      : action === "sign-request"
+                        ? "Запрос подписан"
+                        : action === "approve-response"
+                          ? "Ответ ДВГА/КВГА согласован"
+                          : action === "sign-response"
+                            ? "Ответ ДВГА/КВГА подписан"
+                            : action === "approve-final-response"
+                              ? "Окончательный ответ согласован"
+                              : action === "sign-final-response"
+                                ? "Окончательный ответ подписан"
+                                : action === "approve-decision-project"
+                                  ? "Проект решения согласован"
+                                  : action === "sign-decision-project"
+                                    ? "Проект решения подписан"
+                                    : action === "approve-certificate"
+                                      ? "Справка согласована"
+                                      : action === "sign-certificate"
+                                        ? "Справка подписана"
+                                        : action ===
+                                            "review-commission-documents"
+                                          ? "Члены АК ознакомились с документами"
+                                          : action === "members"
+                                            ? "Заседание по данному делу проведено"
+                                            : action === "sign"
+                                              ? "Протокол подписан"
+                                              : "Запрос направлен на согласование",
+                  );
+                  return;
+                }
                 if (model.role !== "demo-superuser") model.setRole(role);
                 setDialog({ type: "action", action });
-                return;
+              }}
+              onDocument={(kind, document) =>
+                setDialog({ type: "document", kind, document })
               }
-              if (action === "approve-request") {
-                const form = new FormData();
-                form.set("approved", "on");
-                form.set("requestId", requestId || "");
-                const next = applyAction(model.state, c.id, action, role, form);
-                model.commit(next, "Запрос согласован");
-                return;
-              }
-              if (
-                action === "screen" ||
-                action === "send-request-approval" ||
-                action === "sign-request" ||
-                action === "approve-response" ||
-                action === "sign-response" ||
-                action === "approve-final-response" ||
-                action === "sign-final-response" ||
-                action === "approve-decision-project" ||
-                action === "sign-decision-project" ||
-                action === "approve-certificate" ||
-                action === "sign-certificate" ||
-                action === "review-commission-documents" ||
-                action === "members" ||
-                action === "sign"
-              ) {
-                const form = new FormData();
-                if (action === "screen") {
-                  form.set("identity", "on");
-                  form.set("document", "on");
-                  form.set("grounds", "on");
-                  form.set("competence", "on");
-                  form.set(
-                    "assignee",
-                    c.assignee === "Не назначен"
-                      ? "Исполнитель ДАВГА"
-                      : c.assignee,
-                  );
-                  form.set("authority", c.authority);
-                  form.set(
-                    "basis",
-                    "Реквизиты обращения проверены, обращение принято к рассмотрению.",
-                  );
-                  if (c.type === "control")
-                    form.set(
-                      "actEffect",
-                      "Обращение принято к рассмотрению в общем порядке.",
-                    );
-                }
-                if (action === "members") {
-                  form.set("meetingConducted", "on");
-                }
-                if (action === "sign") {
-                  form.set("secretary", "on");
-                  c.members
-                    .filter((member) => member.present)
-                    .forEach((member) =>
-                      form.set(`signed_${member.id}`, "on"),
-                    );
-                  form.set(
-                    "reason",
-                    "Результаты голосования членов АК зафиксированы в протоколе.",
-                  );
-                }
-                if (action === "sign-request") {
-                  form.set("requestId", requestId || "");
-                }
-                const next = applyAction(
-                  model.state,
-                  c.id,
-                  action,
-                  model.role === "demo-superuser" ? model.role : role,
-                  form,
-                );
-                model.commit(
-                  next,
-                  action === "screen"
-                    ? "Обращение принято к рассмотрению"
-                    : action === "sign-request"
-                      ? "Запрос подписан"
-                    : action === "approve-response"
-                      ? "Ответ ДВГА/КВГА согласован"
-                    : action === "sign-response"
-                      ? "Ответ ДВГА/КВГА подписан"
-                    : action === "approve-final-response"
-                      ? "Окончательный ответ согласован"
-                    : action === "sign-final-response"
-                      ? "Окончательный ответ подписан"
-                    : action === "approve-decision-project"
-                      ? "Проект решения согласован"
-                    : action === "sign-decision-project"
-                      ? "Проект решения подписан"
-                    : action === "approve-certificate"
-                      ? "Справка согласована"
-                      : action === "sign-certificate"
-                        ? "Справка подписана"
-                      : action === "review-commission-documents"
-                          ? "Члены АК ознакомились с документами"
-                        : action === "members"
-                          ? "Заседание по данному делу проведено"
-                        : action === "sign"
-                          ? "Протокол подписан"
-                        : "Запрос направлен на согласование",
-                );
-                return;
-              }
-              if (model.role !== "demo-superuser") model.setRole(role);
-              setDialog({ type: "action", action });
-            }}
-            onDocument={(kind, document) =>
-              setDialog({ type: "document", kind, document })
-            }
-            onUpload={() => setDialog({ type: "upload" })}
-          />
+              onUpload={() => setDialog({ type: "upload" })}
+            />
           )
         ) : (
           <Notice>
@@ -1466,31 +1565,32 @@ export default function ObjectionsModule() {
         ))}
       {model.route.page === "sessions" &&
         !["dvga", "kvga", "subject"].includes(model.role) && (
-        <SessionsPage
-          cases={model.state.cases}
-          meetings={model.state.meetings ?? []}
-          attendancePolls={model.state.attendancePolls}
-          commissionMembers={COMMISSION_ATTENDANCE_MEMBERS}
-          role={model.role}
-          date={model.state.date}
-          onOpen={openCase}
-          onCreateMeeting={() => setDialog({ type: "meeting" })}
-          onUpdateAttendanceResponse={updateAttendanceResponse}
-          onAddCase={addCaseToMeeting}
-          onExcludeCases={excludeCasesFromMeeting}
-          onTransferCases={transferCasesToMeeting}
-          onMoveCase={moveMeetingCase}
-          onPreviewAgenda={(meeting) =>
-            previewWordDocument(
-              "Повестка дня №" + meeting.number,
-              meeting.agendaHtml,
-            )
-          }
-          onSignAgenda={signMeetingAgenda}
-          onCompleteMeeting={completeMeeting}
-          initialMeetingId={model.route.meetingId}
-        />
-      )}
+          <SessionsPage
+            cases={model.state.cases}
+            meetings={model.state.meetings ?? []}
+            attendancePolls={model.state.attendancePolls}
+            commissionMembers={COMMISSION_ATTENDANCE_MEMBERS}
+            activeCommissionMemberId={activeCommissionMember.id}
+            role={model.role}
+            date={model.state.date}
+            onOpen={openCase}
+            onCreateMeeting={() => setDialog({ type: "meeting" })}
+            onUpdateAttendanceResponse={updateAttendanceResponse}
+            onAddCase={addCaseToMeeting}
+            onExcludeCases={excludeCasesFromMeeting}
+            onTransferCases={transferCasesToMeeting}
+            onMoveCase={moveMeetingCase}
+            onPreviewAgenda={(meeting) =>
+              previewWordDocument(
+                "Повестка дня №" + meeting.number,
+                meeting.agendaHtml,
+              )
+            }
+            onSignAgenda={signMeetingAgenda}
+            onCompleteMeeting={completeMeeting}
+            initialMeetingId={model.route.meetingId}
+          />
+        )}
       {model.route.page === "notifications" && (
         <NotificationsPage
           notifications={model.state.notifications}
@@ -1503,7 +1603,9 @@ export default function ObjectionsModule() {
           onOpenSessions={(meetingId) =>
             model.navigate({ page: "sessions", meetingId })
           }
-          onOpenRecommendations={() => model.navigate({ page: "recommendations" })}
+          onOpenRecommendations={() =>
+            model.navigate({ page: "recommendations" })
+          }
           onOpenCase={(caseId) => {
             const target = model.state.cases.find((item) => item.id === caseId);
             if (target) openCase(target);
@@ -1543,7 +1645,11 @@ export default function ObjectionsModule() {
           onSaveDraft={
             dialog.action === "request" || dialog.action === "request-saq"
               ? (form) =>
-                  saveRequestDraft(c.id, dialog.action as RequestDraftKind, form)
+                  saveRequestDraft(
+                    c.id,
+                    dialog.action as RequestDraftKind,
+                    form,
+                  )
               : dialog.action === "analysis"
                 ? (form) => saveAnalysisDraft(c.id, form)
                 : undefined
@@ -1585,7 +1691,9 @@ export default function ObjectionsModule() {
               кроме обращений, перешедших в этот статус в день заседания.
             </Notice>
             <label className="field">
-              <span>Дата и время заседания <b className="required">*</b></span>
+              <span>
+                Дата и время заседания <b className="required">*</b>
+              </span>
               <input
                 name="dateTime"
                 type="datetime-local"
@@ -1607,7 +1715,9 @@ export default function ObjectionsModule() {
             {dialogError && <p className="form-error">{dialogError}</p>}
             <div className="dialog-actions">
               <Button onClick={close}>Отмена</Button>
-              <Button primary type="submit">Создать заседание</Button>
+              <Button primary type="submit">
+                Создать заседание
+              </Button>
             </div>
           </form>
         </Modal>
@@ -1669,8 +1779,8 @@ export default function ObjectionsModule() {
             }}
           >
             <p>
-              Опрос будет направлен всем членам Апелляционной комиссии и
-              лицам, исполняющим их обязанности, по выбранным обращениям.
+              Опрос будет направлен всем членам Апелляционной комиссии и лицам,
+              исполняющим их обязанности, по выбранным обращениям.
             </p>
             <label className="field">
               <span>
@@ -1704,69 +1814,81 @@ export default function ObjectionsModule() {
           </form>
         </Modal>
       )}
-      {dialog?.type === "attendance-answer" && (() => {
-        const notification = model.state.notifications.find(
-          (item) => item.id === dialog.notificationId && item.kind === "attendance-poll",
-        );
-        if (!notification?.attendancePollId || !notification.commissionMemberId) return null;
-        const poll = model.state.attendancePolls.find(
-          (item) => item.id === notification.attendancePollId,
-        );
-        if (!poll) return null;
-        const member = COMMISSION_ATTENDANCE_MEMBERS.find(
-          (item) => item.id === notification.commissionMemberId,
-        );
-        if (!member) return null;
-        const answer = poll.responses[member.id];
-        return (
-          <Modal title="Подтвердите присутствие" onClose={close}>
-            <p>
-              {`Укажите, будете ли присутствовать на заседании ${formatDateTime(poll.dateTime)}.`}
-            </p>
-            <p className="muted">Член АК: {member.name}</p>
-            <div className="dialog-actions">
-              <Button onClick={close}>Отмена</Button>
-              <Button
-                className={answer === "no" ? "attendance-choice-active" : ""}
-                onClick={() => answerAttendancePoll(notification.id, "no")}
-              >
-                Нет
-              </Button>
-              <Button
-                primary
-                className={answer === "yes" ? "attendance-choice-active" : ""}
-                onClick={() => answerAttendancePoll(notification.id, "yes")}
-              >
-                Да
-              </Button>
-            </div>
-          </Modal>
-        );
-      })()}
-      {dialog?.type === "agenda-results" && (() => {
-        const agenda = model.state.agendas.find(
-          (item) => item.id === dialog.agendaId,
-        );
-        if (!agenda) return null;
-        const agendaCases = agenda.caseIds
-          .map((caseId) => model.state.cases.find((item) => item.id === caseId))
-          .filter((item): item is ObjectionCase => Boolean(item));
-        return (
-          <AgendaResultsModal
-            cases={agendaCases}
-            meetingDate={agenda.meetingDate}
-            onGenerate={(html) => {
-              const next = structuredClone(model.state);
-              const target = next.agendas.find((item) => item.id === agenda.id);
-              if (!target) return;
-              target.resultsHtml = html;
-              model.commit(next, "Итоги по повестке дня сформированы");
-              close();
-            }}
-            onClose={close}
-          />
-        );
-      })()}
+      {dialog?.type === "attendance-answer" &&
+        (() => {
+          const notification = model.state.notifications.find(
+            (item) =>
+              item.id === dialog.notificationId &&
+              item.kind === "attendance-poll",
+          );
+          if (
+            !notification?.attendancePollId ||
+            !notification.commissionMemberId
+          )
+            return null;
+          const poll = model.state.attendancePolls.find(
+            (item) => item.id === notification.attendancePollId,
+          );
+          if (!poll) return null;
+          const member = COMMISSION_ATTENDANCE_MEMBERS.find(
+            (item) => item.id === notification.commissionMemberId,
+          );
+          if (!member) return null;
+          const answer = poll.responses[member.id];
+          return (
+            <Modal title="Подтвердите присутствие" onClose={close}>
+              <p>
+                {`Укажите, будете ли присутствовать на заседании ${formatDateTime(poll.dateTime)}.`}
+              </p>
+              <p className="muted">Член АК: {member.name}</p>
+              <div className="dialog-actions">
+                <Button onClick={close}>Отмена</Button>
+                <Button
+                  className={answer === "no" ? "attendance-choice-active" : ""}
+                  onClick={() => answerAttendancePoll(notification.id, "no")}
+                >
+                  Нет
+                </Button>
+                <Button
+                  primary
+                  className={answer === "yes" ? "attendance-choice-active" : ""}
+                  onClick={() => answerAttendancePoll(notification.id, "yes")}
+                >
+                  Да
+                </Button>
+              </div>
+            </Modal>
+          );
+        })()}
+      {dialog?.type === "agenda-results" &&
+        (() => {
+          const agenda = model.state.agendas.find(
+            (item) => item.id === dialog.agendaId,
+          );
+          if (!agenda) return null;
+          const agendaCases = agenda.caseIds
+            .map((caseId) =>
+              model.state.cases.find((item) => item.id === caseId),
+            )
+            .filter((item): item is ObjectionCase => Boolean(item));
+          return (
+            <AgendaResultsModal
+              cases={agendaCases}
+              meetingDate={agenda.meetingDate}
+              onGenerate={(html) => {
+                const next = structuredClone(model.state);
+                const target = next.agendas.find(
+                  (item) => item.id === agenda.id,
+                );
+                if (!target) return;
+                target.resultsHtml = html;
+                model.commit(next, "Итоги по повестке дня сформированы");
+                close();
+              }}
+              onClose={close}
+            />
+          );
+        })()}
       {dialog?.type === "new" && (
         <NewCaseModal
           state={model.state}

@@ -58,8 +58,8 @@ function PointCard({
     ? documents.filter(
         (document) =>
           !!document.dataUrl &&
-          point.evidence!
-            .split(",")
+          point
+            .evidence!.split(",")
             .map((name) => name.trim())
             .includes(document.filename || document.name),
       )
@@ -85,67 +85,65 @@ function PointCard({
         </div>
       </div>
       <div hidden={!expanded}>
-      {point.finding && (
+        {point.finding && (
+          <p>
+            <b>Документы подтверждающие нарушение:</b> {point.finding}
+          </p>
+        )}
         <p>
-          <b>Документы подтверждающие нарушение:</b> {point.finding}
+          <b>Довод заявителя:</b> {point.argument}
         </p>
-      )}
-      <p>
-        <b>Довод заявителя:</b> {point.argument}
-      </p>
-      {point.evidence && (
-        <p>
-          <b>Доказательства:</b>{" "}
-          {evidenceDocuments.length ? (
-            evidenceDocuments.map((document, index) => (
-              <span key={`${document.filename}-${index}`}>
-                {index > 0 && ", "}
-                <a
-                  href={document.dataUrl}
-                  download={document.filename || document.name}
-                >
-                  {document.filename || document.name}
-                </a>
-              </span>
-            ))
-          ) : (
-            point.evidence
-          )}
-        </p>
-      )}
-      {point.amount > 0 && (
-        <p>
-          <b>Сумма:</b> {formatMoney(point.amount)}
-        </p>
-      )}
-      {review && (
-        <>
-          {point.position && (
-            <p>
-              <b>Позиция ДВГА:</b> {point.position}
-            </p>
-          )}
-          {point.analysis && (
-            <p>
-              <b>Анализ:</b> {point.analysis}
-            </p>
-          )}
-          {point.legal && (
-            <p>
-              <b>Основание:</b> {point.legal}
-            </p>
-          )}
-          {result && (
-            <p>
-              <b>{point.final ? "Принятое решение" : "Проект решения"}:</b>{" "}
-              {OUTCOMES[result]}
-              {point.remainingAmount != null && point.amount > 0
-                ? `; остаток ${formatMoney(point.remainingAmount)}`
-                : ""}
-            </p>
-          )}
-        </>
-      )}
+        {point.evidence && (
+          <p>
+            <b>Доказательства:</b>{" "}
+            {evidenceDocuments.length
+              ? evidenceDocuments.map((document, index) => (
+                  <span key={`${document.filename}-${index}`}>
+                    {index > 0 && ", "}
+                    <a
+                      href={document.dataUrl}
+                      download={document.filename || document.name}
+                    >
+                      {document.filename || document.name}
+                    </a>
+                  </span>
+                ))
+              : point.evidence}
+          </p>
+        )}
+        {point.amount > 0 && (
+          <p>
+            <b>Сумма:</b> {formatMoney(point.amount)}
+          </p>
+        )}
+        {review && (
+          <>
+            {point.position && (
+              <p>
+                <b>Позиция ДВГА:</b> {point.position}
+              </p>
+            )}
+            {point.analysis && (
+              <p>
+                <b>Анализ:</b> {point.analysis}
+              </p>
+            )}
+            {point.legal && (
+              <p>
+                <b>Основание:</b> {point.legal}
+              </p>
+            )}
+            {result && (
+              <p>
+                <b>{point.final ? "Принятое решение" : "Проект решения"}:</b>{" "}
+                {OUTCOMES[result]}
+                {point.remainingAmount != null && point.amount > 0
+                  ? `; остаток ${formatMoney(point.remainingAmount)}`
+                  : ""}
+              </p>
+            )}
+          </>
+        )}
       </div>
     </article>
   );
@@ -243,7 +241,9 @@ function AuthorityRequestMaterials({
                           Скачать
                         </a>
                       ) : (
-                        <Button onClick={() => onDocument(document.kind, document)}>
+                        <Button
+                          onClick={() => onDocument(document.kind, document)}
+                        >
                           Просмотр
                         </Button>
                       )}
@@ -261,10 +261,123 @@ function AuthorityRequestMaterials({
           <div className="request-documents-list">
             <div className="request-document-row">
               <span>{finalResponse.name}</span>
-              <Button onClick={() => onDocument(finalResponse.kind, finalResponse)}>
+              <Button
+                onClick={() => onDocument(finalResponse.kind, finalResponse)}
+              >
                 Просмотр
               </Button>
             </div>
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
+function SubjectRequestMaterials({
+  c,
+  onDocument,
+}: {
+  c: ObjectionCase;
+  onDocument: (kind: string, document?: CaseDocument) => void;
+}) {
+  const requests = c.requests.filter(
+    (request) =>
+      request.template === "other" &&
+      request.saqRecipient === "subject" &&
+      Boolean(request.sent),
+  );
+  const decisionProject =
+    c.decisionProjectRouting?.channel === "saq"
+      ? c.documents
+          .filter((document) => document.kind === "decision-project")
+          .at(-1)
+      : undefined;
+  const comment = c.documents
+    .filter((document) => document.kind === "decision-project-comment")
+    .at(-1);
+  const finalResponse = c.delivery?.recipientRoles?.includes("subject")
+    ? c.documents
+        .filter((document) => document.kind === "final-response")
+        .at(-1)
+    : undefined;
+
+  const documentRow = (document: CaseDocument) => (
+    <div
+      className="request-document-row"
+      key={`${document.kind}-${document.name}`}
+    >
+      <span>{document.name}</span>
+      {document.dataUrl ? (
+        <a
+          className="button"
+          href={document.dataUrl}
+          download={document.filename || document.name}
+        >
+          Скачать
+        </a>
+      ) : (
+        <Button onClick={() => onDocument(document.kind, document)}>
+          Просмотр
+        </Button>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      <h3 className="form-section">Материалы и результаты рассмотрения</h3>
+      {requests.map((request) => {
+        const requestDocuments = c.documents.filter(
+          (document) =>
+            document.requestId === request.id &&
+            ["request", "request-appendix"].includes(document.kind),
+        );
+        const responseDocuments = c.documents.filter(
+          (document) =>
+            document.requestId === request.id &&
+            ["subject-response-attachment", "response-attachment"].includes(
+              document.kind,
+            ),
+        );
+        return (
+          <div key={request.id}>
+            <section className="request-documents-section">
+              <h4>Запрос в кабинет Объекта SAQ</h4>
+              <div className="request-documents-list">
+                {requestDocuments.map(documentRow)}
+              </div>
+            </section>
+            {request.responded && responseDocuments.length > 0 && (
+              <section className="request-documents-section">
+                <h4>Ответ на запрос</h4>
+                <div className="request-documents-list">
+                  {responseDocuments.map(documentRow)}
+                </div>
+              </section>
+            )}
+          </div>
+        );
+      })}
+      {decisionProject && (
+        <section className="request-documents-section">
+          <h4>Проект решения</h4>
+          <div className="request-documents-list">
+            {documentRow(decisionProject)}
+          </div>
+        </section>
+      )}
+      {comment && (
+        <section className="request-documents-section">
+          <h4>Замечание к проекту решения</h4>
+          <div className="request-documents-list">{documentRow(comment)}</div>
+        </section>
+      )}
+      {finalResponse && (
+        <section className="request-documents-section">
+          <h4>Окончательный ответ</h4>
+          <div className="request-documents-list">
+            {documentRow(finalResponse)}
           </div>
         </section>
       )}
@@ -302,11 +415,13 @@ export default function CaseWorkspace({
   const actionAppealAuthorities = agendaDetails?.actionAppealAuthorities || [];
   const requirementFiles = c.documents.filter(
     (document) =>
-      document.kind === "attachment" && document.text === "Требования заявителя",
+      document.kind === "attachment" &&
+      document.text === "Требования заявителя",
   );
   const powerOfAttorney = c.documents.find(
     (document) =>
-      document.kind === "attachment" && document.text === "Доверенность представителя",
+      document.kind === "attachment" &&
+      document.text === "Доверенность представителя",
   );
   const hasSeparateAuditObject = [
     "Жалоба на уведомление",
@@ -322,11 +437,11 @@ export default function CaseWorkspace({
         ? "Предписание по профилактическому контролю"
         : agendaDetails?.decisionKind === "preventive-control-act"
           ? "Акт о результате профилактического контроля"
-        : agendaDetails?.decisionKind === "quality-control"
-          ? "Контроль качества"
-          : agendaDetails?.decisionKind === "administrative-act"
-            ? "Административный акт"
-            : undefined;
+          : agendaDetails?.decisionKind === "quality-control"
+            ? "Контроль качества"
+            : agendaDetails?.decisionKind === "administrative-act"
+              ? "Административный акт"
+              : undefined;
   const hideRequestBlocks =
     role === "commission" ||
     c.status === "documents_review" ||
@@ -334,6 +449,12 @@ export default function CaseWorkspace({
     c.status === "commission_voting";
   const isClosed = CLOSED.includes(c.status);
   const currentExecutionDeadline = executionDeadline(c, role);
+  const authorityRequests = c.requests.filter((request) =>
+    isRequestForAuthority(request, role),
+  );
+  const authorityHasPendingRequest = authorityRequests.some(
+    (request) => !request.responded,
+  );
   const subjectRequest = c.requests.find(
     (request) =>
       request.template === "other" &&
@@ -349,6 +470,11 @@ export default function CaseWorkspace({
         !c.decisionProjectRouting.commentsDeadline ||
         date <= c.decisionProjectRouting.commentsDeadline,
     );
+  const recipientLimited = isAuthorityRole(role) || role === "subject";
+  const recipientHasActiveTask =
+    authorityHasPendingRequest ||
+    Boolean(subjectRequest) ||
+    subjectCanCommentOnDecisionProject;
   return (
     <>
       <div className="back-row">
@@ -361,7 +487,9 @@ export default function CaseWorkspace({
         subtitle={c.org}
         action={
           <>
-            <span className="badge blue">{STATUS[c.status]}</span>
+            {(!recipientLimited || recipientHasActiveTask) && (
+              <span className="badge blue">{STATUS[c.status]}</span>
+            )}
             <Button onClick={() => onDocument("original")}>
               Исходное обращение
             </Button>
@@ -374,47 +502,52 @@ export default function CaseWorkspace({
             {(
               [
                 ["overview", "Обращение"],
-              [
-                "review",
-                role === "commission"
-                  ? "Материалы и результаты"
-                  : "Процесс рассмотрения",
-              ],
+                [
+                  "review",
+                  role === "commission" || recipientLimited
+                    ? "Материалы и результаты"
+                    : "Процесс рассмотрения",
+                ],
                 ["documents", "Документы"],
                 ["history", "История"],
               ] as [CaseTab, string][]
             )
               .filter(
-                ([value]) => !isAuthorityRole(role) || value !== "documents",
+                ([value]) =>
+                  !recipientLimited ||
+                  !["documents", "history"].includes(value),
               )
               .map(([value, label]) => (
-              <button
-                key={value}
-                className={tab === value ? "active" : ""}
-                onClick={() => onTab(value)}
-              >
-                {label}
-                {value === "documents" && (
-                  <span className="count">{c.documents.length + 2}</span>
-                )}
-              </button>
-            ))}
+                <button
+                  key={value}
+                  className={tab === value ? "active" : ""}
+                  onClick={() => onTab(value)}
+                >
+                  {label}
+                  {value === "documents" && (
+                    <span className="count">{c.documents.length + 2}</span>
+                  )}
+                </button>
+              ))}
           </div>
           <div className="card-body">
             {tab === "overview" && (
               <>
-                {role !== "subject" && <div className="consideration-entry">
-                  <div>
-                    <strong>Рассмотрение обращения</strong>
-                    <p>
-                      Текущая задача, этапы и действия по делу доступны в
-                      процессе рассмотрения.
-                    </p>
-                  </div>
-                  <Button primary onClick={() => onTab("review")}>
-                    Открыть процесс рассмотрения
-                  </Button>
-                </div>}
+                {role !== "subject" &&
+                  (!isAuthorityRole(role) || authorityHasPendingRequest) && (
+                    <div className="consideration-entry">
+                      <div>
+                        <strong>Рассмотрение обращения</strong>
+                        <p>
+                          Текущая задача, этапы и действия по делу доступны в
+                          процессе рассмотрения.
+                        </p>
+                      </div>
+                      <Button primary onClick={() => onTab("review")}>
+                        Открыть процесс рассмотрения
+                      </Button>
+                    </div>
+                  )}
                 <div className="facts">
                   <Fact
                     label="Вид обращения"
@@ -439,6 +572,12 @@ export default function CaseWorkspace({
                     }
                     value={c.bin}
                   />
+                  {c.applicantIdentifierType && (
+                    <Fact
+                      label="Тип идентификатора заявителя"
+                      value={c.applicantIdentifierType}
+                    />
+                  )}
                   <Fact
                     label="Номер возражения, жалобы, заявления"
                     value={c.appealNumber}
@@ -509,11 +648,14 @@ export default function CaseWorkspace({
                       value={formatDate(item.documentDate)}
                     />,
                   ])}
-                  {c.type === "notice" && (
+                  {isActionComplaint && (
                     <Fact
-                      label="Сумма, тенге"
-                      value={formatMoney(c.amount)}
+                      label="Связано с государственной закупкой"
+                      value={agendaDetails?.procurementNumber ? "Да" : "Нет"}
                     />
+                  )}
+                  {c.type === "notice" && (
+                    <Fact label="Сумма, тенге" value={formatMoney(c.amount)} />
                   )}
                   {agendaDetails?.procurementMethod && (
                     <Fact
@@ -645,18 +787,20 @@ export default function CaseWorkspace({
                 )}
               </>
             )}
-            {tab === "review" && (
-              isAuthorityRole(role) ? (
+            {tab === "review" &&
+              (isAuthorityRole(role) ? (
                 <>
-                  <ConsiderationProcess
-                    c={c}
-                    date={date}
-                    role={role}
-                    recommendations={recommendations}
-                    onAction={onAction}
-                    onHistory={() => onTab("history")}
-                    hideStages
-                  />
+                  {authorityHasPendingRequest && (
+                    <ConsiderationProcess
+                      c={c}
+                      date={date}
+                      role={role}
+                      recommendations={recommendations}
+                      onAction={onAction}
+                      onHistory={() => onTab("history")}
+                      hideStages
+                    />
+                  )}
                   <AuthorityRequestMaterials
                     c={c}
                     role={role}
@@ -664,453 +808,107 @@ export default function CaseWorkspace({
                   />
                 </>
               ) : (
-              <>
-                {role === "subject" ? (
-                  <section className="consideration-process">
-                    <div className="consideration-task">
-                      <div>
-                        <span className="consideration-eyebrow">Текущая задача</span>
-                        <h4>
-                          {subjectCanCommentOnDecisionProject
-                            ? "Направить замечание к проекту решения"
-                            : "Направить ответ на запрос"}
-                        </h4>
-                        <p>
-                          {subjectCanCommentOnDecisionProject
-                            ? "Замечание будет направлено рабочему органу для назначения заслушивания."
-                            : "Вложите ответ и направьте его в кабинет рабочего органа."}
-                        </p>
-                      </div>
-                      <div className="consideration-task-action">
-                        <Button
-                          primary
-                          disabled={
-                            subjectCanCommentOnDecisionProject
-                              ? false
-                              : !subjectRequest
-                          }
-                          onClick={() =>
-                            onAction(
-                              subjectCanCommentOnDecisionProject
-                                ? "submit-decision-project-comment"
-                                : "subject-response",
-                              role,
-                            )
-                          }
-                        >
-                          {subjectCanCommentOnDecisionProject
-                            ? "Направить замечание"
-                            : subjectRequest
-                              ? "Направить ответ"
-                              : "Ответ направлен"}
-                        </Button>
-                      </div>
-                    </div>
-                  </section>
-                ) : (
-                  <ConsiderationProcess
-                    c={c}
-                    date={date}
-                    role={role}
-                    recommendations={recommendations}
-                    onAction={onAction}
-                    onHistory={() => onTab("history")}
-                    hideStages={["commission", "dvga", "kvga"].includes(role)}
-                  />
-                )}
-                <h3 className="form-section">
-                  Материалы и результаты рассмотрения
-                </h3>
-                {(() => {
-                  const conclusions = c.documents.filter(
-                    (document) => document.kind === "conclusion",
-                  );
-                  return conclusions.length ? (
-                    <section className="request-documents-section">
-                      <h4>Заключение по обращению</h4>
-                      <div className="request-documents-list">
-                        {conclusions.map((document) => (
-                          <div className="request-document-row" key={`${document.name}-${document.date}`}>
-                            <span>
-                              {document.name}
-                              {c.conclusionRegistration && (
-                                <small>
-                                  {` №${c.conclusionRegistration.number} от ${formatDate(c.conclusionRegistration.date)}`}
-                                </small>
-                              )}
+                <>
+                  {role === "subject" ? (
+                    (subjectRequest || subjectCanCommentOnDecisionProject) && (
+                      <section className="consideration-process">
+                        <div className="consideration-task">
+                          <div>
+                            <span className="consideration-eyebrow">
+                              Текущая задача
                             </span>
-                            {document.dataUrl ? (
-                              <a className="button" href={document.dataUrl} download={document.filename || document.name}>Скачать</a>
-                            ) : (
-                              <Button onClick={() => onDocument(document.kind, document)}>Просмотр</Button>
-                            )}
+                            <h4>
+                              {subjectCanCommentOnDecisionProject
+                                ? "Направить замечание к проекту решения"
+                                : "Направить ответ на запрос"}
+                            </h4>
+                            <p>
+                              {subjectCanCommentOnDecisionProject
+                                ? "Замечание будет направлено рабочему органу для назначения заслушивания."
+                                : "Вложите ответ и направьте его в кабинет рабочего органа."}
+                            </p>
                           </div>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null;
-                })()}
-                {(() => {
-                  const finalResponse = c.documents
-                    .filter((document) => document.kind === "final-response")
-                    .at(-1);
-                  return finalResponse ? (
-                    <section className="request-documents-section">
-                      <h4>Окончательный ответ</h4>
-                      <div className="request-documents-list">
-                        <div className="request-document-row">
-                          <span>{finalResponse.name}</span>
-                          <div className="request-document-actions">
+                          <div className="consideration-task-action">
                             <Button
-                              onClick={() =>
-                                onDocument(finalResponse.kind, finalResponse)
+                              primary
+                              disabled={
+                                subjectCanCommentOnDecisionProject
+                                  ? false
+                                  : !subjectRequest
                               }
-                            >
-                              Просмотр
-                            </Button>
-                            <Button
                               onClick={() =>
-                                downloadFile(
-                                  `${c.id}-окончательный-ответ.doc`,
-                                  wordDocumentHtml({
-                                    c,
-                                    kind: finalResponse.kind,
-                                    document: finalResponse,
-                                  }),
-                                  "application/msword",
+                                onAction(
+                                  subjectCanCommentOnDecisionProject
+                                    ? "submit-decision-project-comment"
+                                    : "subject-response",
+                                  role,
                                 )
                               }
                             >
-                              Скачать Word
+                              {subjectCanCommentOnDecisionProject
+                                ? "Направить замечание"
+                                : subjectRequest
+                                  ? "Направить ответ"
+                                  : "Ответ направлен"}
                             </Button>
                           </div>
                         </div>
-                      </div>
-                    </section>
-                  ) : null;
-                })()}
-                {(() => {
-                  const recommendations = c.documents.filter(
-                    (document) =>
-                      [
-                        "recommendation",
-                        "recommendation-attachment",
-                        "recommendation-response-attachment",
-                      ].includes(document.kind),
-                  );
-                  return recommendations.length ? (
-                    <section className="request-documents-section">
-                      <h4>Рекомендации</h4>
-                      <div className="request-documents-list">
-                        {recommendations.map((document) => (
-                          <div className="request-document-row" key={`${document.name}-${document.date}`}>
-                            <span>
-                              {document.name}
-                              {document.kind === "recommendation-attachment" && (
-                                <small>Вложение к рекомендации</small>
-                              )}
-                              {document.kind === "recommendation-response-attachment" && (
-                                <small>Вложение к ответу на рекомендацию</small>
-                              )}
-                            </span>
-                            {document.dataUrl ? (
-                              <a
-                                className="button"
-                                href={document.dataUrl}
-                                download={document.filename || document.name}
-                              >
-                                Скачать
-                              </a>
-                            ) : (
-                              <Button onClick={() => onDocument(document.kind, document)}>
-                                Просмотр
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null;
-                })()}
-                {(() => {
-                  const decisionProject = c.documents
-                    .filter((document) => document.kind === "decision-project")
-                    .at(-1);
-                  return decisionProject ? (
-                    <section className="request-documents-section">
-                      <h4>Проект решения</h4>
-                      <div className="request-documents-list">
-                        <div className="request-document-row">
-                          <span>{decisionProject.name}</span>
-                          <div className="request-document-actions">
-                            <Button
-                              onClick={() =>
-                                onDocument(decisionProject.kind, decisionProject)
-                              }
-                            >
-                              Просмотр
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                downloadFile(
-                                  `${c.id}-проект-решения.doc`,
-                                  wordDocumentHtml({
-                                    c,
-                                    kind: decisionProject.kind,
-                                    document: decisionProject,
-                                  }),
-                                  "application/msword",
-                                )
-                              }
-                            >
-                              Скачать Word
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </section>
-                  ) : null;
-                })()}
-                {(() => {
-                  const hearingProtocols = c.documents.filter(
-                    (document) => document.kind === "hearing-protocol-attachment",
-                  );
-                  return hearingProtocols.length ? (
-                    <section className="request-documents-section">
-                      <h4>Протокол заслушивания</h4>
-                      <div className="request-documents-list">
-                        {hearingProtocols.map((document) => (
-                          <div
-                            className="request-document-row"
-                            key={`${document.name}-${document.date}`}
-                          >
-                            <span>{document.name}</span>
-                            {document.dataUrl ? (
-                              <a
-                                className="button"
-                                href={document.dataUrl}
-                                download={document.filename || document.name}
-                              >
-                                Скачать
-                              </a>
-                            ) : (
-                              <Button onClick={() => onDocument(document.kind, document)}>
-                                Просмотр
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null;
-                })()}
-                {c.decisionProjectRouting && (
-                  <Notice>
-                    <strong>Направление проекта решения</strong>
-                    <p>
-                      {c.decisionProjectRouting.channel === "saq"
-                        ? "Направлен автоматически в кабинет заявителя SAQ"
-                        : `Направлен через ${c.decisionProjectRouting.deliveryPath || "внешнюю систему"}`}
-                      {` · ${formatDate(c.decisionProjectRouting.sentAt)}`}
-                    </p>
-                    {c.decisionProjectRouting.registrationNumber && (
-                      <p>Регистрационный номер: {c.decisionProjectRouting.registrationNumber}</p>
-                    )}
-                    <p>
-                      Срок для замечаний: {formatDate(c.decisionProjectRouting.commentsDeadline)}
-                    </p>
-                    {c.decisionProjectRouting.commentReceivedAt ? (
-                      <>
-                        <p>
-                          Замечание поступило {formatDate(c.decisionProjectRouting.commentReceivedAt)}
-                          {c.decisionProjectRouting.commentChannel
-                            ? ` · ${c.decisionProjectRouting.commentChannel}`
-                            : ""}
-                        </p>
-                        {c.decisionProjectRouting.commentRegistrationNumber && (
-                          <p>Регистрационный номер замечания: {c.decisionProjectRouting.commentRegistrationNumber}</p>
-                        )}
-                      </>
-                    ) : (
-                      <p>Замечание к проекту решения не поступило.</p>
-                    )}
-                  </Notice>
-                )}
-                {(() => {
-                  const protocol = c.documents
-                    .filter((document) => document.kind === "protocol")
-                    .at(-1);
-                  return protocol ? (
-                    <section className="request-documents-section">
-                      <h4>Протокол заседания</h4>
-                      <div className="request-documents-list">
-                        <div className="request-document-row">
-                          <span>{protocol.name}</span>
-                          <div className="request-document-actions">
-                            <Button onClick={() => onDocument(protocol.kind, protocol)}>
-                              Просмотр
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                downloadFile(
-                                  `${c.id}-протокол.doc`,
-                                  wordDocumentHtml({
-                                    c,
-                                    kind: protocol.kind,
-                                    document: protocol,
-                                  }),
-                                  "application/msword",
-                                )
-                              }
-                            >
-                              Скачать Word
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    </section>
-                  ) : null;
-                })()}
-                {(() => {
-                  // Every certificate keeps an immutable snapshot.  The newest
-                  // version is listed first so it is the one the user sees first.
-                  const certificates = c.documents
-                    .filter((document) => document.kind === "certificate")
-                    .slice()
-                    .reverse();
-                  return certificates.length ? (
-                    <section className="request-documents-section">
-                      <h4>Справка</h4>
-                      <div className="request-documents-list">
-                        {certificates.map((certificate, index) => (
-                          <div
-                            className="request-document-row"
-                            key={`${certificate.name}-${certificate.date}-${index}`}
-                          >
-                            <span>{certificate.name}</span>
-                            <div className="request-document-actions">
-                              <Button
-                                onClick={() =>
-                                  onDocument(certificate.kind, certificate)
-                                }
-                              >
-                                Просмотр
-                              </Button>
-                              <Button
-                                onClick={() =>
-                                  downloadFile(
-                                    `${c.id}-${certificate.name}.doc`,
-                                    wordDocumentHtml({
-                                      c,
-                                      kind: certificate.kind,
-                                      document: certificate,
-                                    }),
-                                    "application/msword",
-                                  )
-                                }
-                              >
-                                Скачать Word
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  ) : null;
-                })()}
-                {["demo-superuser", "work", "commission", "dvga", "kvga"].includes(role) &&
-                  [
-                    {
-                      title: "Ответ ДВГА",
-                      requests: c.requests.filter(
-                        (request) =>
-                          !!request.sent &&
-                          request.template !== "other" &&
-                          request.recipient.toUpperCase().includes("ДВГА"),
-                      ),
-                    },
-                    {
-                      title: "Ответ других органов",
-                      requests: c.requests.filter(
-                        (request) =>
-                          !!request.sent &&
-                          request.template === "other",
-                      ),
-                    },
-                    {
-                      title: "Ответ КВГА",
-                      requests: c.requests.filter(
-                        (request) =>
-                          !!request.sent &&
-                          request.template !== "other" &&
-                          request.recipient.toUpperCase().includes("КВГА"),
-                      ),
-                    },
-                  ].map(
-                    (group) => {
-                      if (!group.requests.length) return null;
-                      const responseMaterials = group.requests.flatMap((request) => {
-                        if (!request.responded) return [];
-                        const isAuthorityRequest = request.template !== "other";
-                        const hasResponseAppendix = c.documents.some(
-                          (document) =>
-                            document.requestId === request.id &&
-                            document.kind === "authority-response-appendix",
+                      </section>
+                    )
+                  ) : (
+                    <ConsiderationProcess
+                      c={c}
+                      date={date}
+                      role={role}
+                      recommendations={recommendations}
+                      onAction={onAction}
+                      onHistory={() => onTab("history")}
+                      hideStages={["commission", "dvga", "kvga"].includes(role)}
+                    />
+                  )}
+                  {role === "subject" && (
+                    <SubjectRequestMaterials c={c} onDocument={onDocument} />
+                  )}
+                  {role !== "subject" && (
+                    <>
+                      <h3 className="form-section">
+                        Материалы и результаты рассмотрения
+                      </h3>
+                      {(() => {
+                        const conclusions = c.documents.filter(
+                          (document) => document.kind === "conclusion",
                         );
-                        return c.documents.filter(
-                          (document) =>
-                            document.requestId === request.id &&
-                            (isAuthorityRequest
-                              ? [
-                                  "authority-response-appendix",
-                                  "authority-response-attachment",
-                                  "response-attachment",
-                                  ...(hasResponseAppendix
-                                    ? []
-                                    : ["request-appendix"]),
-                                ]
-                              : [
-                                  "response-attachment",
-                                  "subject-response-attachment",
-                                  "position",
-                                ]
-                            ).includes(document.kind),
-                        );
-                      });
-                      const awaitingResponse = group.requests.some(
-                        (request) => !request.responded,
-                      );
-                      return (
-                        <section
-                          className="request-documents-section"
-                          key={group.title}
-                        >
-                          <h4>{group.title}</h4>
-                          {responseMaterials.length > 0 && (
+                        return conclusions.length ? (
+                          <section className="request-documents-section">
+                            <h4>Заключение по обращению</h4>
                             <div className="request-documents-list">
-                              {responseMaterials.map((document) => (
+                              {conclusions.map((document) => (
                                 <div
                                   className="request-document-row"
-                                  key={`response-${document.requestId}-${document.name}`}
+                                  key={`${document.name}-${document.date}`}
                                 >
-                                  <span>{document.name}</span>
+                                  <span>
+                                    {document.name}
+                                    {c.conclusionRegistration && (
+                                      <small>
+                                        {` №${c.conclusionRegistration.number} от ${formatDate(c.conclusionRegistration.date)}`}
+                                      </small>
+                                    )}
+                                  </span>
                                   {document.dataUrl ? (
                                     <a
                                       className="button"
                                       href={document.dataUrl}
-                                      download={document.filename || document.name}
+                                      download={
+                                        document.filename || document.name
+                                      }
                                     >
                                       Скачать
                                     </a>
                                   ) : (
                                     <Button
                                       onClick={() =>
-                                        onDocument(
-                                          document.kind === "request-appendix"
-                                            ? "authority-response-appendix"
-                                            : document.kind,
-                                          document,
-                                        )
+                                        onDocument(document.kind, document)
                                       }
                                     >
                                       Просмотр
@@ -1119,163 +917,624 @@ export default function CaseWorkspace({
                                 </div>
                               ))}
                             </div>
-                          )}
-                          {awaitingResponse && (
-                            <p className="muted">Ожидается поступление ответа.</p>
-                          )}
-                        </section>
-                      );
-                    },
-                  )}
-                {(!hideRequestBlocks || role === "commission") && c.requests.length > 0 && (
-                  <>
-                    {[
-                      {
-                        title: "Запрос в ДВГА",
-                        requests: c.requests.filter(
-                          (request) =>
-                            request.template !== "other" &&
-                            request.recipient.toUpperCase().includes("ДВГА"),
-                        ),
-                      },
-                      {
-                        title: "Запрос в КВГА",
-                        requests: c.requests.filter(
-                          (request) =>
-                            request.template !== "other" &&
-                            request.recipient.toUpperCase().includes("КВГА"),
-                        ),
-                      },
-                      {
-                        title: "Запрос в другие органы",
-                        requests: c.requests.filter(
-                          (request) => request.template === "other",
-                        ),
-                      },
-                    ].map(
-                      (group) =>
-                        group.requests.length > 0 && (
-                          <section
-                            className="request-documents-section"
-                            key={group.title}
-                          >
-                            <h4>{group.title}</h4>
+                          </section>
+                        ) : null;
+                      })()}
+                      {(() => {
+                        const finalResponse = c.documents
+                          .filter(
+                            (document) => document.kind === "final-response",
+                          )
+                          .at(-1);
+                        return finalResponse ? (
+                          <section className="request-documents-section">
+                            <h4>Окончательный ответ</h4>
                             <div className="request-documents-list">
-                              {group.requests.flatMap((request) =>
-                                c.documents
-                                  .filter(
-                                    (document) =>
-                                      document.requestId === request.id &&
-                                      !(
-                                        request.template !== "other" &&
-                                        !!request.responded &&
-                                        [
-                                          "authority-response-appendix",
-                                          "authority-response-attachment",
-                                          "response-attachment",
-                                        ].includes(document.kind)
-                                      ),
-                                  )
-                                  .map((document) => (
+                              <div className="request-document-row">
+                                <span>{finalResponse.name}</span>
+                                <div className="request-document-actions">
+                                  <Button
+                                    onClick={() =>
+                                      onDocument(
+                                        finalResponse.kind,
+                                        finalResponse,
+                                      )
+                                    }
+                                  >
+                                    Просмотр
+                                  </Button>
+                                  <Button
+                                    onClick={() =>
+                                      downloadFile(
+                                        `${c.id}-окончательный-ответ.doc`,
+                                        wordDocumentHtml({
+                                          c,
+                                          kind: finalResponse.kind,
+                                          document: finalResponse,
+                                        }),
+                                        "application/msword",
+                                      )
+                                    }
+                                  >
+                                    Скачать Word
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </section>
+                        ) : null;
+                      })()}
+                      {(() => {
+                        const recommendations = c.documents.filter((document) =>
+                          [
+                            "recommendation",
+                            "recommendation-attachment",
+                            "recommendation-response-attachment",
+                          ].includes(document.kind),
+                        );
+                        return recommendations.length ? (
+                          <section className="request-documents-section">
+                            <h4>Рекомендации</h4>
+                            <div className="request-documents-list">
+                              {recommendations.map((document) => (
+                                <div
+                                  className="request-document-row"
+                                  key={`${document.name}-${document.date}`}
+                                >
+                                  <span>
+                                    {document.name}
+                                    {document.kind ===
+                                      "recommendation-attachment" && (
+                                      <small>Вложение к рекомендации</small>
+                                    )}
+                                    {document.kind ===
+                                      "recommendation-response-attachment" && (
+                                      <small>
+                                        Вложение к ответу на рекомендацию
+                                      </small>
+                                    )}
+                                  </span>
+                                  {document.dataUrl ? (
+                                    <a
+                                      className="button"
+                                      href={document.dataUrl}
+                                      download={
+                                        document.filename || document.name
+                                      }
+                                    >
+                                      Скачать
+                                    </a>
+                                  ) : (
+                                    <Button
+                                      onClick={() =>
+                                        onDocument(document.kind, document)
+                                      }
+                                    >
+                                      Просмотр
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        ) : null;
+                      })()}
+                      {(() => {
+                        const decisionProject = c.documents
+                          .filter(
+                            (document) => document.kind === "decision-project",
+                          )
+                          .at(-1);
+                        return decisionProject ? (
+                          <section className="request-documents-section">
+                            <h4>Проект решения</h4>
+                            <div className="request-documents-list">
+                              <div className="request-document-row">
+                                <span>{decisionProject.name}</span>
+                                <div className="request-document-actions">
+                                  <Button
+                                    onClick={() =>
+                                      onDocument(
+                                        decisionProject.kind,
+                                        decisionProject,
+                                      )
+                                    }
+                                  >
+                                    Просмотр
+                                  </Button>
+                                  <Button
+                                    onClick={() =>
+                                      downloadFile(
+                                        `${c.id}-проект-решения.doc`,
+                                        wordDocumentHtml({
+                                          c,
+                                          kind: decisionProject.kind,
+                                          document: decisionProject,
+                                        }),
+                                        "application/msword",
+                                      )
+                                    }
+                                  >
+                                    Скачать Word
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </section>
+                        ) : null;
+                      })()}
+                      {(() => {
+                        const hearingProtocols = c.documents.filter(
+                          (document) =>
+                            document.kind === "hearing-protocol-attachment",
+                        );
+                        return hearingProtocols.length ? (
+                          <section className="request-documents-section">
+                            <h4>Протокол заслушивания</h4>
+                            <div className="request-documents-list">
+                              {hearingProtocols.map((document) => (
+                                <div
+                                  className="request-document-row"
+                                  key={`${document.name}-${document.date}`}
+                                >
+                                  <span>{document.name}</span>
+                                  {document.dataUrl ? (
+                                    <a
+                                      className="button"
+                                      href={document.dataUrl}
+                                      download={
+                                        document.filename || document.name
+                                      }
+                                    >
+                                      Скачать
+                                    </a>
+                                  ) : (
+                                    <Button
+                                      onClick={() =>
+                                        onDocument(document.kind, document)
+                                      }
+                                    >
+                                      Просмотр
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        ) : null;
+                      })()}
+                      {c.decisionProjectRouting && (
+                        <Notice>
+                          <strong>Направление проекта решения</strong>
+                          <p>
+                            {c.decisionProjectRouting.channel === "saq"
+                              ? "Направлен автоматически в кабинет заявителя SAQ"
+                              : `Направлен через ${c.decisionProjectRouting.deliveryPath || "внешнюю систему"}`}
+                            {` · ${formatDate(c.decisionProjectRouting.sentAt)}`}
+                          </p>
+                          {c.decisionProjectRouting.registrationNumber && (
+                            <p>
+                              Регистрационный номер:{" "}
+                              {c.decisionProjectRouting.registrationNumber}
+                            </p>
+                          )}
+                          <p>
+                            Срок для замечаний:{" "}
+                            {formatDate(
+                              c.decisionProjectRouting.commentsDeadline,
+                            )}
+                          </p>
+                          {c.decisionProjectRouting.commentReceivedAt ? (
+                            <>
+                              <p>
+                                Замечание поступило{" "}
+                                {formatDate(
+                                  c.decisionProjectRouting.commentReceivedAt,
+                                )}
+                                {c.decisionProjectRouting.commentChannel
+                                  ? ` · ${c.decisionProjectRouting.commentChannel}`
+                                  : ""}
+                              </p>
+                              {c.decisionProjectRouting
+                                .commentRegistrationNumber && (
+                                <p>
+                                  Регистрационный номер замечания:{" "}
+                                  {
+                                    c.decisionProjectRouting
+                                      .commentRegistrationNumber
+                                  }
+                                </p>
+                              )}
+                            </>
+                          ) : (
+                            <p>Замечание к проекту решения не поступило.</p>
+                          )}
+                        </Notice>
+                      )}
+                      {(() => {
+                        const protocol = c.documents
+                          .filter((document) => document.kind === "protocol")
+                          .at(-1);
+                        return protocol ? (
+                          <section className="request-documents-section">
+                            <h4>Протокол заседания</h4>
+                            <div className="request-documents-list">
+                              <div className="request-document-row">
+                                <span>{protocol.name}</span>
+                                <div className="request-document-actions">
+                                  <Button
+                                    onClick={() =>
+                                      onDocument(protocol.kind, protocol)
+                                    }
+                                  >
+                                    Просмотр
+                                  </Button>
+                                  <Button
+                                    onClick={() =>
+                                      downloadFile(
+                                        `${c.id}-протокол.doc`,
+                                        wordDocumentHtml({
+                                          c,
+                                          kind: protocol.kind,
+                                          document: protocol,
+                                        }),
+                                        "application/msword",
+                                      )
+                                    }
+                                  >
+                                    Скачать Word
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </section>
+                        ) : null;
+                      })()}
+                      {(() => {
+                        // Every certificate keeps an immutable snapshot.  The newest
+                        // version is listed first so it is the one the user sees first.
+                        const certificates = c.documents
+                          .filter((document) => document.kind === "certificate")
+                          .slice()
+                          .reverse();
+                        return certificates.length ? (
+                          <section className="request-documents-section">
+                            <h4>Справка</h4>
+                            <div className="request-documents-list">
+                              {certificates.map((certificate, index) => (
+                                <div
+                                  className="request-document-row"
+                                  key={`${certificate.name}-${certificate.date}-${index}`}
+                                >
+                                  <span>{certificate.name}</span>
+                                  <div className="request-document-actions">
+                                    <Button
+                                      onClick={() =>
+                                        onDocument(
+                                          certificate.kind,
+                                          certificate,
+                                        )
+                                      }
+                                    >
+                                      Просмотр
+                                    </Button>
+                                    <Button
+                                      onClick={() =>
+                                        downloadFile(
+                                          `${c.id}-${certificate.name}.doc`,
+                                          wordDocumentHtml({
+                                            c,
+                                            kind: certificate.kind,
+                                            document: certificate,
+                                          }),
+                                          "application/msword",
+                                        )
+                                      }
+                                    >
+                                      Скачать Word
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        ) : null;
+                      })()}
+                      {[
+                        "demo-superuser",
+                        "work",
+                        "commission",
+                        "dvga",
+                        "kvga",
+                      ].includes(role) &&
+                        [
+                          {
+                            title: "Ответ ДВГА",
+                            requests: c.requests.filter(
+                              (request) =>
+                                !!request.sent &&
+                                request.template !== "other" &&
+                                request.recipient
+                                  .toUpperCase()
+                                  .includes("ДВГА"),
+                            ),
+                          },
+                          {
+                            title: "Ответ других органов",
+                            requests: c.requests.filter(
+                              (request) =>
+                                !!request.sent && request.template === "other",
+                            ),
+                          },
+                          {
+                            title: "Ответ КВГА",
+                            requests: c.requests.filter(
+                              (request) =>
+                                !!request.sent &&
+                                request.template !== "other" &&
+                                request.recipient
+                                  .toUpperCase()
+                                  .includes("КВГА"),
+                            ),
+                          },
+                        ].map((group) => {
+                          if (!group.requests.length) return null;
+                          const responseMaterials = group.requests.flatMap(
+                            (request) => {
+                              if (!request.responded) return [];
+                              const isAuthorityRequest =
+                                request.template !== "other";
+                              const hasResponseAppendix = c.documents.some(
+                                (document) =>
+                                  document.requestId === request.id &&
+                                  document.kind ===
+                                    "authority-response-appendix",
+                              );
+                              return c.documents.filter(
+                                (document) =>
+                                  document.requestId === request.id &&
+                                  (isAuthorityRequest
+                                    ? [
+                                        "authority-response-appendix",
+                                        "authority-response-attachment",
+                                        "response-attachment",
+                                        ...(hasResponseAppendix
+                                          ? []
+                                          : ["request-appendix"]),
+                                      ]
+                                    : [
+                                        "response-attachment",
+                                        "subject-response-attachment",
+                                        "position",
+                                      ]
+                                  ).includes(document.kind),
+                              );
+                            },
+                          );
+                          const awaitingResponse = group.requests.some(
+                            (request) => !request.responded,
+                          );
+                          return (
+                            <section
+                              className="request-documents-section"
+                              key={group.title}
+                            >
+                              <h4>{group.title}</h4>
+                              {responseMaterials.length > 0 && (
+                                <div className="request-documents-list">
+                                  {responseMaterials.map((document) => (
                                     <div
                                       className="request-document-row"
-                                      key={`${request.id}-${document.name}`}
+                                      key={`response-${document.requestId}-${document.name}`}
                                     >
                                       <span>{document.name}</span>
                                       {document.dataUrl ? (
                                         <a
                                           className="button"
                                           href={document.dataUrl}
-                                          download={document.filename || document.name}
+                                          download={
+                                            document.filename || document.name
+                                          }
                                         >
                                           Скачать
                                         </a>
                                       ) : (
                                         <Button
                                           onClick={() =>
-                                            onDocument(document.kind, document)
+                                            onDocument(
+                                              document.kind ===
+                                                "request-appendix"
+                                                ? "authority-response-appendix"
+                                                : document.kind,
+                                              document,
+                                            )
                                           }
                                         >
                                           Просмотр
                                         </Button>
                                       )}
                                     </div>
-                                  )),
+                                  ))}
+                                </div>
                               )}
-                            </div>
-                          </section>
-                        ),
-                    )}
-                  </>
-                )}
-                {c.issues
-                  .filter((point) => point.disputed)
-                  .map((point) => (
-                    <PointCard
-                      key={point.id}
-                      point={point}
-                      documents={c.documents}
-                      review
-                    />
-                  ))}
-                {c.memberPosition && !isClosed && (
-                  <Notice>
-                    <strong>Позиции членов комиссии</strong>
-                    <p>{c.memberPosition}</p>
-                  </Notice>
-                )}
-                {c.hearing && (
-                  <Notice>
-                    <strong>Заслушивание</strong>
-                    {c.hearing.skip ? (
-                      <p>Не проводилось: {c.hearing.reason}</p>
-                    ) : (
-                      <>
-                        <p>Дата и время: {formatDateTime(c.hearing.date)}</p>
-                        <p>Место или формат: {c.hearing.location || "—"}</p>
-                        <p>
-                          Уведомление направлено: {formatDate(c.hearing.notice)}
-                          {c.hearing.noticeChannel
-                            ? ` · ${c.hearing.noticeChannel}`
-                            : ""}
-                        </p>
-                      </>
-                    )}
-                    {c.hearing.subject && <p>Заявитель: {c.hearing.subject}</p>}
-                    {c.hearing.issuer && <p>Орган: {c.hearing.issuer}</p>}
-                    {c.hearing.note && <p>{c.hearing.note}</p>}
-                  </Notice>
-                )}
-                {c.result && !isClosed && (
-                  <Notice tone="green">
-                    <strong>{c.result.label}</strong>
-                    <p>{c.result.reason}</p>
-                    <p>{c.result.effect}</p>
-                  </Notice>
-                )}
-                {c.delivery && (
-                  <Notice>
-                    <strong>Доставка результата</strong>
-                    <p>
-                      Направлен {formatDate(c.delivery.date)} · Вручён{" "}
-                      {formatDate(c.delivery.received)}
-                    </p>
-                    <p>
-                      {c.delivery.appealCourt}. {c.delivery.appealProcedure}
-                    </p>
-                  </Notice>
-                )}
-                {c.court && (
-                  <Notice tone="amber">
-                    <strong>Судебное дело {c.court.number}</strong>
-                    <p>{c.court.effect}</p>
-                    {c.court.result && <p>{c.court.result}</p>}
-                  </Notice>
-                )}
-              </>
-              )
-            )}
-            {tab === "documents" && !isAuthorityRole(role) && (
+                              {awaitingResponse && (
+                                <p className="muted">
+                                  Ожидается поступление ответа.
+                                </p>
+                              )}
+                            </section>
+                          );
+                        })}
+                      {(!hideRequestBlocks || role === "commission") &&
+                        c.requests.length > 0 && (
+                          <>
+                            {[
+                              {
+                                title: "Запрос в ДВГА",
+                                requests: c.requests.filter(
+                                  (request) =>
+                                    request.template !== "other" &&
+                                    request.recipient
+                                      .toUpperCase()
+                                      .includes("ДВГА"),
+                                ),
+                              },
+                              {
+                                title: "Запрос в КВГА",
+                                requests: c.requests.filter(
+                                  (request) =>
+                                    request.template !== "other" &&
+                                    request.recipient
+                                      .toUpperCase()
+                                      .includes("КВГА"),
+                                ),
+                              },
+                              {
+                                title: "Запрос в другие органы",
+                                requests: c.requests.filter(
+                                  (request) => request.template === "other",
+                                ),
+                              },
+                            ].map(
+                              (group) =>
+                                group.requests.length > 0 && (
+                                  <section
+                                    className="request-documents-section"
+                                    key={group.title}
+                                  >
+                                    <h4>{group.title}</h4>
+                                    <div className="request-documents-list">
+                                      {group.requests.flatMap((request) =>
+                                        c.documents
+                                          .filter(
+                                            (document) =>
+                                              document.requestId ===
+                                                request.id &&
+                                              !(
+                                                request.template !== "other" &&
+                                                !!request.responded &&
+                                                [
+                                                  "authority-response-appendix",
+                                                  "authority-response-attachment",
+                                                  "response-attachment",
+                                                ].includes(document.kind)
+                                              ),
+                                          )
+                                          .map((document) => (
+                                            <div
+                                              className="request-document-row"
+                                              key={`${request.id}-${document.name}`}
+                                            >
+                                              <span>{document.name}</span>
+                                              {document.dataUrl ? (
+                                                <a
+                                                  className="button"
+                                                  href={document.dataUrl}
+                                                  download={
+                                                    document.filename ||
+                                                    document.name
+                                                  }
+                                                >
+                                                  Скачать
+                                                </a>
+                                              ) : (
+                                                <Button
+                                                  onClick={() =>
+                                                    onDocument(
+                                                      document.kind,
+                                                      document,
+                                                    )
+                                                  }
+                                                >
+                                                  Просмотр
+                                                </Button>
+                                              )}
+                                            </div>
+                                          )),
+                                      )}
+                                    </div>
+                                  </section>
+                                ),
+                            )}
+                          </>
+                        )}
+                      {c.issues
+                        .filter((point) => point.disputed)
+                        .map((point) => (
+                          <PointCard
+                            key={point.id}
+                            point={point}
+                            documents={c.documents}
+                            review
+                          />
+                        ))}
+                      {c.memberPosition && !isClosed && (
+                        <Notice>
+                          <strong>Позиции членов комиссии</strong>
+                          <p>{c.memberPosition}</p>
+                        </Notice>
+                      )}
+                      {c.hearing && (
+                        <Notice>
+                          <strong>Заслушивание</strong>
+                          {c.hearing.skip ? (
+                            <p>Не проводилось: {c.hearing.reason}</p>
+                          ) : (
+                            <>
+                              <p>
+                                Дата и время: {formatDateTime(c.hearing.date)}
+                              </p>
+                              <p>
+                                Место или формат: {c.hearing.location || "—"}
+                              </p>
+                              <p>
+                                Уведомление направлено:{" "}
+                                {formatDate(c.hearing.notice)}
+                                {c.hearing.noticeChannel
+                                  ? ` · ${c.hearing.noticeChannel}`
+                                  : ""}
+                              </p>
+                            </>
+                          )}
+                          {c.hearing.subject && (
+                            <p>Заявитель: {c.hearing.subject}</p>
+                          )}
+                          {c.hearing.issuer && <p>Орган: {c.hearing.issuer}</p>}
+                          {c.hearing.note && <p>{c.hearing.note}</p>}
+                        </Notice>
+                      )}
+                      {c.result && !isClosed && (
+                        <Notice tone="green">
+                          <strong>{c.result.label}</strong>
+                          <p>{c.result.reason}</p>
+                          <p>{c.result.effect}</p>
+                        </Notice>
+                      )}
+                      {c.delivery && (
+                        <Notice>
+                          <strong>Доставка результата</strong>
+                          <p>
+                            Направлен {formatDate(c.delivery.date)} · Вручён{" "}
+                            {formatDate(c.delivery.received)}
+                          </p>
+                          <p>
+                            {c.delivery.appealCourt}.{" "}
+                            {c.delivery.appealProcedure}
+                          </p>
+                        </Notice>
+                      )}
+                      {c.court && (
+                        <Notice tone="amber">
+                          <strong>Судебное дело {c.court.number}</strong>
+                          <p>{c.court.effect}</p>
+                          {c.court.result && <p>{c.court.result}</p>}
+                        </Notice>
+                      )}
+                    </>
+                  )}
+                </>
+              ))}
+            {tab === "documents" && !recipientLimited && (
               <>
                 <div className="section-heading">
                   <h3>Материалы обращения</h3>
@@ -1315,33 +1574,33 @@ export default function CaseWorkspace({
                       !["request", "request-appendix"].includes(document.kind),
                   )
                   .map((document, index) => (
-                  <div className="document-row" key={index}>
-                    <div>
-                      <strong>{document.name}</strong>
-                      <span className="subline">
-                        {formatDate(document.date)} · {document.author}
-                      </span>
+                    <div className="document-row" key={index}>
+                      <div>
+                        <strong>{document.name}</strong>
+                        <span className="subline">
+                          {formatDate(document.date)} · {document.author}
+                        </span>
+                      </div>
+                      {document.dataUrl ? (
+                        <a
+                          className="button"
+                          href={document.dataUrl}
+                          download={document.filename || document.name}
+                        >
+                          Скачать
+                        </a>
+                      ) : (
+                        <Button
+                          onClick={() => onDocument(document.kind, document)}
+                        >
+                          Просмотр
+                        </Button>
+                      )}
                     </div>
-                    {document.dataUrl ? (
-                      <a
-                        className="button"
-                        href={document.dataUrl}
-                        download={document.filename || document.name}
-                      >
-                        Скачать
-                      </a>
-                    ) : (
-                      <Button
-                        onClick={() => onDocument(document.kind, document)}
-                      >
-                        Просмотр
-                      </Button>
-                    )}
-                  </div>
                   ))}
               </>
             )}
-            {tab === "history" && (
+            {tab === "history" && !recipientLimited && (
               <div className="event-list">
                 {[...c.history].reverse().map((event, index) => (
                   <article className="history-event" key={index}>
@@ -1376,7 +1635,9 @@ export default function CaseWorkspace({
                       </div>
                       <div className="support-row">
                         <span>Исполнить до</span>
-                        <strong>{formatDate(addWorkdays(request.sent, 2))}</strong>
+                        <strong>
+                          {formatDate(addWorkdays(request.sent, 2))}
+                        </strong>
                       </div>
                     </>
                   ) : null;
@@ -1412,11 +1673,11 @@ export default function CaseWorkspace({
               {!isAuthorityRole(role) &&
                 c.appealType !== "Жалоба на уведомление" &&
                 c.pauseDays > 0 && (
-                <div className="support-row">
-                  <span>Приостановление</span>
-                  <strong>{c.pauseDays} раб. дн.</strong>
-                </div>
-              )}
+                  <div className="support-row">
+                    <span>Приостановление</span>
+                    <strong>{c.pauseDays} раб. дн.</strong>
+                  </div>
+                )}
               {c.delivery?.received && (
                 <>
                   <div className="support-row">
