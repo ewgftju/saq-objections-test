@@ -883,6 +883,56 @@ td .subline {
   line-height: 1.45;
   white-space: pre-wrap;
 }
+.attendance-member-list {
+  display: grid;
+  gap: 10px;
+  padding: 16px 20px 20px;
+}
+.attendance-member-card {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.3fr) minmax(170px, 0.9fr) minmax(180px, 1fr) minmax(190px, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 15px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #fff;
+}
+.attendance-member-person {
+  display: grid;
+  gap: 3px;
+}
+.attendance-member-person strong {
+  font-size: 14px;
+  line-height: 1.4;
+}
+.attendance-member-person > span,
+.attendance-member-change > span:last-child {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.attendance-member-answer,
+.attendance-member-change,
+.attendance-member-control {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.attendance-member-label {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+.attendance-member-control select {
+  min-width: 0;
+  width: 100%;
+}
+@media (max-width: 980px) {
+  .attendance-member-card {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.9fr);
+  }
+}
 .fact small {
   display: block;
   color: var(--muted);
@@ -1749,6 +1799,13 @@ details[open] summary {
   }
   .meeting-access-details {
     grid-template-columns: 1fr;
+  }
+  .attendance-member-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .attendance-member-change,
+  .attendance-member-control {
+    grid-column: auto;
   }
   .meeting-access-card-head,
   .meeting-access-details {
