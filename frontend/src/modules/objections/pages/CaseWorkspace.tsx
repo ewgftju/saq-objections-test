@@ -464,7 +464,7 @@ export default function CaseWorkspace({
                     value={formatDate(c.document.received)}
                   />
                   <Fact
-                    label="Портал / цифровая система, по которой поступило уведомление"
+                    label="Портал/цифровая система, по которой поступило обращение"
                     value={c.channel}
                     wide
                   />
@@ -844,6 +844,38 @@ export default function CaseWorkspace({
                     </section>
                   ) : null;
                 })()}
+                {c.decisionProjectRouting && (
+                  <Notice>
+                    <strong>Направление проекта решения</strong>
+                    <p>
+                      {c.decisionProjectRouting.channel === "saq"
+                        ? "Направлен автоматически в кабинет заявителя SAQ"
+                        : `Направлен через ${c.decisionProjectRouting.deliveryPath || "внешнюю систему"}`}
+                      {` · ${formatDate(c.decisionProjectRouting.sentAt)}`}
+                    </p>
+                    {c.decisionProjectRouting.registrationNumber && (
+                      <p>Регистрационный номер: {c.decisionProjectRouting.registrationNumber}</p>
+                    )}
+                    <p>
+                      Срок для замечаний: {formatDate(c.decisionProjectRouting.commentsDeadline)}
+                    </p>
+                    {c.decisionProjectRouting.commentReceivedAt ? (
+                      <>
+                        <p>
+                          Замечание поступило {formatDate(c.decisionProjectRouting.commentReceivedAt)}
+                          {c.decisionProjectRouting.commentChannel
+                            ? ` · ${c.decisionProjectRouting.commentChannel}`
+                            : ""}
+                        </p>
+                        {c.decisionProjectRouting.commentRegistrationNumber && (
+                          <p>Регистрационный номер замечания: {c.decisionProjectRouting.commentRegistrationNumber}</p>
+                        )}
+                      </>
+                    ) : (
+                      <p>Замечание к проекту решения не поступило.</p>
+                    )}
+                  </Notice>
+                )}
                 {(() => {
                   const protocol = c.documents
                     .filter((document) => document.kind === "protocol")

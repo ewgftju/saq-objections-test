@@ -503,7 +503,10 @@ export default function ActionModal({
         action === "request-other" ||
         action === "deliver" ||
         action === "create-decision-project" ||
-        action === "send-decision-project-eotinish"
+        action === "send-decision-project-eotinish" ||
+        action === "record-decision-project-delivery" ||
+        action === "submit-decision-project-comment" ||
+        action === "record-external-decision-project-comment"
       }
     >
       <form
@@ -817,7 +820,7 @@ export default function ActionModal({
           <>
             <div className="request-modal-details">
               <div><span>Автор</span><b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b></div>
-              <div><span>Печатная форма</span><b>{action === "create-decision-project" ? "Проект решения и приложение" : "Окончательный ответ и приложение"}</b></div>
+              <div><span>Печатная форма</span><b>{action === "create-decision-project" ? "Проект решения и приложение" : (c.appealType || "").trim().startsWith("Жалоба") ? "Мотивированный ответ и приложение" : "Окончательный ответ и приложение"}</b></div>
             </div>
             {definition.note && <Notice>{definition.note}</Notice>}
             <div className="request-modal-tabs" role="tablist">
@@ -1311,6 +1314,33 @@ export default function ActionModal({
                 required
               />
               <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
+            </label>
+          </>
+        ) : [
+          "record-decision-project-delivery",
+          "submit-decision-project-comment",
+          "record-external-decision-project-comment",
+        ].includes(action) ? (
+          <>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            <div className="form-grid">
+              {definition.fields.map((field) => (
+                <Field key={field.name} field={field} />
+              ))}
+            </div>
+            <label className="field request-attachments-field">
+              <span>
+                {action === "record-decision-project-delivery"
+                  ? "Подтверждающий файл"
+                  : "Файл замечания"}
+              </span>
+              <input
+                type="file"
+                name="responseFiles"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                multiple
+              />
+              <small>Необязательное вложение до 2 МБ.</small>
             </label>
           </>
         ) : action === "position" ? (

@@ -76,6 +76,8 @@ const OBJECTION_STAGES: ProcessStage[] = [
       "decision_project",
       "decision_project_approval",
       "decision_project_signed",
+      "decision_project_delivery",
+      "decision_project_comments",
       "decision_project_eotinish",
       "decision_project_hearing",
       "delivered",
@@ -104,8 +106,8 @@ const DECISION_SUBSTEPS = [
 
 const EXECUTION_SUBSTEPS = [
   "Сформировать проект решения",
-  "Зафиксировать заслушивание",
-  "Зафиксировать проведение заслушивания",
+  "Направить проект решения",
+  "Рассмотреть замечания и провести заслушивание",
   "Мотивированный ответ",
 ] as const;
 
@@ -309,8 +311,15 @@ function executionSubstep(status: CaseStatus) {
     ].includes(status)
   )
     return 0;
-  if (status === "decision_project_eotinish") return 1;
-  if (status === "decision_project_hearing") return 2;
+  if (status === "decision_project_delivery") return 1;
+  if (
+    [
+      "decision_project_comments",
+      "decision_project_eotinish",
+      "decision_project_hearing",
+    ].includes(status)
+  )
+    return 2;
   if (["decided", "final_response_approval", "final_response_signed"].includes(status))
     return 3;
   return null;
@@ -362,9 +371,17 @@ const TASK_HELP: Partial<Record<Action, string>> = {
   "approve-decision-project":
     "Проверьте сформированный проект решения и согласуйте его для подписания.",
   "sign-decision-project":
-    "Подпишите согласованный проект решения. Затем назначьте заслушивание и зафиксируйте направление уведомления.",
+    "Подпишите согласованный проект решения. В SAQ он будет направлен автоматически; для внешнего канала направление фиксирует рабочий орган.",
+  "record-decision-project-delivery":
+    "Зафиксируйте направление подписанного проекта решения через внешнюю систему.",
+  "submit-decision-project-comment":
+    "Направьте замечание к проекту решения в течение двух рабочих дней со дня его получения.",
+  "record-external-decision-project-comment":
+    "Зарегистрируйте замечание, поступившее к проекту решения через внешнюю систему.",
+  "proceed-to-final-response":
+    "После истечения срока для замечаний и при их отсутствии зафиксируйте причину перехода к мотивированному ответу.",
   "send-decision-project-eotinish":
-    "Укажите реквизиты заслушивания и направление уведомления заявителю.",
+    "Укажите реквизиты заслушивания и канал направления извещения заявителю.",
   "hearing-after-decision-project":
     "Зафиксируйте проведение заслушивания. После этого станет доступно формирование окончательного ответа.",
   "approve-final-response":

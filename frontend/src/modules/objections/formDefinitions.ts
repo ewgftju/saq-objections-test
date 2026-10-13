@@ -154,6 +154,10 @@ export function actionForm(
     action === "analysis" ||
     action === "assign-work-executor" ||
     action === "send-decision-project-eotinish" ||
+    action === "record-decision-project-delivery" ||
+    action === "submit-decision-project-comment" ||
+    action === "record-external-decision-project-comment" ||
+    action === "proceed-to-final-response" ||
     action === "commission-vote" ||
     action === "fill-meeting-certificate" ||
     action === "edit-certificate"
@@ -580,7 +584,9 @@ export function actionForm(
       title =
         action === "create-decision-project"
           ? "Сформировать проект решения"
-          : "Сформировать окончательный ответ";
+          : (c.appealType || "").trim().startsWith("Жалоба")
+            ? "Сформировать мотивированный ответ"
+            : "Сформировать окончательный ответ";
       if (action === "deliver")
         fields.push(input("number", "Исходящий номер", "ИСХ-" + c.id));
       if (action === "deliver")
@@ -606,7 +612,7 @@ export function actionForm(
           : "Оформление — 2 рабочих дня с решения; публикация закупочного решения — 1 рабочий день после направления. Для уведомления формируется заключение по структуре приложения 7. Вручение фиксируется отдельно.";
       break;
     case "send-decision-project-eotinish":
-      title = "Заслушивание назначено";
+      title = "Назначить заслушивание";
       fields.push(
         input(
           "hearingDateTime",
@@ -633,7 +639,51 @@ export function actionForm(
         ),
       );
       note =
-        "После сохранения извещение о заслушивании будет зафиксировано в карточке обращения.";
+        "Если выбран кабинет SAQ, извещение будет автоматически направлено в кабинет заявителя.";
+      break;
+    case "record-decision-project-delivery":
+      title = "Зафиксировать направление проекта решения";
+      fields.push(
+        input("projectSentDate", "Дата отправки", date, "date"),
+        select(
+          "projectDeliveryPath",
+          "Способ отправки",
+          EXTERNAL_REQUEST_PATH_OPTIONS,
+        ),
+        {
+          name: "projectRegistrationNumber",
+          label: "Регистрационный номер",
+          type: "text",
+          required: false,
+        },
+      );
+      note =
+        "Вложение подтверждающего файла необязательно. После фиксации срок для замечаний составит 2 рабочих дня с даты отправки.";
+      break;
+    case "submit-decision-project-comment":
+      title = "Направить замечание к проекту решения";
+      fields.push(area("projectComment", "Замечание к проекту решения"));
+      note = "Замечание будет направлено рабочему органу и станет основанием для назначения заслушивания.";
+      break;
+    case "record-external-decision-project-comment":
+      title = "Зафиксировать замечание к проекту решения";
+      fields.push(
+        input("projectCommentReceivedAt", "Дата поступления замечания", date, "date"),
+        select("projectCommentChannel", "Канал поступления", EXTERNAL_REQUEST_PATH_OPTIONS),
+        {
+          name: "projectCommentRegistrationNumber",
+          label: "Регистрационный номер",
+          type: "text",
+          required: false,
+        },
+        area("projectComment", "Замечание к проекту решения"),
+      );
+      note = "Вложение файла необязательно. После фиксации станет доступно назначение заслушивания.";
+      break;
+    case "proceed-to-final-response":
+      title = "Перейти на этап «Мотивированный ответ»";
+      fields.push(area("reason", "Причина перехода"));
+      note = "Переход доступен после истечения 2 рабочих дней для замечаний, если замечание не поступило.";
       break;
     case "close-review":
       title = "Завершить рассмотрение";

@@ -38,6 +38,8 @@ export type CaseStatus =
   | "decision_project"
   | "decision_project_approval"
   | "decision_project_signed"
+  | "decision_project_delivery"
+  | "decision_project_comments"
   | "decision_project_eotinish"
   | "decision_project_hearing"
   | "decided"
@@ -182,6 +184,21 @@ export interface Delivery {
   received?: string;
   /** Кабинеты, в которые направлен подписанный окончательный ответ. */
   recipientRoles?: Role[];
+}
+
+/** Направление проекта решения и период для представления замечаний. */
+export interface DecisionProjectRouting {
+  /** SAQ — автоматическое направление в кабинет; external — зафиксировано РО. */
+  channel: "saq" | "external";
+  sentAt: string;
+  receivedAt: string;
+  commentsDeadline: string;
+  deliveryPath?: string;
+  registrationNumber?: string;
+  commentReceivedAt?: string;
+  commentChannel?: string;
+  commentRegistrationNumber?: string;
+  commentText?: string;
 }
 
 export interface CaseDocument {
@@ -452,6 +469,8 @@ export interface ObjectionCase {
   /** Реквизиты регистрации заключения по возражению на уведомление. */
   conclusionRegistration?: { date: string; number: string };
   decisionProject?: Delivery | null;
+  /** Реквизиты направления проекта решения и замечаний заявителя. */
+  decisionProjectRouting?: DecisionProjectRouting | null;
   pause?: { date: string; recipient: string; text: string } | null;
   requestPauseStartedAt?: string;
   resumeStatus?: CaseStatus;
@@ -542,6 +561,10 @@ export type Action =
   | "create-decision-project"
   | "approve-decision-project"
   | "sign-decision-project"
+  | "record-decision-project-delivery"
+  | "submit-decision-project-comment"
+  | "record-external-decision-project-comment"
+  | "proceed-to-final-response"
   | "send-decision-project-eotinish"
   | "hearing-after-decision-project"
   | "deliver"

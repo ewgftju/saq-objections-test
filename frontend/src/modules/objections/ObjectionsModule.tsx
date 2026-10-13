@@ -172,6 +172,14 @@ export default function ObjectionsModule() {
         !request.responded,
     ) ||
     Boolean(
+      item.decisionProjectRouting?.channel === "saq" &&
+        [
+          "decision_project_comments",
+          "decision_project_eotinish",
+          "decision_project_hearing",
+        ].includes(item.status),
+    ) ||
+    Boolean(
       item.delivery?.recipientRoles?.includes("subject") &&
         item.documents.some((document) => document.kind === "final-response"),
     );
@@ -187,7 +195,7 @@ export default function ObjectionsModule() {
       return;
     }
     if (model.role === "subject" && !subjectCanOpenCase(c)) {
-      model.setToast("В кабинет заявителя поступают запросы и подписанные окончательные ответы.");
+      model.setToast("В кабинет заявителя поступают запросы, проект решения и подписанные окончательные ответы.");
       return;
     }
     const shouldMarkRead =
@@ -839,7 +847,7 @@ export default function ObjectionsModule() {
       form.set("commissionMember", activeCommissionMember.id);
     }
     if (
-        !["position", "record-external-response", "fill-request-response", "request", "request-saq", "request-other", "deliver", "subject-response", "send-recommendations"].includes(
+        !["position", "record-external-response", "fill-request-response", "request", "request-saq", "request-other", "deliver", "subject-response", "send-recommendations", "record-decision-project-delivery", "submit-decision-project-comment", "record-external-decision-project-comment"].includes(
         action,
       )
     ) {
@@ -967,6 +975,10 @@ export default function ObjectionsModule() {
                 ? "subject-response-attachment"
               : action === "send-recommendations"
                 ? "recommendation-attachment"
+              : action === "record-decision-project-delivery"
+                ? "decision-project-delivery-attachment"
+              : ["submit-decision-project-comment", "record-external-decision-project-comment"].includes(action)
+                ? "decision-project-comment-attachment"
               : "response-attachment",
           text:
             ["request", "request-saq", "request-other"].includes(action)
@@ -981,6 +993,10 @@ export default function ObjectionsModule() {
                 ? "Ответ Объекта на запрос"
               : action === "send-recommendations"
                 ? "Вложение к рекомендации"
+              : action === "record-decision-project-delivery"
+                ? "Подтверждение направления проекта решения"
+              : ["submit-decision-project-comment", "record-external-decision-project-comment"].includes(action)
+                ? "Вложение к замечанию на проект решения"
               : "Полученный ответ на запрос",
           author: ROLES[model.role],
           date: next.date,
@@ -1005,6 +1021,10 @@ export default function ObjectionsModule() {
               ? "Вложен ответ Объекта"
             : action === "send-recommendations"
               ? "Вложен файл к рекомендации"
+            : action === "record-decision-project-delivery"
+              ? "Вложено подтверждение направления проекта решения"
+            : ["submit-decision-project-comment", "record-external-decision-project-comment"].includes(action)
+              ? "Вложен файл к замечанию на проект решения"
             : "Вложены полученные файлы",
         text: attached.map(({ file }) => file.name).join(", "),
       });
@@ -1031,6 +1051,14 @@ export default function ObjectionsModule() {
             : "Рекомендация сохранена"
         : action === "record-external-response"
           ? "Ответ другого органа и вложения сохранены"
+        : action === "record-decision-project-delivery"
+          ? attached.length
+            ? "Направление проекта решения и подтверждающий файл сохранены"
+            : "Направление проекта решения зафиксировано"
+        : ["submit-decision-project-comment", "record-external-decision-project-comment"].includes(action)
+          ? attached.length
+            ? "Замечание к проекту решения и вложения сохранены"
+            : "Замечание к проекту решения сохранено"
         : "Полученный ответ и вложения сохранены",
     );
   }
@@ -1264,8 +1292,7 @@ export default function ObjectionsModule() {
           ) : model.role === "subject" && !subjectCanOpenCase(c) ? (
             <Notice tone="amber">
               Карточка обращения недоступна: в кабинете объекта отображаются
-              только запросы, ожидающие предоставления ответа, и подписанные
-              окончательные ответы.
+              запросы, проекты решений и подписанные окончательные ответы.
             </Notice>
           ) : (
           <CaseWorkspace
@@ -1278,7 +1305,11 @@ export default function ObjectionsModule() {
             onAction={(action, role, requestId) => {
               if (
                 action === "record-external-response" ||
-                action === "send-decision-project-eotinish"
+                action === "send-decision-project-eotinish" ||
+                action === "record-decision-project-delivery" ||
+                action === "submit-decision-project-comment" ||
+                action === "record-external-decision-project-comment" ||
+                action === "proceed-to-final-response"
               ) {
                 setDialog({ type: "action", action, requestId });
                 return;

@@ -940,7 +940,7 @@ export default function NewCaseModal({
           field={{
             name: "channel",
             label:
-              "Портал / цифровая система, по которой поступило уведомление",
+              "Портал/цифровая система, по которой поступило обращение",
             type: "select",
             value: "Веб-портал государственных закупок",
             options: CHANNEL_OPTIONS.map((option) => [option, option]),

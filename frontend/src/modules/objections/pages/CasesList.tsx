@@ -53,6 +53,8 @@ const HEARING_WAITING_STATUSES = [
   "decision_project",
   "decision_project_approval",
   "decision_project_signed",
+  "decision_project_delivery",
+  "decision_project_comments",
   "decision_project_eotinish",
   "decision_project_hearing",
 ] as const;

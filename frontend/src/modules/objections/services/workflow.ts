@@ -183,6 +183,10 @@ function requiresEotinishDecisionProject(c: ObjectionCase) {
   return (c.appealType || "").trim().startsWith("Жалоба");
 }
 
+function cameThroughSaq(c: ObjectionCase) {
+  return (c.channel || "").trim().toUpperCase() === "SAQ";
+}
+
 function requiresConclusion(c: ObjectionCase) {
   const appealType = (c.appealType || "").trim();
   return (
@@ -407,6 +411,11 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       label: "Подписать проект решения",
       role: "director",
     },
+    decision_project_delivery: {
+      action: "record-decision-project-delivery",
+      label: "Зафиксировать направление проекта решения",
+      role: "work",
+    },
     decision_project_eotinish: {
       action: "send-decision-project-eotinish",
       label: "Заслушивание назначено",
@@ -428,7 +437,9 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
           ? c.documents.some((document) => document.kind === "conclusion")
             ? "Завершить рассмотрение"
             : "Вложить заключение"
-          : "Сформировать окончательный ответ",
+          : requiresEotinishDecisionProject(c)
+            ? "Сформировать мотивированный ответ"
+            : "Сформировать окончательный ответ",
       role: c.selfReview ? "dvga" : reviewer,
     },
     final_response_approval: {
@@ -472,6 +483,32 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       action: "subject-response",
       label: "Направить ответ",
       role: "subject",
+    });
+  if (
+    c.status === "decision_project_comments" &&
+    c.decisionProjectRouting &&
+    cameThroughSaq(c)
+  )
+    options.push({
+      action: "submit-decision-project-comment",
+      label: "Направить замечание к проекту решения",
+      role: "subject",
+    });
+  if (
+    c.status === "decision_project_comments" &&
+    c.decisionProjectRouting &&
+    !cameThroughSaq(c)
+  )
+    options.push({
+      action: "record-external-decision-project-comment",
+      label: "Зафиксировать замечание к проекту решения",
+      role: "work",
+    });
+  if (c.status === "decision_project_comments")
+    options.push({
+      action: "proceed-to-final-response",
+      label: "Перейти на этап «Мотивированный ответ»",
+      role: "work",
     });
   const requestStageStatuses: ObjectionCase["status"][] = [
     "accepted",
@@ -1713,14 +1750,122 @@ export function applyAction(
     case "sign-decision-project":
       if (!c.decisionProject)
         throw new Error("Проект решения ещё не сформирован");
-      c.status = "decision_project_eotinish";
-      title = "Проект решения подписан";
-      note = "Подписанный проект решения готов к направлению через E-Otinish.";
+      if (cameThroughSaq(c)) {
+        c.decisionProjectRouting = {
+          channel: "saq",
+          sentAt: date,
+          receivedAt: date,
+          commentsDeadline: addWorkdays(date, 2),
+        };
+        c.status = "decision_project_comments";
+        next.notifications.push({
+          id: `decision-project-subject-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient: ROLES.subject,
+          recipientRole: "subject",
+          date,
+          read: false,
+          text: `В кабинет направлен проект решения по обращению №${c.appealNumber || c.id}. Замечания можно направить до ${c.decisionProjectRouting.commentsDeadline}.`,
+        });
+        next.notifications.push({
+          id: `decision-project-work-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient: ROLES.work,
+          recipientRole: "work",
+          date,
+          read: false,
+          text: `Проект решения по обращению №${c.appealNumber || c.id} успешно направлен в кабинет заявителя SAQ.`,
+        });
+        title = "Проект решения подписан и направлен в кабинет заявителя";
+        note = `Проект решения автоматически направлен в кабинет заявителя SAQ. Срок для замечаний — до ${c.decisionProjectRouting.commentsDeadline}.`;
+      } else {
+        c.status = "decision_project_delivery";
+        title = "Проект решения подписан";
+        note = "Зафиксируйте направление проекта решения через внешнюю систему.";
+      }
       doc("Подписанный проект решения", "decision-project", note);
       break;
+    case "record-decision-project-delivery": {
+      if (!c.decisionProject)
+        throw new Error("Проект решения ещё не сформирован");
+      if (cameThroughSaq(c))
+        throw new Error("Для обращения из SAQ проект решения направляется автоматически");
+      const sentAt = text("projectSentDate", "Дата отправки");
+      dateObject(sentAt);
+      const deliveryPath = text("projectDeliveryPath", "Способ отправки");
+      c.decisionProjectRouting = {
+        channel: "external",
+        sentAt,
+        receivedAt: sentAt,
+        commentsDeadline: addWorkdays(sentAt, 2),
+        deliveryPath,
+        registrationNumber: String(form.get("projectRegistrationNumber") || "").trim() || undefined,
+      };
+      c.status = "decision_project_comments";
+      title = "Направление проекта решения зафиксировано";
+      note = `Проект решения направлен ${sentAt} через ${deliveryPath}. Срок для замечаний — до ${c.decisionProjectRouting.commentsDeadline}.`;
+      break;
+    }
+    case "submit-decision-project-comment": {
+      if (!cameThroughSaq(c) || !c.decisionProjectRouting)
+        throw new Error("Замечание из кабинета SAQ недоступно");
+      if (date > c.decisionProjectRouting.commentsDeadline)
+        throw new Error("Срок для направления замечаний к проекту решения истёк");
+      const commentText = text("projectComment", "Замечание к проекту решения");
+      c.decisionProjectRouting.commentReceivedAt = date;
+      c.decisionProjectRouting.commentChannel = "Кабинет SAQ";
+      c.decisionProjectRouting.commentText = commentText;
+      c.status = "decision_project_eotinish";
+      title = "Замечание к проекту решения направлено";
+      note = "Замечание поступило рабочему органу. Доступно назначение заслушивания.";
+      doc("Замечание к проекту решения", "decision-project-comment", commentText);
+      next.notifications.push({
+        id: `decision-project-comment-${c.id}-${next.notifications.length + 1}`,
+        caseId: c.id,
+        recipient: ROLES.work,
+        recipientRole: "work",
+        date,
+        read: false,
+        text: `Поступило замечание к проекту решения по обращению №${c.appealNumber || c.id}.`,
+      });
+      break;
+    }
+    case "record-external-decision-project-comment": {
+      if (cameThroughSaq(c) || !c.decisionProjectRouting)
+        throw new Error("Для обращения из SAQ замечание поступает автоматически");
+      const receivedAt = text("projectCommentReceivedAt", "Дата поступления замечания");
+      dateObject(receivedAt);
+      const commentText = text("projectComment", "Замечание к проекту решения");
+      c.decisionProjectRouting.commentReceivedAt = receivedAt;
+      c.decisionProjectRouting.commentChannel = text("projectCommentChannel", "Канал поступления");
+      c.decisionProjectRouting.commentRegistrationNumber =
+        String(form.get("projectCommentRegistrationNumber") || "").trim() || undefined;
+      c.decisionProjectRouting.commentText = commentText;
+      c.status = "decision_project_eotinish";
+      title = "Замечание к проекту решения зафиксировано";
+      note = "Замечание зарегистрировано. Доступно назначение заслушивания.";
+      doc("Замечание к проекту решения", "decision-project-comment", commentText);
+      break;
+    }
+    case "proceed-to-final-response": {
+      if (!c.decisionProjectRouting)
+        throw new Error("Сначала зафиксируйте направление проекта решения");
+      if (c.decisionProjectRouting.commentReceivedAt)
+        throw new Error("По поступившему замечанию необходимо назначить заслушивание");
+      if (date <= c.decisionProjectRouting.commentsDeadline)
+        throw new Error(`Срок для замечаний действует до ${c.decisionProjectRouting.commentsDeadline}`);
+      const reason = text("reason", "Причина перехода");
+      c.hearing = { skip: true, reason };
+      c.status = "decided";
+      title = "Переход к мотивированному ответу зафиксирован";
+      note = reason;
+      break;
+    }
     case "send-decision-project-eotinish":
       if (!c.decisionProject)
         throw new Error("Проект решения ещё не сформирован");
+      if (!c.decisionProjectRouting?.commentReceivedAt)
+        throw new Error("Заслушивание назначается после поступления замечания к проекту решения");
       const hearingDateTime = text(
         "hearingDateTime",
         "Дата и время заслушивания",
@@ -1749,6 +1894,16 @@ export function applyAction(
       title = "Заслушивание назначено";
       note = `Дата и время: ${hearingDateTime}. Место или формат: ${hearingLocation}. Уведомление направлено ${hearingNoticeDate} через ${c.hearing.noticeChannel}.`;
       doc("Извещение о назначении заслушивания", "hearing", note);
+      if (c.hearing.noticeChannel === "saq")
+        next.notifications.push({
+          id: `hearing-notice-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient: ROLES.subject,
+          recipientRole: "subject",
+          date,
+          read: false,
+          text: `В кабинет направлено извещение о заслушивании по обращению №${c.appealNumber || c.id}: ${hearingDateTime}.`,
+        });
       break;
     case "hearing-after-decision-project":
       if (!c.decisionProject)

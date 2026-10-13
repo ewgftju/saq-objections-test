@@ -718,7 +718,7 @@ test("исходное обращение использует реквизит�
   assert.match(html, /Номер возражения, жалобы, заявления:/);
   assert.match(
     html,
-    /Портал \/ цифровая система, по которой поступило уведомление:/,
+    /Портал\/цифровая система, по которой поступило обращение:/,
   );
   assert.match(html, /Вид обжалуемого решения:/);
   assert.match(html, /Требования\.pdf/);
@@ -3311,6 +3311,24 @@ test("жалоба из E-Otinish проходит проект решения �
   h.run("approve-decision-project", "director");
   assert.equal(h.c.status, "decision_project_signed");
   h.run("sign-decision-project", "director");
+  assert.equal(h.c.status, "decision_project_delivery");
+  const projectDeliveryForm = actionForm(
+    "record-decision-project-delivery",
+    h.c,
+    h.state.date,
+    {},
+  );
+  assert.equal(projectDeliveryForm.title, "Зафиксировать направление проекта решения");
+  h.run("record-decision-project-delivery", "work", {
+    projectSentDate: "2026-09-11",
+    projectDeliveryPath: "E-Otinish",
+  });
+  assert.equal(h.c.status, "decision_project_comments");
+  h.run("record-external-decision-project-comment", "work", {
+    projectCommentReceivedAt: "2026-09-11",
+    projectCommentChannel: "E-Otinish",
+    projectComment: "Просим провести заслушивание.",
+  });
   assert.equal(h.c.status, "decision_project_eotinish");
   const hearingAssignmentForm = actionForm(
     "send-decision-project-eotinish",
@@ -3318,7 +3336,7 @@ test("жалоба из E-Otinish проходит проект решения �
     h.state.date,
     {},
   );
-  assert.equal(hearingAssignmentForm.title, "Заслушивание назначено");
+  assert.equal(hearingAssignmentForm.title, "Назначить заслушивание");
   assert.ok(
     hearingAssignmentForm.fields.some(
       (field) => field.name === "hearingDateTime",
@@ -3335,6 +3353,67 @@ test("жалоба из E-Otinish проходит проект решения �
   h.run("hearing-after-decision-project", "work");
   assert.equal(h.c.status, "decided");
   assert.equal(nextAction(h.c)?.action, "deliver");
+});
+
+test("проект решения по жалобе направляется в SAQ и замечания управляют заслушиванием", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.channel = "SAQ";
+  h.c.status = "decision_project_signed";
+  h.c.decisionProject = {
+    date: "2026-09-08",
+    number: "",
+    receipt: "",
+    channel: "",
+    appealCourt: "",
+    appealProcedure: "",
+  };
+
+  h.run("sign-decision-project", "director");
+  assert.equal(h.c.status, "decision_project_comments");
+  assert.deepEqual(h.c.decisionProjectRouting, {
+    channel: "saq",
+    sentAt: h.state.date,
+    receivedAt: h.state.date,
+    commentsDeadline: addWorkdays(h.state.date, 2),
+  });
+  assert.match(
+    h.state.notifications.at(-1)?.text || "",
+    /успешно направлен в кабинет заявителя SAQ/,
+  );
+
+  h.run("submit-decision-project-comment", "subject", {
+    projectComment: "Не согласны с проектом решения.",
+  });
+  assert.equal(h.c.status, "decision_project_eotinish");
+  assert.equal(h.c.decisionProjectRouting?.commentChannel, "Кабинет SAQ");
+  assert.ok(
+    h.c.documents.some(
+      (document) => document.kind === "decision-project-comment",
+    ),
+  );
+});
+
+test("без замечаний по проекту решения рабочий орган вручную переходит к мотивированному ответу", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на действие/бездействие";
+  h.c.channel = "E-Otinish";
+  h.c.status = "decision_project_comments";
+  h.c.decisionProjectRouting = {
+    channel: "external",
+    sentAt: "2026-09-08",
+    receivedAt: "2026-09-08",
+    commentsDeadline: "2026-09-10",
+    deliveryPath: "E-Otinish",
+  };
+  h.state.date = "2026-09-11";
+
+  h.run("proceed-to-final-response", "work", {
+    reason: "Замечания к проекту решения в установленный срок не поступили.",
+  });
+  assert.equal(h.c.status, "decided");
+  assert.equal(h.c.hearing?.skip, true);
+  assert.match(h.c.hearing?.reason || "", /не поступили/);
 });
 
 test("все виды жалоб проходят маршрут с проектом решения независимо от источника", () => {
