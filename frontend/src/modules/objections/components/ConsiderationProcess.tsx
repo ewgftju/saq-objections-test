@@ -226,6 +226,54 @@ function RequestResponsesPanel({
   );
 }
 
+function DecisionProjectApprovalPanel({ c }: { c: ObjectionCase }) {
+  const awaitingApproval = c.status === "decision_project_approval";
+  const awaitingSignature = c.status === "decision_project_signed";
+  if (!awaitingApproval && !awaitingSignature) return null;
+
+  const decisionProject = c.documents
+    .filter((document) => document.kind === "decision-project")
+    .at(-1);
+  const status = awaitingApproval ? "На согласовании" : "На подписании";
+  const responsible = awaitingApproval
+    ? "Согласующий руководитель"
+    : "Директор ДАВГА";
+
+  return (
+    <Notice tone="amber">
+      <div className="request-response-heading">
+        <div>
+          <span className="request-response-eyebrow">Информационный блок</span>
+          <strong>Проект решения</strong>
+        </div>
+        <span className="request-response-summary">
+          Документов: <b>1</b>
+        </span>
+      </div>
+      <ul className="request-response-status-list">
+        <li className="is-pending">
+          <span className="request-response-marker" aria-hidden="true">
+            …
+          </span>
+          <span className="request-response-recipient">
+            <strong>{decisionProject?.name || "Проект решения"}</strong>
+            <small>Ответственный: {responsible}</small>
+          </span>
+          <span className="request-response-dates">
+            <small>
+              Дата формирования: {decisionProject?.date ? formatDate(decisionProject.date) : "—"}
+            </small>
+          </span>
+          <span className="response-pending">
+            <span className="response-status-dot" aria-hidden="true" />
+            {status}
+          </span>
+        </li>
+      </ul>
+    </Notice>
+  );
+}
+
 function RecommendationStatusPanel({
   recommendations,
 }: {
@@ -779,6 +827,9 @@ export default function ConsiderationProcess({
         </div>
       )}
       <RecommendationStatusPanel recommendations={caseRecommendations} />
+      {(role === "demo-superuser" || role === "work") && (
+        <DecisionProjectApprovalPanel c={c} />
+      )}
       {inRequestFormationStage && (
         <div className="request-responses-panel">
           <RequestResponsesPanel c={c} role={role} onAction={onAction} />
