@@ -481,6 +481,7 @@ export default function CaseWorkspace({
         date <= c.decisionProjectRouting.commentsDeadline,
     );
   const recipientLimited = isAuthorityRole(role) || role === "subject";
+  const canViewOverview = !recipientLimited || isAuthorityRole(role);
   const commissionCurrentTaskHidden =
     role === "commission" &&
     commissionMeetingCompleted &&
@@ -526,7 +527,9 @@ export default function CaseWorkspace({
             )
               .filter(
                 ([value]) =>
-                  !recipientLimited || value === "review",
+                  !recipientLimited ||
+                  value === "review" ||
+                  (value === "overview" && canViewOverview),
               )
               .map(([value, label]) => (
                 <button
@@ -542,7 +545,7 @@ export default function CaseWorkspace({
               ))}
           </div>
           <div className="card-body">
-            {tab === "overview" && !recipientLimited && (
+            {tab === "overview" && canViewOverview && (
               <>
                 {(!isAuthorityRole(role) || authorityHasPendingRequest) &&
                   !commissionCurrentTaskHidden && (
