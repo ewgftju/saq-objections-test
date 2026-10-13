@@ -1908,10 +1908,12 @@ export function applyAction(
     case "hearing-after-decision-project":
       if (!c.decisionProject)
         throw new Error("Проект решения ещё не сформирован");
+      if (!form.has("hearingProtocolAttached"))
+        throw new Error("Вложите протокол заслушивания");
+      if (c.hearing) c.hearing.held = date;
       c.status = "decided";
       title = "Заслушивание проведено";
-      note = "Заслушивание после направления проекта решения проведено.";
-      doc("Заслушивание по проекту решения проведено", "hearing", note);
+      note = "Протокол заслушивания вложен. Обращение переведено к формированию мотивированного ответа.";
       break;
     case "forward": {
       checked(form, "materials");

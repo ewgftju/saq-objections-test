@@ -641,6 +641,11 @@ export function actionForm(
       note =
         "Если выбран кабинет SAQ, извещение будет автоматически направлено в кабинет заявителя.";
       break;
+    case "hearing-after-decision-project":
+      title = "Заслушивание проведено";
+      note =
+        "Вложите протокол проведённого заслушивания. После сохранения обращение перейдёт к формированию мотивированного ответа.";
+      break;
     case "record-decision-project-delivery":
       title = "Зафиксировать направление проекта решения";
       fields.push(

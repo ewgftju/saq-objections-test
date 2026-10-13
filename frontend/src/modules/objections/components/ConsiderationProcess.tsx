@@ -489,8 +489,7 @@ export default function ConsiderationProcess({
       option.action !== "fill-meeting-certificate" &&
       option.action !== "supplement" &&
       option.action !== "court" &&
-      option.action !== "receipt" &&
-      option.action !== "send-recommendations",
+      option.action !== "receipt",
   );
   const extras = inRequestFormationStage
     ? availableExtras.filter((option) => option.action === "supplement")
@@ -527,9 +526,6 @@ export default function ConsiderationProcess({
     !c.decisionProjectRouting?.commentReceivedAt &&
     Boolean(date && commentsDeadline && date > commentsDeadline);
   const canPerformNextAction = role === "demo-superuser" || role === next?.role;
-  const canSendRecommendations =
-    (role === "demo-superuser" || role === "work") &&
-    (Boolean(c.meeting?.signed) || c.status === "completed");
   const requestActionsVisible =
     inRequestFormationStage && (role === "demo-superuser" || role === "work");
   // Запросы могут потребоваться и после того, как первые уже направлены.
@@ -745,14 +741,6 @@ export default function ConsiderationProcess({
                 Заполнить справку
               </Button>
             )}
-            {canSendRecommendations && (
-                <Button
-                  primary
-                  onClick={() => onAction("send-recommendations", "work")}
-                >
-                  Направить рекомендации
-                </Button>
-              )}
             {role !== "demo-superuser" && role !== next.role && (
               <small>Действие выполняет {taskOwner}.</small>
             )}
@@ -812,20 +800,6 @@ export default function ConsiderationProcess({
           </p>
         </Notice>
       ) : null}
-      {!next && canSendRecommendations && (
-        <div className="consideration-task recommendation-action-panel">
-          <div>
-            <span className="consideration-eyebrow">Рекомендации</span>
-            <h4>Направить рекомендацию</h4>
-            <p>Можно направить новую рекомендацию и после завершения рассмотрения.</p>
-          </div>
-          <div className="consideration-task-action">
-            <Button primary onClick={() => onAction("send-recommendations", "work")}>
-              Направить рекомендации
-            </Button>
-          </div>
-        </div>
-      )}
       <RecommendationStatusPanel recommendations={caseRecommendations} />
       {(role === "demo-superuser" || role === "work") && (
         <DecisionProjectApprovalPanel c={c} />

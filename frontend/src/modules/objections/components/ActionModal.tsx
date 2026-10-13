@@ -563,7 +563,8 @@ export default function ActionModal({
         action === "send-decision-project-eotinish" ||
         action === "record-decision-project-delivery" ||
         action === "submit-decision-project-comment" ||
-        action === "record-external-decision-project-comment"
+        action === "record-external-decision-project-comment" ||
+        action === "hearing-after-decision-project"
       }
     >
       <form
@@ -1373,6 +1374,23 @@ export default function ActionModal({
               <input
                 type="file"
                 name="responseFiles"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                multiple
+                required
+              />
+              <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
+            </label>
+          </>
+        ) : action === "hearing-after-decision-project" ? (
+          <>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            <label className="field request-attachments-field">
+              <span>
+                Протокол заслушивания <span className="required">*</span>
+              </span>
+              <input
+                type="file"
+                name="hearingProtocolFiles"
                 accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
                 multiple
                 required

@@ -847,7 +847,7 @@ export default function ObjectionsModule() {
       form.set("commissionMember", activeCommissionMember.id);
     }
     if (
-        !["position", "record-external-response", "fill-request-response", "request", "request-saq", "request-other", "deliver", "subject-response", "send-recommendations", "record-decision-project-delivery", "submit-decision-project-comment", "record-external-decision-project-comment"].includes(
+        !["position", "record-external-response", "fill-request-response", "request", "request-saq", "request-other", "deliver", "subject-response", "send-recommendations", "record-decision-project-delivery", "submit-decision-project-comment", "record-external-decision-project-comment", "hearing-after-decision-project"].includes(
         action,
       )
     ) {
@@ -881,6 +881,8 @@ export default function ObjectionsModule() {
               ? "subjectResponseFiles"
             : action === "send-recommendations"
               ? "recommendationFiles"
+              : action === "hearing-after-decision-project"
+                ? "hearingProtocolFiles"
             : "responseFiles",
       )
       .filter(
@@ -890,6 +892,8 @@ export default function ObjectionsModule() {
       throw new Error("Вложите хотя бы один полученный файл");
     if (action === "subject-response" && !files.length)
       throw new Error("Вложите хотя бы один файл ответа");
+    if (action === "hearing-after-decision-project" && !files.length)
+      throw new Error("Вложите протокол заслушивания");
     if (
       action === "deliver" &&
       ["Возражение на уведомление", "Возражение на уведомления"].includes(
@@ -898,6 +902,8 @@ export default function ObjectionsModule() {
       !files.length
     )
       throw new Error("Вложите хотя бы один файл заключения");
+    if (action === "hearing-after-decision-project")
+      form.set("hearingProtocolAttached", "on");
     for (const file of files) {
       if (file.size > 2 * 1024 * 1024)
         throw new Error(`Файл «${file.name}» превышает 2 МБ`);
@@ -975,6 +981,8 @@ export default function ObjectionsModule() {
                 ? "subject-response-attachment"
               : action === "send-recommendations"
                 ? "recommendation-attachment"
+              : action === "hearing-after-decision-project"
+                ? "hearing-protocol-attachment"
               : action === "record-decision-project-delivery"
                 ? "decision-project-delivery-attachment"
               : ["submit-decision-project-comment", "record-external-decision-project-comment"].includes(action)
@@ -993,6 +1001,8 @@ export default function ObjectionsModule() {
                 ? "Ответ Объекта на запрос"
               : action === "send-recommendations"
                 ? "Вложение к рекомендации"
+              : action === "hearing-after-decision-project"
+                ? "Протокол заслушивания"
               : action === "record-decision-project-delivery"
                 ? "Подтверждение направления проекта решения"
               : ["submit-decision-project-comment", "record-external-decision-project-comment"].includes(action)
@@ -1021,6 +1031,8 @@ export default function ObjectionsModule() {
               ? "Вложен ответ Объекта"
             : action === "send-recommendations"
               ? "Вложен файл к рекомендации"
+            : action === "hearing-after-decision-project"
+              ? "Вложен протокол заслушивания"
             : action === "record-decision-project-delivery"
               ? "Вложено подтверждение направления проекта решения"
             : ["submit-decision-project-comment", "record-external-decision-project-comment"].includes(action)
@@ -1049,6 +1061,8 @@ export default function ObjectionsModule() {
           ? attached.length
             ? "Рекомендация и вложение сохранены"
             : "Рекомендация сохранена"
+        : action === "hearing-after-decision-project"
+          ? "Протокол заслушивания вложен. Переход к мотивированному ответу выполнен"
         : action === "record-external-response"
           ? "Ответ другого органа и вложения сохранены"
         : action === "record-decision-project-delivery"
@@ -1310,7 +1324,8 @@ export default function ObjectionsModule() {
                 action === "record-decision-project-delivery" ||
                 action === "submit-decision-project-comment" ||
                 action === "record-external-decision-project-comment" ||
-                action === "proceed-to-final-response"
+                action === "proceed-to-final-response" ||
+                action === "hearing-after-decision-project"
               ) {
                 setDialog({ type: "action", action, requestId });
                 return;
@@ -1343,7 +1358,6 @@ export default function ObjectionsModule() {
                 action === "sign-final-response" ||
                 action === "approve-decision-project" ||
                 action === "sign-decision-project" ||
-                action === "hearing-after-decision-project" ||
                 action === "approve-certificate" ||
                 action === "sign-certificate" ||
                 action === "review-commission-documents" ||
@@ -1416,8 +1430,6 @@ export default function ObjectionsModule() {
                       ? "Проект решения согласован"
                     : action === "sign-decision-project"
                       ? "Проект решения подписан"
-                    : action === "hearing-after-decision-project"
-                      ? "Заслушивание проведено"
                     : action === "approve-certificate"
                       ? "Справка согласована"
                       : action === "sign-certificate"

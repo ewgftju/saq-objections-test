@@ -3258,6 +3258,24 @@ test("рекомендации доступны после завершения 
   );
 });
 
+test("рекомендация выводится в других действиях по делу", () => {
+  const h = harness();
+  h.c.status = "completed";
+  const processHtml = renderToStaticMarkup(
+    createElement(ConsiderationProcess, {
+      c: h.c,
+      role: "work",
+      onAction() {},
+      onHistory() {},
+    }),
+  );
+  assert.match(
+    processHtml,
+    /Другие действия по делу[\s\S]*Направить рекомендации/,
+  );
+  assert.doesNotMatch(processHtml, /recommendation-action-panel/);
+});
+
 test("жалоба из E-Otinish проходит проект решения перед окончательным ответом", () => {
   const h = harness(2);
   h.c.appealType = "Жалоба на решение КВГА/ДВГА";
@@ -3350,9 +3368,44 @@ test("жалоба из E-Otinish проходит проект решения �
   });
   assert.equal(h.c.status, "decision_project_hearing");
   assert.equal(h.c.hearing?.location, "онлайн, Qosyl");
-  h.run("hearing-after-decision-project", "work");
+  assert.throws(
+    () => h.run("hearing-after-decision-project", "work"),
+    /Вложите протокол заслушивания/,
+  );
+  h.run("hearing-after-decision-project", "work", {
+    hearingProtocolAttached: "on",
+  });
   assert.equal(h.c.status, "decided");
+  assert.equal(h.c.hearing?.held, h.state.date);
   assert.equal(nextAction(h.c)?.action, "deliver");
+});
+
+test("протокол заслушивания отображается среди материалов рассмотрения", () => {
+  const h = harness(2);
+  h.c.documents.push({
+    name: "Протокол заслушивания.pdf",
+    filename: "Протокол заслушивания.pdf",
+    kind: "hearing-protocol-attachment",
+    text: "Протокол заслушивания",
+    date: h.state.date,
+    author: "Рабочий орган",
+    dataUrl: "data:application/pdf;base64,AA==",
+  });
+
+  const html = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c: h.c,
+      tab: "review",
+      role: "work",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  assert.match(html, /<h4>Протокол заслушивания<\/h4>/);
+  assert.match(html, /Протокол заслушивания\.pdf/);
 });
 
 test("рабочий орган видит статус согласования и подписания проекта решения", () => {
