@@ -231,15 +231,30 @@ export interface Delivery {
   recipientRoles?: Role[];
 }
 
-/** Направление проекта решения и период для представления замечаний. */
-export interface DecisionProjectRouting {
-  /** SAQ — автоматическое направление в кабинет; external — зафиксировано РО. */
-  channel: "saq" | "external";
-  sentAt: string;
-  receivedAt: string;
-  commentsDeadline: string;
+/** Адресат подписанного проекта решения и состояние его доставки. */
+export interface DecisionProjectRecipient {
+  id: "subject" | "authority";
+  recipient: string;
+  recipientRole?: Role;
+  /** Заявитель представляет замечания; орган аудита получает копию. */
+  purpose: "comments" | "copy";
+  channel: "saq" | "external" | "none";
+  status: "pending" | "sent" | "not_sent";
+  sentAt?: string;
   deliveryPath?: string;
   registrationNumber?: string;
+}
+
+/** Направление проекта решения и период для представления замечаний. */
+export interface DecisionProjectRouting {
+  /** Реквизиты направления заявителю, представляющему замечания. */
+  channel?: "saq" | "external";
+  sentAt?: string;
+  receivedAt?: string;
+  commentsDeadline?: string;
+  deliveryPath?: string;
+  registrationNumber?: string;
+  recipients: DecisionProjectRecipient[];
   commentReceivedAt?: string;
   commentChannel?: string;
   commentRegistrationNumber?: string;
@@ -516,6 +531,8 @@ export interface ObjectionCase {
   /** Реквизиты регистрации заключения по возражению на уведомление. */
   conclusionRegistration?: { date: string; number: string };
   decisionProject?: Delivery | null;
+  /** Выбранные при создании проекта решения адресаты и способы направления. */
+  decisionProjectRecipients?: DecisionProjectRecipient[];
   /** Реквизиты направления проекта решения и замечаний заявителя. */
   decisionProjectRouting?: DecisionProjectRouting | null;
   pause?: { date: string; recipient: string; text: string } | null;
