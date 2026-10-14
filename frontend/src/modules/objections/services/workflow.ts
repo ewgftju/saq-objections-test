@@ -27,6 +27,7 @@ import {
   presidingChairId,
   remainingIssues,
 } from "./decisions";
+import { hasSubjectSaqCabinet } from "./saqCabinets";
 
 export const controlDecisions = [
   ["cancel", "Отменить административный акт"],
@@ -54,7 +55,7 @@ function authorityRole(recipient: string): Role {
 }
 
 function defaultDecisionProjectRecipients(c: ObjectionCase): DecisionProjectRecipient[] {
-  const subjectChannel = cameThroughSaq(c) ? "saq" : "external";
+  const subjectChannel = hasSubjectSaqCabinet(c) ? "saq" : "external";
   return [
     {
       id: "subject",
@@ -1742,13 +1743,17 @@ export function applyAction(
       break;
     }
     case "create-decision-project": {
-      const defaultChannel = cameThroughSaq(c) ? "saq" : "external";
-      const subjectChannel =
+      const defaultChannel = hasSubjectSaqCabinet(c) ? "saq" : "external";
+      const requestedSubjectChannel =
         String(form.get("projectSubjectChannel") || "") === "external"
           ? "external"
           : String(form.get("projectSubjectChannel") || "") === "saq"
             ? "saq"
             : defaultChannel;
+      const subjectChannel =
+        requestedSubjectChannel === "saq" && !hasSubjectSaqCabinet(c)
+          ? "external"
+          : requestedSubjectChannel;
       const authorityChannel = String(form.get("projectAuthorityChannel") || "");
       c.decisionProject = {
         date,
