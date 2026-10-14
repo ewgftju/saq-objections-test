@@ -144,6 +144,12 @@ function requiresMotivatedResponse(c: ObjectionCase) {
   return appealType.startsWith("Жалоба") || appealType === "Заявление";
 }
 
+function defaultDecisionProjectChannel(c: ObjectionCase) {
+  return (c.channel || "").trim().toUpperCase() === "SAQ"
+    ? "saq"
+    : "external";
+}
+
 export function actionForm(
   action: Action,
   c: ObjectionCase,
@@ -601,6 +607,21 @@ export function actionForm(
           : requiresMotivatedResponse(c)
             ? "Сформировать мотивированный ответ"
             : "Сформировать окончательный ответ";
+      if (action === "create-decision-project") {
+        const defaultChannel = defaultDecisionProjectChannel(c);
+        fields.push(
+          heading("projectRouting", "Направление после подписания"),
+          select("projectSubjectChannel", "Заявитель / кабинет объекта", [
+            ["saq", "В кабинет SAQ"],
+            ["external", "Через другую систему"],
+          ], defaultChannel),
+          select("projectAuthorityChannel", `Копия: ${c.issuer || "КВГА/ДВГА"}`, [
+            ["saq", "В кабинет SAQ"],
+            ["external", "Через другую систему"],
+            ["none", "Не направлять"],
+          ], defaultChannel),
+        );
+      }
       if (action === "deliver")
         fields.push(input("number", "Исходящий номер", "ИСХ-" + c.id));
       if (action === "deliver")
@@ -656,6 +677,22 @@ export function actionForm(
     case "record-decision-project-delivery":
       title = "Зафиксировать направление проекта решения";
       fields.push(
+        select(
+          "projectRecipientId",
+          "Адресат",
+          (c.decisionProjectRouting?.recipients || [
+            {
+              id: "subject",
+              recipient: c.org || "Заявитель",
+              channel: "external",
+              status: "pending",
+            },
+          ])
+            .filter((recipient) => recipient.channel === "external" && recipient.status === "pending")
+            .map((recipient) => [recipient.id, recipient.recipient]),
+        ),
+      );
+      fields.push(
         input("projectSentDate", "Дата отправки", date, "date"),
         select(
           "projectDeliveryPath",
@@ -670,7 +707,7 @@ export function actionForm(
         },
       );
       note =
-        "Вложение подтверждающего файла необязательно. После фиксации срок для замечаний составит 2 рабочих дня с даты отправки.";
+        "Укажите реквизиты направления для выбранного адресата. Срок для замечаний рассчитывается от даты направления заявителю.";
       break;
     case "submit-decision-project-comment":
       title = "Направить замечание к проекту решения";
