@@ -897,12 +897,29 @@ td .subline {
 .recommendation-open-cell {
   display: grid;
   justify-items: start;
-  gap: 9px;
+  gap: 6px;
 }
-.recommendation-open-cell .button {
-  min-height: 32px;
-  padding: 6px 10px;
+.recommendation-open-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--blue);
   font-size: 13px;
+  font-weight: 600;
+}
+.recommendation-open-link:hover {
+  border-bottom-color: currentColor;
+  background: transparent;
+}
+.recommendation-open-link span {
+  font-size: 17px;
+  line-height: 1;
 }
 .recommendation-page-head {
   display: grid;
