@@ -101,7 +101,8 @@ export default function AppShell({
           badge: page === "notifications" ? unreadNotifications : undefined,
           active:
             route.page === page ||
-            (route.page === "detail" && page === "registry"),
+            (route.page === "detail" && page === "registry") ||
+            (route.page === "recommendation" && page === "recommendations"),
           onClick: () => onNavigate({ page }),
           }))}
       />
