@@ -1149,24 +1149,15 @@ export default function CaseWorkspace({
                       {c.decisionProjectRouting && (
                         <Notice>
                           <strong>Направление проекта решения</strong>
-                          <p>
-                            {c.decisionProjectRouting.channel === "saq"
-                              ? "Направлен автоматически в кабинет заявителя SAQ"
-                              : `Направлен через ${c.decisionProjectRouting.deliveryPath || "внешнюю систему"}`}
-                            {` · ${formatDate(c.decisionProjectRouting.sentAt)}`}
-                          </p>
-                          {c.decisionProjectRouting.registrationNumber && (
-                            <p>
-                              Регистрационный номер:{" "}
-                              {c.decisionProjectRouting.registrationNumber}
-                            </p>
-                          )}
-                          <p>
-                            Срок для замечаний:{" "}
-                            {formatDate(
-                              c.decisionProjectRouting.commentsDeadline,
-                            )}
-                          </p>
+                          <div className="table-scroll">
+                            <table className="data-table compact-table">
+                              <thead><tr><th>Адресат</th><th>Способ</th><th>Статус</th><th>Дата и реквизиты</th></tr></thead>
+                              <tbody>{(c.decisionProjectRouting.recipients?.length ? c.decisionProjectRouting.recipients : [{ id: "subject", recipient: c.org || "Заявитель", purpose: "comments", channel: c.decisionProjectRouting.channel || "external", status: c.decisionProjectRouting.sentAt ? "sent" : "pending", sentAt: c.decisionProjectRouting.sentAt, deliveryPath: c.decisionProjectRouting.deliveryPath, registrationNumber: c.decisionProjectRouting.registrationNumber }]).map((recipient) => (
+                                <tr key={recipient.id}><td>{recipient.recipient}{recipient.purpose === "copy" && <small>Копия</small>}</td><td>{recipient.channel === "saq" ? "Кабинет SAQ" : recipient.channel === "external" ? recipient.deliveryPath || "Другая система" : "Не направляется"}</td><td>{recipient.status === "sent" ? "Направлен" : recipient.status === "not_sent" ? "Не направляется" : "Требуется фиксация"}</td><td>{recipient.sentAt ? formatDate(recipient.sentAt) : "—"}{recipient.registrationNumber ? ` · № ${recipient.registrationNumber}` : ""}</td></tr>
+                              ))}</tbody>
+                            </table>
+                          </div>
+                          {c.decisionProjectRouting.commentsDeadline && <p>Срок для замечаний заявителя: {formatDate(c.decisionProjectRouting.commentsDeadline)}</p>}
                           {c.decisionProjectRouting.commentReceivedAt ? (
                             <>
                               <p>
