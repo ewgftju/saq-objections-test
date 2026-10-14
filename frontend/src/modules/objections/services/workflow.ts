@@ -2167,13 +2167,13 @@ export function applyAction(
         recipient,
         recipientRole,
         channel,
-        status: "sent",
+        status: channel === "saq" ? "approval" : "sent",
         answer: "",
         caseId: c.id,
         caseReference: c.appealNumber || c.id,
         executor: c.assignee,
         createdAt: date,
-        sentAt,
+        sentAt: channel === "external" ? sentAt : undefined,
         dueDate,
         deliveryPath,
         registrationNumber,
@@ -2181,32 +2181,36 @@ export function applyAction(
       doc(
         `Рекомендация для ${recipient}`,
         "recommendation",
-        `${recommendationText}\n\nКому направлена: ${recipient}.\nДата направления: ${formatDate(sentAt)}.\nСрок исполнения: ${formatDate(dueDate)}.${
+        `${recommendationText}\n\nКому направлена: ${recipient}.\n${
+          channel === "saq"
+            ? "Рекомендация подготовлена для направления через кабинет SAQ."
+            : `Дата направления: ${formatDate(sentAt)}.`
+        }\nСрок исполнения: ${formatDate(dueDate)}.${
           channel === "external"
             ? `\nСпособ отправки: ${deliveryPath}.\nНомер направления: ${registrationNumber}.`
             : ""
         }`,
       );
-      if (recipientRole) {
+      if (channel === "saq") {
         next.notifications.push({
           id: `recommendation-${c.id}-${next.notifications.length + 1}`,
           caseId: c.id,
-          recipient,
-          recipientRole,
-          date: sentAt,
+          recipient: ROLES.deputy,
+          recipientRole: "deputy",
+          date,
           read: false,
           kind: "recommendation",
-          text: `Направлена рекомендация по обращению №${c.appealNumber || c.id}. Срок исполнения — ${formatDate(dueDate)}.`,
+          text: `Поступила рекомендация по обращению №${c.appealNumber || c.id} для согласования перед направлением в ${recipient}.`,
         });
       }
       title =
         channel === "external"
           ? "Направление рекомендации зафиксировано"
-          : "Рекомендация направлена";
+          : "Рекомендация направлена на согласование";
       note = `${
         channel === "external"
           ? "Направление рекомендации зафиксировано"
-          : "Рекомендация направлена"
+          : "Рекомендация направлена на согласование"
       }: ${recipient}. Срок исполнения — ${formatDate(dueDate)}.`;
       break;
     }
