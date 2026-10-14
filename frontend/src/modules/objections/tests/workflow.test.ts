@@ -41,6 +41,7 @@ import CasesList from "../pages/CasesList";
 import CaseWorkspace from "../pages/CaseWorkspace";
 import NotificationsPage from "../pages/NotificationsPage";
 import ConsiderationProcess from "../components/ConsiderationProcess";
+import ActionModal from "../components/ActionModal";
 import { caseCsv } from "../../../utils/download";
 import { auditAuthorityFullName } from "../../../utils/auditAuthority";
 import { pathForRoute, routeFromPath } from "../routing";
@@ -3582,6 +3583,28 @@ test("жалоба на уведомление формирует мотивир
       (field) => field.name === "conclusionRegistrationNumber",
     ),
   );
+});
+
+test("в форме мотивированного ответа по жалобе на уведомление нет документа заключения", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.status = "decided";
+
+  const html = renderToStaticMarkup(
+    createElement(ActionModal, {
+      action: "deliver",
+      c: h.c,
+      date: h.state.date,
+      role: "work",
+      onSubmit: () => undefined,
+      onClose: () => undefined,
+    }),
+  );
+
+  assert.match(html, /Исходящий номер/);
+  assert.match(html, /Канал доставки/);
+  assert.doesNotMatch(html, /Документ заключения/);
+  assert.doesNotMatch(html, /Для уведомления формируется заключение/);
 });
 
 test("уведомления АК показывают новые опросы первыми и блокируют повторный ответ", () => {
