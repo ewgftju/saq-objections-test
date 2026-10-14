@@ -26,6 +26,22 @@ function statusTone(status: CaseRecommendation["status"]) {
   return "blue";
 }
 
+/** Supports recommendations created before the recipient role was stored. */
+function recipientRoleOf(recommendation: CaseRecommendation): Role | undefined {
+  if (recommendation.recipientRole) return recommendation.recipientRole;
+  const recipientRoles: Record<string, Role> = {
+    ДВГА: "dvga",
+    "Кабинет ДВГА": "dvga",
+    КВГА: "kvga",
+    "Кабинет КВГА": "kvga",
+    Объект: "subject",
+    "Кабинет Объекта": "subject",
+    "Вышестоящий орган": "higher",
+    "Кабинет вышестоящего органа": "higher",
+  };
+  return recipientRoles[recommendation.recipient];
+}
+
 export default function RecommendationsPage({
   recommendations,
   role,
@@ -58,9 +74,8 @@ export default function RecommendationsPage({
     ? recommendations
     : recommendations.filter(
         (recommendation) =>
-          recommendation.recipientRole === role ||
-          (!recommendation.recipientRole &&
-            recommendation.recipient === ROLES[role]),
+          recipientRoleOf(recommendation) === role ||
+          recommendation.recipient === ROLES[role],
       );
 
   return (
@@ -94,9 +109,10 @@ export default function RecommendationsPage({
               </thead>
               <tbody>
                 {visibleRecommendations.map((recommendation, index) => {
+                  const recipientRole = recipientRoleOf(recommendation);
                   const canRespond =
                     (role === "demo-superuser" ||
-                      role === recommendation.recipientRole) &&
+                      role === recipientRole) &&
                     recommendation.status !== "executed" &&
                     recommendation.channel !== "external";
                   const canReview =
@@ -141,8 +157,8 @@ export default function RecommendationsPage({
                                 onClick={() => setResponseRecommendation(recommendation)}
                               >
                                 {recommendation.status === "returned"
-                                  ? "Доработать ответ"
-                                  : "Внести ответ"}
+                                  ? "Доработать исполнение"
+                                  : "Направить исполнение"}
                               </Button>
                             )}
                           {canReview && (
