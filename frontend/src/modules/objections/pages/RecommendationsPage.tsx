@@ -95,6 +95,8 @@ export default function RecommendationsPage({
     useState<CaseRecommendation | null>(null);
   const [returnRecommendation, setReturnRecommendation] =
     useState<CaseRecommendation | null>(null);
+  const [detailsRecommendation, setDetailsRecommendation] =
+    useState<CaseRecommendation | null>(null);
   const isWork = role === "demo-superuser" || role === "work";
   const isDemo = role === "demo-superuser";
   const visibleRecommendations = recommendations.filter((recommendation) => {
@@ -137,23 +139,17 @@ export default function RecommendationsPage({
               <thead>
                 <tr>
                   <th>№</th>
-                  <th>Текст рекомендации</th>
                   <th>Кому направлена рекомендация</th>
                   <th>Способ направления</th>
                   <th>Дата направления</th>
                   <th>Срок исполнения</th>
-                  <th>Результат исполнения</th>
+                  <th>Результат</th>
                   <th>Статус</th>
-                  <th />
+                  <th>Действия</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleRecommendations.map((recommendation, index) => {
-                  const returnDocuments = documents.filter(
-                    (document) =>
-                      document.recommendationId === recommendation.id &&
-                      document.kind === "recommendation-return-attachment",
-                  );
                   const recipientRole = recipientRoleOf(recommendation);
                   const canRespond =
                     (isDemo || role === recipientRole) &&
@@ -174,7 +170,6 @@ export default function RecommendationsPage({
                   return (
                     <tr key={recommendation.id}>
                       <td>{index + 1}</td>
-                      <td>{recommendation.text}</td>
                       <td>{recommendation.recipient}</td>
                       <td>
                         {recommendation.channel === "external"
@@ -197,26 +192,15 @@ export default function RecommendationsPage({
                         <span className={`badge ${statusTone(recommendation.status)}`}>
                           {statusLabel(recommendation, role)}
                         </span>
-                        {recommendation.returnReason && (
-                          <small className="subline">
-                            Причина возврата: {recommendation.returnReason}
-                          </small>
-                        )}
-                        {returnDocuments.map((document) =>
-                          document.dataUrl ? (
-                            <a
-                              className="subline"
-                              href={document.dataUrl}
-                              download={document.filename || document.name}
-                              key={document.name}
-                            >
-                              Файл возврата: {document.filename || document.name}
-                            </a>
-                          ) : null,
-                        )}
                       </td>
                       <td>
                         <div className="table-actions">
+                          <Button
+                            primary
+                            onClick={() => setDetailsRecommendation(recommendation)}
+                          >
+                            Подробнее
+                          </Button>
                           <Button onClick={() => onOpenCase(recommendation.caseId)}>
                             Обращение
                           </Button>
@@ -265,6 +249,97 @@ export default function RecommendationsPage({
           </div>
         </section>
       )}
+      {detailsRecommendation && (() => {
+        const recommendationDocuments = documents.filter(
+          (document) => document.recommendationId === detailsRecommendation.id,
+        );
+        const answerDocuments = recommendationDocuments.filter(
+          (document) => document.kind === "recommendation-response-attachment",
+        );
+        const returnDocuments = recommendationDocuments.filter(
+          (document) => document.kind === "recommendation-return-attachment",
+        );
+        const sourceDocuments = recommendationDocuments.filter(
+          (document) => document.kind === "recommendation-attachment",
+        );
+        return (
+          <Modal
+            title={`Рекомендация № ${detailsRecommendation.id}`}
+            onClose={() => setDetailsRecommendation(null)}
+            wide
+          >
+            <div className="recommendation-details">
+              <section className="recommendation-summary">
+                <span className={`badge ${statusTone(detailsRecommendation.status)}`}>
+                  {statusLabel(detailsRecommendation, role)}
+                </span>
+                <p>{detailsRecommendation.text}</p>
+              </section>
+              <div className="recommendation-facts">
+                <div><span>Кому направлена</span><strong>{detailsRecommendation.recipient}</strong></div>
+                <div>
+                  <span>Способ направления</span>
+                  <strong>
+                    {detailsRecommendation.channel === "external"
+                      ? detailsRecommendation.deliveryPath || "Другая система"
+                      : "Кабинет SAQ"}
+                  </strong>
+                  {detailsRecommendation.registrationNumber && (
+                    <small>№ {detailsRecommendation.registrationNumber}</small>
+                  )}
+                </div>
+                <div><span>Дата направления</span><strong>{formatDate(detailsRecommendation.sentAt || detailsRecommendation.createdAt)}</strong></div>
+                <div><span>Срок исполнения</span><strong>{formatDate(detailsRecommendation.revisionDueDate || detailsRecommendation.dueDate)}</strong></div>
+                <div><span>Результат исполнения</span><strong>{detailsRecommendation.executionResult || "Не указан"}</strong></div>
+                <div><span>Версия ответа</span><strong>{detailsRecommendation.responseVersion ? `№ ${detailsRecommendation.responseVersion}` : "Ответа пока нет"}</strong></div>
+              </div>
+              {detailsRecommendation.answer && (
+                <section className="recommendation-note">
+                  <h4>Ответ исполнителя</h4>
+                  <p>{detailsRecommendation.answer}</p>
+                </section>
+              )}
+              {detailsRecommendation.returnReason && (
+                <section className="recommendation-note return-note">
+                  <h4>Причина возврата на доработку</h4>
+                  <p>{detailsRecommendation.returnReason}</p>
+                </section>
+              )}
+              {recommendationDocuments.length > 0 && (
+                <section className="recommendation-files">
+                  <h4>Документы</h4>
+                  {[
+                    ["Материалы рекомендации", sourceDocuments],
+                    ["Файлы исполнения", answerDocuments],
+                    ["Файлы возврата", returnDocuments],
+                  ].map(([label, files]) =>
+                    Array.isArray(files) && files.length > 0 ? (
+                      <div className="recommendation-file-group" key={label as string}>
+                        <span>{label as string}</span>
+                        {files.map((document, documentIndex) => document.dataUrl ? (
+                          <a
+                            href={document.dataUrl}
+                            download={document.filename || document.name}
+                            key={`${document.name}-${documentIndex}`}
+                          >
+                            {document.filename || document.name}
+                          </a>
+                        ) : null)}
+                      </div>
+                    ) : null,
+                  )}
+                </section>
+              )}
+              <div className="actions">
+                <Button onClick={() => onOpenCase(detailsRecommendation.caseId)}>
+                  Открыть обращение
+                </Button>
+                <Button onClick={() => setDetailsRecommendation(null)}>Закрыть</Button>
+              </div>
+            </div>
+          </Modal>
+        );
+      })()}
       {responseRecommendation && (
         <Modal title="Ответ на рекомендацию" onClose={() => setResponseRecommendation(null)}>
           <form
