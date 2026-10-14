@@ -188,6 +188,10 @@ test("три исходных дела: разные сроки и перено�
     "2026-09-02",
   ]);
   const requestStepCase = state.cases[0];
+  assert.equal(
+    executionDeadline({ ...requestStepCase, status: "received" }),
+    requestStepCase.document.received,
+  );
   for (const status of [
     "accepted",
     "requested",
