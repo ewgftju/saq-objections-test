@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import { ROLES } from "../../../data/constants";
-import type { CaseRecommendation, Role } from "../../../types";
+import type { CaseDocument, CaseRecommendation, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 
 const EXECUTION_RESULT_OPTIONS = [
@@ -14,16 +14,34 @@ const EXECUTION_RESULT_OPTIONS = [
 ] as const;
 
 const STATUS_LABELS: Record<CaseRecommendation["status"], string> = {
+  approval: "На согласовании",
+  signature: "На подписании",
   sent: "Направлена",
   answered: "Ответ получен",
+  acceptance_approval: "Принятие на согласовании",
+  acceptance_signature: "Принятие на подписании",
+  return_approval: "Возврат на согласовании",
+  return_signature: "Возврат на подписании",
   executed: "Исполнена",
   returned: "Возвращена на доработку",
 };
 
 function statusTone(status: CaseRecommendation["status"]) {
   if (status === "executed") return "green";
-  if (status === "returned") return "amber";
+  if (["returned", "return_approval", "return_signature"].includes(status))
+    return "amber";
   return "blue";
+}
+
+function statusLabel(recommendation: CaseRecommendation, role: Role) {
+  const recipientRole = recipientRoleOf(recommendation);
+  if (role === recipientRole) {
+    if (recommendation.status === "sent") return "На исполнении";
+    if (recommendation.status === "answered") return "Ответ направлен";
+  }
+  if (recommendation.channel === "external" && recommendation.status === "sent")
+    return "Направлена через другую систему";
+  return STATUS_LABELS[recommendation.status];
 }
 
 /** Supports recommendations created before the recipient role was stored. */
@@ -49,6 +67,9 @@ export default function RecommendationsPage({
   onSubmitResponse,
   onAcceptResponse,
   onReturnForRevision,
+  onApprove,
+  onSign,
+  documents = [],
 }: {
   recommendations: CaseRecommendation[];
   role: Role;
@@ -63,20 +84,35 @@ export default function RecommendationsPage({
   onReturnForRevision: (
     recommendationId: string,
     revisionDueDate: string,
-  ) => void;
+    reason: string,
+    files: File[],
+  ) => void | Promise<void>;
+  onApprove: (recommendationId: string) => void;
+  onSign: (recommendationId: string) => void;
+  documents?: CaseDocument[];
 }) {
   const [responseRecommendation, setResponseRecommendation] =
     useState<CaseRecommendation | null>(null);
   const [returnRecommendation, setReturnRecommendation] =
     useState<CaseRecommendation | null>(null);
   const isWork = role === "demo-superuser" || role === "work";
-  const visibleRecommendations = isWork
-    ? recommendations
-    : recommendations.filter(
-        (recommendation) =>
-          recipientRoleOf(recommendation) === role ||
-          recommendation.recipient === ROLES[role],
+  const isDemo = role === "demo-superuser";
+  const visibleRecommendations = recommendations.filter((recommendation) => {
+    if (isWork) return true;
+    if (role === "deputy")
+      return ["approval", "acceptance_approval", "return_approval"].includes(
+        recommendation.status,
       );
+    if (role === "director")
+      return ["signature", "acceptance_signature", "return_signature"].includes(
+        recommendation.status,
+      );
+    return (
+      ["sent", "answered", "returned", "executed"].includes(recommendation.status) &&
+      (recipientRoleOf(recommendation) === role ||
+        recommendation.recipient === ROLES[role])
+    );
+  });
 
   return (
     <>
@@ -85,7 +121,11 @@ export default function RecommendationsPage({
         subtitle={
           isWork
             ? "Направленные рекомендации и контроль их исполнения"
-            : "Рекомендации, направленные в ваш кабинет для исполнения"
+            : role === "deputy"
+              ? "Рекомендации, поступившие на согласование"
+              : role === "director"
+                ? "Рекомендации и решения по исполнению, поступившие на подписание"
+                : "Рекомендации, направленные в ваш кабинет для исполнения"
         }
       />
       {visibleRecommendations.length === 0 ? (
@@ -109,14 +149,28 @@ export default function RecommendationsPage({
               </thead>
               <tbody>
                 {visibleRecommendations.map((recommendation, index) => {
+                  const returnDocuments = documents.filter(
+                    (document) =>
+                      document.recommendationId === recommendation.id &&
+                      document.kind === "recommendation-return-attachment",
+                  );
                   const recipientRole = recipientRoleOf(recommendation);
                   const canRespond =
-                    (role === "demo-superuser" ||
-                      role === recipientRole) &&
-                    recommendation.status !== "executed" &&
+                    (isDemo || role === recipientRole) &&
+                    ["sent", "returned"].includes(recommendation.status) &&
                     recommendation.channel !== "external";
                   const canReview =
                     isWork && recommendation.status === "answered";
+                  const canApprove =
+                    (role === "deputy" || isDemo) &&
+                    ["approval", "acceptance_approval", "return_approval"].includes(
+                      recommendation.status,
+                    );
+                  const canSign =
+                    (role === "director" || isDemo) &&
+                    ["signature", "acceptance_signature", "return_signature"].includes(
+                      recommendation.status,
+                    );
                   return (
                     <tr key={recommendation.id}>
                       <td>{index + 1}</td>
@@ -141,8 +195,25 @@ export default function RecommendationsPage({
                       <td>{recommendation.executionResult || "—"}</td>
                       <td>
                         <span className={`badge ${statusTone(recommendation.status)}`}>
-                          {STATUS_LABELS[recommendation.status]}
+                          {statusLabel(recommendation, role)}
                         </span>
+                        {recommendation.returnReason && (
+                          <small className="subline">
+                            Причина возврата: {recommendation.returnReason}
+                          </small>
+                        )}
+                        {returnDocuments.map((document) =>
+                          document.dataUrl ? (
+                            <a
+                              className="subline"
+                              href={document.dataUrl}
+                              download={document.filename || document.name}
+                              key={document.name}
+                            >
+                              Файл возврата: {document.filename || document.name}
+                            </a>
+                          ) : null,
+                        )}
                       </td>
                       <td>
                         <div className="table-actions">
@@ -167,12 +238,22 @@ export default function RecommendationsPage({
                                 primary
                                 onClick={() => onAcceptResponse(recommendation.id)}
                               >
-                                Принять ответ
+                                Направить принятие на согласование
                               </Button>
                               <Button onClick={() => setReturnRecommendation(recommendation)}>
                                 Вернуть на доработку
                               </Button>
                             </>
+                          )}
+                          {canApprove && (
+                            <Button primary onClick={() => onApprove(recommendation.id)}>
+                              Согласовать
+                            </Button>
+                          )}
+                          {canSign && (
+                            <Button primary onClick={() => onSign(recommendation.id)}>
+                              Подписать
+                            </Button>
                           )}
                         </div>
                       </td>
@@ -252,13 +333,26 @@ export default function RecommendationsPage({
         >
           <form
             className="form-grid"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
+              const form = new FormData(event.currentTarget);
               const revisionDueDate = String(
-                new FormData(event.currentTarget).get("revisionDueDate") || "",
+                form.get("revisionDueDate") || "",
               );
-              if (!revisionDueDate) return;
-              onReturnForRevision(returnRecommendation.id, revisionDueDate);
+              const reason = String(form.get("returnReason") || "").trim();
+              const files = form
+                .getAll("returnFiles")
+                .filter(
+                  (value): value is File =>
+                    value instanceof File && value.name.length > 0,
+                );
+              if (!revisionDueDate || (!reason && !files.length)) return;
+              await onReturnForRevision(
+                returnRecommendation.id,
+                revisionDueDate,
+                reason,
+                files,
+              );
               setReturnRecommendation(null);
             }}
           >
@@ -272,6 +366,20 @@ export default function RecommendationsPage({
                 defaultValue={returnRecommendation.dueDate || ""}
                 required
               />
+            </label>
+            <label className="field">
+              <span>Причина возврата</span>
+              <textarea name="returnReason" rows={4} />
+            </label>
+            <label className="field">
+              <span>Вложить файл с причиной возврата</span>
+              <input
+                type="file"
+                name="returnFiles"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                multiple
+              />
+              <small>Заполните причину или вложите файл.</small>
             </label>
             <div className="actions">
               <Button type="button" onClick={() => setReturnRecommendation(null)}>
