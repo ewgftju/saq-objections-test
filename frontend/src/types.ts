@@ -145,10 +145,22 @@ export interface CaseRecommendation {
   /** Канал направления: кабинет SAQ либо внешняя система. */
   channel?: "saq" | "external";
   /**
-   * Направлена → ответ получен → исполнена / возвращена на доработку.
-   * Для записей, созданных до обновления, отсутствие поля означает «saq».
+   * Полный маршрут SAQ: согласование и подпись рекомендации, исполнение,
+   * затем согласование и подпись решения о принятии либо возврате ответа.
+   * Для ранее созданных записей статус sent означает уже направленную
+   * рекомендацию в кабинете SAQ.
    */
-  status: "sent" | "answered" | "executed" | "returned";
+  status:
+    | "approval"
+    | "signature"
+    | "sent"
+    | "answered"
+    | "acceptance_approval"
+    | "acceptance_signature"
+    | "return_approval"
+    | "return_signature"
+    | "returned"
+    | "executed";
   answer: string;
   executionResult?: string;
   caseId: string;
@@ -170,6 +182,12 @@ export interface CaseRecommendation {
   revisionDueDate?: string;
   returnedAt?: string;
   executedAt?: string;
+  /** Решение рабочего органа по поступившему ответу. */
+  reviewDecision?: "accept" | "return";
+  /** Причина, указанная при возврате ответа на доработку. */
+  returnReason?: string;
+  /** Номер повторного представления исполнения адресатом. */
+  responseVersion?: number;
 }
 
 export interface Delivery {
