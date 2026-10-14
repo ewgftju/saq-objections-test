@@ -24,6 +24,7 @@ import CasesList from "./pages/CasesList";
 import CaseWorkspace from "./pages/CaseWorkspace";
 import NotificationsPage from "./pages/NotificationsPage";
 import RecommendationsPage from "./pages/RecommendationsPage";
+import RecommendationDetailsPage from "./pages/RecommendationDetailsPage";
 import {
   ProcessesPage,
   SessionsPage,
@@ -68,6 +69,15 @@ function recommendationRecipientRole(
     "Кабинет вышестоящего органа": "higher",
   } as const;
   return recipientRoles[recommendation.recipient as keyof typeof recipientRoles];
+}
+
+function addRecommendationActivity(
+  recommendation: CaseRecommendation,
+  activity: Omit<NonNullable<CaseRecommendation["activity"]>[number], "id">,
+) {
+  const id = `${recommendation.id}-activity-${(recommendation.activity?.length || 0) + 1}`;
+  (recommendation.activity ??= []).push({ id, ...activity });
+  return id;
 }
 
 function participantsFromPoll(poll: CommissionAttendancePoll) {
@@ -1080,6 +1090,10 @@ export default function ObjectionsModule() {
       action === "send-recommendations"
         ? next.recommendations.at(-1)?.id
         : undefined;
+    const recommendationActivityId =
+      action === "send-recommendations"
+        ? next.recommendations.at(-1)?.activity?.at(-1)?.id
+        : undefined;
     if (attached.length) {
       updated.documents.push(
         ...attached.map(({ file, dataUrl }) => ({
@@ -1132,6 +1146,7 @@ export default function ObjectionsModule() {
           dataUrl,
           requestId: responseRequestId,
           recommendationId,
+          recommendationActivityId,
         })),
       );
       updated.history.push({
@@ -1249,6 +1264,17 @@ export default function ObjectionsModule() {
     recommendation.answeredAt = next.date;
     recommendation.revisionDueDate = undefined;
     recommendation.responseVersion = (recommendation.responseVersion || 0) + 1;
+    const responseActivityId = addRecommendationActivity(recommendation, {
+      date: next.date,
+      actor: ROLES[model.role],
+      type: "response",
+      title:
+        recommendation.responseVersion > 1
+          ? `Повторное исполнение № ${recommendation.responseVersion}`
+          : "Исполнение рекомендации направлено",
+      text: answer,
+      executionResult,
+    });
     const caseItem = next.cases.find(
       (item) => item.id === recommendation.caseId,
     );
@@ -1264,6 +1290,7 @@ export default function ObjectionsModule() {
           date: next.date,
           dataUrl,
           recommendationId,
+          recommendationActivityId: responseActivityId,
         })),
       );
     }
@@ -1302,6 +1329,13 @@ export default function ObjectionsModule() {
       throw new Error("Нет ответа на рекомендацию для принятия");
     recommendation.status = "acceptance_approval";
     recommendation.reviewDecision = "accept";
+    addRecommendationActivity(recommendation, {
+      date: next.date,
+      actor: ROLES[model.role],
+      type: "acceptance",
+      title: "Принятие исполнения направлено на согласование",
+      text: `Рабочий орган предлагает принять исполнение: ${recommendation.executionResult || "—"}`,
+    });
     const caseItem = next.cases.find(
       (item) => item.id === recommendation.caseId,
     );
@@ -1370,6 +1404,14 @@ export default function ObjectionsModule() {
     recommendation.revisionDueDate = revisionDueDate;
     recommendation.dueDate = revisionDueDate;
     recommendation.returnedAt = next.date;
+    const returnActivityId = addRecommendationActivity(recommendation, {
+      date: next.date,
+      actor: ROLES[model.role],
+      type: "return",
+      title: "Исполнение возвращено на доработку",
+      text: reason.trim() || "Причина указана во вложении.",
+      dueDate: revisionDueDate,
+    });
     const caseItem = next.cases.find(
       (item) => item.id === recommendation.caseId,
     );
@@ -1385,6 +1427,7 @@ export default function ObjectionsModule() {
           date: next.date,
           dataUrl,
           recommendationId,
+          recommendationActivityId: returnActivityId,
         })),
       );
     }
@@ -1422,6 +1465,13 @@ export default function ObjectionsModule() {
     if (!recommendation || !nextStatus)
       throw new Error("Нет рекомендации для согласования");
     recommendation.status = nextStatus;
+    addRecommendationActivity(recommendation, {
+      date: next.date,
+      actor: ROLES[model.role],
+      type: "approved",
+      title: "Рекомендация согласована",
+      text: "Направлена директору ДАВГА для подписания.",
+    });
     const caseItem = next.cases.find((item) => item.id === recommendation.caseId);
     caseItem?.history.push({
       date: next.date,
@@ -1455,6 +1505,13 @@ export default function ObjectionsModule() {
     if (recommendation.status === "signature") {
       recommendation.status = "sent";
       recommendation.sentAt = next.date;
+      addRecommendationActivity(recommendation, {
+        date: next.date,
+        actor: ROLES[model.role],
+        type: "signed",
+        title: "Рекомендация подписана и направлена",
+        text: `Направлена в ${recommendation.recipient}.`,
+      });
       caseItem.history.push({
         date: next.date,
         actor: ROLES[model.role],
@@ -1477,6 +1534,14 @@ export default function ObjectionsModule() {
     if (recommendation.status === "return_signature") {
       recommendation.status = "returned";
       recommendation.returnedAt = next.date;
+      addRecommendationActivity(recommendation, {
+        date: next.date,
+        actor: ROLES[model.role],
+        type: "return",
+        title: "Возврат на доработку подписан и направлен",
+        text: recommendation.returnReason || "Причина указана во вложении.",
+        dueDate: recommendation.revisionDueDate,
+      });
       caseItem.history.push({
         date: next.date,
         actor: ROLES[model.role],
@@ -1498,6 +1563,13 @@ export default function ObjectionsModule() {
     }
     recommendation.status = "executed";
     recommendation.executedAt = next.date;
+    addRecommendationActivity(recommendation, {
+      date: next.date,
+      actor: ROLES[model.role],
+      type: "executed",
+      title: "Исполнение рекомендации принято",
+      text: `Исполнение подтверждено: ${recommendation.executionResult || "—"}`,
+    });
     caseItem.history.push({
       date: next.date,
       actor: ROLES[model.role],
@@ -1828,18 +1900,33 @@ export default function ObjectionsModule() {
         <RecommendationsPage
           recommendations={model.state.recommendations}
           role={model.role}
-          onOpenCase={(caseId) => {
-            const target = model.state.cases.find((item) => item.id === caseId);
-            if (target) openCase(target);
-          }}
-          onSubmitResponse={submitRecommendationResponse}
-          onAcceptResponse={acceptRecommendationResponse}
-          onReturnForRevision={returnRecommendationForRevision}
-          onApprove={approveRecommendation}
-          onSign={signRecommendation}
-          documents={model.state.cases.flatMap((item) => item.documents)}
+          onOpenRecommendation={(recommendationId) =>
+            model.navigate({ page: "recommendation", caseId: recommendationId })
+          }
         />
       )}
+      {model.route.page === "recommendation" && (() => {
+        const recommendation = model.state.recommendations.find(
+          (item) => item.id === model.route.caseId,
+        );
+        return recommendation ? (
+          <RecommendationDetailsPage
+            recommendation={recommendation}
+            role={model.role}
+            documents={model.state.cases.flatMap((item) => item.documents)}
+            onBack={() => model.navigate({ page: "recommendations" })}
+            onOpenCase={(caseId) => {
+              const target = model.state.cases.find((item) => item.id === caseId);
+              if (target) openCase(target);
+            }}
+            onSubmitResponse={submitRecommendationResponse}
+            onAcceptResponse={acceptRecommendationResponse}
+            onReturnForRevision={returnRecommendationForRevision}
+            onApprove={approveRecommendation}
+            onSign={signRecommendation}
+          />
+        ) : <Notice tone="amber">Рекомендация не найдена.</Notice>;
+      })()}
       {model.route.page === "processes" && <ProcessesPage />}
       {model.route.page === "sources" && <SourcesPage />}
       {dialog?.type === "action" && c && (
