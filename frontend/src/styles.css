@@ -823,6 +823,77 @@ td .subline {
   grid-template-columns: 1fr 1fr;
   gap: 20px 28px;
 }
+.recommendation-details {
+  display: grid;
+  gap: 20px;
+}
+.recommendation-summary {
+  padding: 18px 20px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: #f8fbfd;
+}
+.recommendation-summary p,
+.recommendation-note p {
+  margin: 10px 0 0;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.recommendation-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--line-soft);
+}
+.recommendation-facts > div {
+  display: grid;
+  gap: 5px;
+  min-height: 84px;
+  padding: 15px 16px;
+  background: white;
+}
+.recommendation-facts span,
+.recommendation-file-group > span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.recommendation-facts strong {
+  line-height: 1.4;
+  font-weight: 600;
+}
+.recommendation-facts small {
+  color: var(--muted);
+}
+.recommendation-note,
+.recommendation-files {
+  padding: 18px 20px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+}
+.recommendation-note h4,
+.recommendation-files h4 {
+  margin: 0;
+  font-size: 15px;
+}
+.return-note {
+  border-color: #f1d69b;
+  background: #fffaf0;
+}
+.recommendation-files {
+  display: grid;
+  gap: 14px;
+}
+.recommendation-file-group {
+  display: grid;
+  gap: 7px;
+}
+.recommendation-file-group a {
+  width: fit-content;
+  color: var(--blue);
+}
 .meeting-access-card {
   max-width: 760px;
   overflow: visible;
@@ -1724,6 +1795,9 @@ details[open] summary {
   }
 }
 @media (max-width: 600px) {
+  .recommendation-facts {
+    grid-template-columns: 1fr;
+  }
   .app-shell,
   .app-shell.expanded {
     display: block;
