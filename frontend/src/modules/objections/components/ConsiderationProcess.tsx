@@ -281,8 +281,14 @@ function RecommendationStatusPanel({
 }) {
   if (!recommendations.length) return null;
   const labels: Record<CaseRecommendation["status"], string> = {
+    approval: "На согласовании",
+    signature: "На подписании",
     sent: "Направлена",
     answered: "Ответ получен",
+    acceptance_approval: "Принятие на согласовании",
+    acceptance_signature: "Принятие на подписании",
+    return_approval: "Возврат на согласовании",
+    return_signature: "Возврат на подписании",
     executed: "Исполнена",
     returned: "Возвращена на доработку",
   };
