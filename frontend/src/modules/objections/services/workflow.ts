@@ -2161,8 +2161,9 @@ export function applyAction(
         channel === "external"
           ? text("recommendationRegistrationNumber", "Номер направления")
           : undefined;
+      const recommendationId = `recommendation-${c.id}-${next.recommendations.length + 1}`;
       next.recommendations.push({
-        id: `recommendation-${c.id}-${next.recommendations.length + 1}`,
+        id: recommendationId,
         text: recommendationText,
         recipient,
         recipientRole,
@@ -2177,6 +2178,20 @@ export function applyAction(
         dueDate,
         deliveryPath,
         registrationNumber,
+        activity: [
+          {
+            id: `${recommendationId}-created`,
+            date,
+            actor: ROLES[role],
+            type: "created",
+            title:
+              channel === "external"
+                ? "Рекомендация направлена"
+                : "Рекомендация подготовлена и направлена на согласование",
+            text: `Получатель: ${recipient}.`,
+            dueDate,
+          },
+        ],
       });
       doc(
         `Рекомендация для ${recipient}`,
