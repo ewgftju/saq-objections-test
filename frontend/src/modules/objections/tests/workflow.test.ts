@@ -3567,16 +3567,16 @@ test("все виды жалоб проходят маршрут с проект
   });
 });
 
-test("жалоба на уведомление формирует окончательный ответ, а не заключение", () => {
+test("жалоба на уведомление формирует мотивированный ответ по общему маршруту жалоб", () => {
   const h = harness(2);
   h.c.appealType = "Жалоба на уведомление";
   h.c.status = "decided";
 
   assert.equal(nextAction(h.c)?.action, "deliver");
-  assert.equal(nextAction(h.c)?.label, "Сформировать окончательный ответ");
+  assert.equal(nextAction(h.c)?.label, "Сформировать мотивированный ответ");
 
   const definition = actionForm("deliver", h.c, h.state.date, {});
-  assert.equal(definition.title, "Сформировать окончательный ответ");
+  assert.equal(definition.title, "Сформировать мотивированный ответ");
   assert.ok(
     !definition.fields.some(
       (field) => field.name === "conclusionRegistrationNumber",
