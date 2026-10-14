@@ -5,6 +5,7 @@ import { OUTCOMES } from "../../data/constants";
 import { addWorkdays, filingDeadline } from "./services/deadlines";
 import { disputed } from "./services/decisions";
 import { controlDecisions } from "./services/workflow";
+import { hasSubjectSaqCabinet, subjectSaqCabinetLabel } from "./services/saqCabinets";
 
 export interface FormField {
   name: string;
@@ -145,9 +146,7 @@ function requiresMotivatedResponse(c: ObjectionCase) {
 }
 
 function defaultDecisionProjectChannel(c: ObjectionCase) {
-  return (c.channel || "").trim().toUpperCase() === "SAQ"
-    ? "saq"
-    : "external";
+  return hasSubjectSaqCabinet(c) ? "saq" : "external";
 }
 
 export function actionForm(
@@ -609,18 +608,37 @@ export function actionForm(
             : "Сформировать окончательный ответ";
       if (action === "create-decision-project") {
         const defaultChannel = defaultDecisionProjectChannel(c);
+        const subjectCabinetAvailable = hasSubjectSaqCabinet(c);
         fields.push(
           heading("projectRouting", "Направление после подписания"),
-          select("projectSubjectChannel", "Заявитель / кабинет объекта", [
-            ["saq", "В кабинет SAQ"],
-            ["external", "Через другую систему"],
-          ], defaultChannel),
+          {
+            name: "subjectCabinetStatus",
+            label: "Проверка кабинета заявителя",
+            type: "text",
+            value: subjectSaqCabinetLabel(c),
+            required: false,
+            readOnly: true,
+          },
+          select(
+            "projectSubjectChannel",
+            "Заявитель / кабинет объекта",
+            subjectCabinetAvailable
+              ? [
+                  ["saq", "В кабинет SAQ"],
+                  ["external", "Через другую систему"],
+                ]
+              : [["external", "Через другую систему"]],
+            defaultChannel,
+          ),
           select("projectAuthorityChannel", `Копия: ${c.issuer || "КВГА/ДВГА"}`, [
             ["saq", "В кабинет SAQ"],
             ["external", "Через другую систему"],
             ["none", "Не направлять"],
           ], defaultChannel),
         );
+        if (!subjectCabinetAvailable)
+          note =
+            "Кабинет заявителя в SAQ не найден. После подписания зафиксируйте внешнее направление: дату, способ, регистрационный номер и подтверждающий файл.";
       }
       if (action === "deliver")
         fields.push(input("number", "Исходящий номер", "ИСХ-" + c.id));
@@ -635,7 +653,7 @@ export function actionForm(
         );
       note =
         action === "create-decision-project"
-          ? "Проект решения формируется по той же печатной форме, что и окончательный ответ. После сохранения он будет направлен на согласование и подписание."
+          ? note || "Проект решения формируется по той же печатной форме, что и окончательный ответ. После сохранения он будет направлен на согласование и подписание."
           : c.type === "control"
             ? "Статья 100 АППК: письменный результат заявителю и копия органу. Вручение фиксируется отдельно после направления."
             : requiresConclusion(c)
