@@ -59,6 +59,7 @@ export type Page =
   | "sessions"
   | "notifications"
   | "recommendations"
+  | "recommendation"
   | "processes"
   | "sources";
 export type CaseTab = "overview" | "review" | "documents" | "history";
@@ -138,6 +139,24 @@ export interface Meeting {
   signed?: string;
 }
 
+export interface RecommendationActivity {
+  id: string;
+  date: string;
+  actor: string;
+  type:
+    | "created"
+    | "approved"
+    | "signed"
+    | "response"
+    | "acceptance"
+    | "return"
+    | "executed";
+  title: string;
+  text: string;
+  executionResult?: string;
+  dueDate?: string;
+}
+
 export interface CaseRecommendation {
   id: string;
   text: string;
@@ -188,6 +207,8 @@ export interface CaseRecommendation {
   returnReason?: string;
   /** Номер повторного представления исполнения адресатом. */
   responseVersion?: number;
+  /** Непрерывная история направления и исполнения рекомендации. */
+  activity?: RecommendationActivity[];
 }
 
 export interface Delivery {
@@ -230,6 +251,8 @@ export interface CaseDocument {
   requestId?: string;
   /** Рекомендация, к которой относится приложенный документ. */
   recommendationId?: string;
+  /** Событие рекомендации, к которому относится файл. */
+  recommendationActivityId?: string;
   snapshot?: {
     issues: ViolationPoint[];
     result: CaseResult | null;
