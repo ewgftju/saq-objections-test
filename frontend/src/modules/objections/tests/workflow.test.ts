@@ -3499,7 +3499,7 @@ test("без замечаний по проекту решения рабочи�
     commentsDeadline: "2026-09-10",
     deliveryPath: "E-Otinish",
   };
-  h.state.date = "2026-09-11";
+  h.state.date = "2026-09-09";
 
   h.run("proceed-to-final-response", "work", {
     reason: "Замечания к проекту решения в установленный срок не поступили.",
@@ -3509,7 +3509,7 @@ test("без замечаний по проекту решения рабочи�
   assert.match(h.c.hearing?.reason || "", /не поступили/);
 });
 
-test("истечение срока ожидания замечаний выделяется красным в информационном блоке", () => {
+test("информационный блок не блокирует переход к мотивированному ответу", () => {
   const h = harness(2);
   h.c.status = "decision_project_comments";
   h.c.decisionProjectRouting = {
@@ -3522,15 +3522,14 @@ test("истечение срока ожидания замечаний выде
   const html = renderToStaticMarkup(
     createElement(ConsiderationProcess, {
       c: h.c,
-      date: "2026-09-11",
+      date: "2026-09-09",
       role: "work",
       onAction: () => undefined,
       onHistory: () => undefined,
     }),
   );
-  assert.match(html, /notice red/);
-  assert.match(html, /Срок ожидания замечаний к проекту решения истек/);
-  assert.match(html, /Перейдите к формированию мотивированного ответа/);
+  assert.match(html, /notice amber/);
+  assert.match(html, /рабочий орган может сразу перейти к/);
 });
 
 test("все виды жалоб проходят маршрут с проектом решения независимо от источника", () => {
