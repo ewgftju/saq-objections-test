@@ -527,10 +527,6 @@ export default function ConsiderationProcess({
   const currentDecisionSubstep = decisionSubstep(c.status);
   const currentExecutionSubstep = executionSubstep(c.status);
   const commentsDeadline = c.decisionProjectRouting?.commentsDeadline;
-  const commentsDeadlineExpired =
-    c.status === "decision_project_comments" &&
-    !c.decisionProjectRouting?.commentReceivedAt &&
-    Boolean(date && commentsDeadline && date > commentsDeadline);
   const canPerformNextAction = role === "demo-superuser" || role === next?.role;
   const requestActionsVisible =
     inRequestFormationStage && (role === "demo-superuser" || role === "work");
@@ -781,20 +777,15 @@ export default function ConsiderationProcess({
           </p>
         </Notice>
       ) : c.status === "decision_project_comments" && commentsDeadline ? (
-        <Notice tone={commentsDeadlineExpired ? "red" : "amber"}>
+        <Notice tone="amber">
           <strong>Ожидание замечаний к проекту решения</strong>
           <p>
-            Срок ожидания замечаний к проекту решения: до {formatDate(commentsDeadline)}
-            {" "}— 2 рабочих дня с даты направления проекта решения.
+            Заявитель может направить замечание к проекту решения до {formatDate(commentsDeadline)}.
           </p>
-          {commentsDeadlineExpired ? (
-            <p>
-              Срок ожидания замечаний к проекту решения истек. Перейдите к
-              формированию мотивированного ответа.
-            </p>
-          ) : (
-            <p>Замечание к проекту решения пока не поступило.</p>
-          )}
+          <p>
+            Если замечание не поступило, рабочий орган может сразу перейти к
+            формированию мотивированного ответа.
+          </p>
         </Notice>
       ) : !requestActionsVisible ? (
         <Notice tone={c.status === "completed" ? "green" : "amber"}>
