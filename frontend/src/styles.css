@@ -894,9 +894,15 @@ td .subline {
   width: fit-content;
   color: var(--blue);
 }
-.recommendations-registry-table th:last-child,
-.recommendations-registry-table td:last-child {
-  text-align: right;
+.recommendation-open-cell {
+  display: grid;
+  justify-items: start;
+  gap: 9px;
+}
+.recommendation-open-cell .button {
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 13px;
 }
 .recommendation-page-head {
   display: grid;
