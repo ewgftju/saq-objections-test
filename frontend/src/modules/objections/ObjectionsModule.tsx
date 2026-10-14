@@ -1318,6 +1318,194 @@ export default function ObjectionsModule() {
     );
   }
 
+  async function recordExternalRecommendationResponse(
+    recommendationId: string,
+    responseDate: string,
+    responseRegistrationNumber: string,
+    answer: string,
+    executionResult: string,
+    files: File[],
+  ) {
+    if (!["demo-superuser", "work"].includes(model.role))
+      throw new Error("Ответ по внешней рекомендации фиксирует рабочий орган");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(responseDate))
+      throw new Error("Укажите дату поступления ответа");
+    if (!responseRegistrationNumber.trim())
+      throw new Error("Укажите номер входящего документа");
+    if (!answer.trim() || !executionResult.trim())
+      throw new Error("Заполните результат и текст исполнения");
+    const allowedFile = /\.(pdf|png|jpe?g|docx?|xlsx?|txt)$/i;
+    for (const file of files) {
+      if (file.size > 2 * 1024 * 1024)
+        throw new Error(`Файл «${file.name}» превышает 2 МБ`);
+      if (!allowedFile.test(file.name))
+        throw new Error("Поддерживаются PDF, PNG, JPG, DOC(X), XLS(X), TXT");
+    }
+    const attached = await Promise.all(
+      files.map(
+        (file) =>
+          new Promise<{ file: File; dataUrl: string }>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              resolve({ file, dataUrl: String(reader.result) });
+            reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+            reader.readAsDataURL(file);
+          }),
+      ),
+    );
+    const next = structuredClone(model.state);
+    const recommendation = next.recommendations.find(
+      (item) => item.id === recommendationId,
+    );
+    if (!recommendation || recommendation.channel !== "external")
+      throw new Error("Внешняя рекомендация не найдена");
+    if (!["sent", "returned"].includes(recommendation.status))
+      throw new Error("Ответ по этой рекомендации уже зафиксирован");
+    recommendation.answer = answer.trim();
+    recommendation.executionResult = executionResult;
+    recommendation.status = "answered";
+    recommendation.answeredAt = responseDate;
+    recommendation.responseReceivedAt = responseDate;
+    recommendation.responseRegistrationNumber = responseRegistrationNumber.trim();
+    recommendation.revisionDueDate = undefined;
+    recommendation.responseVersion = (recommendation.responseVersion || 0) + 1;
+    const responseActivityId = addRecommendationActivity(recommendation, {
+      date: responseDate,
+      actor: ROLES[model.role],
+      type: "response",
+      title:
+        recommendation.responseVersion > 1
+          ? `Повторное исполнение № ${recommendation.responseVersion} зафиксировано`
+          : "Исполнение рекомендации зафиксировано",
+      text: `Входящий № ${recommendation.responseRegistrationNumber}. ${recommendation.answer}`,
+      executionResult,
+    });
+    const caseItem = next.cases.find(
+      (item) => item.id === recommendation.caseId,
+    );
+    if (!caseItem) throw new Error("Обращение не найдено");
+    if (attached.length) {
+      caseItem.documents.push(
+        ...attached.map(({ file, dataUrl }) => ({
+          name: file.name,
+          filename: file.name,
+          kind: "recommendation-response-attachment",
+          text: "Вложение к ответу на рекомендацию, полученному через другую систему",
+          author: ROLES[model.role],
+          date: responseDate,
+          dataUrl,
+          recommendationId,
+          recommendationActivityId: responseActivityId,
+        })),
+      );
+    }
+    caseItem.history.push({
+      date: responseDate,
+      actor: ROLES[model.role],
+      title: "Ответ на рекомендацию зафиксирован через другую систему",
+      text: `Входящий № ${recommendation.responseRegistrationNumber}. ${executionResult}`,
+    });
+    model.commit(
+      next,
+      attached.length
+        ? "Ответ по внешней рекомендации и вложения зафиксированы"
+        : "Ответ по внешней рекомендации зафиксирован",
+    );
+  }
+
+  async function returnExternalRecommendationForRevision(
+    recommendationId: string,
+    revisionDueDate: string,
+    reason: string,
+    sentAt: string,
+    registrationNumber: string,
+    files: File[],
+  ) {
+    if (!["demo-superuser", "work"].includes(model.role))
+      throw new Error("Вернуть ответ на доработку может только рабочий орган");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(revisionDueDate))
+      throw new Error("Укажите срок исполнения доработки");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(sentAt))
+      throw new Error("Укажите дату исходящего документа");
+    if (!registrationNumber.trim())
+      throw new Error("Укажите номер исходящего документа");
+    if (revisionDueDate < sentAt)
+      throw new Error("Новый срок исполнения не может быть раньше даты направления");
+    if (!reason.trim() && !files.length)
+      throw new Error("Укажите причину возврата или вложите файл");
+    const allowedFile = /\.(pdf|png|jpe?g|docx?|xlsx?|txt)$/i;
+    for (const file of files) {
+      if (file.size > 2 * 1024 * 1024)
+        throw new Error(`Файл «${file.name}» превышает 2 МБ`);
+      if (!allowedFile.test(file.name))
+        throw new Error("Поддерживаются PDF, PNG, JPG, DOC(X), XLS(X), TXT");
+    }
+    const attached = await Promise.all(
+      files.map(
+        (file) =>
+          new Promise<{ file: File; dataUrl: string }>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              resolve({ file, dataUrl: String(reader.result) });
+            reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+            reader.readAsDataURL(file);
+          }),
+      ),
+    );
+    const next = structuredClone(model.state);
+    const recommendation = next.recommendations.find(
+      (item) => item.id === recommendationId,
+    );
+    if (
+      !recommendation ||
+      recommendation.channel !== "external" ||
+      recommendation.status !== "answered"
+    )
+      throw new Error("Нет ответа на внешнюю рекомендацию для возврата");
+    recommendation.status = "returned";
+    recommendation.reviewDecision = "return";
+    recommendation.returnReason = reason.trim();
+    recommendation.revisionDueDate = revisionDueDate;
+    recommendation.dueDate = revisionDueDate;
+    recommendation.returnedAt = sentAt;
+    recommendation.returnSentAt = sentAt;
+    recommendation.returnRegistrationNumber = registrationNumber.trim();
+    const returnActivityId = addRecommendationActivity(recommendation, {
+      date: sentAt,
+      actor: ROLES[model.role],
+      type: "return",
+      title: "Исполнение возвращено на доработку через другую систему",
+      text: `Исходящий № ${recommendation.returnRegistrationNumber}. ${reason.trim() || "Причина указана во вложении."}`,
+      dueDate: revisionDueDate,
+    });
+    const caseItem = next.cases.find(
+      (item) => item.id === recommendation.caseId,
+    );
+    if (!caseItem) throw new Error("Обращение не найдено");
+    if (attached.length) {
+      caseItem.documents.push(
+        ...attached.map(({ file, dataUrl }) => ({
+          name: file.name,
+          filename: file.name,
+          kind: "recommendation-return-attachment",
+          text: "Вложение к возврату рекомендации на доработку через другую систему",
+          author: ROLES[model.role],
+          date: sentAt,
+          dataUrl,
+          recommendationId,
+          recommendationActivityId: returnActivityId,
+        })),
+      );
+    }
+    caseItem.history.push({
+      date: sentAt,
+      actor: ROLES[model.role],
+      title: "Исполнение рекомендации возвращено на доработку через другую систему",
+      text: `Исходящий № ${recommendation.returnRegistrationNumber}. Новый срок: ${revisionDueDate}.`,
+    });
+    model.commit(next, "Возврат по внешней рекомендации зафиксирован");
+  }
+
   function acceptRecommendationResponse(recommendationId: string) {
     if (!["demo-superuser", "work"].includes(model.role))
       throw new Error("Принять ответ может только рабочий орган");
@@ -1327,6 +1515,30 @@ export default function ObjectionsModule() {
     );
     if (!recommendation || recommendation.status !== "answered")
       throw new Error("Нет ответа на рекомендацию для принятия");
+    const caseItem = next.cases.find(
+      (item) => item.id === recommendation.caseId,
+    );
+    if (!caseItem) throw new Error("Обращение не найдено");
+    if (recommendation.channel === "external") {
+      recommendation.status = "executed";
+      recommendation.reviewDecision = "accept";
+      recommendation.executedAt = next.date;
+      addRecommendationActivity(recommendation, {
+        date: next.date,
+        actor: ROLES[model.role],
+        type: "executed",
+        title: "Исполнение рекомендации принято",
+        text: `Рабочий орган принял исполнение, зафиксированное через другую систему: ${recommendation.executionResult || "—"}`,
+      });
+      caseItem.history.push({
+        date: next.date,
+        actor: ROLES[model.role],
+        title: "Исполнение рекомендации принято",
+        text: "Ответ, поступивший через другую систему, принят рабочим органом.",
+      });
+      model.commit(next, "Исполнение рекомендации принято");
+      return;
+    }
     recommendation.status = "acceptance_approval";
     recommendation.reviewDecision = "accept";
     addRecommendationActivity(recommendation, {
@@ -1336,16 +1548,12 @@ export default function ObjectionsModule() {
       title: "Принятие исполнения направлено на согласование",
       text: `Рабочий орган предлагает принять исполнение: ${recommendation.executionResult || "—"}`,
     });
-    const caseItem = next.cases.find(
-      (item) => item.id === recommendation.caseId,
-    );
-    if (caseItem)
-      caseItem.history.push({
-        date: next.date,
-        actor: ROLES[model.role],
-        title: "Исполнение рекомендации направлено на согласование",
-        text: `Рабочий орган предлагает принять исполнение: ${recommendation.executionResult || "—"}`,
-      });
+    caseItem.history.push({
+      date: next.date,
+      actor: ROLES[model.role],
+      title: "Исполнение рекомендации направлено на согласование",
+      text: `Рабочий орган предлагает принять исполнение: ${recommendation.executionResult || "—"}`,
+    });
     next.notifications.push({
       id: `recommendation-acceptance-${recommendation.caseId}-${next.notifications.length + 1}`,
       caseId: recommendation.caseId,
@@ -1398,6 +1606,8 @@ export default function ObjectionsModule() {
     );
     if (!recommendation || recommendation.status !== "answered")
       throw new Error("Нет ответа на рекомендацию для возврата");
+    if (recommendation.channel === "external")
+      throw new Error("Возврат по внешней рекомендации фиксируется отдельным действием");
     recommendation.status = "return_approval";
     recommendation.reviewDecision = "return";
     recommendation.returnReason = reason.trim();
@@ -1920,8 +2130,10 @@ export default function ObjectionsModule() {
               if (target) openCase(target);
             }}
             onSubmitResponse={submitRecommendationResponse}
+            onRecordExternalResponse={recordExternalRecommendationResponse}
             onAcceptResponse={acceptRecommendationResponse}
             onReturnForRevision={returnRecommendationForRevision}
+            onReturnExternalForRevision={returnExternalRecommendationForRevision}
             onApprove={approveRecommendation}
             onSign={signRecommendation}
           />
