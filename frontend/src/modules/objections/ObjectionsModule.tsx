@@ -1248,6 +1248,7 @@ export default function ObjectionsModule() {
     recommendation.status = "answered";
     recommendation.answeredAt = next.date;
     recommendation.revisionDueDate = undefined;
+    recommendation.responseVersion = (recommendation.responseVersion || 0) + 1;
     const caseItem = next.cases.find(
       (item) => item.id === recommendation.caseId,
     );
@@ -1299,8 +1300,8 @@ export default function ObjectionsModule() {
     );
     if (!recommendation || recommendation.status !== "answered")
       throw new Error("Нет ответа на рекомендацию для принятия");
-    recommendation.status = "executed";
-    recommendation.executedAt = next.date;
+    recommendation.status = "acceptance_approval";
+    recommendation.reviewDecision = "accept";
     const caseItem = next.cases.find(
       (item) => item.id === recommendation.caseId,
     );
@@ -1308,15 +1309,27 @@ export default function ObjectionsModule() {
       caseItem.history.push({
         date: next.date,
         actor: ROLES[model.role],
-        title: "Ответ на рекомендацию принят",
-        text: `Исполнение подтверждено: ${recommendation.executionResult || "—"}`,
+        title: "Исполнение рекомендации направлено на согласование",
+        text: `Рабочий орган предлагает принять исполнение: ${recommendation.executionResult || "—"}`,
       });
-    model.commit(next, "Ответ на рекомендацию принят");
+    next.notifications.push({
+      id: `recommendation-acceptance-${recommendation.caseId}-${next.notifications.length + 1}`,
+      caseId: recommendation.caseId,
+      recipient: ROLES.deputy,
+      recipientRole: "deputy",
+      date: next.date,
+      read: false,
+      kind: "recommendation-response",
+      text: `Согласуйте принятие исполнения рекомендации по обращению №${recommendation.caseReference}.`,
+    });
+    model.commit(next, "Принятие исполнения направлено на согласование");
   }
 
-  function returnRecommendationForRevision(
+  async function returnRecommendationForRevision(
     recommendationId: string,
     revisionDueDate: string,
+    reason: string,
+    files: File[],
   ) {
     if (!["demo-superuser", "work"].includes(model.role))
       throw new Error("Вернуть ответ на доработку может только рабочий орган");
@@ -1324,13 +1337,36 @@ export default function ObjectionsModule() {
       throw new Error("Укажите срок исполнения доработки");
     if (revisionDueDate < model.state.date)
       throw new Error("Срок исполнения доработки не может быть в прошлом");
+    if (!reason.trim() && !files.length)
+      throw new Error("Укажите причину возврата или вложите файл");
+    const allowedFile = /\.(pdf|png|jpe?g|docx?|xlsx?|txt)$/i;
+    for (const file of files) {
+      if (file.size > 2 * 1024 * 1024)
+        throw new Error(`Файл «${file.name}» превышает 2 МБ`);
+      if (!allowedFile.test(file.name))
+        throw new Error("Поддерживаются PDF, PNG, JPG, DOC(X), XLS(X), TXT");
+    }
+    const attached = await Promise.all(
+      files.map(
+        (file) =>
+          new Promise<{ file: File; dataUrl: string }>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () =>
+              resolve({ file, dataUrl: String(reader.result) });
+            reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+            reader.readAsDataURL(file);
+          }),
+      ),
+    );
     const next = structuredClone(model.state);
     const recommendation = next.recommendations.find(
       (item) => item.id === recommendationId,
     );
     if (!recommendation || recommendation.status !== "answered")
       throw new Error("Нет ответа на рекомендацию для возврата");
-    recommendation.status = "returned";
+    recommendation.status = "return_approval";
+    recommendation.reviewDecision = "return";
+    recommendation.returnReason = reason.trim();
     recommendation.revisionDueDate = revisionDueDate;
     recommendation.dueDate = revisionDueDate;
     recommendation.returnedAt = next.date;
@@ -1338,25 +1374,147 @@ export default function ObjectionsModule() {
       (item) => item.id === recommendation.caseId,
     );
     if (!caseItem) throw new Error("Обращение не найдено");
+    if (attached.length) {
+      caseItem.documents.push(
+        ...attached.map(({ file, dataUrl }) => ({
+          name: file.name,
+          filename: file.name,
+          kind: "recommendation-return-attachment",
+          text: "Вложение к возврату рекомендации на доработку",
+          author: ROLES[model.role],
+          date: next.date,
+          dataUrl,
+          recommendationId,
+        })),
+      );
+    }
     caseItem.history.push({
       date: next.date,
       actor: ROLES[model.role],
-      title: "Ответ на рекомендацию возвращён на доработку",
-      text: `Срок исполнения доработки: ${revisionDueDate}.`,
+      title: "Возврат исполнения рекомендации направлен на согласование",
+      text: `${reason.trim() || "Причина указана во вложении."} Срок исполнения доработки: ${revisionDueDate}.`,
     });
-    if (recommendation.recipientRole) {
-      next.notifications.push({
-        id: `recommendation-revision-${caseItem.id}-${next.notifications.length + 1}`,
+    next.notifications.push({
+      id: `recommendation-return-${caseItem.id}-${next.notifications.length + 1}`,
+      caseId: caseItem.id,
+      recipient: ROLES.deputy,
+      recipientRole: "deputy",
+      date: next.date,
+      read: false,
+      kind: "recommendation-response",
+      text: `Согласуйте возврат исполнения рекомендации по обращению №${recommendation.caseReference}.`,
+    });
+    model.commit(next, "Возврат исполнения направлен на согласование");
+  }
+
+  function approveRecommendation(recommendationId: string) {
+    if (!["demo-superuser", "deputy"].includes(model.role))
+      throw new Error("Согласовать рекомендацию может только заместитель директора ДАВГА");
+    const next = structuredClone(model.state);
+    const recommendation = next.recommendations.find((item) => item.id === recommendationId);
+    const nextStatus = recommendation?.status === "approval"
+      ? "signature"
+      : recommendation?.status === "acceptance_approval"
+        ? "acceptance_signature"
+        : recommendation?.status === "return_approval"
+          ? "return_signature"
+          : undefined;
+    if (!recommendation || !nextStatus)
+      throw new Error("Нет рекомендации для согласования");
+    recommendation.status = nextStatus;
+    const caseItem = next.cases.find((item) => item.id === recommendation.caseId);
+    caseItem?.history.push({
+      date: next.date,
+      actor: ROLES[model.role],
+      title: "Рекомендация согласована",
+      text: "Документ направлен директору ДАВГА для подписания.",
+    });
+    next.notifications.push({
+      id: `recommendation-sign-${recommendation.caseId}-${next.notifications.length + 1}`,
+      caseId: recommendation.caseId,
+      recipient: ROLES.director,
+      recipientRole: "director",
+      date: next.date,
+      read: false,
+      kind: "recommendation",
+      text: `Подпишите рекомендацию или решение по её исполнению для обращения №${recommendation.caseReference}.`,
+    });
+    model.commit(next, "Рекомендация согласована и направлена на подписание");
+  }
+
+  function signRecommendation(recommendationId: string) {
+    if (!["demo-superuser", "director"].includes(model.role))
+      throw new Error("Подписать рекомендацию может только директор ДАВГА");
+    const next = structuredClone(model.state);
+    const recommendation = next.recommendations.find((item) => item.id === recommendationId);
+    if (!recommendation || !["signature", "acceptance_signature", "return_signature"].includes(recommendation.status))
+      throw new Error("Нет рекомендации для подписания");
+    const caseItem = next.cases.find((item) => item.id === recommendation.caseId);
+    if (!caseItem) throw new Error("Обращение не найдено");
+    const recipientRole = recommendationRecipientRole(recommendation);
+    if (recommendation.status === "signature") {
+      recommendation.status = "sent";
+      recommendation.sentAt = next.date;
+      caseItem.history.push({
+        date: next.date,
+        actor: ROLES[model.role],
+        title: "Рекомендация подписана и направлена",
+        text: `Направлена в ${recommendation.recipient}.`,
+      });
+      if (recipientRole) next.notifications.push({
+        id: `recommendation-delivery-${caseItem.id}-${next.notifications.length + 1}`,
         caseId: caseItem.id,
         recipient: recommendation.recipient,
-        recipientRole: recommendation.recipientRole,
+        recipientRole,
         date: next.date,
         read: false,
         kind: "recommendation",
-        text: `Ответ на рекомендацию по обращению №${caseItem.appealNumber || caseItem.id} возвращён на доработку. Срок исполнения — ${revisionDueDate}.`,
+        text: `В ваш кабинет направлена рекомендация по обращению №${recommendation.caseReference}. Срок исполнения — ${recommendation.dueDate}.`,
       });
+      model.commit(next, "Рекомендация подписана и направлена получателю");
+      return;
     }
-    model.commit(next, "Ответ на рекомендацию возвращён на доработку");
+    if (recommendation.status === "return_signature") {
+      recommendation.status = "returned";
+      recommendation.returnedAt = next.date;
+      caseItem.history.push({
+        date: next.date,
+        actor: ROLES[model.role],
+        title: "Исполнение рекомендации возвращено на доработку",
+        text: `${recommendation.returnReason || "Причина указана во вложении."} Срок: ${recommendation.revisionDueDate}.`,
+      });
+      if (recipientRole) next.notifications.push({
+        id: `recommendation-revision-${caseItem.id}-${next.notifications.length + 1}`,
+        caseId: caseItem.id,
+        recipient: recommendation.recipient,
+        recipientRole,
+        date: next.date,
+        read: false,
+        kind: "recommendation",
+        text: `Исполнение рекомендации возвращено на доработку. Причина: ${recommendation.returnReason || "указана во вложении"}. Новый срок — ${recommendation.revisionDueDate}.`,
+      });
+      model.commit(next, "Возврат на доработку подписан и направлен получателю");
+      return;
+    }
+    recommendation.status = "executed";
+    recommendation.executedAt = next.date;
+    caseItem.history.push({
+      date: next.date,
+      actor: ROLES[model.role],
+      title: "Исполнение рекомендации принято",
+      text: `Исполнение подтверждено: ${recommendation.executionResult || "—"}`,
+    });
+    if (recipientRole) next.notifications.push({
+      id: `recommendation-executed-${caseItem.id}-${next.notifications.length + 1}`,
+      caseId: caseItem.id,
+      recipient: recommendation.recipient,
+      recipientRole,
+      date: next.date,
+      read: false,
+      kind: "recommendation",
+      text: `Исполнение рекомендации по обращению №${recommendation.caseReference} принято и подписано.`,
+    });
+    model.commit(next, "Принятие исполнения подписано");
   }
 
   function saveRequestDraft(
@@ -1677,6 +1835,9 @@ export default function ObjectionsModule() {
           onSubmitResponse={submitRecommendationResponse}
           onAcceptResponse={acceptRecommendationResponse}
           onReturnForRevision={returnRecommendationForRevision}
+          onApprove={approveRecommendation}
+          onSign={signRecommendation}
+          documents={model.state.cases.flatMap((item) => item.documents)}
         />
       )}
       {model.route.page === "processes" && <ProcessesPage />}
