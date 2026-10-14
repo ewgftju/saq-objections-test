@@ -3464,15 +3464,26 @@ test("проект решения по жалобе направляется в 
 
   h.run("sign-decision-project", "director");
   assert.equal(h.c.status, "decision_project_comments");
-  assert.deepEqual(h.c.decisionProjectRouting, {
-    channel: "saq",
-    sentAt: h.state.date,
-    receivedAt: h.state.date,
-    commentsDeadline: addWorkdays(h.state.date, 2),
-  });
+  assert.equal(h.c.decisionProjectRouting?.channel, "saq");
+  assert.equal(h.c.decisionProjectRouting?.sentAt, h.state.date);
+  assert.equal(
+    h.c.decisionProjectRouting?.commentsDeadline,
+    addWorkdays(h.state.date, 2),
+  );
+  assert.deepEqual(h.c.decisionProjectRouting?.recipients, [
+    {
+      id: "subject",
+      recipient: h.c.org,
+      recipientRole: "subject",
+      purpose: "comments",
+      channel: "saq",
+      status: "sent",
+      sentAt: h.state.date,
+    },
+  ]);
   assert.match(
     h.state.notifications.at(-1)?.text || "",
-    /успешно направлен в кабинет заявителя SAQ/,
+    /В кабинет направлен проект решения/,
   );
 
   h.run("submit-decision-project-comment", "subject", {
@@ -3484,6 +3495,43 @@ test("проект решения по жалобе направляется в 
     h.c.documents.some(
       (document) => document.kind === "decision-project-comment",
     ),
+  );
+});
+
+test("проект решения направляется адресатам разными способами и ждёт внешнюю фиксацию", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.channel = "SAQ";
+  h.c.status = "decision_project";
+
+  h.run("create-decision-project", "work", {
+    projectSubjectChannel: "saq",
+    projectAuthorityChannel: "external",
+  });
+  h.run("approve-decision-project", "director");
+  h.run("sign-decision-project", "director");
+
+  assert.equal(h.c.status, "decision_project_delivery");
+  assert.equal(
+    h.c.decisionProjectRouting?.recipients.find((item) => item.id === "subject")?.status,
+    "sent",
+  );
+  assert.equal(
+    h.c.decisionProjectRouting?.recipients.find((item) => item.id === "authority")?.status,
+    "pending",
+  );
+
+  h.run("record-decision-project-delivery", "work", {
+    projectRecipientId: "authority",
+    projectSentDate: h.state.date,
+    projectDeliveryPath: "СЭД",
+    projectRegistrationNumber: "ИСХ-25",
+  });
+
+  assert.equal(h.c.status, "decision_project_comments");
+  assert.equal(
+    h.c.decisionProjectRouting?.recipients.find((item) => item.id === "authority")?.registrationNumber,
+    "ИСХ-25",
   );
 });
 
