@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 34063)
+Total output lines: 3764
+
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Children, createElement, isValidElement } from "react";
@@ -1701,468 +1704,7 @@ test("голосование членов АК и формирование пр�
       h.c.issues
         .filter((point) => point.disputed)
         .flatMap((point) => [
-          [`protocolVote_${point.id}_protocol-member-1`, "accept"],
-          [`protocolVote_${point.id}_protocol-member-2`, "partial"],
-        ]),
-    ),
-  });
-  assert.equal(h.c.status, "protocol");
-  assert.notEqual(nextAction(h.c)?.action, "commission-vote");
-  assert.ok(
-    !additionalActions(h.c).some(
-      (action) => action.action === "commission-vote",
-    ),
-  );
-});
-
-test("рабочий орган видит статусы ответов по направленным запросам", () => {
-  const h = harness();
-  screen(h);
-  h.run("request", "work", {
-    recipient: "ДВГА по Атырауской области",
-    deadline: "2026-09-10T18:00",
-  });
-  h.run("send-request-approval", "work");
-  h.run("approve-request", "deputy", { approved: "on" });
-  h.run("sign-request", "director");
-  h.c.requests.push({
-    id: "subject-request",
-    recipient: "Кабинет Объекта",
-    date: "2026-09-04",
-    text: "Предоставить пояснения",
-    deadline: "2026-09-10T18:00",
-    sent: "2026-09-04",
-    responded: "2026-09-05",
-    template: "other",
-    saqRecipient: "subject",
-  });
-
-  const html = renderToStaticMarkup(
-    createElement(ConsiderationProcess, {
-      c: h.c,
-      role: "work",
-      onAction() {},
-      onHistory() {},
-    }),
-  );
-  assert.match(html, /Запросы и ответы/);
-  assert.match(html, /ДВГА по Атырауской области/);
-  assert.match(html, /Ожидается ответ/);
-  assert.match(html, /Кабинет Объекта/);
-  assert.match(html, /Ответ получен/);
-});
-
-test("кабинет объекта получает возможность направить ответ только после подписи запроса", () => {
-  const h = harness();
-  screen(h);
-  h.run("request", "work", {
-    recipient: "КВГА",
-    deadline: "2026-09-10T18:00",
-  });
-  h.run("request-saq", "work", {
-    saqRecipient: "subject",
-    customRequestText: "Предоставить пояснения и документы.",
-  });
-
-  assert.ok(
-    !additionalActions(h.c).some(
-      (action) => action.action === "subject-response",
-    ),
-  );
-
-  h.run("send-request-approval", "work");
-  h.c.requests.filter((request) => !request.sent).forEach((request) =>
-    h.run("approve-request", "deputy", {
-      requestId: request.id,
-      approved: "on",
-    }),
-  );
-  const subjectRequest = h.c.requests.find(
-    (request) => request.saqRecipient === "subject",
-  )!;
-  h.run("sign-request", "director", { requestId: subjectRequest.id });
-
-  assert.ok(
-    additionalActions(h.c).some(
-      (action) => action.action === "subject-response",
-    ),
-  );
-});
-
-test("кабинет объекта видит в реестре только подписанные запросы, ожидающие ответа", () => {
-  const h = harness();
-  const awaiting = structuredClone(h.c);
-  awaiting.id = "subject-awaiting";
-  awaiting.requests = [
-    {
-      id: "subject-awaiting-request",
-      recipient: "Кабинет Объекта",
-      date: "2026-09-08",
-      text: "Предоставить пояснения",
-      deadline: "2026-09-10T18:00",
-      sent: "2026-09-08",
-      template: "other",
-      saqRecipient: "subject",
-    },
-  ];
-  const unsigned = structuredClone(awaiting);
-  unsigned.id = "subject-unsigned";
-  delete unsigned.requests[0].sent;
-  const answered = structuredClone(awaiting);
-  answered.id = "subject-answered";
-  answered.requests[0].responded = "2026-09-09";
-
-  const html = renderToStaticMarkup(
-    createElement(CasesList, {
-      cases: [awaiting, unsigned, answered],
-      date: "2026-09-08",
-      role: "subject",
-      onOpen() {},
-      onCreate() {},
-      onExport() {},
-    }),
-  );
-  assert.match(html, /subject-awaiting/);
-  assert.doesNotMatch(html, /subject-unsigned/);
-  assert.doesNotMatch(html, /subject-answered/);
-  assert.doesNotMatch(html, /Новое возражение\/обращение/);
-});
-
-test("внешний ответ можно зафиксировать до поступления ответов SAQ", () => {
-  const h = harness();
-  screen(h);
-  h.run("request", "work", {
-    recipient: "КВГА",
-    deadline: "2026-09-10T18:00",
-  });
-  h.run("request-other", "work", {
-    recipient: "Экспертная организация",
-    customRequestText: "Просим предоставить заключение.",
-  });
-  h.run("send-request-approval", "work");
-  h.c.requests.filter((request) => !request.sent).forEach((request) =>
-    h.run("approve-request", "deputy", {
-      requestId: request.id,
-      approved: "on",
-    }),
-  );
-  h.c.requests.filter((request) => !request.sent).forEach((request) =>
-    h.run("sign-request", "director", { requestId: request.id }),
-  );
-  const external = h.c.requests.find(
-    (request) => request.recipient === "Экспертная организация",
-  )!;
-
-  h.run("record-external-response", "work", {
-    externalRequestId: external.id,
-    date: "2026-09-09",
-    responseRegistrationNumber: "ВХ-21",
-  });
-  assert.equal(
-    h.c.requests.find((request) => request.id === external.id)?.responded,
-    "2026-09-09",
-  );
-  assert.notEqual(h.c.status, "materials");
-
-  h.run(
-    "fill-request-response",
-    "kvga",
-    Object.fromEntries(
-      h.c.issues
-        .filter((point) => point.disputed)
-        .flatMap((point) => [
-          [`authorityFinding_${point.id}`, "Нарушение КВГА"],
-          [`authorityResponse_${point.id}`, "Ответ КВГА"],
-        ]),
-    ),
-  );
-  h.run("approve-response", "kvga");
-  h.run("sign-response", "kvga");
-
-  assert.equal(h.c.status, "materials");
-  assert.equal(
-    h.c.requests.find((request) => request.id === external.id)?.confirmed,
-    "2026-09-09",
-  );
-});
-
-test("справка редактируется с созданием новой версии перед формированием протокола", () => {
-  const h = harness();
-  const point = h.c.issues.find((item) => item.disputed)!;
-  h.c.status = "meeting";
-  h.c.certificate = {
-    davgaArguments: "Первоначальные доводы ДАВГА",
-    davgaArgumentsByPoint: { [point.id]: "Первоначальные доводы ДАВГА" },
-    memberPositions: [],
-  };
-  h.c.documents.push({
-    name: "Справка: результаты голосования членов АК",
-    kind: "certificate",
-    text: "Первоначальная версия",
-    date: "2026-09-04",
-    author: "Рабочий орган ДАВГА",
-    snapshot: structuredClone({
-      issues: h.c.issues,
-      result: null,
-      members: h.c.members,
-      votes: null,
-      meeting: null,
-      hearing: null,
-      delivery: null,
-      certificate: h.c.certificate,
-    }),
-  });
-  assert.deepEqual(
-    additionalActions(h.c).find(
-      (action) => action.action === "edit-certificate",
-    ),
-    {
-      action: "edit-certificate",
-      label: "Редактировать справку",
-      role: "work",
-    },
-  );
-  assert.ok(
-    !additionalActions(h.c).some((action) =>
-      ["pause", "postpone", "return-analysis"].includes(action.action),
-    ),
-  );
-
-  h.run("edit-certificate", "work", {
-    ...Object.fromEntries(
-      h.c.issues
-        .filter((item) => item.disputed)
-        .map((item) => [
-          `certificateDavga_${item.id}`,
-          item.id === point.id
-            ? "Уточнённые доводы ДАВГА"
-            : `Доводы ДАВГА по пункту ${item.number}`,
-        ]),
-    ),
-  });
-  const certificates = h.c.documents.filter(
-    (document) => document.kind === "certificate",
-  );
-  assert.equal(certificates.length, 2);
-  assert.equal(
-    certificates.at(-1)?.name,
-    "Справка: результаты голосования членов АК. Версия 2",
-  );
-  assert.equal(
-    certificates.at(-1)?.snapshot?.certificate?.davgaArgumentsByPoint?.[
-      point.id
-    ],
-    "Уточнённые доводы ДАВГА",
-  );
-  const originalVersionHtml = renderToStaticMarkup(
-    createElement(DocumentContent, {
-      c: h.c,
-      kind: "certificate",
-      document: certificates[0],
-    }),
-  );
-  assert.match(originalVersionHtml, /Первоначальные доводы ДАВГА/);
-  assert.doesNotMatch(originalVersionHtml, /Уточнённые доводы ДАВГА/);
-});
-
-test("дело открывает процесс, а одно действие передаёт задачу вместе с ролью исполнителя", () => {
-  const h = harness();
-  const path = pathForRoute({ page: "detail", caseId: h.c.id });
-  assert.equal(routeFromPath(path).tab, "review");
-  assert.equal(
-    routeFromPath(`/cases/${encodeURIComponent(h.c.id)}`).tab,
-    "review",
-  );
-  assert.equal(
-    routeFromPath(path.replace(/review$/, "overview")).tab,
-    "overview",
-  );
-
-  function primaryAction(node: ReactNode): (() => void) | undefined {
-    if (
-      !isValidElement<{
-        children?: ReactNode;
-        primary?: boolean;
-        onClick?: () => void;
-      }>(node)
-    )
-      return;
-    if (node.props.primary) return node.props.onClick;
-    for (const child of Children.toArray(node.props.children)) {
-      const action = primaryAction(child);
-      if (action) return action;
-    }
-  }
-
-  let selected: { action: Action; role: Role } | undefined;
-  const process = () =>
-    ConsiderationProcess({
-      c: h.c,
-      role: "work",
-      onAction: (action, role) => {
-        selected = { action, role };
-      },
-      onHistory() {},
-    });
-  const requestFormationHtml = renderToStaticMarkup(process());
-  assert.match(requestFormationHtml, /Сформировать запрос в ДВГА\/КВГА/);
-  assert.match(requestFormationHtml, /Шаги этапа запроса/);
-  assert.match(requestFormationHtml, /Формирование запроса/);
-  assert.match(requestFormationHtml, /Согласование запроса/);
-  assert.match(requestFormationHtml, /Подписание запроса/);
-  assert.match(requestFormationHtml, /Ожидание ответа/);
-  assert.match(requestFormationHtml, /Текущая задача/);
-  primaryAction(process())!();
-  assert.deepEqual(selected, { action: "request", role: "work" });
-  assert.match(
-    renderToStaticMarkup(process()),
-    /Сформировать запрос в ДВГА\/КВГА/,
-  );
-  assert.match(
-    renderToStaticMarkup(process()),
-    /Зафиксировать запрос через другую систему/,
-  );
-  h.run("request", "work", {
-    recipient: "ДВГА по Атырауской области",
-    deadline: "2026-09-10T18:00",
-  });
-  const requestMaterialsHtml = renderToStaticMarkup(
-    createElement(CaseWorkspace, {
-      c: h.c,
-      tab: "review",
-      role: "work",
-      onBack() {},
-      onTab() {},
-      onAction() {},
-      onDocument() {},
-      onUpload() {},
-    }),
-  );
-  assert.match(requestMaterialsHtml, /Запрос в ДВГА по Атырауской области/);
-  assert.match(
-    requestMaterialsHtml,
-    /Приложение к запросу в ДВГА по Атырауской области/,
-  );
-  assert.match(requestMaterialsHtml, /Запрос в ДВГА/);
-  assert.doesNotMatch(requestMaterialsHtml, /Сформированные документы/);
-  assert.ok(h.c.documents.some((document) => document.kind === "request"));
-  assert.ok(
-    h.c.documents.some((document) => document.kind === "request-appendix"),
-  );
-  h.c.appealDate = "2026-09-08";
-  h.c.appealNumber = "ВОЗ-77";
-  const requestDocument = h.c.documents.find(
-    (document) => document.kind === "request",
-  )!;
-  const requestHtml = renderToStaticMarkup(
-    createElement(DocumentContent, {
-      c: h.c,
-      kind: "request",
-      document: requestDocument,
-    }),
-  );
-  assert.match(
-    requestHtml,
-    /Департаментом внутреннего государственного аудита по Атырауской области Комитета внутреннего государственного аудита Министерства финансов Республики Казахстан/,
-  );
-  assert.match(
-    requestHtml,
-    /возражения от ГУ «Управление образования», ИИН\/БИН 000000000001/,
-  );
-  assert.match(
-    requestHtml,
-    /просим представить мотивированный ответ по каждому доводу возражения и подтверждающие документы/,
-  );
-  const appendixDocument = h.c.documents.find(
-    (document) => document.kind === "request-appendix",
-  )!;
-  const appendixHtml = renderToStaticMarkup(
-    createElement(DocumentContent, {
-      c: h.c,
-      kind: "request-appendix",
-      document: appendixDocument,
-    }),
-  );
-  assert.match(appendixHtml, /Нарушение, по которым поступило возражение/);
-  assert.match(
-    appendixHtml,
-    /<td><\/td><td>Требование к технической спецификации<\/td>/,
-  );
-  assert.doesNotMatch(
-    appendixHtml,
-    /Описание соответствует функциональной потребности/,
-  );
-  const appendixWithResponseHtml = renderToStaticMarkup(
-    createElement(DocumentContent, {
-      c: h.c,
-      kind: "request-appendix",
-      document: appendixDocument,
-      appendixFindingPreview: { [h.c.issues[0].id]: "Нарушение ДВГА" },
-      appendixPreview: { [h.c.issues[0].id]: "Мотивированный ответ ДВГА" },
-    }),
-  );
-  assert.match(appendixWithResponseHtml, /Нарушение ДВГА/);
-  assert.match(appendixWithResponseHtml, /Мотивированный ответ ДВГА/);
-  assert.match(renderToStaticMarkup(process()), /Направить на согласование/);
-  h.run("send-request-approval", "work");
-  assert.match(renderToStaticMarkup(process()), /Согласовать запрос/);
-  h.run("approve-request", "deputy", { approved: "on" });
-  assert.match(renderToStaticMarkup(process()), /Подписать запрос/);
-  h.run("sign-request", "director");
-  const workProcessHtml = renderToStaticMarkup(process());
-  assert.match(workProcessHtml, /Ожидание ответа на запрос/);
-  assert.doesNotMatch(workProcessHtml, /Заполнить ответ ДВГА\/КВГА/);
-  assert.match(workProcessHtml, /Сформировать запрос в кабинет SAQ/);
-  assert.doesNotMatch(
-    workProcessHtml,
-    /Формирование новых запросов завершено/,
-  );
-
-  h.run("request-saq", "work", {
-    saqRecipient: "subject",
-    customRequestText: "Просим представить дополнительные документы.",
-  });
-  assert.equal(h.c.status, "request_approved");
-  h.run("send-request-approval", "work");
-  assert.equal(h.c.status, "request_approval");
-  assert.equal(
-    h.c.requests.at(-1)?.recipient,
-    "Кабинет Объекта SAQ",
-  );
-  assert.equal(h.c.requests.at(-1)?.approved, undefined);
-
-  const control = harness(2);
-  screen(control);
-  const controlHtml = renderToStaticMarkup(
-    createElement(ConsiderationProcess, {
-      c: control.c,
-      role: "work",
-      onAction() {},
-      onHistory() {},
-    }),
-  );
-  assert.match(controlHtml, /Сформировать запрос/);
-  assert.doesNotMatch(controlHtml, /Заседание, голоса и протокол/);
-  assert.doesNotMatch(controlHtml, /Позиции комиссии/);
-});
-
-test("справка формируется с отдельными доводами ДАВГА по каждому оспариваемому пункту", () => {
-  const h = harness(0);
-  screen(h);
-  h.run("request", "work", {
-    recipient: "ДВГА по Атырауской области",
-    deadline: "2026-09-10T18:00",
-  });
-  h.run("send-request-approval", "work");
-  h.run("approve-request", "deputy", { approved: "on" });
-  h.run("sign-request", "director");
-  h.run(
-    "fill-request-response",
-    "dvga",
-    Object.fromEntries(
-      h.c.issues
-        .filter((point) => point.disputed)
-        .flatMap((point) => [
+          [`protocolVote_${point.id}_protocol-me…4063 tokens truncated…     .flatMap((point) => [
           [`authorityFinding_${point.id}`, "Нарушение, заполненное ДВГА"],
           [`authorityResponse_${point.id}`, "Мотивированный ответ ДВГА"],
         ]),
@@ -3532,6 +3074,65 @@ test("проект решения направляется адресатам р
   assert.equal(
     h.c.decisionProjectRouting?.recipients.find((item) => item.id === "authority")?.registrationNumber,
     "ИСХ-25",
+  );
+});
+
+test("форма проекта решения показывает доступность кабинета заявителя по БИН", () => {
+  const withCabinet = harness(2);
+  const availableForm = actionForm(
+    "create-decision-project",
+    withCabinet.c,
+    withCabinet.state.date,
+    {},
+  );
+  assert.equal(
+    availableForm.fields.find((field) => field.name === "subjectCabinetStatus")?.value,
+    "Кабинет заявителя SAQ доступен (БИН: 000000000002).",
+  );
+  assert.deepEqual(
+    availableForm.fields
+      .find((field) => field.name === "projectSubjectChannel")
+      ?.options,
+    [
+      ["saq", "В кабинет SAQ"],
+      ["external", "Через другую систему"],
+    ],
+  );
+
+  const withoutCabinet = harness(1);
+  withoutCabinet.c.appealType = "Жалоба на уведомление";
+  const unavailableForm = actionForm(
+    "create-decision-project",
+    withoutCabinet.c,
+    withoutCabinet.state.date,
+    {},
+  );
+  assert.equal(
+    unavailableForm.fields
+      .find((field) => field.name === "subjectCabinetStatus")
+      ?.value,
+    "Кабинет заявителя SAQ не зарегистрирован (БИН: 000000000001).",
+  );
+  assert.deepEqual(
+    unavailableForm.fields
+      .find((field) => field.name === "projectSubjectChannel")
+      ?.options,
+    [["external", "Через другую систему"]],
+  );
+});
+
+test("проект решения не направляется в SAQ при отсутствии кабинета заявителя", () => {
+  const h = harness(1);
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.status = "decision_project";
+  h.run("create-decision-project", "work", {
+    projectSubjectChannel: "saq",
+    projectAuthorityChannel: "none",
+  });
+
+  assert.equal(
+    h.c.decisionProjectRecipients?.find((recipient) => recipient.id === "subject")?.channel,
+    "external",
   );
 });
 
