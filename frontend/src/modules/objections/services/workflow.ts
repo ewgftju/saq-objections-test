@@ -1884,6 +1884,10 @@ export function applyAction(
         throw new Error(
           "По поступившему замечанию необходимо назначить заслушивание",
         );
+      if (date <= c.decisionProjectRouting.commentsDeadline)
+        throw new Error(
+          `Срок для замечаний действует до ${c.decisionProjectRouting.commentsDeadline}`,
+        );
       const reason = text("reason", "Причина перехода");
       c.hearing = { skip: true, reason };
       c.status = "decided";
