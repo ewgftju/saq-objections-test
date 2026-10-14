@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Action, ObjectionCase, Role } from "../../../types";
 import { Button, Modal, Notice } from "../../../components/ui";
-import { actionForm } from "../formDefinitions";
+import { actionForm, requiresConclusion } from "../formDefinitions";
 import type { FormField, FormValues } from "../formDefinitions";
 import { disputed, normalizeVoteChoice } from "../services/decisions";
 import { DocumentContent } from "./DocumentModal";
@@ -743,7 +743,7 @@ export default function ActionModal({
               )}
             </label>
           </>
-        ) : action === "deliver" && c.type === "notice" ? (
+        ) : action === "deliver" && requiresConclusion(c) ? (
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
             <div className="form-grid">
