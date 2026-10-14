@@ -7,6 +7,7 @@ import { ROLES } from "../../data/constants";
 import { COMMISSION_ATTENDANCE_MEMBERS } from "../../data/objections";
 import type {
   Action,
+  CaseRecommendation,
   CaseDocument,
   CommissionAttendancePoll,
   CommissionMeeting,
@@ -51,6 +52,23 @@ type DialogState =
   | { type: "meeting" }
   | { type: "new" | "clock" | "reset" | "upload" }
   | null;
+
+function recommendationRecipientRole(
+  recommendation: CaseRecommendation,
+) {
+  if (recommendation.recipientRole) return recommendation.recipientRole;
+  const recipientRoles = {
+    ДВГА: "dvga",
+    "Кабинет ДВГА": "dvga",
+    КВГА: "kvga",
+    "Кабинет КВГА": "kvga",
+    Объект: "subject",
+    "Кабинет Объекта": "subject",
+    "Вышестоящий орган": "higher",
+    "Кабинет вышестоящего органа": "higher",
+  } as const;
+  return recipientRoles[recommendation.recipient as keyof typeof recipientRoles];
+}
 
 function participantsFromPoll(poll: CommissionAttendancePoll) {
   const chairId = presidingChairId(
@@ -1216,7 +1234,7 @@ export default function ObjectionsModule() {
     if (!recommendation) throw new Error("Рекомендация не найдена");
     if (
       model.role !== "demo-superuser" &&
-      recommendation.recipientRole !== model.role
+      recommendationRecipientRole(recommendation) !== model.role
     )
       throw new Error("Ответ может направить только адресат рекомендации");
     if (recommendation.channel === "external")
