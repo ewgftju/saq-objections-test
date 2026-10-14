@@ -130,13 +130,18 @@ const WORK_EXECUTOR_OPTIONS = [
   ["Эксперт ДАВГА", "Эксперт ДАВГА"],
 ] as const satisfies FormField["options"];
 
-function requiresConclusion(c: ObjectionCase) {
+export function requiresConclusion(c: ObjectionCase) {
   const appealType = (c.appealType || "").trim();
   return (
     appealType === "Возражение на уведомление" ||
     appealType === "Возражение на уведомления" ||
     (!appealType && c.type === "notice")
   );
+}
+
+function requiresMotivatedResponse(c: ObjectionCase) {
+  const appealType = (c.appealType || "").trim();
+  return appealType.startsWith("Жалоба") || appealType === "Заявление";
 }
 
 export function actionForm(
@@ -593,8 +598,7 @@ export function actionForm(
       title =
         action === "create-decision-project"
           ? "Сформировать проект решения"
-          : (c.appealType || "").trim().startsWith("Жалоба") ||
-              (c.appealType || "").trim() === "Заявление"
+          : requiresMotivatedResponse(c)
             ? "Сформировать мотивированный ответ"
             : "Сформировать окончательный ответ";
       if (action === "deliver")
@@ -613,7 +617,9 @@ export function actionForm(
           ? "Проект решения формируется по той же печатной форме, что и окончательный ответ. После сохранения он будет направлен на согласование и подписание."
           : c.type === "control"
             ? "Статья 100 АППК: письменный результат заявителю и копия органу. Вручение фиксируется отдельно после направления."
-            : "Оформление — 2 рабочих дня с решения; публикация закупочного решения — 1 рабочий день после направления. Для уведомления формируется заключение по структуре приложения 7. Вручение фиксируется отдельно.";
+            : requiresConclusion(c)
+              ? "Оформление — 2 рабочих дня с решения; публикация закупочного решения — 1 рабочий день после направления. Для уведомления формируется заключение по структуре приложения 7. Вручение фиксируется отдельно."
+            : "Оформление — 2 рабочих дня с решения; публикация закупочного решения — 1 рабочий день после направления. После формирования мотивированный ответ направляется на согласование и подписание.";
       break;
     case "send-decision-project-eotinish":
       title = "Назначить заслушивание";
@@ -879,6 +885,8 @@ export function actionForm(
               : action === "deliver"
                 ? requiresConclusion(c)
                   ? "Вложить заключение"
+                : requiresMotivatedResponse(c)
+                  ? "Сформировать мотивированный ответ"
                   : "Сформировать окончательный ответ"
                 : action === "close-review"
                   ? "Завершить рассмотрение"
