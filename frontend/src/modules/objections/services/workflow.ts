@@ -5,6 +5,7 @@ import type {
   Action,
   ActionOption,
   CaseRequest,
+  DecisionProjectRecipient,
   DemoState,
   ObjectionCase,
   Outcome,
@@ -50,6 +51,26 @@ function isDvgaOrKvgaRequest(recipient: string) {
 
 function authorityRole(recipient: string): Role {
   return isKvgaRequest(recipient) ? "kvga" : "dvga";
+}
+
+function defaultDecisionProjectRecipients(c: ObjectionCase): DecisionProjectRecipient[] {
+  const subjectChannel = cameThroughSaq(c) ? "saq" : "external";
+  return [
+    {
+      id: "subject",
+      recipient: c.org || "Заявитель",
+      recipientRole: "subject",
+      purpose: "comments",
+      channel: subjectChannel,
+      status: "pending",
+    },
+  ];
+}
+
+function decisionProjectRecipients(c: ObjectionCase) {
+  return c.decisionProjectRecipients?.length
+    ? c.decisionProjectRecipients
+    : defaultDecisionProjectRecipients(c);
 }
 
 function isActiveRequest(request: CaseRequest) {
@@ -489,7 +510,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   if (
     c.status === "decision_project_comments" &&
     c.decisionProjectRouting &&
-    cameThroughSaq(c)
+    c.decisionProjectRouting.channel === "saq"
   )
     options.push({
       action: "submit-decision-project-comment",
@@ -499,7 +520,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   if (
     c.status === "decision_project_comments" &&
     c.decisionProjectRouting &&
-    !cameThroughSaq(c)
+    c.decisionProjectRouting.channel === "external"
   )
     options.push({
       action: "record-external-decision-project-comment",
@@ -1721,6 +1742,14 @@ export function applyAction(
       break;
     }
     case "create-decision-project": {
+      const defaultChannel = cameThroughSaq(c) ? "saq" : "external";
+      const subjectChannel =
+        String(form.get("projectSubjectChannel") || "") === "external"
+          ? "external"
+          : String(form.get("projectSubjectChannel") || "") === "saq"
+            ? "saq"
+            : defaultChannel;
+      const authorityChannel = String(form.get("projectAuthorityChannel") || "");
       c.decisionProject = {
         date,
         // Для проекта решения исходящий номер не оформляется: его укажут
@@ -1731,6 +1760,31 @@ export function applyAction(
         appealCourt: String(form.get("appealCourt") || ""),
         appealProcedure: String(form.get("appealProcedure") || ""),
       };
+      c.decisionProjectRecipients = [
+        {
+          id: "subject",
+          recipient: c.org || "Заявитель",
+          recipientRole: "subject",
+          purpose: "comments",
+          channel: subjectChannel,
+          status: "pending",
+        },
+        {
+          id: "authority",
+          recipient: c.issuer || "КВГА/ДВГА",
+          recipientRole: authorityRole(c.issuer || "ДВГА"),
+          purpose: "copy",
+          channel:
+            authorityChannel === "none"
+              ? "none"
+              : authorityChannel === "external"
+                ? "external"
+                : authorityChannel === "saq"
+                  ? "saq"
+                  : defaultChannel,
+          status: authorityChannel === "none" ? "not_sent" : "pending",
+        },
+      ];
       disputed(c).forEach((point) => {
         point.finalDecisionByMajority =
           form.get(`finalResponseMajority_${point.id}`) === "on";
@@ -1755,71 +1809,104 @@ export function applyAction(
     case "sign-decision-project":
       if (!c.decisionProject)
         throw new Error("Проект решения ещё не сформирован");
-      if (cameThroughSaq(c)) {
-        c.decisionProjectRouting = {
-          channel: "saq",
-          sentAt: date,
-          receivedAt: date,
-          commentsDeadline: addWorkdays(date, 2),
-        };
-        c.status = "decision_project_comments";
-        next.notifications.push({
-          id: `decision-project-subject-${c.id}-${next.notifications.length + 1}`,
-          caseId: c.id,
-          recipient: ROLES.subject,
-          recipientRole: "subject",
-          date,
-          read: false,
-          text: `В кабинет направлен проект решения по обращению №${c.appealNumber || c.id}. Замечания можно направить до ${c.decisionProjectRouting.commentsDeadline}.`,
+      const recipients: DecisionProjectRecipient[] = decisionProjectRecipients(c).map((recipient) => ({
+        ...recipient,
+        status:
+          recipient.channel === "saq"
+            ? "sent"
+            : recipient.channel === "none"
+              ? "not_sent"
+              : "pending",
+        sentAt: recipient.channel === "saq" ? date : undefined,
+      }));
+      const subjectRecipient = recipients.find(
+        (recipient) => recipient.purpose === "comments",
+      );
+      c.decisionProjectRouting = {
+        recipients,
+        ...(subjectRecipient?.channel === "saq"
+          ? {
+              channel: "saq" as const,
+              sentAt: date,
+              receivedAt: date,
+              commentsDeadline: addWorkdays(date, 2),
+            }
+          : {}),
+      };
+      recipients
+        .filter((recipient) => recipient.channel === "saq" && recipient.recipientRole)
+        .forEach((recipient) => {
+          next.notifications.push({
+            id: `decision-project-${recipient.id}-${c.id}-${next.notifications.length + 1}`,
+            caseId: c.id,
+            recipient: recipient.recipient,
+            recipientRole: recipient.recipientRole,
+            date,
+            read: false,
+            text:
+              recipient.purpose === "comments"
+                ? `В кабинет направлен проект решения по обращению №${c.appealNumber || c.id}. Замечания можно направить до ${c.decisionProjectRouting?.commentsDeadline}.`
+                : `В ваш кабинет направлена копия проекта решения по обращению №${c.appealNumber || c.id}.`,
+          });
         });
-        next.notifications.push({
-          id: `decision-project-work-${c.id}-${next.notifications.length + 1}`,
-          caseId: c.id,
-          recipient: ROLES.work,
-          recipientRole: "work",
-          date,
-          read: false,
-          text: `Проект решения по обращению №${c.appealNumber || c.id} успешно направлен в кабинет заявителя SAQ.`,
-        });
-        title = "Проект решения подписан и направлен в кабинет заявителя";
-        note = `Проект решения автоматически направлен в кабинет заявителя SAQ. Срок для замечаний — до ${c.decisionProjectRouting.commentsDeadline}.`;
-      } else {
+      const pendingExternal = recipients.filter(
+        (recipient) => recipient.channel === "external" && recipient.status === "pending",
+      );
+      if (pendingExternal.length) {
         c.status = "decision_project_delivery";
         title = "Проект решения подписан";
-        note =
-          "Зафиксируйте направление проекта решения через внешнюю систему.";
+        note = `Автоматически направлено: ${recipients.filter((recipient) => recipient.channel === "saq").length}. Зафиксируйте внешнее направление: ${pendingExternal.map((recipient) => recipient.recipient).join(", ")}.`;
+      } else {
+        c.status = "decision_project_comments";
+        title = "Проект решения подписан и направлен";
+        note = `Проект решения автоматически направлен в кабинет SAQ. Срок для замечаний — до ${c.decisionProjectRouting?.commentsDeadline}.`;
       }
       doc("Подписанный проект решения", "decision-project", note);
       break;
     case "record-decision-project-delivery": {
       if (!c.decisionProject)
         throw new Error("Проект решения ещё не сформирован");
-      if (cameThroughSaq(c))
-        throw new Error(
-          "Для обращения из SAQ проект решения направляется автоматически",
-        );
+      c.decisionProjectRouting ??= { recipients: defaultDecisionProjectRecipients(c) };
+      const recipientId = text("projectRecipientId", "Адресат") as DecisionProjectRecipient["id"];
+      const recipient = c.decisionProjectRouting.recipients.find(
+        (item) => item.id === recipientId && item.channel === "external" && item.status === "pending",
+      );
+      if (!recipient) throw new Error("Выберите адресата с внешним способом направления");
       const sentAt = text("projectSentDate", "Дата отправки");
       dateObject(sentAt);
       const deliveryPath = text("projectDeliveryPath", "Способ отправки");
-      c.decisionProjectRouting = {
-        channel: "external",
-        sentAt,
-        receivedAt: sentAt,
-        commentsDeadline: addWorkdays(sentAt, 2),
-        deliveryPath,
-        registrationNumber:
-          String(form.get("projectRegistrationNumber") || "").trim() ||
-          undefined,
-      };
-      c.status = "decision_project_comments";
+      recipient.status = "sent";
+      recipient.sentAt = sentAt;
+      recipient.deliveryPath = deliveryPath;
+      recipient.registrationNumber =
+        String(form.get("projectRegistrationNumber") || "").trim() || undefined;
+      if (recipient.purpose === "comments") {
+        c.decisionProjectRouting.channel = "external";
+        c.decisionProjectRouting.sentAt = sentAt;
+        c.decisionProjectRouting.receivedAt = sentAt;
+        c.decisionProjectRouting.commentsDeadline = addWorkdays(sentAt, 2);
+        c.decisionProjectRouting.deliveryPath = deliveryPath;
+        c.decisionProjectRouting.registrationNumber = recipient.registrationNumber;
+      }
+      const pendingExternal = c.decisionProjectRouting.recipients.filter(
+        (item) => item.channel === "external" && item.status === "pending",
+      );
+      c.status = pendingExternal.length
+        ? "decision_project_delivery"
+        : "decision_project_comments";
       title = "Направление проекта решения зафиксировано";
-      note = `Проект решения направлен ${sentAt} через ${deliveryPath}. Срок для замечаний — до ${c.decisionProjectRouting.commentsDeadline}.`;
+      note = recipient.purpose === "comments"
+        ? `Проект решения направлен заявителю ${sentAt} через ${deliveryPath}. Срок для замечаний — до ${c.decisionProjectRouting.commentsDeadline}.`
+        : `Копия проекта решения направлена ${recipient.recipient} ${sentAt} через ${deliveryPath}.`;
       break;
     }
     case "submit-decision-project-comment": {
-      if (!cameThroughSaq(c) || !c.decisionProjectRouting)
+      if (c.decisionProjectRouting?.channel !== "saq")
         throw new Error("Замечание из кабинета SAQ недоступно");
-      if (date > c.decisionProjectRouting.commentsDeadline)
+      if (
+        c.decisionProjectRouting.commentsDeadline &&
+        date > c.decisionProjectRouting.commentsDeadline
+      )
         throw new Error(
           "Срок для направления замечаний к проекту решения истёк",
         );
@@ -1884,6 +1971,8 @@ export function applyAction(
         throw new Error(
           "По поступившему замечанию необходимо назначить заслушивание",
         );
+      if (!c.decisionProjectRouting.commentsDeadline)
+        throw new Error("Не зафиксировано направление проекта решения заявителю");
       if (date <= c.decisionProjectRouting.commentsDeadline)
         throw new Error(
           `Срок для замечаний действует до ${c.decisionProjectRouting.commentsDeadline}`,
