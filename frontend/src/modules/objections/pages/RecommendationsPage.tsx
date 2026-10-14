@@ -51,13 +51,19 @@ export default function RecommendationsPage({
                   <th>Результат</th>
                   <th>№ обращения</th>
                   <th>Статус</th>
-                  <th>Карточка</th>
                 </tr>
               </thead>
               <tbody>
                 {visibleRecommendations.map((recommendation, index) => (
                   <tr key={recommendation.id}>
-                    <td>{index + 1}</td>
+                    <td>
+                      <div className="recommendation-open-cell">
+                        <strong>{index + 1}</strong>
+                        <Button primary onClick={() => onOpenRecommendation(recommendation.id)}>
+                          Открыть
+                        </Button>
+                      </div>
+                    </td>
                     <td>{recommendation.recipient}</td>
                     <td>
                       {recommendation.channel === "external"
@@ -75,11 +81,6 @@ export default function RecommendationsPage({
                       <span className={`badge ${recommendationStatusTone(recommendation.status)}`}>
                         {recommendationStatusLabel(recommendation, role)}
                       </span>
-                    </td>
-                    <td>
-                      <Button primary onClick={() => onOpenRecommendation(recommendation.id)}>
-                        Открыть
-                      </Button>
                     </td>
                   </tr>
                 ))}
