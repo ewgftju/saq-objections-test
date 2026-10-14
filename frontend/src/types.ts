@@ -197,9 +197,15 @@ export interface CaseRecommendation {
   registrationNumber?: string;
   /** Дата поступления ответа адресата. */
   answeredAt?: string;
+  /** Реквизиты ответа, вручную зафиксированного по внешнему каналу. */
+  responseRegistrationNumber?: string;
+  responseReceivedAt?: string;
   /** Срок, установленный при возврате ответа на доработку. */
   revisionDueDate?: string;
   returnedAt?: string;
+  /** Реквизиты возврата, направленного через внешнюю систему. */
+  returnSentAt?: string;
+  returnRegistrationNumber?: string;
   executedAt?: string;
   /** Решение рабочего органа по поступившему ответу. */
   reviewDecision?: "accept" | "return";
