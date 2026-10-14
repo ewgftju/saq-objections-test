@@ -1,4 +1,4 @@
-import { Button, Notice, PageHeading } from "../../../components/ui";
+import { Notice, PageHeading } from "../../../components/ui";
 import type { CaseRecommendation, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import {
@@ -43,12 +43,11 @@ export default function RecommendationsPage({
             <table className="registry-table recommendations-registry-table">
               <thead>
                 <tr>
-                  <th>№</th>
+                  <th>№ рекомендации</th>
                   <th>Кому направлена</th>
                   <th>Способ направления</th>
                   <th>Дата направления</th>
                   <th>Срок исполнения</th>
-                  <th>Результат</th>
                   <th>№ обращения</th>
                   <th>Статус</th>
                 </tr>
@@ -58,10 +57,14 @@ export default function RecommendationsPage({
                   <tr key={recommendation.id}>
                     <td>
                       <div className="recommendation-open-cell">
-                        <strong>{index + 1}</strong>
-                        <Button primary onClick={() => onOpenRecommendation(recommendation.id)}>
-                          Открыть
-                        </Button>
+                        <strong>№ {index + 1}</strong>
+                        <button
+                          type="button"
+                          className="recommendation-open-link"
+                          onClick={() => onOpenRecommendation(recommendation.id)}
+                        >
+                          Открыть карточку <span>→</span>
+                        </button>
                       </div>
                     </td>
                     <td>{recommendation.recipient}</td>
@@ -75,7 +78,6 @@ export default function RecommendationsPage({
                     </td>
                     <td>{formatDate(recommendation.sentAt || recommendation.createdAt)}</td>
                     <td>{formatDate(recommendation.revisionDueDate || recommendation.dueDate)}</td>
-                    <td>{recommendation.executionResult || "—"}</td>
                     <td>{recommendation.caseReference}</td>
                     <td>
                       <span className={`badge ${recommendationStatusTone(recommendation.status)}`}>
