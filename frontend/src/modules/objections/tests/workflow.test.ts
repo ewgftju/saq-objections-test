@@ -3323,6 +3323,7 @@ test("жалоба из E-Otinish проходит проект решения �
   );
 
   h.run("create-decision-project", "work", {
+    projectSubjectChannel: "external",
     [`finalResponseMajority_${h.c.issues.find((point) => point.disputed)!.id}`]:
       "on",
   });
@@ -3331,7 +3332,16 @@ test("жалоба из E-Otinish проходит проект решения �
     createElement(DocumentContent, { c: h.c, kind: "decision-project" }),
   );
   assert.match(projectHtml, /решение удовлетворить большинством голосов\./);
-  h.run("approve-decision-project", "director");
+  assert.deepEqual(nextAction(h.c), {
+    action: "approve-decision-project",
+    label: "Согласовать проект решения",
+    role: "deputy",
+  });
+  assert.throws(
+    () => h.run("approve-decision-project", "director"),
+    /недоступно/,
+  );
+  h.run("approve-decision-project", "deputy");
   assert.equal(h.c.status, "decision_project_signed");
   h.run("sign-decision-project", "director");
   assert.equal(h.c.status, "decision_project_delivery");
@@ -3341,7 +3351,10 @@ test("жалоба из E-Otinish проходит проект решения �
     h.state.date,
     {},
   );
-  assert.equal(projectDeliveryForm.title, "Зафиксировать направление проекта решения");
+  assert.equal(
+    projectDeliveryForm.title,
+    "Зафиксировать направление проекта решения заявителю",
+  );
   h.run("record-decision-project-delivery", "work", {
     projectSentDate: "2026-09-11",
     projectDeliveryPath: "E-Otinish",
@@ -3534,7 +3547,7 @@ test("проект решения направляется только заяв
   h.run("create-decision-project", "work", {
     projectSubjectChannel: "external",
   });
-  h.run("approve-decision-project", "director");
+  h.run("approve-decision-project", "deputy");
   h.run("sign-decision-project", "director");
 
   assert.equal(h.c.status, "decision_project_delivery");
@@ -3567,7 +3580,7 @@ test("заявитель с БИН Объекта №2 получает прое
   h.run("create-decision-project", "work", {
     projectSubjectChannel: "saq",
   });
-  h.run("approve-decision-project", "director");
+  h.run("approve-decision-project", "deputy");
   h.run("sign-decision-project", "director");
 
   assert.equal(

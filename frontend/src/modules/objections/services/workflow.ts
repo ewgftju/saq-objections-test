@@ -493,7 +493,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     decision_project_approval: {
       action: "approve-decision-project",
       label: "Согласовать проект решения",
-      role: "director",
+      role: "deputy",
     },
     decision_project_signed: {
       action: "sign-decision-project",
