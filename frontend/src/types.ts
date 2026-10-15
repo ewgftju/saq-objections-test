@@ -244,7 +244,11 @@ export interface MotivatedResponseRecipient {
   identifier?: string;
   recipientRole?: Role;
   channel: "saq" | "external";
-  status: "pending" | "sent";
+  /**
+   * `not_tracked` применяется к объекту аудита без кабинета SAQ:
+   * направление через другую систему не требует отдельной фиксации РО.
+   */
+  status: "pending" | "sent" | "not_tracked";
   sentAt?: string;
   deliveryPath?: string;
   registrationNumber?: string;

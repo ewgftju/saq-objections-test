@@ -791,7 +791,7 @@ export function actionForm(
         ? "Подписать мотивированный ответ"
         : "Подписать ответ";
       note = requiresMotivatedResponse(c)
-        ? "После подписи ответ автоматически поступит в доступные кабинеты SAQ заявителя и объекта аудита. Для адресатов без кабинета SAQ рабочий орган зафиксирует направление через другую систему."
+        ? "После подписи ответ автоматически поступит в доступные кабинеты SAQ заявителя и объекта аудита. При внешнем направлении рабочий орган фиксирует отправку только заявителю."
         : "Подпишите согласованный окончательный ответ.";
       break;
     case "record-final-response-delivery": {
@@ -799,7 +799,9 @@ export function actionForm(
       const recipients = (c.motivatedResponseRouting?.recipients || [])
         .filter(
           (recipient) =>
-            recipient.channel === "external" && recipient.status === "pending",
+            recipient.id === "applicant" &&
+            recipient.channel === "external" &&
+            recipient.status === "pending",
         )
         .map(
           (recipient) =>
@@ -833,7 +835,7 @@ export function actionForm(
         },
       );
       note =
-        "Зафиксируйте направление отдельно по каждому адресату без кабинета SAQ и приложите файл-подтверждение отправки.";
+        "Зафиксируйте направление заявителю через другую систему и приложите файл-подтверждение отправки.";
       break;
     }
     case "send-recommendations":

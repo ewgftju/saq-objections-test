@@ -85,7 +85,8 @@ function decisionProjectRecipients(c: ObjectionCase) {
 /**
  * Мотивированный ответ направляется заявителю и, при наличии отдельного
  * БИН/ИИН, объекту аудита. Канал определяется не источником обращения, а
- * наличием соответствующего кабинета SAQ.
+ * наличием соответствующего кабинета SAQ. Ручная фиксация внешнего
+ * направления применяется только к заявителю.
  */
 function defaultMotivatedResponseRecipients(
   c: ObjectionCase,
@@ -2240,9 +2241,11 @@ export function applyAction(
         const recipients: MotivatedResponseRecipient[] = motivatedResponseRecipients(c).map(
           (recipient) => ({
             ...recipient,
-            status: (recipient.channel === "saq" ? "sent" : "pending") as
-              | "sent"
-              | "pending",
+            status: (recipient.channel === "saq"
+              ? "sent"
+              : recipient.id === "audit-object"
+                ? "not_tracked"
+                : "pending") as "sent" | "pending" | "not_tracked",
             sentAt: recipient.channel === "saq" ? date : undefined,
           }),
         );
@@ -2260,7 +2263,14 @@ export function applyAction(
         ];
         const pendingExternal = recipients.filter(
           (recipient) =>
-            recipient.channel === "external" && recipient.status === "pending",
+            recipient.id === "applicant" &&
+            recipient.channel === "external" &&
+            recipient.status === "pending",
+        );
+        const auditObjectWithoutTracking = recipients.some(
+          (recipient) =>
+            recipient.id === "audit-object" &&
+            recipient.status === "not_tracked",
         );
         c.status = pendingExternal.length
           ? "final_response_delivery"
@@ -2269,8 +2279,10 @@ export function applyAction(
           ? "Мотивированный ответ подписан"
           : "Мотивированный ответ подписан и направлен";
         note = pendingExternal.length
-          ? "Ответ автоматически направлен в доступные кабинеты SAQ. Зафиксируйте направление через другую систему для остальных адресатов."
-          : "Мотивированный ответ направлен в кабинеты SAQ адресатов.";
+          ? "Ответ автоматически направлен в доступные кабинеты SAQ. Зафиксируйте направление через другую систему для заявителя."
+          : auditObjectWithoutTracking
+            ? "Мотивированный ответ направлен в доступные кабинеты SAQ. Направление объекту аудита через другую систему не требует фиксации."
+            : "Мотивированный ответ направлен в кабинеты SAQ адресатов.";
         doc("Подписанный мотивированный ответ", "final-response", note);
         c.delivery.recipientRoles.forEach((recipientRole) => {
           const recipient = isSubjectRole(recipientRole)
@@ -2333,6 +2345,7 @@ export function applyAction(
       const recipientId = text("motivatedResponseRecipient", "Адресат");
       const recipient = routing.recipients.find(
         (item) =>
+          item.id === "applicant" &&
           item.id === recipientId &&
           item.channel === "external" &&
           item.status === "pending",
@@ -2360,7 +2373,10 @@ export function applyAction(
         ];
       }
       const remainingExternal = routing.recipients.some(
-        (item) => item.channel === "external" && item.status === "pending",
+        (item) =>
+          item.id === "applicant" &&
+          item.channel === "external" &&
+          item.status === "pending",
       );
       c.status = remainingExternal ? "final_response_delivery" : "completed";
       title = "Направление мотивированного ответа зафиксировано";

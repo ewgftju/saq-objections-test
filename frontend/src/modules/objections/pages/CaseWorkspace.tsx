@@ -1131,7 +1131,9 @@ export default function CaseWorkspace({
                                       <small>
                                         {recipient.status === "sent"
                                           ? `Направлен${recipient.sentAt ? ` · ${formatDate(recipient.sentAt)}` : ""}${recipient.deliveryPath ? ` · ${recipient.deliveryPath}` : ""}${recipient.registrationNumber ? ` · №${recipient.registrationNumber}` : ""}`
-                                          : "Ожидает фиксации направления"}
+                                          : recipient.status === "not_tracked"
+                                            ? "Направление через другую систему не требует фиксации"
+                                            : "Ожидает фиксации направления"}
                                       </small>
                                     </span>
                                   </div>
