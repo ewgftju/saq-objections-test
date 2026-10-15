@@ -669,9 +669,9 @@ export function actionForm(
           note =
             "Кабинет заявителя в SAQ не найден. После подписи зафиксируйте внешнее направление: дату, способ или систему, исходящий номер (ID) и файл-подтверждение.";
       }
-      if (action === "deliver")
+      if (action === "deliver" && !requiresMotivatedResponse(c))
         fields.push(input("number", "Исходящий номер", "ИСХ-" + c.id));
-      if (action === "deliver")
+      if (action === "deliver" && !requiresMotivatedResponse(c))
         fields.push(
           select("channel", "Канал доставки", [
             ["eotinish", "E-Otinish"],

@@ -34,6 +34,50 @@ function responseDocumentLabel(c: ObjectionCase) {
     : "Окончательный ответ";
 }
 
+function ResponseDocumentSection({
+  c,
+  onDocument,
+}: {
+  c: ObjectionCase;
+  onDocument: (kind: string, document?: CaseDocument) => void;
+}) {
+  const finalResponse = c.documents
+    .filter((document) => document.kind === "final-response")
+    .at(-1);
+  if (!finalResponse) return null;
+
+  return (
+    <section className="request-documents-section">
+      <h4>{responseDocumentLabel(c)}</h4>
+      <div className="request-documents-list">
+        <div className="request-document-row">
+          <span>{finalResponse.name}</span>
+          <div className="request-document-actions">
+            <Button onClick={() => onDocument(finalResponse.kind, finalResponse)}>
+              Просмотр
+            </Button>
+            <Button
+              onClick={() =>
+                downloadFile(
+                  `${c.id}-окончательный-ответ.doc`,
+                  wordDocumentHtml({
+                    c,
+                    kind: finalResponse.kind,
+                    document: finalResponse,
+                  }),
+                  "application/msword",
+                )
+              }
+            >
+              Скачать Word
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Fact({
   label,
   value,
@@ -988,6 +1032,7 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
+                      <ResponseDocumentSection c={c} onDocument={onDocument} />
                       {(() => {
                         const hearingProtocols = c.documents.filter(
                           (document) =>
@@ -1055,50 +1100,6 @@ export default function CaseWorkspace({
                           {c.hearing.note && <p>{c.hearing.note}</p>}
                         </Notice>
                       )}
-                      {(() => {
-                        const finalResponse = c.documents
-                          .filter(
-                            (document) => document.kind === "final-response",
-                          )
-                          .at(-1);
-                        return finalResponse ? (
-                          <section className="request-documents-section">
-                            <h4>{responseDocumentLabel(c)}</h4>
-                            <div className="request-documents-list">
-                              <div className="request-document-row">
-                                <span>{finalResponse.name}</span>
-                                <div className="request-document-actions">
-                                  <Button
-                                    onClick={() =>
-                                      onDocument(
-                                        finalResponse.kind,
-                                        finalResponse,
-                                      )
-                                    }
-                                  >
-                                    Просмотр
-                                  </Button>
-                                  <Button
-                                    onClick={() =>
-                                      downloadFile(
-                                        `${c.id}-окончательный-ответ.doc`,
-                                        wordDocumentHtml({
-                                          c,
-                                          kind: finalResponse.kind,
-                                          document: finalResponse,
-                                        }),
-                                        "application/msword",
-                                      )
-                                    }
-                                  >
-                                    Скачать Word
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          </section>
-                        ) : null;
-                      })()}
                       {(() => {
                         const routing = c.motivatedResponseRouting;
                         const confirmations = c.documents.filter(

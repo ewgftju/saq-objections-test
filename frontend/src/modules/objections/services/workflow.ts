@@ -2166,20 +2166,25 @@ export function applyAction(
         note = `Заключение по обращению вложено: №${registrationNumber} от ${formatDate(registrationDate)}.`;
         break;
       }
+      const isMotivatedResponse = requiresEotinishDecisionProject(c);
       c.delivery = {
         date,
-        number: text("number", "Исходящий номер"),
+        number: isMotivatedResponse
+          ? String(form.get("number") || "")
+          : text("number", "Исходящий номер"),
         // The receipt is no longer collected with the final response.
         // Preserve it only when replaying legacy form data.
         receipt: String(form.get("receipt") || "").trim(),
-        channel: text("channel", "Канал"),
+        channel: isMotivatedResponse
+          ? String(form.get("channel") || "")
+          : text("channel", "Канал"),
         // These requisites are no longer filled in the final-response form.
         // Keep optional legacy values so older saved actions continue to render.
         appealCourt: String(form.get("appealCourt") || ""),
         appealProcedure: String(form.get("appealProcedure") || ""),
         published: requiresConclusion(c) ? date : null,
       };
-      if (requiresEotinishDecisionProject(c)) {
+      if (isMotivatedResponse) {
         const defaultChannel = hasSubjectSaqCabinet(c) ? "saq" : "external";
         const requestedSubjectChannel = String(
           form.get("motivatedResponseApplicantChannel") || "",

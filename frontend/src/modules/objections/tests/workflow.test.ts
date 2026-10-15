@@ -3387,6 +3387,12 @@ test("жалоба из E-Otinish проходит проект решения �
 
 test("протокол заслушивания отображается среди материалов рассмотрения", () => {
   const h = harness(2);
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.documents.push({
+    name: "Подписанный мотивированный ответ",
+    kind: "final-response",
+    date: h.state.date,
+  });
   h.c.documents.push({
     name: "Протокол заслушивания.pdf",
     filename: "Протокол заслушивания.pdf",
@@ -3409,7 +3415,12 @@ test("протокол заслушивания отображается сре�
       onUpload() {},
     }),
   );
+  assert.match(html, /<h4>Мотивированный ответ<\/h4>/);
   assert.match(html, /<h4>Протокол заслушивания<\/h4>/);
+  assert.ok(
+    html.indexOf("<h4>Мотивированный ответ</h4>") <
+      html.indexOf("<h4>Протокол заслушивания</h4>"),
+  );
   assert.match(html, /Протокол заслушивания\.pdf/);
 });
 
@@ -3749,8 +3760,6 @@ test("мотивированный ответ сохраняет выбранн�
   h.c.status = "decided";
 
   h.run("deliver", "work", {
-    number: "ИСХ-25",
-    channel: "eotinish",
     motivatedResponseApplicantChannel: "external",
   });
   assert.equal(
@@ -3795,8 +3804,6 @@ test("при отсутствии кабинета SAQ мотивированн�
   );
 
   h.run("deliver", "work", {
-    number: "ИСХ-26",
-    channel: "eotinish",
     motivatedResponseApplicantChannel: "saq",
   });
   assert.equal(
@@ -3823,8 +3830,8 @@ test("в форме мотивированного ответа по жалоб�
     }),
   );
 
-  assert.match(html, /Исходящий номер/);
-  assert.match(html, /Канал доставки/);
+  assert.doesNotMatch(html, /Исходящий номер/);
+  assert.doesNotMatch(html, /Канал доставки/);
   assert.doesNotMatch(html, /Документ заключения/);
   assert.doesNotMatch(html, /Для уведомления формируется заключение/);
 });
