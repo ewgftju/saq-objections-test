@@ -82,6 +82,69 @@ function ResponseDocumentSection({
   );
 }
 
+function MotivatedResponseRoutingSection({
+  c,
+  onDocument,
+}: {
+  c: ObjectionCase;
+  onDocument: (kind: string, document?: CaseDocument) => void;
+}) {
+  const recipients = (c.motivatedResponseRouting?.recipients || []).filter(
+    (recipient) => recipient.status !== "not_tracked",
+  );
+  const confirmations = c.documents.filter(
+    (document) => document.kind === "motivated-response-delivery-attachment",
+  );
+  if (!recipients.length && !confirmations.length) return null;
+
+  return (
+    <section className="request-documents-section">
+      <h4>Направление мотивированного ответа</h4>
+      {recipients.length > 0 && (
+        <div className="request-documents-list">
+          {recipients.map((recipient) => (
+            <div className="request-document-row" key={recipient.id}>
+              <span>
+                {recipient.recipient}
+                <small>
+                  {recipient.status === "sent"
+                    ? `Направлен${recipient.sentAt ? ` · ${formatDate(recipient.sentAt)}` : ""}${recipient.deliveryPath ? ` · ${recipient.deliveryPath}` : ""}${recipient.registrationNumber ? ` · №${recipient.registrationNumber}` : ""}`
+                    : "Ожидает фиксации направления"}
+                </small>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {confirmations.length > 0 && (
+        <div className="request-documents-list">
+          {confirmations.map((document) => (
+            <div
+              className="request-document-row"
+              key={`${document.name}-${document.date}`}
+            >
+              <span>{document.name}</span>
+              {document.dataUrl ? (
+                <a
+                  className="button"
+                  href={document.dataUrl}
+                  download={document.filename || document.name}
+                >
+                  Скачать
+                </a>
+              ) : (
+                <Button onClick={() => onDocument(document.kind, document)}>
+                  Просмотр
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function HearingDetails({
   hearing,
 }: {
@@ -1068,6 +1131,10 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
+                      <MotivatedResponseRoutingSection
+                        c={c}
+                        onDocument={onDocument}
+                      />
                       <ResponseDocumentSection c={c} onDocument={onDocument} />
                       {(() => {
                         const hearingProtocols = c.documents.filter(
@@ -1108,70 +1175,6 @@ export default function CaseWorkspace({
                         ) : null;
                       })()}
                       {c.hearing && <HearingDetails hearing={c.hearing} />}
-                      {(() => {
-                        const routing = c.motivatedResponseRouting;
-                        const confirmations = c.documents.filter(
-                          (document) =>
-                            document.kind ===
-                            "motivated-response-delivery-attachment",
-                        );
-                        if (!routing && !confirmations.length) return null;
-                        return (
-                          <section className="request-documents-section">
-                            <h4>Направление мотивированного ответа</h4>
-                            {routing && (
-                              <div className="request-documents-list">
-                                {routing.recipients.map((recipient) => (
-                                  <div
-                                    className="request-document-row"
-                                    key={recipient.id}
-                                  >
-                                    <span>
-                                      {recipient.recipient}
-                                      <small>
-                                        {recipient.status === "sent"
-                                          ? `Направлен${recipient.sentAt ? ` · ${formatDate(recipient.sentAt)}` : ""}${recipient.deliveryPath ? ` · ${recipient.deliveryPath}` : ""}${recipient.registrationNumber ? ` · №${recipient.registrationNumber}` : ""}`
-                                          : recipient.status === "not_tracked"
-                                            ? "Направление через другую систему не требует фиксации"
-                                            : "Ожидает фиксации направления"}
-                                      </small>
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {confirmations.length > 0 && (
-                              <div className="request-documents-list">
-                                {confirmations.map((document) => (
-                                  <div
-                                    className="request-document-row"
-                                    key={`${document.name}-${document.date}`}
-                                  >
-                                    <span>{document.name}</span>
-                                    {document.dataUrl ? (
-                                      <a
-                                        className="button"
-                                        href={document.dataUrl}
-                                        download={document.filename || document.name}
-                                      >
-                                        Скачать
-                                      </a>
-                                    ) : (
-                                      <Button
-                                        onClick={() =>
-                                          onDocument(document.kind, document)
-                                        }
-                                      >
-                                        Просмотр
-                                      </Button>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </section>
-                        );
-                      })()}
                       {(() => {
                         const recommendations = c.documents.filter((document) =>
                           [

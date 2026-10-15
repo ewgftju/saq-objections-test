@@ -3406,6 +3406,23 @@ test("протокол заслушивания отображается сре�
     kind: "final-response",
     date: h.state.date,
   });
+  h.c.motivatedResponseRouting = {
+    recipients: [
+      {
+        id: "applicant",
+        recipient: "Заявитель",
+        channel: "saq",
+        status: "sent",
+        sentAt: h.state.date,
+      },
+      {
+        id: "audit-object",
+        recipient: "Наименование объекта аудита *",
+        channel: "external",
+        status: "not_tracked",
+      },
+    ],
+  };
   h.c.documents.push({
     name: "Протокол заслушивания.pdf",
     filename: "Протокол заслушивания.pdf",
@@ -3428,11 +3445,21 @@ test("протокол заслушивания отображается сре�
       onUpload() {},
     }),
   );
+  assert.match(html, /<h4>Направление мотивированного ответа<\/h4>/);
   assert.match(html, /<h4>Мотивированный ответ<\/h4>/);
   assert.match(html, /<h4>Протокол заслушивания<\/h4>/);
   assert.ok(
+    html.indexOf("<h4>Направление мотивированного ответа</h4>") <
+      html.indexOf("<h4>Мотивированный ответ</h4>"),
+  );
+  assert.ok(
     html.indexOf("<h4>Мотивированный ответ</h4>") <
       html.indexOf("<h4>Протокол заслушивания</h4>"),
+  );
+  assert.doesNotMatch(html, /Наименование объекта аудита/);
+  assert.doesNotMatch(
+    html,
+    /Направление через другую систему не требует фиксации/,
   );
   assert.match(html, /Протокол заслушивания\.pdf/);
 });
