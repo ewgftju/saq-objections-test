@@ -3496,6 +3496,22 @@ test("проект решения по жалобе направляется в 
       (document) => document.kind === "decision-project-comment",
     ),
   );
+
+  h.run("send-decision-project-eotinish", "work", {
+    hearingDateTime: "2026-09-14T10:00",
+    hearingLocation: "г. Астана, онлайн",
+    hearingNoticeChannel: "E-Otinish",
+    hearingNoticeDate: "2026-09-11",
+  });
+  assert.equal(h.c.status, "decision_project_hearing");
+  assert.ok(
+    h.state.notifications.some(
+      (notification) =>
+        notification.caseId === h.c.id &&
+        notification.recipientRole === "subject" &&
+        /извещение о заслушивании/i.test(notification.text),
+    ),
+  );
 });
 
 test("проект решения направляется только заявителю и ждёт внешнюю фиксацию", () => {
