@@ -299,6 +299,10 @@ function SubjectRequestMaterials({
   const comment = c.documents
     .filter((document) => document.kind === "decision-project-comment")
     .at(-1);
+  const hearingNotice =
+    c.decisionProjectRouting?.channel === "saq"
+      ? c.documents.filter((document) => document.kind === "hearing").at(-1)
+      : undefined;
   const finalResponse = c.delivery?.recipientRoles?.includes(role)
     ? c.documents
         .filter((document) => document.kind === "final-response")
@@ -374,6 +378,12 @@ function SubjectRequestMaterials({
         <section className="request-documents-section">
           <h4>Замечание к проекту решения</h4>
           <div className="request-documents-list">{documentRow(comment)}</div>
+        </section>
+      )}
+      {hearingNotice && (
+        <section className="request-documents-section">
+          <h4>Извещение о заслушивании</h4>
+          <div className="request-documents-list">{documentRow(hearingNotice)}</div>
         </section>
       )}
       {finalResponse && (
@@ -1071,6 +1081,13 @@ export default function CaseWorkspace({
                             (document) => document.kind === "decision-project",
                           )
                           .at(-1);
+                        const projectComments = c.documents.filter(
+                          (document) =>
+                            [
+                              "decision-project-comment",
+                              "decision-project-comment-attachment",
+                            ].includes(document.kind),
+                        );
                         return decisionProject ? (
                           <section className="request-documents-section">
                             <h4>Проект решения</h4>
@@ -1106,6 +1123,38 @@ export default function CaseWorkspace({
                                 </div>
                               </div>
                             </div>
+                            {projectComments.length > 0 && (
+                              <>
+                                <strong>Замечание к проекту решения</strong>
+                                <div className="request-documents-list">
+                                  {projectComments.map((document) => (
+                                    <div
+                                      className="request-document-row"
+                                      key={`${document.kind}-${document.name}-${document.date}`}
+                                    >
+                                      <span>{document.name}</span>
+                                      {document.dataUrl ? (
+                                        <a
+                                          className="button"
+                                          href={document.dataUrl}
+                                          download={document.filename || document.name}
+                                        >
+                                          Скачать
+                                        </a>
+                                      ) : (
+                                        <Button
+                                          onClick={() =>
+                                            onDocument(document.kind, document)
+                                          }
+                                        >
+                                          Просмотр
+                                        </Button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </>
+                            )}
                           </section>
                         ) : null;
                       })()}
@@ -1149,45 +1198,6 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
-                      {c.decisionProjectRouting && (
-                        <Notice>
-                          <strong>Направление проекта решения</strong>
-                          <div className="table-scroll">
-                            <table className="data-table compact-table">
-                              <thead><tr><th>Адресат</th><th>Способ</th><th>Статус</th><th>Дата и реквизиты</th></tr></thead>
-                              <tbody>{(c.decisionProjectRouting.recipients?.length ? c.decisionProjectRouting.recipients : [{ id: "subject", recipient: c.org || "Заявитель", purpose: "comments", channel: c.decisionProjectRouting.channel || "external", status: c.decisionProjectRouting.sentAt ? "sent" : "pending", sentAt: c.decisionProjectRouting.sentAt, deliveryPath: c.decisionProjectRouting.deliveryPath, registrationNumber: c.decisionProjectRouting.registrationNumber }]).map((recipient) => (
-                                <tr key={recipient.id}><td>{recipient.recipient}{recipient.purpose === "copy" && <small>Копия</small>}</td><td>{recipient.channel === "saq" ? "Кабинет SAQ" : recipient.channel === "external" ? recipient.deliveryPath || "Другая система" : "Не направляется"}</td><td>{recipient.status === "sent" ? recipient.id === "subject" && recipient.channel === "saq" ? "Заявитель — направлено через SAQ" : "Направлен" : recipient.status === "not_sent" ? "Не направляется" : recipient.id === "subject" && recipient.channel === "external" ? "Заявитель — ожидается фиксация внешней отправки" : "Требуется фиксация"}</td><td>{recipient.sentAt ? formatDate(recipient.sentAt) : "—"}{recipient.registrationNumber ? ` · № ${recipient.registrationNumber}` : ""}</td></tr>
-                              ))}</tbody>
-                            </table>
-                          </div>
-                          {c.decisionProjectRouting.commentsDeadline && <p>Срок для замечаний заявителя: {formatDate(c.decisionProjectRouting.commentsDeadline)}</p>}
-                          {c.decisionProjectRouting.commentReceivedAt ? (
-                            <>
-                              <p>
-                                Замечание поступило{" "}
-                                {formatDate(
-                                  c.decisionProjectRouting.commentReceivedAt,
-                                )}
-                                {c.decisionProjectRouting.commentChannel
-                                  ? ` · ${c.decisionProjectRouting.commentChannel}`
-                                  : ""}
-                              </p>
-                              {c.decisionProjectRouting
-                                .commentRegistrationNumber && (
-                                <p>
-                                  Регистрационный номер замечания:{" "}
-                                  {
-                                    c.decisionProjectRouting
-                                      .commentRegistrationNumber
-                                  }
-                                </p>
-                              )}
-                            </>
-                          ) : (
-                            <p>Замечание к проекту решения не поступило.</p>
-                          )}
-                        </Notice>
-                      )}
                       {(() => {
                         const protocol = c.documents
                           .filter((document) => document.kind === "protocol")
