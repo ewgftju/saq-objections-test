@@ -231,12 +231,12 @@ export interface Delivery {
   recipientRoles?: Role[];
 }
 
-/** Адресат подписанного проекта решения и состояние его доставки. */
+/** Заявитель — адресат подписанного проекта решения и состояние его доставки. */
 export interface DecisionProjectRecipient {
   id: "subject" | "authority";
   recipient: string;
   recipientRole?: Role;
-  /** Заявитель представляет замечания; орган аудита получает копию. */
+  /** Проект решения направляется заявителю для представления замечаний. */
   purpose: "comments" | "copy";
   channel: "saq" | "external" | "none";
   status: "pending" | "sent" | "not_sent";
@@ -531,7 +531,7 @@ export interface ObjectionCase {
   /** Реквизиты регистрации заключения по возражению на уведомление. */
   conclusionRegistration?: { date: string; number: string };
   decisionProject?: Delivery | null;
-  /** Выбранные при создании проекта решения адресаты и способы направления. */
+  /** Выбранный при создании проекта решения способ направления заявителю. */
   decisionProjectRecipients?: DecisionProjectRecipient[];
   /** Реквизиты направления проекта решения и замечаний заявителя. */
   decisionProjectRouting?: DecisionProjectRouting | null;
