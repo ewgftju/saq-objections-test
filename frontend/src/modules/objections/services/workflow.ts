@@ -2002,7 +2002,7 @@ export function applyAction(
       title = "Заслушивание назначено";
       note = `Дата и время: ${hearingDateTime}. Место или формат: ${hearingLocation}. Уведомление направлено ${hearingNoticeDate} через ${c.hearing.noticeChannel}.`;
       doc("Извещение о назначении заслушивания", "hearing", note);
-      if (c.hearing.noticeChannel === "saq")
+      if (c.decisionProjectRouting?.channel === "saq")
         next.notifications.push({
           id: `hearing-notice-${c.id}-${next.notifications.length + 1}`,
           caseId: c.id,
