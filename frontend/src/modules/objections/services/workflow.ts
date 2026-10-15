@@ -27,7 +27,12 @@ import {
   presidingChairId,
   remainingIssues,
 } from "./decisions";
-import { hasSubjectSaqCabinet } from "./saqCabinets";
+import {
+  hasSubjectSaqCabinet,
+  isSubjectRole,
+  subjectCabinetName,
+  subjectRoleForCase,
+} from "./saqCabinets";
 
 export const controlDecisions = [
   ["cancel", "Отменить административный акт"],
@@ -60,7 +65,7 @@ function defaultDecisionProjectRecipients(c: ObjectionCase): DecisionProjectReci
     {
       id: "subject",
       recipient: c.org || "Заявитель",
-      recipientRole: "subject",
+      recipientRole: subjectRoleForCase(c),
       purpose: "comments",
       channel: subjectChannel,
       status: "pending",
@@ -492,7 +497,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
 
 export function additionalActions(c: ObjectionCase): ActionOption[] {
   const options: ActionOption[] = [
-    { action: "upload", label: "Добавить материал", role: "subject" },
+    { action: "upload", label: "Добавить материал", role: subjectRoleForCase(c) },
   ];
   if (
     c.requests.some(
@@ -506,7 +511,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
     options.push({
       action: "subject-response",
       label: "Направить ответ",
-      role: "subject",
+      role: subjectRoleForCase(c),
     });
   if (
     c.status === "decision_project_comments" &&
@@ -516,7 +521,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
     options.push({
       action: "submit-decision-project-comment",
       label: "Направить замечание к проекту решения",
-      role: "subject",
+      role: subjectRoleForCase(c),
     });
   if (
     c.status === "decision_project_comments" &&
@@ -626,13 +631,13 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
     options.push({
       action: "court",
       label: "Судебное обжалование",
-      role: "subject",
+      role: subjectRoleForCase(c),
     });
     if (!c.delivery?.received)
       options.push({
         action: "receipt",
         label: "Подтвердить получение результата",
-        role: "subject",
+        role: subjectRoleForCase(c),
       });
   }
   return options;
@@ -808,7 +813,7 @@ export function applyAction(
       const saqRecipient = text("saqRecipient", "Получатель SAQ") as Role;
       if (saqRecipient !== "subject")
         throw new Error("Выберите получателя с кабинетом SAQ");
-      const recipient = "Кабинет Объекта SAQ";
+      const recipient = `Кабинет ${subjectCabinetName(c)} SAQ`;
       const customText = text("customRequestText", "Текст запроса");
       const deadline = `${addWorkdays(date, 2)}T18:00`;
       const requestId = `request-${c.requests.length + 1}`;
@@ -971,7 +976,7 @@ export function applyAction(
           id: `notification-${c.id}-${next.notifications.length + 1}`,
           caseId: c.id,
           recipient: c.org,
-          recipientRole: "subject",
+          recipientRole: subjectRoleForCase(c),
           date,
           read: false,
           text: `В ваш кабинет направлен запрос по обращению №${c.appealNumber || c.id} для предоставления необходимых материалов.`,
@@ -1362,7 +1367,10 @@ export function applyAction(
       break;
     }
     case "subject-response": {
-      if (role !== "subject" && role !== "demo-superuser")
+      if (
+        (role !== "demo-superuser" && !isSubjectRole(role)) ||
+        (role !== "demo-superuser" && role !== subjectRoleForCase(c))
+      )
         throw new Error("Ответ может направить только Объект");
       const request = c.requests.find(
         (item) =>
@@ -1768,7 +1776,7 @@ export function applyAction(
         {
           id: "subject",
           recipient: c.org || "Заявитель",
-          recipientRole: "subject",
+          recipientRole: subjectRoleForCase(c),
           purpose: "comments",
           channel: subjectChannel,
           status: "pending",
@@ -1998,8 +2006,8 @@ export function applyAction(
         next.notifications.push({
           id: `hearing-notice-${c.id}-${next.notifications.length + 1}`,
           caseId: c.id,
-          recipient: ROLES.subject,
-          recipientRole: "subject",
+          recipient: ROLES[subjectRoleForCase(c)],
+          recipientRole: subjectRoleForCase(c),
           date,
           read: false,
           text: `В кабинет направлено извещение о заслушивании по обращению №${c.appealNumber || c.id}: ${hearingDateTime}.`,
@@ -2141,7 +2149,7 @@ export function applyAction(
         throw new Error("Окончательный ответ ещё не сформирован");
       // Дата направления фиксируется в момент подписи и отправки ответа.
       c.delivery.date = date;
-      c.delivery.recipientRoles = [authorityRole(c.issuer), "subject"];
+      c.delivery.recipientRoles = [authorityRole(c.issuer), subjectRoleForCase(c)];
       c.status = "completed";
       title = "Окончательный ответ подписан";
       note =
@@ -2149,7 +2157,7 @@ export function applyAction(
       doc("Подписанный окончательный ответ", "final-response", note);
       c.delivery.recipientRoles.forEach((recipientRole) => {
         const recipient =
-          recipientRole === "subject"
+          isSubjectRole(recipientRole)
             ? c.org
             : recipientRole === "kvga"
               ? "КВГА"
