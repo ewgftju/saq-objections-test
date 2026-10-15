@@ -3570,6 +3570,71 @@ test("проект решения направляется только заяв
   );
 });
 
+test("заявитель с кабинетом SAQ получает извещение о заслушивании при внешнем направлении проекта", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.status = "decision_project_eotinish";
+  h.c.decisionProject = {
+    date: "2026-09-08",
+    number: "",
+    receipt: "",
+    channel: "",
+    appealCourt: "",
+    appealProcedure: "",
+  };
+  h.c.decisionProjectRouting = {
+    channel: "external",
+    recipients: [],
+    commentReceivedAt: "2026-09-09",
+  };
+
+  h.run("send-decision-project-eotinish", "work", {
+    hearingDateTime: "2026-09-14T10:00",
+    hearingLocation: "онлайн, Qosyl",
+    hearingNoticeChannel: "E-Otinish",
+    hearingNoticeDate: "2026-09-11",
+  });
+
+  assert.ok(
+    h.state.notifications.some(
+      (notification) =>
+        notification.caseId === h.c.id &&
+        notification.recipientRole === "subject" &&
+        /извещение о заслушивании/i.test(notification.text),
+    ),
+  );
+});
+
+test("заявитель с кабинетом SAQ видит блок заслушивания в материалах", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.status = "decision_project_hearing";
+  h.c.hearing = {
+    skip: false,
+    date: "2026-09-14T10:00",
+    location: "онлайн, Qosyl",
+    notice: "2026-09-11",
+    noticeChannel: "saq",
+  };
+
+  const html = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c: h.c,
+      tab: "review",
+      role: "subject",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  assert.match(html, /<strong>Заслушивание<\/strong>/);
+  assert.match(html, /Дата и время: 14\.09\.2026 10:00/);
+  assert.match(html, /Место или формат: онлайн, Qosyl/);
+  assert.match(html, /Уведомление направлено: 11\.09\.2026 · saq/);
+});
+
 test("заявитель с БИН Объекта №2 получает проект решения в свой кабинет", () => {
   const h = harness(2);
   h.c.bin = "001002003004";

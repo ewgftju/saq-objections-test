@@ -22,7 +22,11 @@ import {
   reviewDeadline,
 } from "../services/deadlines";
 import { applicantIdentifierType } from "../services/appealTemplates";
-import { isSubjectRole, subjectRoleForCase } from "../services/saqCabinets";
+import {
+  hasSubjectSaqCabinet,
+  isSubjectRole,
+  subjectRoleForCase,
+} from "../services/saqCabinets";
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
@@ -75,6 +79,33 @@ function ResponseDocumentSection({
         </div>
       </div>
     </section>
+  );
+}
+
+function HearingDetails({
+  hearing,
+}: {
+  hearing: NonNullable<ObjectionCase["hearing"]>;
+}) {
+  return (
+    <Notice>
+      <strong>Заслушивание</strong>
+      {hearing.skip ? (
+        <p>Не проводилось: {hearing.reason}</p>
+      ) : (
+        <>
+          <p>Дата и время: {formatDateTime(hearing.date)}</p>
+          <p>Место или формат: {hearing.location || "—"}</p>
+          <p>
+            Уведомление направлено: {formatDate(hearing.notice)}
+            {hearing.noticeChannel ? ` · ${hearing.noticeChannel}` : ""}
+          </p>
+        </>
+      )}
+      {hearing.subject && <p>Заявитель: {hearing.subject}</p>}
+      {hearing.issuer && <p>Орган: {hearing.issuer}</p>}
+      {hearing.note && <p>{hearing.note}</p>}
+    </Notice>
   );
 }
 
@@ -355,8 +386,12 @@ function SubjectRequestMaterials({
     .filter((document) => document.kind === "decision-project-comment")
     .at(-1)
     : undefined;
+  const hearing =
+    isApplicantCabinet && hasSubjectSaqCabinet(c) && !c.hearing?.skip
+      ? c.hearing
+      : undefined;
   const hearingNotice =
-    isApplicantCabinet && c.decisionProjectRouting?.channel === "saq"
+    isApplicantCabinet && hasSubjectSaqCabinet(c)
       ? c.documents.filter((document) => document.kind === "hearing").at(-1)
       : undefined;
   const finalResponse = c.delivery?.recipientRoles?.includes(role)
@@ -436,6 +471,7 @@ function SubjectRequestMaterials({
           <div className="request-documents-list">{documentRow(comment)}</div>
         </section>
       )}
+      {hearing && <HearingDetails hearing={hearing} />}
       {hearingNotice && (
         <section className="request-documents-section">
           <h4>Извещение о заслушивании</h4>
@@ -1071,35 +1107,7 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
-                      {c.hearing && (
-                        <Notice>
-                          <strong>Заслушивание</strong>
-                          {c.hearing.skip ? (
-                            <p>Не проводилось: {c.hearing.reason}</p>
-                          ) : (
-                            <>
-                              <p>
-                                Дата и время: {formatDateTime(c.hearing.date)}
-                              </p>
-                              <p>
-                                Место или формат: {c.hearing.location || "—"}
-                              </p>
-                              <p>
-                                Уведомление направлено: {" "}
-                                {formatDate(c.hearing.notice)}
-                                {c.hearing.noticeChannel
-                                  ? ` · ${c.hearing.noticeChannel}`
-                                  : ""}
-                              </p>
-                            </>
-                          )}
-                          {c.hearing.subject && (
-                            <p>Заявитель: {c.hearing.subject}</p>
-                          )}
-                          {c.hearing.issuer && <p>Орган: {c.hearing.issuer}</p>}
-                          {c.hearing.note && <p>{c.hearing.note}</p>}
-                        </Notice>
-                      )}
+                      {c.hearing && <HearingDetails hearing={c.hearing} />}
                       {(() => {
                         const routing = c.motivatedResponseRouting;
                         const confirmations = c.documents.filter(
