@@ -3498,15 +3498,14 @@ test("проект решения по жалобе направляется в 
   );
 });
 
-test("проект решения направляется адресатам разными способами и ждёт внешнюю фиксацию", () => {
+test("проект решения направляется только заявителю и ждёт внешнюю фиксацию", () => {
   const h = harness(2);
   h.c.appealType = "Жалоба на уведомление";
   h.c.channel = "SAQ";
   h.c.status = "decision_project";
 
   h.run("create-decision-project", "work", {
-    projectSubjectChannel: "saq",
-    projectAuthorityChannel: "external",
+    projectSubjectChannel: "external",
   });
   h.run("approve-decision-project", "director");
   h.run("sign-decision-project", "director");
@@ -3514,15 +3513,11 @@ test("проект решения направляется адресатам р
   assert.equal(h.c.status, "decision_project_delivery");
   assert.equal(
     h.c.decisionProjectRouting?.recipients.find((item) => item.id === "subject")?.status,
-    "sent",
-  );
-  assert.equal(
-    h.c.decisionProjectRouting?.recipients.find((item) => item.id === "authority")?.status,
     "pending",
   );
+  assert.equal(h.c.decisionProjectRouting?.recipients.length, 1);
 
   h.run("record-decision-project-delivery", "work", {
-    projectRecipientId: "authority",
     projectSentDate: h.state.date,
     projectDeliveryPath: "СЭД",
     projectRegistrationNumber: "ИСХ-25",
@@ -3530,7 +3525,7 @@ test("проект решения направляется адресатам р
 
   assert.equal(h.c.status, "decision_project_comments");
   assert.equal(
-    h.c.decisionProjectRouting?.recipients.find((item) => item.id === "authority")?.registrationNumber,
+    h.c.decisionProjectRouting?.recipients.find((item) => item.id === "subject")?.registrationNumber,
     "ИСХ-25",
   );
 });
@@ -3585,7 +3580,6 @@ test("проект решения не направляется в SAQ при о
   h.c.status = "decision_project";
   h.run("create-decision-project", "work", {
     projectSubjectChannel: "saq",
-    projectAuthorityChannel: "none",
   });
 
   assert.equal(
