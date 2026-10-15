@@ -230,27 +230,32 @@ export default function ObjectionsModule() {
       model.state.attendancePolls,
       model.state.meetings,
     )?.responses[activeCommissionMember.id] === "yes";
-  const subjectCanOpenCase = (item: ObjectionCase) =>
-    subjectRoleForCase(item) === model.role &&
-    (item.requests.some(
-      (request) =>
-        request.template === "other" &&
-        request.saqRecipient === "subject" &&
-        Boolean(request.sent) &&
-        !request.responded,
-    ) ||
-    Boolean(
-      item.decisionProjectRouting?.channel === "saq" &&
-        [
-          "decision_project_comments",
-          "decision_project_eotinish",
-          "decision_project_hearing",
-        ].includes(item.status),
-    ) ||
-    Boolean(
+  const subjectCanOpenCase = (item: ObjectionCase) => {
+    const isApplicantCabinet = subjectRoleForCase(item) === model.role;
+    const hasMotivatedResponse = Boolean(
       item.delivery?.recipientRoles?.includes(model.role) &&
         item.documents.some((document) => document.kind === "final-response"),
-    ));
+    );
+    return (
+      hasMotivatedResponse ||
+      (isApplicantCabinet &&
+        (item.requests.some(
+          (request) =>
+            request.template === "other" &&
+            request.saqRecipient === "subject" &&
+            Boolean(request.sent) &&
+            !request.responded,
+        ) ||
+          Boolean(
+            item.decisionProjectRouting?.channel === "saq" &&
+              [
+                "decision_project_comments",
+                "decision_project_eotinish",
+                "decision_project_hearing",
+              ].includes(item.status),
+          )))
+    );
+  };
   const close = () => {
     setDialog(null);
     setDialogError("");
@@ -959,6 +964,7 @@ export default function ObjectionsModule() {
         "subject-response",
         "send-recommendations",
         "record-decision-project-delivery",
+        "record-final-response-delivery",
         "submit-decision-project-comment",
         "record-external-decision-project-comment",
         "hearing-after-decision-project",
@@ -1001,6 +1007,8 @@ export default function ObjectionsModule() {
                 ? "recommendationFiles"
                 : action === "hearing-after-decision-project"
                   ? "hearingProtocolFiles"
+            : action === "record-final-response-delivery"
+              ? "finalResponseDeliveryFiles"
                   : "responseFiles",
       )
       .filter(
@@ -1015,6 +1023,8 @@ export default function ObjectionsModule() {
       throw new Error("Вложите хотя бы один файл ответа");
     if (action === "hearing-after-decision-project" && !files.length)
       throw new Error("Вложите протокол заслушивания");
+    if (action === "record-final-response-delivery" && !files.length)
+      throw new Error("Вложите файл-подтверждение отправки");
     if (
       action === "deliver" &&
       ["Возражение на уведомление", "Возражение на уведомления"].includes(
@@ -1115,6 +1125,8 @@ export default function ObjectionsModule() {
                       ? "hearing-protocol-attachment"
                       : action === "record-decision-project-delivery"
                         ? "decision-project-delivery-attachment"
+                      : action === "record-final-response-delivery"
+                        ? "motivated-response-delivery-attachment"
                         : [
                               "submit-decision-project-comment",
                               "record-external-decision-project-comment",
@@ -1137,6 +1149,8 @@ export default function ObjectionsModule() {
                       ? "Протокол заслушивания"
                       : action === "record-decision-project-delivery"
                         ? "Подтверждение направления проекта решения"
+                        : action === "record-final-response-delivery"
+                          ? "Подтверждение направления мотивированного ответа"
                         : [
                               "submit-decision-project-comment",
                               "record-external-decision-project-comment",
@@ -1170,6 +1184,8 @@ export default function ObjectionsModule() {
                     ? "Вложен протокол заслушивания"
                     : action === "record-decision-project-delivery"
                       ? "Вложено подтверждение направления проекта решения"
+                      : action === "record-final-response-delivery"
+                        ? "Вложено подтверждение направления мотивированного ответа"
                       : [
                             "submit-decision-project-comment",
                             "record-external-decision-project-comment",
@@ -1207,6 +1223,8 @@ export default function ObjectionsModule() {
                       ? attached.length
                         ? "Направление проекта решения и подтверждающий файл сохранены"
                         : "Направление проекта решения зафиксировано"
+                      : action === "record-final-response-delivery"
+                        ? "Направление мотивированного ответа и подтверждающий файл сохранены"
                       : [
                             "submit-decision-project-comment",
                             "record-external-decision-project-comment",
@@ -1910,6 +1928,7 @@ export default function ObjectionsModule() {
                   action === "record-external-response" ||
                   action === "send-decision-project-eotinish" ||
                   action === "record-decision-project-delivery" ||
+                  action === "record-final-response-delivery" ||
                   action === "submit-decision-project-comment" ||
                   action === "record-external-decision-project-comment" ||
                   action === "proceed-to-final-response" ||

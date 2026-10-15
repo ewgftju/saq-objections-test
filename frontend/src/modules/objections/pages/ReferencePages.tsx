@@ -27,6 +27,7 @@ const REVIEWED_CASE_STATUSES = new Set([
   "decided",
   "final_response_approval",
   "final_response_signed",
+  "final_response_delivery",
   "delivered",
   "completed",
   "refused",

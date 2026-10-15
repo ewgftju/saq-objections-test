@@ -562,6 +562,7 @@ export default function ActionModal({
         action === "create-decision-project" ||
         action === "send-decision-project-eotinish" ||
         action === "record-decision-project-delivery" ||
+        action === "record-final-response-delivery" ||
         action === "submit-decision-project-comment" ||
         action === "record-external-decision-project-comment" ||
         action === "hearing-after-decision-project"
@@ -872,6 +873,28 @@ export default function ActionModal({
                 accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
               />
               <small>Необязательное вложение до 2 МБ.</small>
+            </label>
+          </>
+        ) : action === "record-final-response-delivery" ? (
+          <>
+            {definition.note && <Notice>{definition.note}</Notice>}
+            <div className="form-grid">
+              {definition.fields.map((field) => (
+                <Field key={field.name} field={field} />
+              ))}
+            </div>
+            <label className="field request-attachments-field">
+              <span>
+                Файл-подтверждение отправки <span className="required">*</span>
+              </span>
+              <input
+                type="file"
+                name="finalResponseDeliveryFiles"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                multiple
+                required
+              />
+              <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
             </label>
           </>
         ) : action === "deliver" || action === "create-decision-project" ? (

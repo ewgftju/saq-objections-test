@@ -165,6 +165,7 @@ export function actionForm(
     action === "assign-work-executor" ||
     action === "send-decision-project-eotinish" ||
     action === "record-decision-project-delivery" ||
+    action === "record-final-response-delivery" ||
     action === "submit-decision-project-comment" ||
     action === "record-external-decision-project-comment" ||
     action === "proceed-to-final-response" ||
@@ -753,9 +754,55 @@ export function actionForm(
       note = "Проверьте окончательный ответ и согласуйте его для подписания.";
       break;
     case "sign-final-response":
-      title = "Подписать ответ";
-      note = "Подпишите согласованный окончательный ответ.";
+      title = requiresMotivatedResponse(c)
+        ? "Подписать мотивированный ответ"
+        : "Подписать ответ";
+      note = requiresMotivatedResponse(c)
+        ? "После подписи ответ автоматически поступит в доступные кабинеты SAQ заявителя и объекта аудита. Для адресатов без кабинета SAQ рабочий орган зафиксирует направление через другую систему."
+        : "Подпишите согласованный окончательный ответ.";
       break;
+    case "record-final-response-delivery": {
+      title = "Зафиксировать направление мотивированного ответа";
+      const recipients = (c.motivatedResponseRouting?.recipients || [])
+        .filter(
+          (recipient) =>
+            recipient.channel === "external" && recipient.status === "pending",
+        )
+        .map(
+          (recipient) =>
+            [
+              recipient.id,
+              `${recipient.recipient}${recipient.identifier ? ` (${recipient.identifier})` : ""}`,
+            ] as const,
+        );
+      fields.push(
+        select(
+          "motivatedResponseRecipient",
+          "Кому направлен мотивированный ответ",
+          recipients,
+        ),
+        input(
+          "motivatedResponseSentAt",
+          "Дата отправки",
+          date,
+          "date",
+        ),
+        select(
+          "motivatedResponseDeliveryPath",
+          "Способ / система направления",
+          EXTERNAL_REQUEST_PATH_OPTIONS,
+        ),
+        {
+          name: "motivatedResponseRegistrationNumber",
+          label: "Исходящий номер или ID отправки",
+          type: "text",
+          required: false,
+        },
+      );
+      note =
+        "Зафиксируйте направление отдельно по каждому адресату без кабинета SAQ и приложите файл-подтверждение отправки.";
+      break;
+    }
     case "send-recommendations":
       title = "Направить рекомендации";
       fields.push(

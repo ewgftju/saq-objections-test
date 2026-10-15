@@ -46,6 +46,7 @@ export type CaseStatus =
   | "decided"
   | "final_response_approval"
   | "final_response_signed"
+  | "final_response_delivery"
   | "delivered"
   | "completed"
   | "refused"
@@ -230,6 +231,27 @@ export interface Delivery {
   received?: string;
   /** Кабинеты, в которые направлен подписанный окончательный ответ. */
   recipientRoles?: Role[];
+}
+
+/**
+ * Направление мотивированного ответа по жалобе или заявлению. В отличие от
+ * итогового ответа по возражению, каждый адресат может иметь отдельный
+ * канал направления: кабинет SAQ либо внешняя система.
+ */
+export interface MotivatedResponseRecipient {
+  id: "applicant" | "audit-object";
+  recipient: string;
+  identifier?: string;
+  recipientRole?: Role;
+  channel: "saq" | "external";
+  status: "pending" | "sent";
+  sentAt?: string;
+  deliveryPath?: string;
+  registrationNumber?: string;
+}
+
+export interface MotivatedResponseRouting {
+  recipients: MotivatedResponseRecipient[];
 }
 
 /** Заявитель — адресат подписанного проекта решения и состояние его доставки. */
@@ -529,6 +551,8 @@ export interface ObjectionCase {
   votes?: Record<string, VoteResult> | null;
   result?: CaseResult | null;
   delivery?: Delivery | null;
+  /** Маршрут направления мотивированного ответа заявителю и объекту аудита. */
+  motivatedResponseRouting?: MotivatedResponseRouting | null;
   /** Реквизиты регистрации заключения по возражению на уведомление. */
   conclusionRegistration?: { date: string; number: string };
   decisionProject?: Delivery | null;
@@ -636,6 +660,7 @@ export type Action =
   | "close-review"
   | "approve-final-response"
   | "sign-final-response"
+  | "record-final-response-delivery"
   | "send-recommendations"
   | "forward"
   | "control-analysis"

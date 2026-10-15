@@ -73,6 +73,7 @@ const OBJECTION_STAGES: ProcessStage[] = [
       "decided",
       "final_response_approval",
       "final_response_signed",
+      "final_response_delivery",
       "decision_project",
       "decision_project_approval",
       "decision_project_signed",
@@ -374,7 +375,14 @@ function executionSubstep(status: CaseStatus) {
     ].includes(status)
   )
     return 2;
-  if (["decided", "final_response_approval", "final_response_signed"].includes(status))
+  if (
+    [
+      "decided",
+      "final_response_approval",
+      "final_response_signed",
+      "final_response_delivery",
+    ].includes(status)
+  )
     return 3;
   return null;
 }

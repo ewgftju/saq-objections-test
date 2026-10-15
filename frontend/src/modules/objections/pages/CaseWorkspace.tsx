@@ -22,10 +22,17 @@ import {
   reviewDeadline,
 } from "../services/deadlines";
 import { applicantIdentifierType } from "../services/appealTemplates";
-import { isSubjectRole } from "../services/saqCabinets";
+import { isSubjectRole, subjectRoleForCase } from "../services/saqCabinets";
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
+
+function responseDocumentLabel(c: ObjectionCase) {
+  return (c.appealType || "").trim().startsWith("Жалоба") ||
+    c.appealType === "Заявление"
+    ? "Мотивированный ответ"
+    : "Окончательный ответ";
+}
 
 function Fact({
   label,
@@ -258,7 +265,7 @@ function AuthorityRequestMaterials({
       })}
       {finalResponse && (
         <section className="request-documents-section">
-          <h4>Окончательный ответ</h4>
+          <h4>{responseDocumentLabel(c)}</h4>
           <div className="request-documents-list">
             <div className="request-document-row">
               <span>{finalResponse.name}</span>
@@ -284,23 +291,28 @@ function SubjectRequestMaterials({
   role: Role;
   onDocument: (kind: string, document?: CaseDocument) => void;
 }) {
-  const requests = c.requests.filter(
-    (request) =>
-      request.template === "other" &&
-      request.saqRecipient === "subject" &&
-      Boolean(request.sent),
-  );
+  const isApplicantCabinet = subjectRoleForCase(c) === role;
+  const requests = isApplicantCabinet
+    ? c.requests.filter(
+        (request) =>
+          request.template === "other" &&
+          request.saqRecipient === "subject" &&
+          Boolean(request.sent),
+      )
+    : [];
   const decisionProject =
-    c.decisionProjectRouting?.channel === "saq"
+    isApplicantCabinet && c.decisionProjectRouting?.channel === "saq"
       ? c.documents
           .filter((document) => document.kind === "decision-project")
           .at(-1)
       : undefined;
-  const comment = c.documents
+  const comment = isApplicantCabinet
+    ? c.documents
     .filter((document) => document.kind === "decision-project-comment")
-    .at(-1);
+    .at(-1)
+    : undefined;
   const hearingNotice =
-    c.decisionProjectRouting?.channel === "saq"
+    isApplicantCabinet && c.decisionProjectRouting?.channel === "saq"
       ? c.documents.filter((document) => document.kind === "hearing").at(-1)
       : undefined;
   const finalResponse = c.delivery?.recipientRoles?.includes(role)
@@ -388,7 +400,7 @@ function SubjectRequestMaterials({
       )}
       {finalResponse && (
         <section className="request-documents-section">
-          <h4>Окончательный ответ</h4>
+          <h4>{responseDocumentLabel(c)}</h4>
           <div className="request-documents-list">
             {documentRow(finalResponse)}
           </div>
@@ -1051,7 +1063,7 @@ export default function CaseWorkspace({
                           .at(-1);
                         return finalResponse ? (
                           <section className="request-documents-section">
-                            <h4>Окончательный ответ</h4>
+                            <h4>{responseDocumentLabel(c)}</h4>
                             <div className="request-documents-list">
                               <div className="request-document-row">
                                 <span>{finalResponse.name}</span>
@@ -1086,6 +1098,68 @@ export default function CaseWorkspace({
                             </div>
                           </section>
                         ) : null;
+                      })()}
+                      {(() => {
+                        const routing = c.motivatedResponseRouting;
+                        const confirmations = c.documents.filter(
+                          (document) =>
+                            document.kind ===
+                            "motivated-response-delivery-attachment",
+                        );
+                        if (!routing && !confirmations.length) return null;
+                        return (
+                          <section className="request-documents-section">
+                            <h4>Направление мотивированного ответа</h4>
+                            {routing && (
+                              <div className="request-documents-list">
+                                {routing.recipients.map((recipient) => (
+                                  <div
+                                    className="request-document-row"
+                                    key={recipient.id}
+                                  >
+                                    <span>
+                                      {recipient.recipient}
+                                      <small>
+                                        {recipient.status === "sent"
+                                          ? `Направлен${recipient.sentAt ? ` · ${formatDate(recipient.sentAt)}` : ""}${recipient.deliveryPath ? ` · ${recipient.deliveryPath}` : ""}${recipient.registrationNumber ? ` · №${recipient.registrationNumber}` : ""}`
+                                          : "Ожидает фиксации направления"}
+                                      </small>
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {confirmations.length > 0 && (
+                              <div className="request-documents-list">
+                                {confirmations.map((document) => (
+                                  <div
+                                    className="request-document-row"
+                                    key={`${document.name}-${document.date}`}
+                                  >
+                                    <span>{document.name}</span>
+                                    {document.dataUrl ? (
+                                      <a
+                                        className="button"
+                                        href={document.dataUrl}
+                                        download={document.filename || document.name}
+                                      >
+                                        Скачать
+                                      </a>
+                                    ) : (
+                                      <Button
+                                        onClick={() =>
+                                          onDocument(document.kind, document)
+                                        }
+                                      >
+                                        Просмотр
+                                      </Button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </section>
+                        );
                       })()}
                       {(() => {
                         const recommendations = c.documents.filter((document) =>

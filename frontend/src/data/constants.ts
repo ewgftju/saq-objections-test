@@ -50,6 +50,7 @@ export const STATUS = {
   decided: "Решение принято",
   final_response_approval: "Согласование окончательного ответа",
   final_response_signed: "Подписание окончательного ответа",
+  final_response_delivery: "Направление мотивированного ответа",
   delivered: "Результат направлен",
   completed: "Завершено",
   refused: "Отказ в рассмотрении",

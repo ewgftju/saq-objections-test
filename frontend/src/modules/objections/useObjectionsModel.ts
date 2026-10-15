@@ -31,6 +31,7 @@ const COMPLETED_MEETING_STATUSES: CaseStatus[] = [
   "decided",
   "final_response_approval",
   "final_response_signed",
+  "final_response_delivery",
   "delivered",
   "completed",
 ];

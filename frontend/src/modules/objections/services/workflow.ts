@@ -7,6 +7,7 @@ import type {
   CaseRequest,
   DecisionProjectRecipient,
   DemoState,
+  MotivatedResponseRecipient,
   ObjectionCase,
   Outcome,
   RequestLifecycleStatus,
@@ -28,9 +29,11 @@ import {
   remainingIssues,
 } from "./decisions";
 import {
+  hasSaqCabinetForIdentifier,
   hasSubjectSaqCabinet,
   isSubjectRole,
   subjectCabinetName,
+  subjectRoleForIdentifier,
   subjectRoleForCase,
 } from "./saqCabinets";
 
@@ -77,6 +80,43 @@ function decisionProjectRecipients(c: ObjectionCase) {
   return c.decisionProjectRecipients?.length
     ? c.decisionProjectRecipients
     : defaultDecisionProjectRecipients(c);
+}
+
+/**
+ * Мотивированный ответ направляется заявителю и, при наличии отдельного
+ * БИН/ИИН, объекту аудита. Канал определяется не источником обращения, а
+ * наличием соответствующего кабинета SAQ.
+ */
+function defaultMotivatedResponseRecipients(
+  c: ObjectionCase,
+): MotivatedResponseRecipient[] {
+  const recipients: MotivatedResponseRecipient[] = [
+    {
+      id: "applicant",
+      recipient: c.org || "Заявитель",
+      identifier: c.bin,
+      recipientRole: subjectRoleForCase(c),
+      channel: hasSubjectSaqCabinet(c) ? "saq" : "external",
+      status: "pending",
+    },
+  ];
+  const auditObjectIdentifier = c.agendaDetails?.auditObjectBin?.trim();
+  const applicantIdentifier = (c.bin || "").replace(/\D/g, "");
+  if (
+    auditObjectIdentifier &&
+    auditObjectIdentifier.replace(/\D/g, "") !== applicantIdentifier
+  )
+    recipients.push({
+      id: "audit-object",
+      recipient: c.agendaDetails?.auditObjectName || "Объект аудита",
+      identifier: auditObjectIdentifier,
+      recipientRole: subjectRoleForIdentifier(auditObjectIdentifier),
+      channel: hasSaqCabinetForIdentifier(auditObjectIdentifier)
+        ? "saq"
+        : "external",
+      status: "pending",
+    });
+  return recipients;
 }
 
 function isActiveRequest(request: CaseRequest) {
@@ -480,6 +520,11 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       action: "sign-final-response",
       label: "Подписать ответ",
       role: "director",
+    },
+    final_response_delivery: {
+      action: "record-final-response-delivery",
+      label: "Зафиксировать направление мотивированного ответа",
+      role: "work",
     },
     paused: {
       action: "resume",
@@ -2147,33 +2192,132 @@ export function applyAction(
     case "sign-final-response":
       if (!c.delivery)
         throw new Error("Окончательный ответ ещё не сформирован");
-      // Дата направления фиксируется в момент подписи и отправки ответа.
       c.delivery.date = date;
-      c.delivery.recipientRoles = [authorityRole(c.issuer), subjectRoleForCase(c)];
-      c.status = "completed";
-      title = "Окончательный ответ подписан";
-      note =
-        "Окончательный ответ подписан и направлен органу аудита и заявителю.";
-      doc("Подписанный окончательный ответ", "final-response", note);
-      c.delivery.recipientRoles.forEach((recipientRole) => {
-        const recipient =
-          isSubjectRole(recipientRole)
+      if (requiresEotinishDecisionProject(c)) {
+        const recipients: MotivatedResponseRecipient[] = defaultMotivatedResponseRecipients(c).map(
+          (recipient) => ({
+            ...recipient,
+            status: (recipient.channel === "saq" ? "sent" : "pending") as
+              | "sent"
+              | "pending",
+            sentAt: recipient.channel === "saq" ? date : undefined,
+          }),
+        );
+        c.motivatedResponseRouting = { recipients };
+        const saqRecipientRoles = recipients
+          .filter(
+            (recipient) =>
+              recipient.channel === "saq" &&
+              recipient.status === "sent" &&
+              recipient.recipientRole,
+          )
+          .map((recipient) => recipient.recipientRole!);
+        c.delivery.recipientRoles = [
+          ...new Set<Role>([authorityRole(c.issuer), ...saqRecipientRoles]),
+        ];
+        const pendingExternal = recipients.filter(
+          (recipient) =>
+            recipient.channel === "external" && recipient.status === "pending",
+        );
+        c.status = pendingExternal.length
+          ? "final_response_delivery"
+          : "completed";
+        title = pendingExternal.length
+          ? "Мотивированный ответ подписан"
+          : "Мотивированный ответ подписан и направлен";
+        note = pendingExternal.length
+          ? "Ответ автоматически направлен в доступные кабинеты SAQ. Зафиксируйте направление через другую систему для остальных адресатов."
+          : "Мотивированный ответ направлен в кабинеты SAQ адресатов.";
+        doc("Подписанный мотивированный ответ", "final-response", note);
+        c.delivery.recipientRoles.forEach((recipientRole) => {
+          const recipient = isSubjectRole(recipientRole)
+            ? recipients.find(
+                (item) =>
+                  item.recipientRole === recipientRole &&
+                  item.channel === "saq",
+              )?.recipient || ROLES[recipientRole]
+            : recipientRole === "kvga"
+              ? "КВГА"
+              : "ДВГА";
+          next.notifications.push({
+            id: `notification-${c.id}-${next.notifications.length + 1}`,
+            caseId: c.id,
+            recipient,
+            recipientRole,
+            date,
+            read: false,
+            kind: "final-response",
+            text: isSubjectRole(recipientRole)
+              ? `В кабинет направлен мотивированный ответ по обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate || c.registered)}.`
+              : `Направлен мотивированный ответ на обращение №${c.appealNumber || c.id} от ${formatDate(c.appealDate || c.registered)}.`,
+          });
+        });
+      } else {
+        // Для возражения на уведомление сохраняется прежнее направление
+        // подписанного окончательного ответа одновременно обоим адресатам.
+        c.delivery.recipientRoles = [
+          authorityRole(c.issuer),
+          subjectRoleForCase(c),
+        ];
+        c.status = "completed";
+        title = "Окончательный ответ подписан";
+        note =
+          "Окончательный ответ подписан и направлен органу аудита и заявителю.";
+        doc("Подписанный окончательный ответ", "final-response", note);
+        c.delivery.recipientRoles.forEach((recipientRole) => {
+          const recipient = isSubjectRole(recipientRole)
             ? c.org
             : recipientRole === "kvga"
               ? "КВГА"
               : "ДВГА";
-        next.notifications.push({
-          id: `notification-${c.id}-${next.notifications.length + 1}`,
-          caseId: c.id,
-          recipient,
-          recipientRole,
-          date,
-          read: false,
-          kind: "final-response",
-          text: `Направлен окончательный ответ на обращение №${c.appealNumber || c.id} от ${formatDate(c.appealDate || c.registered)}.`,
+          next.notifications.push({
+            id: `notification-${c.id}-${next.notifications.length + 1}`,
+            caseId: c.id,
+            recipient,
+            recipientRole,
+            date,
+            read: false,
+            kind: "final-response",
+            text: `Направлен окончательный ответ на обращение №${c.appealNumber || c.id} от ${formatDate(c.appealDate || c.registered)}.`,
+          });
         });
-      });
+      }
       break;
+    case "record-final-response-delivery": {
+      const routing = c.motivatedResponseRouting;
+      if (!routing)
+        throw new Error("Маршрут мотивированного ответа ещё не сформирован");
+      const recipientId = text("motivatedResponseRecipient", "Адресат");
+      const recipient = routing.recipients.find(
+        (item) =>
+          item.id === recipientId &&
+          item.channel === "external" &&
+          item.status === "pending",
+      );
+      if (!recipient)
+        throw new Error("Нет внешнего направления мотивированного ответа для фиксации");
+      const sentAt = text("motivatedResponseSentAt", "Дата отправки");
+      dateObject(sentAt);
+      const deliveryPath = text(
+        "motivatedResponseDeliveryPath",
+        "Способ отправки",
+      );
+      recipient.status = "sent";
+      recipient.sentAt = sentAt;
+      recipient.deliveryPath = deliveryPath;
+      recipient.registrationNumber =
+        String(form.get("motivatedResponseRegistrationNumber") || "").trim() ||
+        undefined;
+      const remainingExternal = routing.recipients.some(
+        (item) => item.channel === "external" && item.status === "pending",
+      );
+      c.status = remainingExternal ? "final_response_delivery" : "completed";
+      title = "Направление мотивированного ответа зафиксировано";
+      note = remainingExternal
+        ? `Мотивированный ответ направлен ${recipient.recipient} ${sentAt} через ${deliveryPath}. Зафиксируйте направление для остальных адресатов.`
+        : `Мотивированный ответ направлен ${recipient.recipient} ${sentAt} через ${deliveryPath}. Направление всем адресатам завершено.`;
+      break;
+    }
     case "send-recommendations": {
       if (!recommendationsAvailable(c))
         throw new Error(

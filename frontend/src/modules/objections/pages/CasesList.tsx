@@ -64,6 +64,7 @@ const FINAL_RESPONSE_STATUSES = [
   "decided",
   "final_response_approval",
   "final_response_signed",
+  "final_response_delivery",
 ] as const;
 
 function countCasesByStatus(
@@ -137,10 +138,10 @@ export default function CasesList({
     : subjectRole
       ? cases.filter(
           (c) =>
-            subjectRoleForCase(c) === role &&
-            (c.requests.some(isRequestForSubject) ||
-              c.decisionProjectRouting?.channel === "saq" ||
-              hasFinalResponseForRecipient(c, role)),
+            hasFinalResponseForRecipient(c, role) ||
+            (subjectRoleForCase(c) === role &&
+              (c.requests.some(isRequestForSubject) ||
+                c.decisionProjectRouting?.channel === "saq")),
         )
     : cases;
   const recipientRequests = registryCases.flatMap((c) =>
