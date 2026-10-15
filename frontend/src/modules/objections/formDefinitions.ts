@@ -621,7 +621,7 @@ export function actionForm(
           },
           select(
             "projectSubjectChannel",
-            "Заявитель / кабинет объекта",
+            "Направить заявителю",
             subjectCabinetAvailable
               ? [
                   ["saq", "В кабинет SAQ"],
@@ -630,11 +630,6 @@ export function actionForm(
               : [["external", "Через другую систему"]],
             defaultChannel,
           ),
-          select("projectAuthorityChannel", `Копия: ${c.issuer || "КВГА/ДВГА"}`, [
-            ["saq", "В кабинет SAQ"],
-            ["external", "Через другую систему"],
-            ["none", "Не направлять"],
-          ], defaultChannel),
         );
         if (!subjectCabinetAvailable)
           note =
@@ -693,23 +688,7 @@ export function actionForm(
         "Вложите протокол проведённого заслушивания. После сохранения обращение перейдёт к формированию мотивированного ответа.";
       break;
     case "record-decision-project-delivery":
-      title = "Зафиксировать направление проекта решения";
-      fields.push(
-        select(
-          "projectRecipientId",
-          "Адресат",
-          (c.decisionProjectRouting?.recipients || [
-            {
-              id: "subject",
-              recipient: c.org || "Заявитель",
-              channel: "external",
-              status: "pending",
-            },
-          ])
-            .filter((recipient) => recipient.channel === "external" && recipient.status === "pending")
-            .map((recipient) => [recipient.id, recipient.recipient]),
-        ),
-      );
+      title = "Зафиксировать направление проекта решения заявителю";
       fields.push(
         input("projectSentDate", "Дата отправки", date, "date"),
         select(
@@ -725,7 +704,7 @@ export function actionForm(
         },
       );
       note =
-        "Укажите реквизиты направления для выбранного адресата. Срок для замечаний рассчитывается от даты направления заявителю.";
+        "Укажите реквизиты внешнего направления заявителю. Срок для замечаний рассчитывается от даты направления.";
       break;
     case "submit-decision-project-comment":
       title = "Направить замечание к проекту решения";
