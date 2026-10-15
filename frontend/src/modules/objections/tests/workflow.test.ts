@@ -3726,6 +3726,85 @@ test("жалоба на уведомление формирует мотивир
       (field) => field.name === "conclusionRegistrationNumber",
     ),
   );
+  assert.equal(
+    definition.fields.find(
+      (field) => field.name === "motivatedResponseApplicantCabinetStatus",
+    )?.value,
+    "Кабинет заявителя SAQ доступен (БИН: 000000000002).",
+  );
+  assert.deepEqual(
+    definition.fields.find(
+      (field) => field.name === "motivatedResponseApplicantChannel",
+    )?.options,
+    [
+      ["saq", "В кабинет SAQ"],
+      ["external", "Через другую систему"],
+    ],
+  );
+});
+
+test("мотивированный ответ сохраняет выбранный канал заявителя и открывает его после внешней фиксации", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.status = "decided";
+
+  h.run("deliver", "work", {
+    number: "ИСХ-25",
+    channel: "eotinish",
+    motivatedResponseApplicantChannel: "external",
+  });
+  assert.equal(
+    h.c.motivatedResponseRouting?.recipients.find(
+      (recipient) => recipient.id === "applicant",
+    )?.channel,
+    "external",
+  );
+
+  h.run("approve-final-response", "deputy");
+  h.run("sign-final-response", "director");
+  assert.equal(h.c.status, "final_response_delivery");
+  assert.equal(h.c.delivery?.recipientRoles?.includes("subject"), false);
+
+  h.run("record-final-response-delivery", "work", {
+    motivatedResponseRecipient: "applicant",
+    motivatedResponseSentAt: h.state.date,
+    motivatedResponseDeliveryPath: "E-Otinish",
+    motivatedResponseRegistrationNumber: "ИСХ-25",
+  });
+  assert.equal(h.c.status, "completed");
+  assert.ok(h.c.delivery?.recipientRoles?.includes("subject"));
+});
+
+test("при отсутствии кабинета SAQ мотивированный ответ допускает только внешнее направление", () => {
+  const h = harness(1);
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.status = "decided";
+  const definition = actionForm("deliver", h.c, h.state.date, {});
+
+  assert.equal(
+    definition.fields.find(
+      (field) => field.name === "motivatedResponseApplicantCabinetStatus",
+    )?.value,
+    "Кабинет заявителя SAQ не зарегистрирован (БИН: 000000000001).",
+  );
+  assert.deepEqual(
+    definition.fields.find(
+      (field) => field.name === "motivatedResponseApplicantChannel",
+    )?.options,
+    [["external", "Через другую систему"]],
+  );
+
+  h.run("deliver", "work", {
+    number: "ИСХ-26",
+    channel: "eotinish",
+    motivatedResponseApplicantChannel: "saq",
+  });
+  assert.equal(
+    h.c.motivatedResponseRouting?.recipients.find(
+      (recipient) => recipient.id === "applicant",
+    )?.channel,
+    "external",
+  );
 });
 
 test("в форме мотивированного ответа по жалобе на уведомление нет документа заключения", () => {

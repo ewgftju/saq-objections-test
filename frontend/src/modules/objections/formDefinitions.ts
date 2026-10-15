@@ -636,6 +636,39 @@ export function actionForm(
           note =
             "Кабинет заявителя в SAQ не найден. После подписания зафиксируйте внешнее направление: дату, способ, регистрационный номер и подтверждающий файл.";
       }
+      if (action === "deliver" && requiresMotivatedResponse(c)) {
+        const subjectCabinetAvailable = hasSubjectSaqCabinet(c);
+        const selectedChannel = c.motivatedResponseRouting?.recipients.find(
+          (recipient) => recipient.id === "applicant",
+        )?.channel;
+        fields.push(
+          heading("motivatedResponseRouting", "Направление заявителю после подписания"),
+          {
+            name: "motivatedResponseApplicantCabinetStatus",
+            label: "Проверка кабинета заявителя",
+            type: "text",
+            value: subjectSaqCabinetLabel(c),
+            required: false,
+            readOnly: true,
+          },
+          select(
+            "motivatedResponseApplicantChannel",
+            "Направить заявителю",
+            subjectCabinetAvailable
+              ? [
+                  ["saq", "В кабинет SAQ"],
+                  ["external", "Через другую систему"],
+                ]
+              : [["external", "Через другую систему"]],
+            selectedChannel === "external" || !subjectCabinetAvailable
+              ? "external"
+              : "saq",
+          ),
+        );
+        if (!subjectCabinetAvailable)
+          note =
+            "Кабинет заявителя в SAQ не найден. После подписи зафиксируйте внешнее направление: дату, способ или систему, исходящий номер (ID) и файл-подтверждение.";
+      }
       if (action === "deliver")
         fields.push(input("number", "Исходящий номер", "ИСХ-" + c.id));
       if (action === "deliver")

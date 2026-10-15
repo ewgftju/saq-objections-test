@@ -119,6 +119,25 @@ function defaultMotivatedResponseRecipients(
   return recipients;
 }
 
+/**
+ * Выбор канала для заявителя фиксируется при формировании мотивированного
+ * ответа. Для объекта аудита канал по-прежнему определяется наличием его
+ * кабинета SAQ, чтобы не смешивать реквизиты разных адресатов.
+ */
+function motivatedResponseRecipients(c: ObjectionCase) {
+  const recipients = defaultMotivatedResponseRecipients(c);
+  const savedApplicant = c.motivatedResponseRouting?.recipients.find(
+    (recipient) => recipient.id === "applicant",
+  );
+  if (!savedApplicant) return recipients;
+
+  return recipients.map((recipient) =>
+    recipient.id === "applicant"
+      ? { ...recipient, channel: savedApplicant.channel }
+      : recipient,
+  );
+}
+
 function isActiveRequest(request: CaseRequest) {
   return !request.cancelled;
 }
@@ -2160,6 +2179,25 @@ export function applyAction(
         appealProcedure: String(form.get("appealProcedure") || ""),
         published: requiresConclusion(c) ? date : null,
       };
+      if (requiresEotinishDecisionProject(c)) {
+        const defaultChannel = hasSubjectSaqCabinet(c) ? "saq" : "external";
+        const requestedSubjectChannel = String(
+          form.get("motivatedResponseApplicantChannel") || "",
+        );
+        const subjectChannel =
+          requestedSubjectChannel === "external"
+            ? "external"
+            : requestedSubjectChannel === "saq" && hasSubjectSaqCabinet(c)
+              ? "saq"
+              : defaultChannel;
+        c.motivatedResponseRouting = {
+          recipients: defaultMotivatedResponseRecipients(c).map((recipient) =>
+            recipient.id === "applicant"
+              ? { ...recipient, channel: subjectChannel }
+              : recipient,
+          ),
+        };
+      }
       // Для жалоб итог по большинству фиксируется в проекте решения.
       // Окончательный ответ воспроизводит эти значения и не заменяет их.
       if (!c.decisionProject)
@@ -2194,7 +2232,7 @@ export function applyAction(
         throw new Error("Окончательный ответ ещё не сформирован");
       c.delivery.date = date;
       if (requiresEotinishDecisionProject(c)) {
-        const recipients: MotivatedResponseRecipient[] = defaultMotivatedResponseRecipients(c).map(
+        const recipients: MotivatedResponseRecipient[] = motivatedResponseRecipients(c).map(
           (recipient) => ({
             ...recipient,
             status: (recipient.channel === "saq" ? "sent" : "pending") as
@@ -2308,6 +2346,14 @@ export function applyAction(
       recipient.registrationNumber =
         String(form.get("motivatedResponseRegistrationNumber") || "").trim() ||
         undefined;
+      if (recipient.recipientRole && c.delivery) {
+        c.delivery.recipientRoles = [
+          ...new Set<Role>([
+            ...(c.delivery.recipientRoles || []),
+            recipient.recipientRole,
+          ]),
+        ];
+      }
       const remainingExternal = routing.recipients.some(
         (item) => item.channel === "external" && item.status === "pending",
       );
