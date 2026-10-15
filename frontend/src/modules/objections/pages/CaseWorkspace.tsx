@@ -976,6 +976,44 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
+                      {(() => {
+                        const hearingProtocols = c.documents.filter(
+                          (document) =>
+                            document.kind === "hearing-protocol-attachment",
+                        );
+                        return hearingProtocols.length ? (
+                          <section className="request-documents-section">
+                            <h4>Протокол заслушивания</h4>
+                            <div className="request-documents-list">
+                              {hearingProtocols.map((document) => (
+                                <div
+                                  className="request-document-row"
+                                  key={`${document.name}-${document.date}`}
+                                >
+                                  <span>{document.name}</span>
+                                  {document.dataUrl ? (
+                                    <a
+                                      className="button"
+                                      href={document.dataUrl}
+                                      download={document.filename || document.name}
+                                    >
+                                      Скачать
+                                    </a>
+                                  ) : (
+                                    <Button
+                                      onClick={() =>
+                                        onDocument(document.kind, document)
+                                      }
+                                    >
+                                      Просмотр
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        ) : null;
+                      })()}
                       {c.hearing && (
                         <Notice>
                           <strong>Заслушивание</strong>
@@ -1189,46 +1227,6 @@ export default function CaseWorkspace({
                               </section>
                             )}
                           </>
-                        ) : null;
-                      })()}
-                      {(() => {
-                        const hearingProtocols = c.documents.filter(
-                          (document) =>
-                            document.kind === "hearing-protocol-attachment",
-                        );
-                        return hearingProtocols.length ? (
-                          <section className="request-documents-section">
-                            <h4>Протокол заслушивания</h4>
-                            <div className="request-documents-list">
-                              {hearingProtocols.map((document) => (
-                                <div
-                                  className="request-document-row"
-                                  key={`${document.name}-${document.date}`}
-                                >
-                                  <span>{document.name}</span>
-                                  {document.dataUrl ? (
-                                    <a
-                                      className="button"
-                                      href={document.dataUrl}
-                                      download={
-                                        document.filename || document.name
-                                      }
-                                    >
-                                      Скачать
-                                    </a>
-                                  ) : (
-                                    <Button
-                                      onClick={() =>
-                                        onDocument(document.kind, document)
-                                      }
-                                    >
-                                      Просмотр
-                                    </Button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </section>
                         ) : null;
                       })()}
                       {(() => {
