@@ -12,6 +12,7 @@ export const ROLES = {
   kvga: "КВГА",
   commission: "Апелляционная комиссия",
   subject: "Объект",
+  subject2: "Объект №2",
   higher: "Вышестоящий орган",
 } as const;
 export const STATUS = {
