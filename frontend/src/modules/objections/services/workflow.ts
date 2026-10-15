@@ -273,6 +273,21 @@ function requiresEotinishDecisionProject(c: ObjectionCase) {
   return appealType.startsWith("Жалоба") || appealType === "Заявление";
 }
 
+/**
+ * Мотивированный ответ направляется по единому маршруту: для жалоб,
+ * заявлений и возражений на аудиторский отчёт. При этом проект решения и
+ * заслушивание остаются отдельным маршрутом только для жалоб и заявлений.
+ */
+function requiresMotivatedResponse(c: ObjectionCase) {
+  const appealType = (c.appealType || "").trim();
+  return (
+    appealType.startsWith("Жалоба") ||
+    appealType === "Заявление" ||
+    appealType === "Возражение на аудиторский отчет" ||
+    appealType === "Возражение на аудиторский отчёт"
+  );
+}
+
 function cameThroughSaq(c: ObjectionCase) {
   return (c.channel || "").trim().toUpperCase() === "SAQ";
 }
@@ -526,19 +541,23 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
         ? c.documents.some((document) => document.kind === "conclusion")
           ? "Завершить рассмотрение"
           : "Вложить заключение"
-        : requiresEotinishDecisionProject(c)
+        : requiresMotivatedResponse(c)
           ? "Сформировать мотивированный ответ"
           : "Сформировать окончательный ответ",
       role: c.selfReview ? "dvga" : reviewer,
     },
     final_response_approval: {
       action: "approve-final-response",
-      label: "Согласовать ответ",
+      label: requiresMotivatedResponse(c)
+        ? "Согласовать мотивированный ответ"
+        : "Согласовать ответ",
       role: "deputy",
     },
     final_response_signed: {
       action: "sign-final-response",
-      label: "Подписать ответ",
+      label: requiresMotivatedResponse(c)
+        ? "Подписать мотивированный ответ"
+        : "Подписать ответ",
       role: "director",
     },
     final_response_delivery: {
@@ -2167,7 +2186,7 @@ export function applyAction(
         note = `Заключение по обращению вложено: №${registrationNumber} от ${formatDate(registrationDate)}.`;
         break;
       }
-      const isMotivatedResponse = requiresEotinishDecisionProject(c);
+      const isMotivatedResponse = requiresMotivatedResponse(c);
       c.delivery = {
         date,
         number: isMotivatedResponse
@@ -2213,10 +2232,14 @@ export function applyAction(
         });
       c.status = "final_response_approval";
       doc(
-        "Проект окончательного ответа",
+        isMotivatedResponse
+          ? "Проект мотивированного ответа"
+          : "Проект окончательного ответа",
         "final-response",
         c.result?.reason ||
-          "Окончательный ответ сформирован и ожидает согласования.",
+          (isMotivatedResponse
+            ? "Мотивированный ответ сформирован и ожидает согласования."
+            : "Окончательный ответ сформирован и ожидает согласования."),
       );
       doc(
         requiresConclusion(c)
@@ -2228,16 +2251,28 @@ export function applyAction(
       break;
     case "approve-final-response":
       if (!c.delivery)
-        throw new Error("Окончательный ответ ещё не сформирован");
+        throw new Error(
+          requiresMotivatedResponse(c)
+            ? "Мотивированный ответ ещё не сформирован"
+            : "Окончательный ответ ещё не сформирован",
+        );
       c.status = "final_response_signed";
-      title = "Окончательный ответ согласован";
-      note = "Согласованный окончательный ответ ожидает подписания.";
+      title = requiresMotivatedResponse(c)
+        ? "Мотивированный ответ согласован"
+        : "Окончательный ответ согласован";
+      note = requiresMotivatedResponse(c)
+        ? "Согласованный мотивированный ответ ожидает подписания."
+        : "Согласованный окончательный ответ ожидает подписания.";
       break;
     case "sign-final-response":
       if (!c.delivery)
-        throw new Error("Окончательный ответ ещё не сформирован");
+        throw new Error(
+          requiresMotivatedResponse(c)
+            ? "Мотивированный ответ ещё не сформирован"
+            : "Окончательный ответ ещё не сформирован",
+        );
       c.delivery.date = date;
-      if (requiresEotinishDecisionProject(c)) {
+      if (requiresMotivatedResponse(c)) {
         const recipients: MotivatedResponseRecipient[] = motivatedResponseRecipients(c).map(
           (recipient) => ({
             ...recipient,

@@ -33,7 +33,9 @@ import { downloadFile } from "../../../utils/download";
 
 function responseDocumentLabel(c: ObjectionCase) {
   return (c.appealType || "").trim().startsWith("Жалоба") ||
-    c.appealType === "Заявление"
+    c.appealType === "Заявление" ||
+    c.appealType === "Возражение на аудиторский отчет" ||
+    c.appealType === "Возражение на аудиторский отчёт"
     ? "Мотивированный ответ"
     : "Окончательный ответ";
 }

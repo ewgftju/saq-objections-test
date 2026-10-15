@@ -142,7 +142,12 @@ export function requiresConclusion(c: ObjectionCase) {
 
 function requiresMotivatedResponse(c: ObjectionCase) {
   const appealType = (c.appealType || "").trim();
-  return appealType.startsWith("Жалоба") || appealType === "Заявление";
+  return (
+    appealType.startsWith("Жалоба") ||
+    appealType === "Заявление" ||
+    appealType === "Возражение на аудиторский отчет" ||
+    appealType === "Возражение на аудиторский отчёт"
+  );
 }
 
 function defaultDecisionProjectChannel(c: ObjectionCase) {

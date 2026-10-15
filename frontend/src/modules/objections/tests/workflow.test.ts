@@ -3859,6 +3859,42 @@ test("жалоба на уведомление формирует мотивир
   );
 });
 
+test("возражение на аудиторский отчет формирует мотивированный ответ по маршруту SAQ или другой системы", () => {
+  const h = harness(2);
+  h.c.appealType = "Возражение на аудиторский отчет";
+  h.c.status = "decided";
+
+  assert.equal(nextAction(h.c)?.action, "deliver");
+  assert.equal(nextAction(h.c)?.label, "Сформировать мотивированный ответ");
+
+  const definition = actionForm("deliver", h.c, h.state.date, {});
+  assert.equal(definition.title, "Сформировать мотивированный ответ");
+  assert.deepEqual(
+    definition.fields.find(
+      (field) => field.name === "motivatedResponseApplicantChannel",
+    )?.options,
+    [
+      ["saq", "В кабинет SAQ"],
+      ["external", "Через другую систему"],
+    ],
+  );
+
+  h.run("deliver", "work", {
+    motivatedResponseApplicantChannel: "external",
+  });
+  h.run("approve-final-response", "deputy");
+  assert.equal(nextAction(h.c)?.label, "Подписать мотивированный ответ");
+  h.run("sign-final-response", "director");
+
+  assert.equal(h.c.status, "final_response_delivery");
+  assert.equal(
+    h.c.motivatedResponseRouting?.recipients.find(
+      (recipient) => recipient.id === "applicant",
+    )?.channel,
+    "external",
+  );
+});
+
 test("мотивированный ответ сохраняет выбранный канал заявителя и открывает его после внешней фиксации", () => {
   const h = harness(2);
   h.c.appealType = "Жалоба на уведомление";
