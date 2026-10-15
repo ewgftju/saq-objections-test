@@ -8,6 +8,7 @@ export type Role =
   | "kvga"
   | "commission"
   | "subject"
+  | "subject2"
   | "higher"
   | "demo-superuser";
 export type CaseStatus =
