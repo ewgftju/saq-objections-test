@@ -42,6 +42,7 @@ import {
   useObjectionsModel,
 } from "./useObjectionsModel";
 import { formatDateTime } from "../../utils/dateFormat";
+import { isSubjectRole, subjectRoleForCase } from "./services/saqCabinets";
 
 type DialogState =
   | { type: "action"; action: Action; requestId?: string }
@@ -230,7 +231,8 @@ export default function ObjectionsModule() {
       model.state.meetings,
     )?.responses[activeCommissionMember.id] === "yes";
   const subjectCanOpenCase = (item: ObjectionCase) =>
-    item.requests.some(
+    subjectRoleForCase(item) === model.role &&
+    (item.requests.some(
       (request) =>
         request.template === "other" &&
         request.saqRecipient === "subject" &&
@@ -246,9 +248,9 @@ export default function ObjectionsModule() {
         ].includes(item.status),
     ) ||
     Boolean(
-      item.delivery?.recipientRoles?.includes("subject") &&
+      item.delivery?.recipientRoles?.includes(model.role) &&
         item.documents.some((document) => document.kind === "final-response"),
-    );
+    ));
   const close = () => {
     setDialog(null);
     setDialogError("");
@@ -260,7 +262,7 @@ export default function ObjectionsModule() {
       );
       return;
     }
-    if (model.role === "subject" && !subjectCanOpenCase(c)) {
+    if (isSubjectRole(model.role) && !subjectCanOpenCase(c)) {
       model.setToast(
         "В кабинет заявителя поступают запросы, проект решения и подписанные окончательные ответы.",
       );
@@ -1883,7 +1885,7 @@ export default function ObjectionsModule() {
               Карточка обращения доступна члену АК только после ответа «Да» в
               опросе о присутствии на заседании.
             </Notice>
-          ) : model.role === "subject" && !subjectCanOpenCase(c) ? (
+          ) : isSubjectRole(model.role) && !subjectCanOpenCase(c) ? (
             <Notice tone="amber">
               Карточка обращения недоступна: в кабинете объекта отображаются
               запросы, проекты решений и подписанные окончательные ответы.
@@ -2058,7 +2060,7 @@ export default function ObjectionsModule() {
           </Notice>
         ))}
       {model.route.page === "sessions" &&
-        !["dvga", "kvga", "subject"].includes(model.role) && (
+        !["dvga", "kvga", "subject", "subject2"].includes(model.role) && (
           <SessionsPage
             cases={model.state.cases}
             meetings={model.state.meetings ?? []}
