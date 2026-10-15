@@ -976,6 +976,35 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
+                      {c.hearing && (
+                        <Notice>
+                          <strong>Заслушивание</strong>
+                          {c.hearing.skip ? (
+                            <p>Не проводилось: {c.hearing.reason}</p>
+                          ) : (
+                            <>
+                              <p>
+                                Дата и время: {formatDateTime(c.hearing.date)}
+                              </p>
+                              <p>
+                                Место или формат: {c.hearing.location || "—"}
+                              </p>
+                              <p>
+                                Уведомление направлено: {" "}
+                                {formatDate(c.hearing.notice)}
+                                {c.hearing.noticeChannel
+                                  ? ` · ${c.hearing.noticeChannel}`
+                                  : ""}
+                              </p>
+                            </>
+                          )}
+                          {c.hearing.subject && (
+                            <p>Заявитель: {c.hearing.subject}</p>
+                          )}
+                          {c.hearing.issuer && <p>Орган: {c.hearing.issuer}</p>}
+                          {c.hearing.note && <p>{c.hearing.note}</p>}
+                        </Notice>
+                      )}
                       {(() => {
                         const finalResponse = c.documents
                           .filter(
@@ -1088,8 +1117,42 @@ export default function CaseWorkspace({
                               "decision-project-comment-attachment",
                             ].includes(document.kind),
                         );
-                        return decisionProject ? (
-                          <section className="request-documents-section">
+                        return decisionProject || projectComments.length > 0 ? (
+                          <>
+                            {projectComments.length > 0 && (
+                              <section className="request-documents-section">
+                                <h4>Замечание к проекту решения</h4>
+                                <div className="request-documents-list">
+                                  {projectComments.map((document) => (
+                                    <div
+                                      className="request-document-row"
+                                      key={`${document.kind}-${document.name}-${document.date}`}
+                                    >
+                                      <span>{document.name}</span>
+                                      {document.dataUrl ? (
+                                        <a
+                                          className="button"
+                                          href={document.dataUrl}
+                                          download={document.filename || document.name}
+                                        >
+                                          Скачать
+                                        </a>
+                                      ) : (
+                                        <Button
+                                          onClick={() =>
+                                            onDocument(document.kind, document)
+                                          }
+                                        >
+                                          Просмотр
+                                        </Button>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </section>
+                            )}
+                            {decisionProject && (
+                              <section className="request-documents-section">
                             <h4>Проект решения</h4>
                             <div className="request-documents-list">
                               <div className="request-document-row">
@@ -1123,39 +1186,9 @@ export default function CaseWorkspace({
                                 </div>
                               </div>
                             </div>
-                            {projectComments.length > 0 && (
-                              <>
-                                <strong>Замечание к проекту решения</strong>
-                                <div className="request-documents-list">
-                                  {projectComments.map((document) => (
-                                    <div
-                                      className="request-document-row"
-                                      key={`${document.kind}-${document.name}-${document.date}`}
-                                    >
-                                      <span>{document.name}</span>
-                                      {document.dataUrl ? (
-                                        <a
-                                          className="button"
-                                          href={document.dataUrl}
-                                          download={document.filename || document.name}
-                                        >
-                                          Скачать
-                                        </a>
-                                      ) : (
-                                        <Button
-                                          onClick={() =>
-                                            onDocument(document.kind, document)
-                                          }
-                                        >
-                                          Просмотр
-                                        </Button>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              </>
+                              </section>
                             )}
-                          </section>
+                          </>
                         ) : null;
                       })()}
                       {(() => {
@@ -1519,35 +1552,6 @@ export default function CaseWorkspace({
                         <Notice>
                           <strong>Позиции членов комиссии</strong>
                           <p>{c.memberPosition}</p>
-                        </Notice>
-                      )}
-                      {c.hearing && (
-                        <Notice>
-                          <strong>Заслушивание</strong>
-                          {c.hearing.skip ? (
-                            <p>Не проводилось: {c.hearing.reason}</p>
-                          ) : (
-                            <>
-                              <p>
-                                Дата и время: {formatDateTime(c.hearing.date)}
-                              </p>
-                              <p>
-                                Место или формат: {c.hearing.location || "—"}
-                              </p>
-                              <p>
-                                Уведомление направлено:{" "}
-                                {formatDate(c.hearing.notice)}
-                                {c.hearing.noticeChannel
-                                  ? ` · ${c.hearing.noticeChannel}`
-                                  : ""}
-                              </p>
-                            </>
-                          )}
-                          {c.hearing.subject && (
-                            <p>Заявитель: {c.hearing.subject}</p>
-                          )}
-                          {c.hearing.issuer && <p>Орган: {c.hearing.issuer}</p>}
-                          {c.hearing.note && <p>{c.hearing.note}</p>}
                         </Notice>
                       )}
                       {c.result && !isClosed && (
