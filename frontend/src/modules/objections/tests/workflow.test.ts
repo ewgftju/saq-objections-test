@@ -3530,6 +3530,32 @@ test("проект решения направляется только заяв
   );
 });
 
+test("заявитель с БИН Объекта №2 получает проект решения в свой кабинет", () => {
+  const h = harness(2);
+  h.c.bin = "001002003004";
+  h.c.applicantIdentifierType = "БИН";
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.status = "decision_project";
+
+  h.run("create-decision-project", "work", {
+    projectSubjectChannel: "saq",
+  });
+  h.run("approve-decision-project", "director");
+  h.run("sign-decision-project", "director");
+
+  assert.equal(
+    h.c.decisionProjectRouting?.recipients[0]?.recipientRole,
+    "subject2",
+  );
+  assert.ok(
+    h.state.notifications.some(
+      (notification) =>
+        notification.caseId === h.c.id &&
+        notification.recipientRole === "subject2",
+    ),
+  );
+});
+
 test("форма проекта решения показывает доступность кабинета заявителя по БИН", () => {
   const withCabinet = harness(2);
   const availableForm = actionForm(
