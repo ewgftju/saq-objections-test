@@ -22,6 +22,7 @@ import {
   reviewDeadline,
 } from "../services/deadlines";
 import { applicantIdentifierType } from "../services/appealTemplates";
+import { isSubjectRole } from "../services/saqCabinets";
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
@@ -276,9 +277,11 @@ function AuthorityRequestMaterials({
 
 function SubjectRequestMaterials({
   c,
+  role,
   onDocument,
 }: {
   c: ObjectionCase;
+  role: Role;
   onDocument: (kind: string, document?: CaseDocument) => void;
 }) {
   const requests = c.requests.filter(
@@ -296,7 +299,7 @@ function SubjectRequestMaterials({
   const comment = c.documents
     .filter((document) => document.kind === "decision-project-comment")
     .at(-1);
-  const finalResponse = c.delivery?.recipientRoles?.includes("subject")
+  const finalResponse = c.delivery?.recipientRoles?.includes(role)
     ? c.documents
         .filter((document) => document.kind === "final-response")
         .at(-1)
@@ -480,7 +483,7 @@ export default function CaseWorkspace({
         !c.decisionProjectRouting.commentsDeadline ||
         date <= c.decisionProjectRouting.commentsDeadline,
     );
-  const recipientLimited = isAuthorityRole(role) || role === "subject";
+  const recipientLimited = isAuthorityRole(role) || isSubjectRole(role);
   const canViewOverview = !recipientLimited || isAuthorityRole(role);
   const commissionCurrentTaskHidden =
     role === "commission" &&
@@ -852,7 +855,7 @@ export default function CaseWorkspace({
                 </>
               ) : (
                 <>
-                  {role === "subject" ? (
+                  {isSubjectRole(role) ? (
                     (subjectRequest || subjectCanCommentOnDecisionProject) && (
                       <section className="consideration-process">
                         <div className="consideration-task">
@@ -909,10 +912,10 @@ export default function CaseWorkspace({
                       hideStages={["commission", "dvga", "kvga"].includes(role)}
                     />
                   )}
-                  {role === "subject" && (
-                    <SubjectRequestMaterials c={c} onDocument={onDocument} />
+                  {isSubjectRole(role) && (
+                    <SubjectRequestMaterials c={c} role={role} onDocument={onDocument} />
                   )}
-                  {role !== "subject" && (
+                  {!isSubjectRole(role) && (
                     <>
                       <h3 className="form-section">
                         Материалы и результаты рассмотрения
