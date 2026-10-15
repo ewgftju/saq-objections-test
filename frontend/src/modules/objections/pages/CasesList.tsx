@@ -5,6 +5,7 @@ import type { CaseStatus, ObjectionCase, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import { applicantIdentifierType } from "../services/appealTemplates";
 import { executionDeadline, reviewDeadline } from "../services/deadlines";
+import { isSubjectRole, subjectRoleForCase } from "../services/saqCabinets";
 
 const APPEAL_TYPE_OPTIONS = [
   "Заявление",
@@ -126,7 +127,7 @@ export default function CasesList({
   onExport: (cases: ObjectionCase[]) => void;
 }) {
   const authorityRole = isAuthorityRole(role);
-  const subjectRole = role === "subject";
+  const subjectRole = isSubjectRole(role);
   const recipientRole = authorityRole || subjectRole;
   const registryCases = authorityRole
     ? cases.filter((c) =>
@@ -136,8 +137,10 @@ export default function CasesList({
     : subjectRole
       ? cases.filter(
           (c) =>
-            c.requests.some(isRequestForSubject) ||
-            hasFinalResponseForRecipient(c, role),
+            subjectRoleForCase(c) === role &&
+            (c.requests.some(isRequestForSubject) ||
+              c.decisionProjectRouting?.channel === "saq" ||
+              hasFinalResponseForRecipient(c, role)),
         )
     : cases;
   const recipientRequests = registryCases.flatMap((c) =>
