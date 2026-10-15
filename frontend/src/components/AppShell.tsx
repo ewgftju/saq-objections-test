@@ -93,7 +93,7 @@ export default function AppShell({
         items={navigation
           .filter(
             ({ page }) =>
-              !((isAuthorityRole(role) || role === "subject") && page === "sessions"),
+              !((isAuthorityRole(role) || role === "subject" || role === "subject2") && page === "sessions"),
           )
           .map(({ page, label }) => ({
           page,
