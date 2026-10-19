@@ -323,6 +323,18 @@ export function useObjectionsModel() {
     cases[index] = protocolDemo;
     return { ...loaded.state, cases };
   });
+  // Синхронизируем уже сохранённые обращения сразу после открытия страницы.
+  // Это важно, если заседание было создано раньше, а справка подписана позже:
+  // пользователю не требуется выполнять дополнительное действие вручную.
+  useEffect(() => {
+    const synchronized = synchronizeUpcomingMeetingCases(state);
+    if (synchronized === state) return;
+    createDemoRepository(localStorage).save(synchronized);
+    setState(synchronized);
+    // Синхронизация выполняется один раз для состояния, загруженного из
+    // хранилища; последующие изменения проходят через commit().
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     const handler = () => setRoute(routeFromPath(window.location.pathname));
     window.addEventListener("popstate", handler);
