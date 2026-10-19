@@ -3598,6 +3598,44 @@ test("рабочий орган видит статус согласования
   assert.match(signatureHtml, /На подписании/);
 });
 
+test("рабочий орган видит статус согласования и подписания мотивированного ответа", () => {
+  const h = harness(2);
+  h.c.appealType = "Заявление";
+  h.c.status = "final_response_approval";
+  h.c.documents.push({
+    name: "Проект мотивированного ответа",
+    kind: "final-response",
+    date: "2026-09-10",
+  });
+
+  const approvalHtml = renderToStaticMarkup(
+    createElement(ConsiderationProcess, {
+      c: h.c,
+      role: "work",
+      onAction() {},
+      onHistory() {},
+    }),
+  );
+  assert.match(approvalHtml, /Информационный блок/);
+  assert.match(approvalHtml, /Мотивированный ответ/);
+  assert.match(approvalHtml, /Проект мотивированного ответа/);
+  assert.match(approvalHtml, /Ответственный: Заместитель директора ДАВГА/);
+  assert.match(approvalHtml, /На согласовании/);
+  assert.match(approvalHtml, /Дата формирования: 10\.09\.2026/);
+
+  h.c.status = "final_response_signed";
+  const signatureHtml = renderToStaticMarkup(
+    createElement(ConsiderationProcess, {
+      c: h.c,
+      role: "work",
+      onAction() {},
+      onHistory() {},
+    }),
+  );
+  assert.match(signatureHtml, /Ответственный: Директор ДАВГА/);
+  assert.match(signatureHtml, /На подписании/);
+});
+
 test("проект решения по жалобе направляется в SAQ и замечания управляют заслушиванием", () => {
   const h = harness(2);
   h.c.appealType = "Жалоба на уведомление";

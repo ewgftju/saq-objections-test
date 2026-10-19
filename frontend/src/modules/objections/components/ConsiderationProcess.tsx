@@ -276,6 +276,70 @@ function RequestResponsesPanel({
   );
 }
 
+function isMotivatedResponseCase(c: ObjectionCase) {
+  const appealType = (c.appealType || "").trim();
+  return (
+    appealType.startsWith("Жалоба") ||
+    appealType === "Заявление" ||
+    appealType === "Возражение на аудиторский отчет" ||
+    appealType === "Возражение на аудиторский отчёт"
+  );
+}
+
+function FinalResponseApprovalPanel({ c }: { c: ObjectionCase }) {
+  const awaitingApproval = c.status === "final_response_approval";
+  const awaitingSignature = c.status === "final_response_signed";
+  if (!awaitingApproval && !awaitingSignature) return null;
+
+  const finalResponse = c.documents
+    .filter((document) => document.kind === "final-response")
+    .at(-1);
+  const motivated = isMotivatedResponseCase(c);
+  const status = awaitingApproval ? "На согласовании" : "На подписании";
+  const responsible = awaitingApproval
+    ? "Заместитель директора ДАВГА"
+    : "Директор ДАВГА";
+
+  return (
+    <Notice tone="amber">
+      <div className="request-response-heading">
+        <div>
+          <span className="request-response-eyebrow">Информационный блок</span>
+          <strong>{motivated ? "Мотивированный ответ" : "Окончательный ответ"}</strong>
+        </div>
+        <span className="request-response-summary">
+          Документов: <b>1</b>
+        </span>
+      </div>
+      <ul className="request-response-status-list">
+        <li className="is-pending">
+          <span className="request-response-marker" aria-hidden="true">
+            …
+          </span>
+          <span className="request-response-recipient">
+            <strong>
+              {finalResponse?.name ||
+                (motivated
+                  ? "Проект мотивированного ответа"
+                  : "Проект окончательного ответа")}
+            </strong>
+            <small>Ответственный: {responsible}</small>
+          </span>
+          <span className="request-response-dates">
+            <small>
+              Дата формирования: {finalResponse?.date ? formatDate(finalResponse.date) : "—"}
+            </small>
+          </span>
+          <span className="response-pending">
+            <span className="response-status-dot" aria-hidden="true" />
+            {status}
+          </span>
+        </li>
+      </ul>
+    </Notice>
+  );
+}
+
 function DecisionProjectApprovalPanel({ c }: { c: ObjectionCase }) {
   const awaitingApproval = c.status === "decision_project_approval";
   const awaitingSignature = c.status === "decision_project_signed";
@@ -883,6 +947,7 @@ export default function ConsiderationProcess({
         </Notice>
       ) : null}
       <RecommendationStatusPanel recommendations={caseRecommendations} />
+      <FinalResponseApprovalPanel c={c} />
       {(role === "demo-superuser" || role === "work") && (
         <DecisionProjectApprovalPanel c={c} />
       )}
