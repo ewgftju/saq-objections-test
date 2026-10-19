@@ -143,15 +143,16 @@ function currentPollForCase(
 }
 
 /**
- * Сохраняет связь дополнительного запроса с заседанием, из которого он был
- * инициирован. Обращение убирается из текущей повестки и помечается как
- * отложенное, чтобы после обновления справки автоматически попасть в новое
- * заседание.
+ * Сохраняет связь дополнительного запроса или новых доводов с заседанием,
+ * из которого они были инициированы. Обращение убирается из текущей повестки
+ * и помечается как отложенное, чтобы после обновления справки автоматически
+ * попасть в новое заседание.
  */
 function postponeMeetingForAdditionalRequest(
   state: DemoState,
   caseId: string,
   reason: string,
+  context = "направлением дополнительного запроса",
 ) {
   const target = state.cases.find((item) => item.id === caseId);
   if (!target || !state.meetings?.length) return;
@@ -159,7 +160,6 @@ function postponeMeetingForAdditionalRequest(
     .filter(
       (item) =>
         item.caseIds.includes(caseId) &&
-        !item.completed &&
         !item.postponedCaseIds?.includes(caseId) &&
         (!target.attendanceMeetingDate ||
           item.dateTime.slice(0, 10) === target.attendanceMeetingDate),
@@ -193,7 +193,7 @@ function postponeMeetingForAdditionalRequest(
     actor: ROLES.work,
     title: "Заседание отложено",
     text:
-      `Заседание №${meeting.number} отложено в связи с направлением дополнительного запроса. ` +
+      `Заседание №${meeting.number} отложено в связи с ${context}. ` +
       `Причина: ${reason}`,
   });
   state.notifications.push({
@@ -1190,6 +1190,31 @@ export default function ObjectionsModule() {
               : undefined;
     const next = applyAction(model.state, c.id, action, model.role, form);
     const updated = next.cases.find((item) => item.id === c.id)!;
+    if (
+      action === "hearing-after-decision-project" &&
+      (updated.appealType || "").trim() === "Заявление"
+    ) {
+      const hearingOutcome = String(form.get("hearingOutcome") || "");
+      if (
+        hearingOutcome === "additional-request" ||
+        hearingOutcome === "without-request"
+      ) {
+        postponeMeetingForAdditionalRequest(
+          next,
+          c.id,
+          String(
+            form.get(
+              hearingOutcome === "additional-request"
+                ? "additionalRequestReason"
+                : "noRequestReason",
+            ) || "Новые доводы представлены на заслушивании",
+          ),
+          hearingOutcome === "additional-request"
+            ? "направлением дополнительного запроса после заслушивания"
+            : "представлением новых доводов после заслушивания",
+        );
+      }
+    }
     if (["request", "request-saq", "request-other"].includes(action))
       delete updated.requestDrafts?.[action as RequestDraftKind];
     const responseRequestId = [

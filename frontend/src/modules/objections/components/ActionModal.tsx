@@ -152,6 +152,7 @@ function certificateBasisForPoint(
     .map((request) => ({
       authority: request.recipient.toUpperCase().includes("КВГА") ? "КВГА" : "ДВГА",
       response: request.authorityResponses?.[point.id],
+      route: request.route,
     }))
     .filter(
       (
@@ -159,12 +160,15 @@ function certificateBasisForPoint(
       ): item is {
         authority: "ДВГА" | "КВГА";
         response: { finding: string; response: string };
+        route: ObjectionCase["requests"][number]["route"];
       } => Boolean(item.response),
     );
   const authorityArguments =
     responses
-      .map(({ authority, response }) =>
-        response.finding ? `Доводы ${authority}: ${response.finding}` : "",
+      .map(({ authority, response, route }) =>
+        response.finding
+          ? `${route && route !== "initial" ? "Дополнительные доводы" : "Доводы"} ${authority}: ${response.finding}`
+          : "",
       )
       .filter(Boolean)
       .join("\n\n") ||
@@ -172,9 +176,9 @@ function certificateBasisForPoint(
     "—";
   const authorityReply =
     responses
-      .map(({ authority, response }) =>
+      .map(({ authority, response, route }) =>
         response.response
-          ? `Мотивированный ответ ${authority}: ${response.response}`
+          ? `${route && route !== "initial" ? "Дополнительный мотивированный ответ" : "Мотивированный ответ"} ${authority}: ${response.response}`
           : "",
       )
       .filter(Boolean)
@@ -187,14 +191,23 @@ function certificateBasisForPoint(
     c.certificate?.davgaArgumentsByPoint?.[point.id] ||
     c.certificate?.davgaArguments ||
     "—";
+  const additionalApplicantArguments = (sourcePoint.additionalArguments || [])
+    .map(
+      (argument, index) =>
+        `Дополнительные доводы объекта гос. аудита (заявителя), представленные на заслушивании${
+          index ? ` №${index + 1}` : ""
+        }: ${argument}`,
+    )
+    .join("\n\n");
   return [
     responses.length ? authorityArguments : `Доводы ДВГА/КВГА: ${authorityArguments}`,
     `Доводы объекта государственного аудита (заявителя): ${sourcePoint.argument || "—"}`,
+    additionalApplicantArguments,
     responses.length
       ? authorityReply
       : `Мотивированный ответ ДВГА/КВГА: ${authorityReply}`,
     `Доводы рабочего органа (ДАВГА МФ РК): ${davgaArguments}`,
-  ].join("\n\n");
+  ].filter(Boolean).join("\n\n");
 }
 
 function protocolReasonForMember(
@@ -1407,6 +1420,13 @@ export default function ActionModal({
         ) : action === "hearing-after-decision-project" ? (
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
+            {definition.fields.length > 0 && (
+              <div className="form-grid">
+                {definition.fields.map((field) => (
+                  <Field key={field.name} field={field} />
+                ))}
+              </div>
+            )}
             <label className="field request-attachments-field">
               <span>
                 Протокол заслушивания <span className="required">*</span>

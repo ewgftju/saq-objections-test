@@ -3563,6 +3563,152 @@ test("протокол заслушивания отображается сре�
   assert.match(html, /Протокол заслушивания\.pdf/);
 });
 
+test("заявление после заслушивания запускает дополнительный запрос и сохраняет версии доводов", () => {
+  const h = harness(2);
+  h.c.appealType = "Заявление";
+  h.c.status = "decision_project_hearing";
+  h.c.decisionProject = {
+    date: h.state.date,
+    number: "ПР-1",
+    receipt: "SAQ-1",
+    channel: "saq",
+    appealCourt: "—",
+    appealProcedure: "—",
+  };
+  h.c.hearing = {
+    skip: false,
+    date: `${h.state.date}T10:00`,
+    location: "онлайн",
+  };
+  const point = h.c.issues.find((item) => item.disputed)!;
+  const hearingForm = actionForm(
+    "hearing-after-decision-project",
+    h.c,
+    h.state.date,
+    {},
+  );
+  assert.ok(hearingForm.fields.some((field) => field.name === "hearingOutcome"));
+  const additionalHearingForm = actionForm(
+    "hearing-after-decision-project",
+    h.c,
+    h.state.date,
+    { hearingOutcome: "additional-request" },
+  );
+  assert.ok(
+    additionalHearingForm.fields.some(
+      (field) => field.name === `additionalArgument_${point.id}`,
+    ),
+  );
+  assert.ok(
+    additionalHearingForm.fields.some(
+      (field) => field.name === "additionalRequestReason",
+    ),
+  );
+
+  h.run("hearing-after-decision-project", "work", {
+    hearingProtocolAttached: "on",
+    hearingOutcome: "additional-request",
+    [`additionalArgument_${point.id}`]: "Дополнительное пояснение заявителя",
+    additionalRequestReason: "Нужно проверить новый довод документами",
+  });
+  assert.equal(h.c.status, "accepted");
+  assert.equal(h.c.requestRoute, "additional-hearing");
+  assert.equal(h.c.hearingSupplements?.[0]?.requiresRequest, true);
+  assert.deepEqual(
+    h.c.issues.find((item) => item.id === point.id)?.additionalArguments,
+    ["Дополнительное пояснение заявителя"],
+  );
+  const hearingArgumentsDocument = h.c.documents.find(
+    (document) => document.kind === "hearing-additional-arguments",
+  )!;
+  assert.match(
+    renderToStaticMarkup(
+      createElement(DocumentContent, {
+        c: h.c,
+        kind: hearingArgumentsDocument.kind,
+        document: hearingArgumentsDocument,
+      }),
+    ),
+    /Дополнительное пояснение заявителя/,
+  );
+
+  h.run("request", "work", {
+    recipient: "ДВГА по Атырауской области",
+  });
+  const requestAppendix = h.c.documents.find(
+    (document) => document.kind === "request-appendix",
+  )!;
+  const requestHtml = renderToStaticMarkup(
+    createElement(DocumentContent, {
+      c: h.c,
+      kind: "request-appendix",
+      document: requestAppendix,
+    }),
+  );
+  assert.match(requestHtml, /Дополнительное пояснение заявителя/);
+  h.run("send-request-approval", "work");
+  h.run("approve-request", "deputy", { approved: "on" });
+  h.run("sign-request", "director");
+  h.run(
+    "fill-request-response",
+    "dvga",
+    Object.fromEntries(
+      h.c.issues
+        .filter((item) => item.disputed)
+        .flatMap((item) => [
+          [`authorityFinding_${item.id}`, "Новое нарушение, проверенное ДВГА"],
+          [`authorityResponse_${item.id}`, "Дополнительный ответ ДВГА"],
+        ]),
+    ),
+  );
+  h.run("approve-response", "dvga");
+  h.run("sign-response", "dvga");
+  assert.equal(h.c.requestRouteCompletedAt, h.state.date);
+  analysis(h);
+  const certificate = h.c.documents.at(-1)!;
+  const certificateHtml = renderToStaticMarkup(
+    createElement(DocumentContent, {
+      c: h.c,
+      kind: "certificate",
+      document: certificate,
+    }),
+  );
+  assert.match(
+    certificateHtml,
+    /Дополнительные доводы объекта гос\. аудита \(заявителя\), представленные на заслушивании/,
+  );
+  assert.match(certificateHtml, /Дополнительный мотивированный ответ ДВГА/);
+});
+
+test("заявление без дополнительного запроса возвращается к новой справке", () => {
+  const h = harness(2);
+  h.c.appealType = "Заявление";
+  h.c.status = "decision_project_hearing";
+  h.c.decisionProject = {
+    date: h.state.date,
+    number: "ПР-2",
+    receipt: "SAQ-2",
+    channel: "saq",
+    appealCourt: "—",
+    appealProcedure: "—",
+  };
+  h.c.hearing = { skip: false, date: `${h.state.date}T10:00` };
+  const point = h.c.issues.find((item) => item.disputed)!;
+  h.run("hearing-after-decision-project", "work", {
+    hearingProtocolAttached: "on",
+    hearingOutcome: "without-request",
+    [`additionalArgument_${point.id}`]: "Новый довод, подтверждённый материалами дела",
+    noRequestReason: "Все необходимые документы уже находятся в материалах дела",
+  });
+  assert.equal(h.c.status, "materials");
+  assert.equal(h.c.repeatHearingStatus, "required");
+  assert.equal(nextAction(h.c)?.action, "analysis");
+  assert.match(
+    nextAction(h.c)?.label || "",
+    /дополнительным доводам после заслушивания/,
+  );
+});
+
 test("рабочий орган видит статус согласования и подписания проекта решения", () => {
   const h = harness(2);
   h.c.appealType = "Жалоба на решение КВГА/ДВГА";

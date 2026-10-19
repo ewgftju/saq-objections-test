@@ -254,7 +254,8 @@ function advanceAfterResponses(c: ObjectionCase, date: string) {
   c.requestPauseStartedAt = undefined;
   if (
     c.requestRoute === "additional-analysis" ||
-    c.requestRoute === "additional-commission"
+    c.requestRoute === "additional-commission" ||
+    c.requestRoute === "additional-hearing"
   ) {
     c.requestRouteCompletedAt = date;
   }
@@ -501,10 +502,13 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     materials: {
       action: "analysis",
       label:
-        c.requestRoute === "additional-analysis" ||
-        c.requestRoute === "additional-commission"
-          ? "Обновить справку"
-          : "Сформировать справку",
+        c.hearingSupplements?.length
+          ? "Сформировать справку по дополнительным доводам после заслушивания"
+          : c.requestRoute === "additional-analysis" ||
+              c.requestRoute === "additional-commission" ||
+              c.requestRoute === "additional-hearing"
+            ? "Обновить справку"
+            : "Сформировать справку",
       role: reviewer,
     },
     forwarded: {
@@ -830,6 +834,7 @@ export function addDocument(
       delivery: c.delivery || null,
       certificate: c.certificate || null,
       requests: c.requests,
+      hearingSupplements: c.hearingSupplements || [],
     }),
   });
 }
@@ -1440,7 +1445,9 @@ export function applyAction(
       c.status =
         requestRoutingStatus(c) || authorityStatus(c) || "response_approval";
       doc(
-        "Мотивированный ответ ДВГА/КВГА",
+        request.route === "additional-hearing"
+          ? "Дополнительный мотивированный ответ ДВГА/КВГА по дополнительному запросу"
+          : "Мотивированный ответ ДВГА/КВГА",
         "authority-response",
         note,
         request.id,
@@ -1517,7 +1524,8 @@ export function applyAction(
       c.requestPauseStartedAt = undefined;
       if (
         c.requestRoute === "additional-analysis" ||
-        c.requestRoute === "additional-commission"
+        c.requestRoute === "additional-commission" ||
+        c.requestRoute === "additional-hearing"
       ) {
         c.requestRouteCompletedAt = date;
       }
@@ -2208,6 +2216,88 @@ export function applyAction(
       if (!form.has("hearingProtocolAttached"))
         throw new Error("Вложите протокол заслушивания");
       if (c.hearing) c.hearing.held = date;
+
+      if (isStatement(c)) {
+        const hearingOutcome = String(form.get("hearingOutcome") || "").trim();
+        if (
+          ![
+            "additional-request",
+            "without-request",
+            "proceed",
+          ].includes(hearingOutcome)
+        )
+          throw new Error("Выберите дальнейшее действие после заслушивания");
+
+        if (hearingOutcome !== "proceed") {
+          const reasonField =
+            hearingOutcome === "additional-request"
+              ? "additionalRequestReason"
+              : "noRequestReason";
+          const reason = text(
+            reasonField,
+            hearingOutcome === "additional-request"
+              ? "Причина необходимости дополнительного запроса"
+              : "Обоснование отсутствия необходимости в дополнительном запросе",
+          );
+          const byPoint: Record<string, string> = {};
+          disputed(c).forEach((point) => {
+            const value = String(
+              form.get(`additionalArgument_${point.id}`) || "",
+            ).trim();
+            if (!value) return;
+            byPoint[point.id] = value;
+            point.additionalArguments = [
+              ...(point.additionalArguments || []),
+              value,
+            ];
+          });
+          if (!Object.keys(byPoint).length)
+            throw new Error(
+              "Укажите дополнительные доводы хотя бы по одному оспариваемому пункту",
+            );
+
+          const round = (c.repeatHearingRound || 0) + 1;
+          c.hearingSupplements = [
+            ...(c.hearingSupplements || []),
+            {
+              round,
+              date,
+              reason,
+              byPoint,
+              requiresRequest: hearingOutcome === "additional-request",
+            },
+          ];
+          c.repeatHearingStatus = "required";
+          c.repeatHearingRound = round;
+          c.repeatHearingReason = reason;
+          c.repeatHearingRequestedAt = date;
+          c.repeatHearingReadyAt = undefined;
+          c.repeatHearingMeetingId = undefined;
+          doc(
+            "Дополнительные доводы объекта гос. аудита (заявителя), представленные на заслушивании",
+            "hearing-additional-arguments",
+            reason,
+          );
+
+          if (hearingOutcome === "additional-request") {
+            c.requestRoute = "additional-hearing";
+            c.requestRouteStartedAt = date;
+            c.requestRouteCompletedAt = undefined;
+            c.status = "accepted";
+            title = "Дополнительный запрос после заслушивания сформирован";
+            note =
+              `Новые доводы требуют дополнительного запроса. ${reason} ` +
+              "Обращение возвращено на этап «Запрос».";
+          } else {
+            c.status = "materials";
+            title = "Дополнительные доводы зафиксированы";
+            note =
+              `Новые доводы не требуют дополнительного запроса. ${reason} ` +
+              "Обращение возвращено к формированию справки.";
+          }
+          break;
+        }
+      }
       c.status = "decided";
       title = "Заслушивание проведено";
       note =

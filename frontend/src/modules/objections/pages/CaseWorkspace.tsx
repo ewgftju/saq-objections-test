@@ -1176,6 +1176,34 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
+                      {(() => {
+                        const hearingArguments = c.documents.filter(
+                          (document) =>
+                            document.kind === "hearing-additional-arguments",
+                        );
+                        return hearingArguments.length ? (
+                          <section className="request-documents-section">
+                            <h4>Дополнительные доводы после заслушивания</h4>
+                            <div className="request-documents-list">
+                              {hearingArguments.map((document) => (
+                                <div
+                                  className="request-document-row"
+                                  key={`${document.name}-${document.date}`}
+                                >
+                                  <span>{document.name}</span>
+                                  <Button
+                                    onClick={() =>
+                                      onDocument(document.kind, document)
+                                    }
+                                  >
+                                    Просмотр
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        ) : null;
+                      })()}
                       {c.hearing && <HearingDetails hearing={c.hearing} />}
                       {(() => {
                         const recommendations = c.documents.filter((document) =>
@@ -1463,6 +1491,7 @@ export default function CaseWorkspace({
                                   document.requestId === request.id &&
                                   (isAuthorityRequest
                                     ? [
+                                        "authority-response",
                                         "authority-response-appendix",
                                         "authority-response-attachment",
                                         "response-attachment",

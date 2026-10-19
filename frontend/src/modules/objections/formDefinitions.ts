@@ -745,8 +745,58 @@ export function actionForm(
       break;
     case "hearing-after-decision-project":
       title = "Заслушивание проведено";
-      note =
-        "Вложите протокол проведённого заслушивания. После сохранения обращение перейдёт к формированию мотивированного ответа.";
+      if ((c.appealType || "").trim() === "Заявление") {
+        fields.push(
+          select(
+            "hearingOutcome",
+            "Дальнейшее действие",
+            [
+              ["", "Выберите действие"],
+              [
+                "additional-request",
+                "Новые доводы требуют дополнительного запроса",
+              ],
+              ["without-request", "Новые доводы не требуют запроса"],
+              ["proceed", "Перейти на следующий этап"],
+            ],
+            values.hearingOutcome || "",
+          ),
+        );
+        if (
+          values.hearingOutcome === "additional-request" ||
+          values.hearingOutcome === "without-request"
+        ) {
+          disputed(c).forEach((point) => {
+            const field = area(
+              `additionalArgument_${point.id}`,
+              `Дополнительные доводы объекта гос. аудита (заявителя) по пункту ${point.number}`,
+              values[`additionalArgument_${point.id}`] || "",
+            );
+            field.required = false;
+            fields.push(field);
+          });
+          fields.push(
+            area(
+              values.hearingOutcome === "additional-request"
+                ? "additionalRequestReason"
+                : "noRequestReason",
+              values.hearingOutcome === "additional-request"
+                ? "Причина необходимости дополнительного запроса"
+                : "Обоснование отсутствия необходимости в дополнительном запросе",
+              values[
+                values.hearingOutcome === "additional-request"
+                  ? "additionalRequestReason"
+                  : "noRequestReason"
+              ] || "",
+            ),
+          );
+        }
+        note =
+          "Вложите протокол проведённого заслушивания. Выберите дальнейшее действие. При выборе дополнительного запроса или возврата к справке укажите новые доводы и обоснование.";
+      } else {
+        note =
+          "Вложите протокол проведённого заслушивания. После сохранения обращение перейдёт к формированию мотивированного ответа.";
+      }
       break;
     case "record-decision-project-delivery":
       title = "Зафиксировать направление проекта решения заявителю";

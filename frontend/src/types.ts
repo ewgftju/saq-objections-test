@@ -72,6 +72,8 @@ export interface ViolationPoint {
   title: string;
   finding: string;
   argument: string;
+  /** Дополнительные доводы заявителя, представленные на последующих заслушиваниях. */
+  additionalArguments?: string[];
   amount: number;
   disputed: boolean;
   evidence?: string;
@@ -312,7 +314,18 @@ export interface CaseDocument {
     certificate: CaseCertificate | null;
     /** Адресаты и их ответы на момент формирования версии документа. */
     requests?: CaseRequest[];
+    /** Версии дополнительных доводов, представленных на заслушивании. */
+    hearingSupplements?: HearingSupplement[];
   };
+}
+
+/** Дополнительные доводы, зафиксированные после проведения заслушивания. */
+export interface HearingSupplement {
+  round: number;
+  date: string;
+  reason: string;
+  byPoint: Record<string, string>;
+  requiresRequest: boolean;
 }
 
 export interface CaseRequest {
@@ -365,12 +378,14 @@ export type RequestDraftKind = "request" | "request-saq" | "request-other";
 
 /**
  * Маршрут этапа «Запрос». Первоначальный запрос используется в золотом
- * маршруте, дополнительные запросы запускаются из анализа либо заседания.
+ * маршруте, дополнительные запросы запускаются из анализа, заседания либо
+ * после заслушивания по заявлению.
  */
 export type RequestRoute =
   | "initial"
   | "additional-analysis"
-  | "additional-commission";
+  | "additional-commission"
+  | "additional-hearing";
 
 export interface CertificateMemberPosition {
   id: string;
@@ -548,7 +563,7 @@ export interface ObjectionCase {
   requestRouteStartedAt?: string;
   /** Заполняется после получения всех ответов по дополнительному запросу. */
   requestRouteCompletedAt?: string;
-  /** Контроль повторного заседания после запроса членов АК. */
+  /** Контроль повторного заседания после дополнительного запроса или новых доводов. */
   repeatHearingStatus?: "required" | "ready" | "scheduled";
   repeatHearingRound?: number;
   repeatHearingReason?: string;
@@ -557,6 +572,8 @@ export interface ObjectionCase {
   repeatHearingPreviousMeetingId?: string;
   repeatHearingPreviousMeetingNumber?: number;
   repeatHearingMeetingId?: string;
+  /** Дополнительные доводы после заслушивания, по раундам рассмотрения. */
+  hearingSupplements?: HearingSupplement[];
   /** Сохранённые проекты запросов, которые ещё не зафиксированы. */
   requestDrafts?: Partial<Record<RequestDraftKind, RequestDraft>>;
   /** Черновик справки до её формирования и направления на согласование. */

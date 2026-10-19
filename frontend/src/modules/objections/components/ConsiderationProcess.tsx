@@ -99,6 +99,7 @@ const REQUEST_ROUTE_LABELS = {
   "additional-analysis": "Дополнительный запрос по результатам анализа",
   "additional-commission":
     "Дополнительный запрос по решению Апелляционной комиссии",
+  "additional-hearing": "Дополнительный запрос после заслушивания",
 } as const;
 
 const REPEAT_HEARING_LABELS = {
@@ -118,6 +119,8 @@ function requestRouteLabelForRequest(
     return REQUEST_ROUTE_LABELS["additional-analysis"];
   if (request.route === "additional-commission")
     return REQUEST_ROUTE_LABELS["additional-commission"];
+  if (request.route === "additional-hearing")
+    return REQUEST_ROUTE_LABELS["additional-hearing"];
   return REQUEST_ROUTE_LABELS.initial;
 }
 
@@ -649,7 +652,8 @@ export default function ConsiderationProcess({
   const currentExecutionSubstep = executionSubstep(c.status);
   const additionalRequestRoute =
     c.requestRoute === "additional-analysis" ||
-    c.requestRoute === "additional-commission";
+    c.requestRoute === "additional-commission" ||
+    c.requestRoute === "additional-hearing";
   const requestRouteActive =
     currentRequestSubstep !== null && !c.requestRouteCompletedAt;
   const commentsDeadline = c.decisionProjectRouting?.commentsDeadline;
@@ -763,6 +767,18 @@ export default function ConsiderationProcess({
               ))}
             </ol>
           )}
+          {c.hearingSupplements?.length &&
+            currentAnalysisSubstep !== null && (
+              <div className="process-route-banner" role="status">
+                <span className="process-route-banner-label">
+                  Подэтап этапа «Анализ обращения»
+                </span>
+                <strong>
+                  Формирование справки по дополнительным доводам после
+                  заслушивания
+                </strong>
+              </div>
+            )}
           {currentDecisionSubstep !== null && (
             <ol className="process-substeps" aria-label="Шаги этапа решения">
               {DECISION_SUBSTEPS.map((label, index) => (

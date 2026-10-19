@@ -453,7 +453,17 @@ export function DocumentContent({
                           : point.authorityFinding) ??
                         ""}
                     </td>
-                    <td>{point.argument || "—"}</td>
+                    <td>
+                      <div>{point.argument || "—"}</div>
+                      {(point.additionalArguments || []).map((argument, index) => (
+                        <p key={`${point.id}-additional-argument-${index}`}>
+                          <b>
+                            Дополнительные доводы объекта гос. аудита (заявителя):
+                          </b>{" "}
+                          {argument}
+                        </p>
+                      ))}
+                    </td>
                     <td
                       aria-label={`Мотивированный ответ ${appendixAuthority}`}
                     >
@@ -476,12 +486,12 @@ export function DocumentContent({
 
   if (kind === "certificate") {
     const points = snapshot.issues.filter((point) => point.disputed);
-    const authorityRequests = c.requests.filter((item) =>
+    const authorityRequests = (snapshot.requests || c.requests).filter((item) =>
       /ДВГА|КВГА/i.test(item.recipient),
     );
     const authorityText = (pointId: string, field: "finding" | "response") => {
       if (!authorityRequests.length)
-        return [{ authority: "ДВГА/КВГА", value: "—" }];
+        return [{ authority: "ДВГА/КВГА", value: "—", additional: false }];
       return authorityRequests.map((item) => {
         const authority = item.recipient.toUpperCase().includes("КВГА")
           ? "КВГА"
@@ -496,6 +506,7 @@ export function DocumentContent({
         return {
           authority,
           value: item.authorityResponses?.[pointId]?.[field] || fallback || "—",
+          additional: Boolean(item.route && item.route !== "initial"),
         };
       });
     };
@@ -534,9 +545,15 @@ export function DocumentContent({
           <section className="certificate-template-point" key={point.id}>
             <h3>Пункт {point.number}</h3>
             <div className="certificate-template-line">
-              {authorityText(point.id, "finding").map((item) => (
-                <p key={item.authority}>
-                  <b>Доводы {item.authority}:</b> {item.value}
+              {authorityText(point.id, "finding").map((item, index) => (
+                <p
+                  key={`${item.authority}-${item.additional ? "additional" : "initial"}-${index}`}
+                >
+                  <b>
+                    {item.additional ? "Дополнительные доводы" : "Доводы"}{" "}
+                    {item.authority}:
+                  </b>{" "}
+                  {item.value}
                 </p>
               ))}
             </div>
@@ -544,10 +561,30 @@ export function DocumentContent({
               <b>Доводы объекта гос. аудита (заявителя):</b>{" "}
               {point.argument || "—"}
             </div>
+            {(point.additionalArguments || []).map((argument, index) => (
+              <div
+                className="certificate-template-line"
+                key={`${point.id}-additional-argument-${index}`}
+              >
+                <b>
+                  Дополнительные доводы объекта гос. аудита (заявителя),
+                  представленные на заслушивании:
+                </b>{" "}
+                {argument}
+              </div>
+            ))}
             <div className="certificate-template-line">
-              {authorityText(point.id, "response").map((item) => (
-                <p key={item.authority}>
-                  <b>Мотивированный ответ {item.authority}:</b> {item.value}
+              {authorityText(point.id, "response").map((item, index) => (
+                <p
+                  key={`${item.authority}-${item.additional ? "additional" : "initial"}-${index}`}
+                >
+                  <b>
+                    {item.additional
+                      ? "Дополнительный мотивированный ответ"
+                      : "Мотивированный ответ"}{" "}
+                    {item.authority}:
+                  </b>{" "}
+                  {item.value}
                 </p>
               ))}
             </div>
@@ -1340,6 +1377,19 @@ export function DocumentContent({
             <>
               <p>Заявитель: {snapshot.hearing.subject || "—"}</p>
               <p>Орган: {snapshot.hearing.issuer || "—"}</p>
+            </>
+          )}
+          {kind === "hearing-additional-arguments" && (
+            <>
+              <h3>Дополнительные доводы по оспариваемым пунктам</h3>
+              {snapshot.issues
+                .filter((point) => point.disputed)
+                .map((point) => (
+                  <p key={point.id}>
+                    <b>Пункт {point.number}:</b>{" "}
+                    {(point.additionalArguments || []).join("\n") || "—"}
+                  </p>
+                ))}
             </>
           )}
         </>
