@@ -372,9 +372,6 @@ export function SessionsPage({
       ),
     ),
   );
-  const repeatReadyCases = cases.filter(
-    (caseItem) => caseItem.repeatHearingStatus === "ready",
-  );
   const excludedCases = cases.filter(
     (caseItem) =>
       ["certificate_approved", "documents_review"].includes(caseItem.status) &&
@@ -964,31 +961,6 @@ export function SessionsPage({
       </div>
       {visibleSessionsTab === "meetings" ? (
         <>
-          {repeatReadyCases.length > 0 && (
-            <Notice tone="amber">
-              <strong>
-                Готово к повторному заседанию: {repeatReadyCases.length}
-              </strong>
-              <ul>
-                {repeatReadyCases.map((caseItem) => (
-                  <li key={caseItem.id}>
-                    <button
-                      type="button"
-                      className="link-button"
-                      onClick={() => onOpen(caseItem)}
-                    >
-                      {caseItem.appealNumber || caseItem.id}
-                    </button>
-                    {caseItem.repeatHearingPreviousMeetingNumber
-                      ? ` — после заседания №${caseItem.repeatHearingPreviousMeetingNumber}`
-                      : ""}
-                    . Обращение будет включено в ближайшее новое заседание
-                    автоматически.
-                  </li>
-                ))}
-              </ul>
-            </Notice>
-          )}
           <section className="card">
           <div className="table-scroll">
             <table className="registry-table">
