@@ -404,6 +404,8 @@ export interface CommissionMeeting {
   agendaHtml: string;
   agendaSigned?: boolean;
   agendaSignedAt?: string;
+  /** Обращения, снятые с этого заседания из-за дополнительного запроса. */
+  postponedCaseIds?: string[];
   /** Рабочий орган зафиксировал завершение заседания. */
   completed?: boolean;
   completedAt?: string;
@@ -466,7 +468,8 @@ export interface CaseNotification {
     | "request-response"
     | "recommendation"
     | "recommendation-response"
-    | "final-response";
+    | "final-response"
+    | "repeat-hearing";
   attendancePollId?: string;
   commissionMemberId?: string;
   meetingId?: string;
@@ -545,6 +548,15 @@ export interface ObjectionCase {
   requestRouteStartedAt?: string;
   /** Заполняется после получения всех ответов по дополнительному запросу. */
   requestRouteCompletedAt?: string;
+  /** Контроль повторного заседания после запроса членов АК. */
+  repeatHearingStatus?: "required" | "ready" | "scheduled";
+  repeatHearingRound?: number;
+  repeatHearingReason?: string;
+  repeatHearingRequestedAt?: string;
+  repeatHearingReadyAt?: string;
+  repeatHearingPreviousMeetingId?: string;
+  repeatHearingPreviousMeetingNumber?: number;
+  repeatHearingMeetingId?: string;
   /** Сохранённые проекты запросов, которые ещё не зафиксированы. */
   requestDrafts?: Partial<Record<RequestDraftKind, RequestDraft>>;
   /** Черновик справки до её формирования и направления на согласование. */

@@ -1393,6 +1393,22 @@
   color: var(--muted);
   background: #fafcfd;
 }
+.process-repeat-hearing-banner {
+  border-color: #e5c98c;
+  border-left-color: #b77b08;
+  color: #704d00;
+  background: #fff9e9;
+}
+.link-button {
+  padding: 0;
+  border: 0;
+  color: var(--blue);
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
 .request-route-chip {
   display: inline-flex;
   align-items: center;

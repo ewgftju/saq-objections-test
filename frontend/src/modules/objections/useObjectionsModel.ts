@@ -153,6 +153,7 @@ function rescheduleSource(caseItem: ObjectionCase, state: DemoState) {
     .filter(
       (meeting) =>
         excluded.has(meeting.id) ||
+        meeting.postponedCaseIds?.includes(caseItem.id) ||
         (meeting.caseIds.includes(caseItem.id) &&
           (meeting.completed || meetingDate(meeting) < state.date) &&
           !isMeetingCompleted(caseItem)),
@@ -163,11 +164,15 @@ function rescheduleSource(caseItem: ObjectionCase, state: DemoState) {
 function nextMeetingForCase(state: DemoState, caseItem: ObjectionCase) {
   const meetings = state.meetings || [];
   const source = rescheduleSource(caseItem, state);
+  // После решения АК обращение ждёт ответы на дополнительный запрос и новую
+  // справку. До её подписания повторное заседание не назначается.
+  if (caseItem.repeatHearingStatus === "required") return undefined;
   const excluded = new Set(caseItem.excludedFromMeetingIds || []);
   const sourceDate = source ? meetingDate(source) : "";
   const alreadyScheduled = meetings.some(
     (meeting) =>
       meeting.caseIds.includes(caseItem.id) &&
+      !meeting.postponedCaseIds?.includes(caseItem.id) &&
       !excluded.has(meeting.id) &&
       (sourceDate ? meetingDate(meeting) > sourceDate : true),
   );
@@ -209,7 +214,9 @@ export function casesEligibleForMeeting(state: DemoState, dateTime: string) {
   const assignedCaseIds = new Set(
     (state.meetings || [])
       .filter((item) => item.id !== meeting.id)
-      .flatMap((item) => item.caseIds),
+      .flatMap((item) =>
+        item.caseIds.filter((caseId) => !item.postponedCaseIds?.includes(caseId)),
+      ),
   );
   return state.cases.filter(
     (caseItem) =>
@@ -232,6 +239,18 @@ function synchronizeUpcomingMeetingCases(state: DemoState) {
     if (poll && !poll.caseIds.includes(caseItem.id)) poll.caseIds.push(caseItem.id);
     caseItem.attendanceMeetingDate = meeting.dateTime.slice(0, 10);
     const source = rescheduleSource(caseItem, next);
+    if (caseItem.repeatHearingStatus === "ready") {
+      caseItem.repeatHearingStatus = "scheduled";
+      caseItem.repeatHearingMeetingId = meeting.id;
+      caseItem.history.push({
+        date: next.date,
+        actor: "Система",
+        title: "Назначено повторное заседание",
+        text:
+          `Обращение включено в заседание №${meeting.number} после отложенного ` +
+          `заседания №${caseItem.repeatHearingPreviousMeetingNumber || "—"}.`,
+      });
+    }
     caseItem.history.push({
       date: next.date,
       actor: "Система",

@@ -366,7 +366,14 @@ export function SessionsPage({
       )
     : [];
   const scheduledCaseIds = new Set(
-    meetings.flatMap((meeting) => meeting.caseIds),
+    meetings.flatMap((meeting) =>
+      meeting.caseIds.filter(
+        (caseId) => !meeting.postponedCaseIds?.includes(caseId),
+      ),
+    ),
+  );
+  const repeatReadyCases = cases.filter(
+    (caseItem) => caseItem.repeatHearingStatus === "ready",
   );
   const excludedCases = cases.filter(
     (caseItem) =>
@@ -445,6 +452,37 @@ export function SessionsPage({
           АК — Вице-министр; при его отсутствии председательствует Директор
           ДАВГА.
         </Notice>
+        {selectedMeeting.postponedCaseIds?.length ? (
+          <Notice tone="amber">
+            <strong>
+              Отложено для дополнительного запроса: {selectedMeeting.postponedCaseIds.length}
+            </strong>
+            <p>
+              Эти обращения исключены из текущей повестки. После подписания
+              обновлённой справки система включит их в ближайшее новое заседание.
+            </p>
+            <ul>
+              {selectedMeeting.postponedCaseIds.map((caseId) => {
+                const postponedCase = cases.find((item) => item.id === caseId);
+                return (
+                  <li key={caseId}>
+                    {postponedCase ? (
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() => onOpen(postponedCase)}
+                      >
+                        {postponedCase.appealNumber || caseId}
+                      </button>
+                    ) : (
+                      caseId
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </Notice>
+        ) : null}
 
         <section className="card">
           <div className="card-head">
@@ -925,7 +963,33 @@ export function SessionsPage({
         )}
       </div>
       {visibleSessionsTab === "meetings" ? (
-        <section className="card">
+        <>
+          {repeatReadyCases.length > 0 && (
+            <Notice tone="amber">
+              <strong>
+                Готово к повторному заседанию: {repeatReadyCases.length}
+              </strong>
+              <ul>
+                {repeatReadyCases.map((caseItem) => (
+                  <li key={caseItem.id}>
+                    <button
+                      type="button"
+                      className="link-button"
+                      onClick={() => onOpen(caseItem)}
+                    >
+                      {caseItem.appealNumber || caseItem.id}
+                    </button>
+                    {caseItem.repeatHearingPreviousMeetingNumber
+                      ? ` — после заседания №${caseItem.repeatHearingPreviousMeetingNumber}`
+                      : ""}
+                    . Обращение будет включено в ближайшее новое заседание
+                    автоматически.
+                  </li>
+                ))}
+              </ul>
+            </Notice>
+          )}
+          <section className="card">
           <div className="table-scroll">
             <table className="registry-table">
               <thead>
@@ -1035,7 +1099,8 @@ export function SessionsPage({
               </tbody>
             </table>
           </div>
-        </section>
+          </section>
+        </>
       ) : (
         <section className="card">
           <div className="table-scroll">

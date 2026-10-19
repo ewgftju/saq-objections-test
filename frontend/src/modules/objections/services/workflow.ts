@@ -883,6 +883,14 @@ export function applyAction(
         : "additional-analysis";
       c.requestRouteStartedAt = date;
       c.requestRouteCompletedAt = undefined;
+      if (fromCommission) {
+        c.repeatHearingStatus = "required";
+        c.repeatHearingRound = (c.repeatHearingRound || 0) + 1;
+        c.repeatHearingReason = reason;
+        c.repeatHearingRequestedAt = date;
+        c.repeatHearingReadyAt = undefined;
+        c.repeatHearingMeetingId = undefined;
+      }
       c.status = "accepted";
       title = fromCommission
         ? "Дополнительный запрос по решению Апелляционной комиссии сформирован"
@@ -1188,6 +1196,22 @@ export function applyAction(
       title = "Справка подписана";
       note =
         "Справка подписана. Опрос о присутствии направляется автоматически при создании заседания.";
+      if (c.repeatHearingStatus === "required") {
+        c.repeatHearingStatus = "ready";
+        c.repeatHearingReadyAt = date;
+        note =
+          "Обновлённая справка подписана. Обращение отмечено как готовое к повторному заседанию и будет автоматически включено в ближайшее заседание.";
+        next.notifications.push({
+          id: `repeat-hearing-${c.id}-${next.notifications.length + 1}`,
+          caseId: c.id,
+          recipient: ROLES.work,
+          recipientRole: "work",
+          date,
+          read: false,
+          kind: "repeat-hearing",
+          text: `Обращение №${c.appealNumber || c.id} готово к повторному заседанию. Система включит его в ближайшее заседание автоматически.`,
+        });
+      }
       break;
     }
     case "review-commission-documents": {

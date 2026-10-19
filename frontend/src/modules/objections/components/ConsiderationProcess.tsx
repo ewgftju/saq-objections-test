@@ -101,6 +101,12 @@ const REQUEST_ROUTE_LABELS = {
     "Дополнительный запрос по решению Апелляционной комиссии",
 } as const;
 
+const REPEAT_HEARING_LABELS = {
+  required: "Требуется повторное заседание",
+  ready: "Готово к повторному заседанию",
+  scheduled: "Включено в повторное заседание",
+} as const;
+
 function requestRouteLabel(c: ObjectionCase) {
   return c.requestRoute ? REQUEST_ROUTE_LABELS[c.requestRoute] : "Основной запрос";
 }
@@ -641,6 +647,25 @@ export default function ConsiderationProcess({
               <span className="process-route-banner-label">Последний маршрут</span>
               <strong>{requestRouteLabel(c)}</strong>
               <span>Ответ получен, обращение возвращено к дальнейшему рассмотрению.</span>
+            </div>
+          )}
+          {c.repeatHearingStatus && (
+            <div
+              className="process-route-banner process-repeat-hearing-banner"
+              role="status"
+            >
+              <span className="process-route-banner-label">
+                Контроль повторного заседания
+              </span>
+              <strong>{REPEAT_HEARING_LABELS[c.repeatHearingStatus]}</strong>
+              {c.repeatHearingPreviousMeetingNumber && (
+                <span>
+                  Предыдущее заседание: №{c.repeatHearingPreviousMeetingNumber}
+                </span>
+              )}
+              {c.repeatHearingReason && (
+                <span>Причина: {c.repeatHearingReason}</span>
+              )}
             </div>
           )}
           {currentAnalysisSubstep !== null && (

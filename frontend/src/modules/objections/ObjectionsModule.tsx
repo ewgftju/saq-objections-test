@@ -11,6 +11,7 @@ import type {
   CaseDocument,
   CommissionAttendancePoll,
   CommissionMeeting,
+  DemoState,
   ObjectionCase,
   RequestDraftKind,
 } from "../../types";
@@ -139,6 +140,73 @@ function currentPollForCase(
     meetingPoll ||
     attendancePolls.filter((poll) => poll.caseIds.includes(c.id)).at(-1)
   );
+}
+
+/**
+ * Сохраняет связь дополнительного запроса с заседанием, из которого он был
+ * инициирован. Обращение убирается из текущей повестки и помечается как
+ * отложенное, чтобы после обновления справки автоматически попасть в новое
+ * заседание.
+ */
+function postponeMeetingForAdditionalRequest(
+  state: DemoState,
+  caseId: string,
+  reason: string,
+) {
+  const target = state.cases.find((item) => item.id === caseId);
+  if (!target || !state.meetings?.length) return;
+  const meeting = state.meetings
+    .filter(
+      (item) =>
+        item.caseIds.includes(caseId) &&
+        !item.completed &&
+        !item.postponedCaseIds?.includes(caseId) &&
+        (!target.attendanceMeetingDate ||
+          item.dateTime.slice(0, 10) === target.attendanceMeetingDate),
+    )
+    .sort((left, right) => right.dateTime.localeCompare(left.dateTime))
+    .at(0);
+  if (!meeting) return;
+
+  meeting.postponedCaseIds = [
+    ...new Set([...(meeting.postponedCaseIds || []), caseId]),
+  ];
+  meeting.caseIds = meeting.caseIds.filter((id) => id !== caseId);
+  const poll = state.attendancePolls.find((item) => item.id === meeting.pollId);
+  if (poll) poll.caseIds = poll.caseIds.filter((id) => id !== caseId);
+  // Подписанная повестка остаётся неизменяемой исторической формой. Для
+  // неподписанной повестки обновляем состав и печатную форму сразу.
+  if (!meeting.agendaSigned) {
+    const remainingCases = meeting.caseIds
+      .map((id) => state.cases.find((item) => item.id === id))
+      .filter((item): item is ObjectionCase => Boolean(item));
+    meeting.agendaHtml = agendaDocumentHtml(
+      remainingCases,
+      meeting.dateTime.slice(0, 10),
+    );
+  }
+  target.repeatHearingPreviousMeetingId = meeting.id;
+  target.repeatHearingPreviousMeetingNumber = meeting.number;
+  delete target.attendanceMeetingDate;
+  target.history.push({
+    date: state.date,
+    actor: ROLES.work,
+    title: "Заседание отложено",
+    text:
+      `Заседание №${meeting.number} отложено в связи с направлением дополнительного запроса. ` +
+      `Причина: ${reason}`,
+  });
+  state.notifications.push({
+    id: `postponed-hearing-${caseId}-${state.notifications.length + 1}`,
+    caseId,
+    recipient: ROLES.work,
+    recipientRole: "work",
+    date: state.date,
+    read: false,
+    kind: "repeat-hearing",
+    meetingId: meeting.id,
+    text: `Заседание №${meeting.number} по обращению №${target.appealNumber || caseId} отложено. После обновления справки обращение будет направлено на повторное заседание.`,
+  });
 }
 
 function recalculateVotesForChair(c: ObjectionCase) {
@@ -503,6 +571,18 @@ export default function ObjectionsModule() {
       const target = next.cases.find((caseItem) => caseItem.id === item.id);
       if (!target) return;
       target.attendanceMeetingDate = meetingDate;
+      if (target.repeatHearingStatus === "ready") {
+        target.repeatHearingStatus = "scheduled";
+        target.repeatHearingMeetingId = meeting.id;
+        target.history.push({
+          date: next.date,
+          actor: "Система",
+          title: "Назначено повторное заседание",
+          text:
+            `Обращение включено в заседание №${number} после отложенного ` +
+            `заседания №${target.repeatHearingPreviousMeetingNumber || "—"}.`,
+        });
+      }
       target.history.push({
         date: next.date,
         actor: ROLES.work,
@@ -667,6 +747,10 @@ export default function ObjectionsModule() {
       target.excludedFromMeetingIds || []
     ).filter((id) => id !== meeting.id);
     target.attendanceMeetingDate = meeting.dateTime.slice(0, 10);
+    if (target.repeatHearingStatus === "ready") {
+      target.repeatHearingStatus = "scheduled";
+      target.repeatHearingMeetingId = meeting.id;
+    }
     target.history.push({
       date: next.date,
       actor: ROLES.director,
@@ -951,6 +1035,23 @@ export default function ObjectionsModule() {
     // The selected demo cabinet member is also enforced here, not just in the UI.
     if (action === "commission-vote" && model.role === "commission") {
       form.set("commissionMember", activeCommissionMember.id);
+    }
+    if (action === "start-commission-additional-request") {
+      const next = applyAction(model.state, c.id, action, model.role, form);
+      postponeMeetingForAdditionalRequest(
+        next,
+        c.id,
+        String(
+          form.get("reason") ||
+            "Дополнительный запрос по решению Апелляционной комиссии",
+        ),
+      );
+      model.commit(
+        next,
+        "Текущее заседание отложено. Обращение направлено на дополнительный запрос.",
+      );
+      close();
+      return;
     }
     if (
       ![

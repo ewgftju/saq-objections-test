@@ -15,6 +15,7 @@ import {
   applyAction,
   nextAction,
 } from "../services/workflow";
+import { casesEligibleForMeeting } from "../useObjectionsModel";
 import {
   addWorkdays,
   addMonths,
@@ -1687,6 +1688,7 @@ test("заявление использует три маршрута этапа
   assert.equal(h.c.status, "accepted");
   assert.equal(h.c.requestRoute, "additional-commission");
   assert.equal(h.c.requestRouteCompletedAt, undefined);
+  assert.equal(h.c.repeatHearingStatus, "required");
   assert.equal(h.c.documents.at(-1)?.kind, "additional-request-decision");
 
   const process = renderToStaticMarkup(
@@ -1700,6 +1702,41 @@ test("заявление использует три маршрута этапа
   assert.match(
     process,
     /Дополнительный запрос по решению Апелляционной комиссии/,
+  );
+});
+
+test("обращение после дополнительного запроса автоматически включается в новое заседание", () => {
+  const state = initialState();
+  const target = state.cases[0];
+  target.appealType = "Заявление";
+  target.status = "certificate_approved";
+  target.repeatHearingStatus = "ready";
+  target.repeatHearingPreviousMeetingNumber = 12;
+  state.date = "2026-10-20";
+  state.meetings = [
+    {
+      id: "meeting-old",
+      number: 12,
+      dateTime: "2026-10-15T10:00",
+      caseIds: [],
+      postponedCaseIds: [target.id],
+      pollId: "poll-old",
+      agendaHtml: "",
+      created: "2026-10-01",
+    },
+    {
+      id: "meeting-next",
+      number: 13,
+      dateTime: "2026-10-25T10:00",
+      caseIds: [],
+      pollId: "poll-next",
+      agendaHtml: "",
+      created: "2026-10-01",
+    },
+  ];
+  assert.deepEqual(
+    casesEligibleForMeeting(state, "2026-10-25T10:00").map((item) => item.id),
+    [target.id],
   );
 });
 
