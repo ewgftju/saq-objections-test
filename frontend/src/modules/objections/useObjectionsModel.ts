@@ -168,13 +168,15 @@ function nextMeetingForCase(state: DemoState, caseItem: ObjectionCase) {
   // справку. До её подписания повторное заседание не назначается.
   if (caseItem.repeatHearingStatus === "required") return undefined;
   const excluded = new Set(caseItem.excludedFromMeetingIds || []);
-  const sourceDate = source ? meetingDate(source) : "";
+  // Для переноса важны не только календарные даты, но и время заседания:
+  // заседание № 2 в 11:00 того же дня идёт после заседания № 1 в 10:00.
+  const sourceDateTime = source ? source.dateTime : "";
   const alreadyScheduled = meetings.some(
     (meeting) =>
       meeting.caseIds.includes(caseItem.id) &&
       !meeting.postponedCaseIds?.includes(caseItem.id) &&
       !excluded.has(meeting.id) &&
-      (sourceDate ? meetingDate(meeting) > sourceDate : true),
+      (sourceDateTime ? meeting.dateTime > sourceDateTime : true),
   );
   if (alreadyScheduled) return undefined;
 
@@ -199,7 +201,7 @@ function nextMeetingForCase(state: DemoState, caseItem: ObjectionCase) {
       (meeting) =>
         !meeting.agendaSigned &&
         !excluded.has(meeting.id) &&
-        meetingDate(meeting) > sourceDate &&
+        meeting.dateTime > sourceDateTime &&
         meetingDate(meeting) > state.date,
     )
     .sort((left, right) => left.dateTime.localeCompare(right.dateTime))[0];

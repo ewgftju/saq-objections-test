@@ -1712,7 +1712,7 @@ test("обращение после дополнительного запрос�
   target.status = "certificate_approved";
   target.repeatHearingStatus = "ready";
   target.repeatHearingPreviousMeetingNumber = 12;
-  state.date = "2026-10-20";
+  state.date = "2026-10-01";
   state.meetings = [
     {
       id: "meeting-old",
@@ -1727,7 +1727,7 @@ test("обращение после дополнительного запрос�
     {
       id: "meeting-next",
       number: 13,
-      dateTime: "2026-10-25T10:00",
+      dateTime: "2026-10-15T11:00",
       caseIds: [],
       pollId: "poll-next",
       agendaHtml: "",
@@ -1735,7 +1735,7 @@ test("обращение после дополнительного запрос�
     },
   ];
   assert.deepEqual(
-    casesEligibleForMeeting(state, "2026-10-25T10:00").map((item) => item.id),
+    casesEligibleForMeeting(state, "2026-10-15T11:00").map((item) => item.id),
     [target.id],
   );
 });
