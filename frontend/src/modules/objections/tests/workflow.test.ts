@@ -3709,6 +3709,76 @@ test("заявление без дополнительного запроса в
   );
 });
 
+test("повторное заседание заявления после первого проекта сразу ведёт к мотивированному ответу", () => {
+  const h = harness(2);
+  h.c.appealType = "Заявление";
+  h.c.decisionProject = {
+    date: h.state.date,
+    number: "",
+    receipt: "",
+    channel: "saq",
+    appealCourt: "—",
+    appealProcedure: "—",
+  };
+  h.c.repeatHearingStatus = "scheduled";
+  h.c.status = "protocol";
+  h.c.members = [
+    {
+      id: "repeat-chair",
+      name: "Председатель АК",
+      present: true,
+      isChair: true,
+      recused: false,
+      reason: "",
+    },
+    {
+      id: "repeat-member",
+      name: "Член АК",
+      present: true,
+      recused: false,
+      reason: "",
+    },
+  ];
+  h.c.votes = Object.fromEntries(
+    h.c.issues
+      .filter((item) => item.disputed)
+      .map((point) => [
+        point.id,
+        {
+          yes: 2,
+          no: 0,
+          approved: true,
+          chair: "repeat-chair",
+          present: 2,
+          eligible: 2,
+          votes: { "repeat-chair": "accept", "repeat-member": "accept" },
+          voteReasons: {},
+        },
+      ]),
+  );
+  h.c.meeting = {
+    date: h.state.date,
+    number: "",
+    audio: "",
+    format: "онлайн, Qosyl",
+  };
+  assert.equal(nextAction(h.c, "commission")?.action, "sign");
+  h.run("sign", "commission", {
+    secretary: "on",
+    "signed_repeat-chair": "on",
+    "signed_repeat-member": "on",
+    reason: "Итоговая мотивировка повторного заседания",
+  });
+  assert.equal(h.c.status, "decided");
+  assert.equal(h.c.repeatHearingStatus, undefined);
+  assert.equal(nextAction(h.c)?.action, "deliver");
+  assert.equal(nextAction(h.c)?.label, "Сформировать мотивированный ответ");
+  assert.equal(
+    h.c.documents.at(-1)?.name,
+    "Подписанный протокол заседания",
+  );
+});
+
 test("рабочий орган видит статус согласования и подписания проекта решения", () => {
   const h = harness(2);
   h.c.appealType = "Жалоба на решение КВГА/ДВГА";

@@ -1941,9 +1941,25 @@ export function applyAction(
         date,
         number: c.meeting.number,
       };
-      c.status = requiresEotinishDecisionProject(c)
-        ? "decision_project"
-        : "decided";
+      // Если заявление уже прошло первый проект решения и повторное
+      // заседание было назначено после дополнительных доводов/запроса,
+      // второй проект решения не формируется. После подписания повторного
+      // протокола обращение сразу переходит к мотивированному ответу.
+      const repeatHearingAfterDecisionProject =
+        isStatement(c) &&
+        Boolean(c.decisionProject) &&
+        c.repeatHearingStatus === "scheduled";
+      c.status =
+        requiresEotinishDecisionProject(c) &&
+        !repeatHearingAfterDecisionProject
+          ? "decision_project"
+          : "decided";
+      if (repeatHearingAfterDecisionProject) {
+        c.repeatHearingStatus = undefined;
+        title = "Повторный протокол подписан";
+        note =
+          "Повторное заседание завершено. Второй проект решения не формируется; обращение переведено к формированию мотивированного ответа.";
+      }
       doc("Подписанный протокол заседания", "protocol", c.result.reason);
       break;
     }
