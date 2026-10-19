@@ -1369,6 +1369,42 @@
   color: #fff;
   background: var(--blue);
 }
+.process-route-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: -4px 0 18px;
+  padding: 10px 12px;
+  border: 1px solid #bdd7e8;
+  border-left: 3px solid var(--blue);
+  border-radius: 5px;
+  color: #164f70;
+  background: #f3f9fc;
+  font-size: 12px;
+}
+.process-route-banner-label {
+  color: var(--muted);
+  font-weight: 600;
+}
+.process-route-banner-muted {
+  border-color: var(--line-soft);
+  border-left-color: #8aa8b8;
+  color: var(--muted);
+  background: #fafcfd;
+}
+.request-route-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin: -2px 0 2px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: #0f5d84;
+  background: #e7f3fa;
+  font-size: 12px;
+  font-weight: 700;
+}
 .consideration-task,
 .consideration-entry {
   display: flex;

@@ -321,6 +321,8 @@ export interface CaseRequest {
   date: string;
   text: string;
   deadline: string;
+  /** Подэтап этапа «Запрос», на котором создан запрос. */
+  route?: RequestRoute;
   template?: "dvga" | "other";
   /** Кабинет SAQ, в который направляется запрос в другой орган. */
   saqRecipient?: Role;
@@ -360,6 +362,15 @@ export interface RequestDraft {
 }
 
 export type RequestDraftKind = "request" | "request-saq" | "request-other";
+
+/**
+ * Маршрут этапа «Запрос». Первоначальный запрос используется в золотом
+ * маршруте, дополнительные запросы запускаются из анализа либо заседания.
+ */
+export type RequestRoute =
+  | "initial"
+  | "additional-analysis"
+  | "additional-commission";
 
 export interface CertificateMemberPosition {
   id: string;
@@ -528,6 +539,12 @@ export interface ObjectionCase {
   pauseDays: number;
   documents: CaseDocument[];
   requests: CaseRequest[];
+  /** Последний выбранный маршрут этапа «Запрос». */
+  requestRoute?: RequestRoute;
+  /** Дата запуска текущего дополнительного маршрута. */
+  requestRouteStartedAt?: string;
+  /** Заполняется после получения всех ответов по дополнительному запросу. */
+  requestRouteCompletedAt?: string;
   /** Сохранённые проекты запросов, которые ещё не зафиксированы. */
   requestDrafts?: Partial<Record<RequestDraftKind, RequestDraft>>;
   /** Черновик справки до её формирования и направления на согласование. */
@@ -627,6 +644,8 @@ export type Action =
   | "request"
   | "request-saq"
   | "request-other"
+  | "start-analysis-additional-request"
+  | "start-commission-additional-request"
   | "send-request-approval"
   | "approve-request"
   | "sign-request"

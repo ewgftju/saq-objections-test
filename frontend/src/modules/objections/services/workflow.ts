@@ -252,6 +252,12 @@ function advanceAfterResponses(c: ObjectionCase, date: string) {
     if (pausedDays > 0) c.pauseDays += pausedDays;
   }
   c.requestPauseStartedAt = undefined;
+  if (
+    c.requestRoute === "additional-analysis" ||
+    c.requestRoute === "additional-commission"
+  ) {
+    c.requestRouteCompletedAt = date;
+  }
   c.status = "materials";
   return pausedDays;
 }
@@ -287,6 +293,32 @@ function requiresMotivatedResponse(c: ObjectionCase) {
     appealType === "Возражение на аудиторский отчёт"
   );
 }
+
+function isStatement(c: ObjectionCase) {
+  return (c.appealType || "").trim() === "Заявление";
+}
+
+const REQUEST_STAGE_STATUSES: ObjectionCase["status"][] = [
+  "accepted",
+  "requested",
+  "request_approval",
+  "request_signed",
+  "request_approved",
+  "response_approval",
+  "response_signed",
+  "response_ready",
+];
+
+const COMMISSION_STAGE_STATUSES: ObjectionCase["status"][] = [
+  "certificate_approved",
+  "documents_review",
+  "commission_members",
+  "commission_voting",
+  "circulated",
+  "meeting_certificate_approval",
+  "meeting_certificate_signed",
+  "meeting_certificate_approved",
+];
 
 function cameThroughSaq(c: ObjectionCase) {
   return (c.channel || "").trim().toUpperCase() === "SAQ";
@@ -468,7 +500,11 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     },
     materials: {
       action: "analysis",
-      label: "Сформировать справку",
+      label:
+        c.requestRoute === "additional-analysis" ||
+        c.requestRoute === "additional-commission"
+          ? "Обновить справку"
+          : "Сформировать справку",
       role: reviewer,
     },
     forwarded: {
@@ -583,6 +619,20 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   const options: ActionOption[] = [
     { action: "upload", label: "Добавить материал", role: subjectRoleForCase(c) },
   ];
+  if (isStatement(c) && c.status === "materials") {
+    options.push({
+      action: "start-analysis-additional-request",
+      label: "Направить дополнительный запрос",
+      role: "work",
+    });
+  }
+  if (isStatement(c) && COMMISSION_STAGE_STATUSES.includes(c.status)) {
+    options.push({
+      action: "start-commission-additional-request",
+      label: "Направить дополнительный запрос",
+      role: "work",
+    });
+  }
   if (
     c.requests.some(
       (request) =>
@@ -623,17 +673,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       label: "Перейти на этап «Мотивированный ответ»",
       role: "work",
     });
-  const requestStageStatuses: ObjectionCase["status"][] = [
-    "accepted",
-    "requested",
-    "request_approval",
-    "request_signed",
-    "request_approved",
-    "response_approval",
-    "response_signed",
-    "response_ready",
-  ];
-  const canAddRequest = requestStageStatuses.includes(c.status);
+  const canAddRequest = REQUEST_STAGE_STATUSES.includes(c.status);
   const hasDraftRequests = c.requests.some(
     (request) =>
       isActiveRequest(request) && requestLifecycleStatus(request) === "draft",
@@ -827,6 +867,38 @@ export function applyAction(
   let note = "";
 
   switch (action) {
+    case "start-analysis-additional-request":
+    case "start-commission-additional-request": {
+      if (!isStatement(c))
+        throw new Error(
+          "Дополнительный маршрут в этой версии доступен только для заявления",
+        );
+      const reason = text(
+        "reason",
+        "Причина необходимости направления дополнительного запроса",
+      );
+      const fromCommission = action === "start-commission-additional-request";
+      c.requestRoute = fromCommission
+        ? "additional-commission"
+        : "additional-analysis";
+      c.requestRouteStartedAt = date;
+      c.requestRouteCompletedAt = undefined;
+      c.status = "accepted";
+      title = fromCommission
+        ? "Дополнительный запрос по решению Апелляционной комиссии сформирован"
+        : "Дополнительный запрос по результатам анализа сформирован";
+      note = fromCommission
+        ? `Заседание отложено. Причина направления дополнительного запроса: ${reason}`
+        : `Формирование справки приостановлено. Причина направления дополнительного запроса: ${reason}`;
+      doc(
+        fromCommission
+          ? "Решение Апелляционной комиссии о направлении дополнительного запроса"
+          : "Обоснование направления дополнительного запроса по результатам анализа",
+        "additional-request-decision",
+        reason,
+      );
+      break;
+    }
     case "assign-work-executor": {
       c.assignee = text("assignee", "Исполнитель рабочего органа");
       c.unread = false;
@@ -880,6 +952,7 @@ export function applyAction(
         date,
         text: note,
         deadline,
+        route: c.requestRoute || "initial",
         template: "dvga",
         lifecycleStatus: "draft",
         author: String(form.get("executor") || DEMO_USER.fullName),
@@ -908,6 +981,7 @@ export function applyAction(
         date,
         text: note,
         deadline,
+        route: c.requestRoute || "initial",
         template: "other",
         saqRecipient,
         lifecycleStatus: "draft",
@@ -936,6 +1010,7 @@ export function applyAction(
         date: sent,
         text: note,
         deadline: "",
+        route: c.requestRoute || "initial",
         template: "other",
         lifecycleStatus: "waiting_response",
         author: DEMO_USER.fullName,
@@ -1416,6 +1491,12 @@ export function applyAction(
         }
       }
       c.requestPauseStartedAt = undefined;
+      if (
+        c.requestRoute === "additional-analysis" ||
+        c.requestRoute === "additional-commission"
+      ) {
+        c.requestRouteCompletedAt = date;
+      }
       c.status = "materials";
       doc("Полученные материалы по запросам", "position", note);
       break;

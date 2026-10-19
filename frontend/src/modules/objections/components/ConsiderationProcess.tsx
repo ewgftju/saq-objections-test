@@ -94,6 +94,27 @@ const REQUEST_SUBSTEPS = [
   "Ожидание ответа",
 ] as const;
 
+const REQUEST_ROUTE_LABELS = {
+  initial: "Основной запрос",
+  "additional-analysis": "Дополнительный запрос по результатам анализа",
+  "additional-commission":
+    "Дополнительный запрос по решению Апелляционной комиссии",
+} as const;
+
+function requestRouteLabel(c: ObjectionCase) {
+  return c.requestRoute ? REQUEST_ROUTE_LABELS[c.requestRoute] : "Основной запрос";
+}
+
+function requestRouteLabelForRequest(
+  request: ObjectionCase["requests"][number],
+) {
+  if (request.route === "additional-analysis")
+    return REQUEST_ROUTE_LABELS["additional-analysis"];
+  if (request.route === "additional-commission")
+    return REQUEST_ROUTE_LABELS["additional-commission"];
+  return REQUEST_ROUTE_LABELS.initial;
+}
+
 const ANALYSIS_SUBSTEPS = [
   "Сформировать справку",
   "Согласовать справку",
@@ -186,6 +207,7 @@ function RequestResponsesPanel({
               <span className="request-response-recipient">
                 <strong>{requestKind(request)}</strong>
                 <small>Кому: {request.recipient}</small>
+                <small>Маршрут: {requestRouteLabelForRequest(request)}</small>
               </span>
               <span className="request-response-dates">
                 <small>
@@ -534,6 +556,11 @@ export default function ConsiderationProcess({
   const currentAnalysisSubstep = analysisSubstep(c.status);
   const currentDecisionSubstep = decisionSubstep(c.status);
   const currentExecutionSubstep = executionSubstep(c.status);
+  const additionalRequestRoute =
+    c.requestRoute === "additional-analysis" ||
+    c.requestRoute === "additional-commission";
+  const requestRouteActive =
+    currentRequestSubstep !== null && !c.requestRouteCompletedAt;
   const commentsDeadline = c.decisionProjectRouting?.commentsDeadline;
   const commentsDeadlineExpired =
     c.status === "decision_project_comments" &&
@@ -603,6 +630,19 @@ export default function ConsiderationProcess({
               ))}
             </ol>
           )}
+          {requestRouteActive && (
+            <div className="process-route-banner" role="status">
+              <span className="process-route-banner-label">Подэтап этапа «Запрос»</span>
+              <strong>{requestRouteLabel(c)}</strong>
+            </div>
+          )}
+          {additionalRequestRoute && c.requestRouteCompletedAt && currentStatus !== "accepted" && (
+            <div className="process-route-banner process-route-banner-muted" role="status">
+              <span className="process-route-banner-label">Последний маршрут</span>
+              <strong>{requestRouteLabel(c)}</strong>
+              <span>Ответ получен, обращение возвращено к дальнейшему рассмотрению.</span>
+            </div>
+          )}
           {currentAnalysisSubstep !== null && (
             <ol
               className="process-substeps"
@@ -658,6 +698,7 @@ export default function ConsiderationProcess({
           <div>
             <span className="consideration-eyebrow">Текущая задача</span>
             <h4>Формирование и направление запросов</h4>
+            <span className="request-route-chip">{requestRouteLabel(c)}</span>
             <p className="consideration-owner">
               Исполнитель: <strong>{ROLES.work}</strong>
             </p>

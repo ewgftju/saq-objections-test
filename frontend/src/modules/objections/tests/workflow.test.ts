@@ -1641,6 +1641,68 @@ test("в других действиях нет отказа или оставл
   );
 });
 
+test("заявление использует три маршрута этапа запроса", () => {
+  const h = harness();
+  h.c.appealType = "Заявление";
+  h.c.status = "materials";
+
+  assert.deepEqual(
+    additionalActions(h.c).find(
+      (action) => action.action === "start-analysis-additional-request",
+    ),
+    {
+      action: "start-analysis-additional-request",
+      label: "Направить дополнительный запрос",
+      role: "work",
+    },
+  );
+
+  h.run("start-analysis-additional-request", "work", {
+    reason: "Для анализа необходимо получить дополнительные пояснения.",
+  });
+  assert.equal(h.c.status, "accepted");
+  assert.equal(h.c.requestRoute, "additional-analysis");
+  assert.equal(h.c.requestRouteCompletedAt, undefined);
+  assert.equal(h.c.documents.at(-1)?.kind, "additional-request-decision");
+
+  h.run("request-other", "work", {
+    recipient: "Другая система",
+    date: "2026-10-12",
+    registrationNumber: "ДЗ-1",
+    deliveryPath: "Электронный документооборот",
+  });
+  assert.equal(h.c.requests.at(-1)?.route, "additional-analysis");
+  h.run("record-external-response", "work", {
+    externalRequestId: h.c.requests.at(-1)?.id || "",
+    date: "2026-10-13",
+  });
+  assert.equal(h.c.status, "materials");
+  assert.equal(h.c.requestRouteCompletedAt, "2026-10-13");
+  assert.equal(nextAction(h.c)?.label, "Обновить справку");
+
+  h.c.status = "commission_voting";
+  h.run("start-commission-additional-request", "work", {
+    reason: "Членам Апелляционной комиссии нужны дополнительные документы.",
+  });
+  assert.equal(h.c.status, "accepted");
+  assert.equal(h.c.requestRoute, "additional-commission");
+  assert.equal(h.c.requestRouteCompletedAt, undefined);
+  assert.equal(h.c.documents.at(-1)?.kind, "additional-request-decision");
+
+  const process = renderToStaticMarkup(
+    createElement(ConsiderationProcess, {
+      c: h.c,
+      role: "work",
+      onAction() {},
+      onHistory() {},
+    }),
+  );
+  assert.match(
+    process,
+    /Дополнительный запрос по решению Апелляционной комиссии/,
+  );
+});
+
 test("голосование членов АК и формирование протокола доступны параллельно", () => {
   const h = harness();
   h.c.status = "commission_voting";
