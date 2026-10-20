@@ -529,92 +529,94 @@ export function SessionsPage({
           </Notice>
         ) : null}
 
-        <section className="card">
-          <div className="card-head">
-            <h3>Опрос</h3>
-            <span className="muted">Ответы членов Апелляционной комиссии</span>
-          </div>
-          <div className="attendance-member-list">
-            {commissionMembers.map((member) => {
-              const response = selectedPoll?.responses[member.id] || "pending";
-              const changed = selectedPoll?.manualResponseChanges?.[member.id];
-              const isViceMinister = member.id === "kenbeil-dm";
-              const isDavgaDirector = member.id === "kurenbek-shb";
-              const isChair = selectedPoll?.chairId === member.id;
-              const chairLabel = isChair
-                ? isViceMinister
-                  ? "Председатель АК"
-                  : "И.О. Председателя АК"
-                : isViceMinister
-                  ? "Председатель АК"
-                  : isDavgaDirector
-                    ? "Директор ДАВГА"
-                    : "Член АК";
-              const responseLabel =
-                response === "yes"
-                  ? "Будет присутствовать"
-                  : response === "no"
-                    ? "Не будет присутствовать"
-                    : "Нет ответа";
-              return (
-                <article className="attendance-member-card" key={member.id}>
-                  <div className="attendance-member-person">
-                    <strong>{member.name}</strong>
-                    <span>{chairLabel}</span>
-                  </div>
-                  <div className="attendance-member-answer">
-                    <span className="attendance-member-label">Ответ</span>
-                    <span
-                      className={
-                        "badge " +
-                        (response === "yes"
-                          ? "green"
-                          : response === "no"
-                            ? "gray"
-                            : "amber")
-                      }
-                    >
-                      {responseLabel}
-                    </span>
-                  </div>
-                  <div className="attendance-member-change">
-                    <span className="attendance-member-label">Изменение рабочего органа</span>
-                    <span>
-                      {changed
-                        ? changed.changedBy +
-                          " изменил(а) ответ " +
-                          formatDate(changed.changedAt)
-                        : "Не изменялся"}
-                    </span>
-                  </div>
-                  {(role === "demo-superuser" || role === "work") && (
-                    <label className="attendance-member-control">
-                      <span className="attendance-member-label">Отметить вручную</span>
-                      <select
-                        value={response}
-                        aria-label={"Отметить присутствие: " + member.name}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          if (value === "yes" || value === "no") {
-                            onUpdateAttendanceResponse(
-                              selectedMeeting.pollId,
-                              member.id,
-                              value,
-                            );
-                          }
-                        }}
+        {role !== "commission" && (
+          <section className="card">
+            <div className="card-head">
+              <h3>Опрос</h3>
+              <span className="muted">Ответы членов Апелляционной комиссии</span>
+            </div>
+            <div className="attendance-member-list">
+              {commissionMembers.map((member) => {
+                const response = selectedPoll?.responses[member.id] || "pending";
+                const changed = selectedPoll?.manualResponseChanges?.[member.id];
+                const isViceMinister = member.id === "kenbeil-dm";
+                const isDavgaDirector = member.id === "kurenbek-shb";
+                const isChair = selectedPoll?.chairId === member.id;
+                const chairLabel = isChair
+                  ? isViceMinister
+                    ? "Председатель АК"
+                    : "И.О. Председателя АК"
+                  : isViceMinister
+                    ? "Председатель АК"
+                    : isDavgaDirector
+                      ? "Директор ДАВГА"
+                      : "Член АК";
+                const responseLabel =
+                  response === "yes"
+                    ? "Будет присутствовать"
+                    : response === "no"
+                      ? "Не будет присутствовать"
+                      : "Нет ответа";
+                return (
+                  <article className="attendance-member-card" key={member.id}>
+                    <div className="attendance-member-person">
+                      <strong>{member.name}</strong>
+                      <span>{chairLabel}</span>
+                    </div>
+                    <div className="attendance-member-answer">
+                      <span className="attendance-member-label">Ответ</span>
+                      <span
+                        className={
+                          "badge " +
+                          (response === "yes"
+                            ? "green"
+                            : response === "no"
+                              ? "gray"
+                              : "amber")
+                        }
                       >
-                        <option value="pending">Нет ответа</option>
-                        <option value="yes">Будет присутствовать</option>
-                        <option value="no">Не будет присутствовать</option>
-                      </select>
-                    </label>
-                  )}
-                </article>
-              );
-            })}
-          </div>
-        </section>
+                        {responseLabel}
+                      </span>
+                    </div>
+                    <div className="attendance-member-change">
+                      <span className="attendance-member-label">Изменение рабочего органа</span>
+                      <span>
+                        {changed
+                          ? changed.changedBy +
+                            " изменил(а) ответ " +
+                            formatDate(changed.changedAt)
+                          : "Не изменялся"}
+                      </span>
+                    </div>
+                    {(role === "demo-superuser" || role === "work") && (
+                      <label className="attendance-member-control">
+                        <span className="attendance-member-label">Отметить вручную</span>
+                        <select
+                          value={response}
+                          aria-label={"Отметить присутствие: " + member.name}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (value === "yes" || value === "no") {
+                              onUpdateAttendanceResponse(
+                                selectedMeeting.pollId,
+                                member.id,
+                                value,
+                              );
+                            }
+                          }}
+                        >
+                          <option value="pending">Нет ответа</option>
+                          <option value="yes">Будет присутствовать</option>
+                          <option value="no">Не будет присутствовать</option>
+                        </select>
+                      </label>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {!hideAgendaUntilSigned && (
           <section className="card">
