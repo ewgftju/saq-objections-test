@@ -114,11 +114,11 @@ function authorityResponseDeadline(c: ObjectionCase, role?: Role) {
 }
 
 export function executionDeadline(c: ObjectionCase, role?: Role): string | null {
-  if (c.status === "received") return c.document.received;
   if (role === "dvga" || role === "kvga") {
     const deadline = authorityResponseDeadline(c, role);
     if (deadline) return deadline;
   }
+  if (c.status === "received") return c.document.received;
   if (
     ["accepted", "requested", "request_approval", "request_signed"].includes(
       c.status,
