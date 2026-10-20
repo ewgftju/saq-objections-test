@@ -2614,7 +2614,7 @@ export default function ObjectionsModule() {
       {dialog?.type === "reset" && (
         <Modal title="Перезапустить демонстрацию" onClose={close}>
           <p>
-            Три исходных обращения будут восстановлены. Действия и вложения,
+            Исходное обращение будет восстановлено. Действия и вложения,
             добавленные в этом браузере, будут удалены.
           </p>
           {dialogError && <p className="form-error">{dialogError}</p>}
@@ -2626,7 +2626,7 @@ export default function ObjectionsModule() {
                 try {
                   model.commit(
                     initialState(),
-                    "Три исходных обращения восстановлены",
+                    "Исходное обращение восстановлено",
                   );
                   model.navigate({ page: "registry" });
                   close();

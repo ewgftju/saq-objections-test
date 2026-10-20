@@ -16,6 +16,32 @@ export interface ObjectionsRepository {
 export const STORAGE_KEY = "saq.objections.demo.v1";
 const CURRENT_VERSION = 12;
 
+/**
+ * Карточки из старого демонстрационного набора больше не должны появляться
+ * после обновления приложения или загрузки сохранённого состояния.
+ */
+const REMOVED_DEMO_CASE_IDS = new Set([
+  "ВОЗ-2026-004",
+  "ВОЗ-2026-001",
+  "ВОЗ-2026-002",
+  "ЖАЛ-2026-003",
+]);
+const RENAMED_DEMO_CASE_IDS = new Map([["В-2026-005", "В-2026-001"]]);
+
+function migratedCaseId(id: string) {
+  return RENAMED_DEMO_CASE_IDS.get(id) || id;
+}
+
+function normalizeCaseIds(ids: readonly string[] | undefined) {
+  return (ids || [])
+    .map(migratedCaseId)
+    .filter((id) => !REMOVED_DEMO_CASE_IDS.has(id));
+}
+
+function isRemovedDemoCase(id: string) {
+  return REMOVED_DEMO_CASE_IDS.has(id);
+}
+
 // Version 6 distinguishes incoming SAQ appeals from manually created appeals.
 
 export function initialState(): DemoState {
@@ -52,7 +78,25 @@ export function createDemoRepository(
           "Сохранённые данные имеют неподдерживаемый формат. Сбросьте демонстрацию.",
         );
       }
-      const cases = value.cases.map((c) => {
+      // Переносим оставшееся обращение со старого системного номера и
+      // удаляем карточки, которые больше не входят в исходный набор демо.
+      // Сначала устраняем дубли, которые могли появиться при одновременном
+      // наличии старого и нового номера в localStorage.
+      const persistedCases = value.cases.reduce<typeof value.cases>((result, item) => {
+        if (isRemovedDemoCase(item.id)) return result;
+        const id = migratedCaseId(item.id);
+        if (result.some((existing) => existing.id === id)) return result;
+        result.push({
+          ...item,
+          id,
+          appealNumber:
+            item.appealNumber === "В-2026-005"
+              ? "В-2026-001"
+              : item.appealNumber,
+        });
+        return result;
+      }, []);
+      const cases = persistedCases.map((c) => {
         const migrated =
           c.status === "commission_members"
             ? { ...c, status: "commission_voting" as const }
@@ -183,7 +227,12 @@ export function createDemoRepository(
             (normalized.status === "received" && normalized.channel === "SAQ"),
         };
       });
-      const previousNotifications = value.notifications || [];
+      const previousNotifications = (value.notifications || [])
+        .filter((notification) => !isRemovedDemoCase(notification.caseId))
+        .map((notification) => ({
+          ...notification,
+          caseId: migratedCaseId(notification.caseId),
+        }));
       const legacyFinalResponseNotifications =
         value.version < CURRENT_VERSION
           ? cases.flatMap((c) => {
@@ -226,10 +275,34 @@ export function createDemoRepository(
       return {
         ...value,
         version: CURRENT_VERSION,
-        agendas: value.agendas || [],
+        agendas: (value.agendas || [])
+          .map((agenda) => ({
+            ...agenda,
+            caseIds: normalizeCaseIds(agenda.caseIds),
+          }))
+          .filter((agenda) => agenda.caseIds.length > 0),
+        meetings: (value.meetings || [])
+          .map((meeting) => ({
+            ...meeting,
+            caseIds: normalizeCaseIds(meeting.caseIds),
+            postponedCaseIds: meeting.postponedCaseIds
+              ? normalizeCaseIds(meeting.postponedCaseIds)
+              : undefined,
+          }))
+          .filter((meeting) => meeting.caseIds.length > 0),
         notifications: [...previousNotifications, ...legacyFinalResponseNotifications],
-        recommendations: value.recommendations || [],
-        attendancePolls: value.attendancePolls || [],
+        recommendations: (value.recommendations || [])
+          .filter((recommendation) => !isRemovedDemoCase(recommendation.caseId))
+          .map((recommendation) => ({
+            ...recommendation,
+            caseId: migratedCaseId(recommendation.caseId),
+          })),
+        attendancePolls: (value.attendancePolls || [])
+          .map((poll) => ({
+            ...poll,
+            caseIds: normalizeCaseIds(poll.caseIds),
+          }))
+          .filter((poll) => poll.caseIds.length > 0),
         activeCommissionMemberId:
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
         cases: casesWithSharedCase,
