@@ -84,7 +84,13 @@ export function Field({
   if (field.type === "checkbox")
     return (
       <label className="checkbox-row">
-        <input type="checkbox" name={field.name} required={required} disabled={disabled} />
+        <input
+          type="checkbox"
+          name={field.name}
+          defaultChecked={field.value === "on"}
+          required={required}
+          disabled={disabled}
+        />
         <span>{field.label}</span>
       </label>
     );
