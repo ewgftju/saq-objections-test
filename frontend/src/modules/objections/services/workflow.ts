@@ -508,7 +508,11 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     materials: {
       action: "analysis",
       label:
-        c.hearingSupplements?.length
+        c.hearingSupplements?.some(
+          (supplement) =>
+            supplement.hasNewArguments !== false &&
+            Object.keys(supplement.byPoint).length > 0,
+        )
           ? "Сформировать справку по дополнительным доводам после заслушивания"
           : c.requestRoute === "additional-analysis" ||
               c.requestRoute === "additional-commission" ||
@@ -2248,6 +2252,12 @@ export function applyAction(
       if (c.hearing) c.hearing.held = date;
 
       if (isStatement(c)) {
+        const hearingArgumentsPresence = String(
+          form.get("hearingArgumentsPresence") || "",
+        ).trim();
+        if (!["yes", "no"].includes(hearingArgumentsPresence))
+          throw new Error("Укажите наличие новых доводов заявителя");
+        const hasNewArguments = hearingArgumentsPresence === "yes";
         const hearingOutcome = String(form.get("hearingOutcome") || "").trim();
         if (
           ![
@@ -2258,6 +2268,11 @@ export function applyAction(
         )
           throw new Error("Выберите дальнейшее действие после заслушивания");
 
+        if (hearingOutcome === "proceed" && hasNewArguments)
+          throw new Error(
+            "При наличии новых доводов выберите возврат на этап «Запрос» или «Анализ»",
+          );
+
         if (hearingOutcome !== "proceed") {
           const reasonField =
             hearingOutcome === "additional-request"
@@ -2266,25 +2281,30 @@ export function applyAction(
           const reason = text(
             reasonField,
             hearingOutcome === "additional-request"
-              ? "Причина необходимости дополнительного запроса"
-              : "Обоснование отсутствия необходимости в дополнительном запросе",
+              ? "Причина возврата на этап «Запрос»"
+              : "Причина возврата на этап «Анализ»",
           );
+          const selectedPoints = hasNewArguments
+            ? disputed(c).filter((point) =>
+                form.has(`additionalArgumentPoint_${point.id}`),
+              )
+            : [];
+          if (hasNewArguments && !selectedPoints.length)
+            throw new Error(
+              "Выберите хотя бы один оспариваемый пункт, по которому представлены новые доводы",
+            );
           const byPoint: Record<string, string> = {};
-          disputed(c).forEach((point) => {
-            const value = String(
-              form.get(`additionalArgument_${point.id}`) || "",
-            ).trim();
-            if (!value) return;
+          selectedPoints.forEach((point) => {
+            const value = text(
+              `additionalArgument_${point.id}`,
+              `Дополнительные доводы объекта гос. аудита (заявителя) по пункту ${point.number}`,
+            );
             byPoint[point.id] = value;
             point.additionalArguments = [
               ...(point.additionalArguments || []),
               value,
             ];
           });
-          if (!Object.keys(byPoint).length)
-            throw new Error(
-              "Укажите дополнительные доводы хотя бы по одному оспариваемому пункту",
-            );
 
           const round = (c.repeatHearingRound || 0) + 1;
           c.hearingSupplements = [
@@ -2295,6 +2315,7 @@ export function applyAction(
               reason,
               byPoint,
               requiresRequest: hearingOutcome === "additional-request",
+              hasNewArguments,
             },
           ];
           c.repeatHearingStatus = "required";
@@ -2303,11 +2324,12 @@ export function applyAction(
           c.repeatHearingRequestedAt = date;
           c.repeatHearingReadyAt = undefined;
           c.repeatHearingMeetingId = undefined;
-          doc(
-            "Дополнительные доводы объекта гос. аудита (заявителя)",
-            "hearing-additional-arguments",
-            reason,
-          );
+          if (hasNewArguments)
+            doc(
+              "Дополнительные доводы объекта гос. аудита (заявителя)",
+              "hearing-additional-arguments",
+              reason,
+            );
 
           if (hearingOutcome === "additional-request") {
             c.requestRoute = "additional-hearing";
@@ -2316,13 +2338,15 @@ export function applyAction(
             c.status = "accepted";
             title = "Дополнительный запрос после заслушивания сформирован";
             note =
-              `Новые доводы требуют дополнительного запроса. ${reason} ` +
+              `${hasNewArguments ? "Новые доводы требуют дополнительного запроса." : "После заслушивания требуется дополнительный запрос."} ${reason} ` +
               "Обращение возвращено на этап «Запрос».";
           } else {
             c.status = "materials";
-            title = "Дополнительные доводы зафиксированы";
+            title = hasNewArguments
+              ? "Дополнительные доводы зафиксированы"
+              : "Обращение возвращено на этап «Анализ»";
             note =
-              `Новые доводы не требуют дополнительного запроса. ${reason} ` +
+              `${hasNewArguments ? "Новые доводы не требуют дополнительного запроса." : "Новые доводы отсутствуют."} ${reason} ` +
               "Обращение возвращено к формированию справки.";
           }
           break;
