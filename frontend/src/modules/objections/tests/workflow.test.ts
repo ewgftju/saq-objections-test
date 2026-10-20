@@ -3648,10 +3648,29 @@ test("заявление после заслушивания запускает 
     "hearing-after-decision-project",
     h.c,
     h.state.date,
-    { hearingOutcome: "additional-request" },
+    {
+      hearingArgumentsPresence: "yes",
+      hearingOutcome: "additional-request",
+    },
+  );
+  assert.equal(
+    additionalHearingForm.fields.some(
+      (field) => field.name === `additionalArgument_${point.id}`,
+    ),
+    false,
+  );
+  const selectedPointHearingForm = actionForm(
+    "hearing-after-decision-project",
+    h.c,
+    h.state.date,
+    {
+      hearingArgumentsPresence: "yes",
+      hearingOutcome: "additional-request",
+      [`additionalArgumentPoint_${point.id}`]: "on",
+    },
   );
   assert.ok(
-    additionalHearingForm.fields.some(
+    selectedPointHearingForm.fields.some(
       (field) => field.name === `additionalArgument_${point.id}`,
     ),
   );
@@ -3663,7 +3682,9 @@ test("заявление после заслушивания запускает 
 
   h.run("hearing-after-decision-project", "work", {
     hearingProtocolAttached: "on",
+    hearingArgumentsPresence: "yes",
     hearingOutcome: "additional-request",
+    [`additionalArgumentPoint_${point.id}`]: "on",
     [`additionalArgument_${point.id}`]: "Дополнительное пояснение заявителя",
     additionalRequestReason: "Нужно проверить новый довод документами",
   });
@@ -3753,7 +3774,9 @@ test("заявление без дополнительного запроса в
   const point = h.c.issues.find((item) => item.disputed)!;
   h.run("hearing-after-decision-project", "work", {
     hearingProtocolAttached: "on",
+    hearingArgumentsPresence: "yes",
     hearingOutcome: "without-request",
+    [`additionalArgumentPoint_${point.id}`]: "on",
     [`additionalArgument_${point.id}`]: "Новый довод, подтверждённый материалами дела",
     noRequestReason: "Все необходимые документы уже находятся в материалах дела",
   });
@@ -3764,6 +3787,52 @@ test("заявление без дополнительного запроса в
     nextAction(h.c)?.label || "",
     /дополнительным доводам после заслушивания/,
   );
+});
+
+test("заявление без новых доводов можно вернуть на запрос или анализ", () => {
+  const createCase = () => {
+    const h = harness(2);
+    h.c.appealType = "Заявление";
+    h.c.status = "decision_project_hearing";
+    h.c.decisionProject = {
+      date: h.state.date,
+      number: "ПР-3",
+      receipt: "SAQ-3",
+      channel: "saq",
+      appealCourt: "—",
+      appealProcedure: "—",
+    };
+    h.c.hearing = { skip: false, date: `${h.state.date}T10:00` };
+    return h;
+  };
+
+  const queryCase = createCase();
+  queryCase.run("hearing-after-decision-project", "work", {
+    hearingProtocolAttached: "on",
+    hearingArgumentsPresence: "no",
+    hearingOutcome: "additional-request",
+    additionalRequestReason: "Необходимо получить дополнительные материалы",
+  });
+  assert.equal(queryCase.c.status, "accepted");
+  assert.equal(queryCase.c.requestRoute, "additional-hearing");
+  assert.deepEqual(queryCase.c.hearingSupplements?.[0]?.byPoint, {});
+  assert.equal(
+    queryCase.c.documents.some(
+      (document) => document.kind === "hearing-additional-arguments",
+    ),
+    false,
+  );
+
+  const analysisCase = createCase();
+  analysisCase.run("hearing-after-decision-project", "work", {
+    hearingProtocolAttached: "on",
+    hearingArgumentsPresence: "no",
+    hearingOutcome: "without-request",
+    noRequestReason: "Нужно дополнительно проанализировать материалы дела",
+  });
+  assert.equal(analysisCase.c.status, "materials");
+  assert.equal(analysisCase.c.hearingSupplements?.[0]?.hasNewArguments, false);
+  assert.equal(nextAction(analysisCase.c)?.action, "analysis");
 });
 
 test("повторное заседание заявления после первого проекта сразу ведёт к мотивированному ответу", () => {
