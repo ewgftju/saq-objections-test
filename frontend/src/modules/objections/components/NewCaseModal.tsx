@@ -477,6 +477,7 @@ export default function NewCaseModal({
                   id: `notification-${c.id}-${state.notifications.length + 1}`,
                   caseId: c.id,
                   recipient: "Директор ДАВГА",
+                  recipientRole: "director",
                   date: state.date,
                   read: false,
                   text: `Поступило обращение №${c.appealNumber || c.id} от ${appealDate}. Выберите исполнителя рабочего органа.`,
