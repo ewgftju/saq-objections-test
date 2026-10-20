@@ -767,7 +767,11 @@ export default function ConsiderationProcess({
               ))}
             </ol>
           )}
-          {c.hearingSupplements?.length &&
+          {c.hearingSupplements?.some(
+            (supplement) =>
+              supplement.hasNewArguments !== false &&
+              Object.keys(supplement.byPoint).length > 0,
+          ) &&
             currentAnalysisSubstep !== null && (
               <div className="process-route-banner" role="status">
                 <span className="process-route-banner-label">
