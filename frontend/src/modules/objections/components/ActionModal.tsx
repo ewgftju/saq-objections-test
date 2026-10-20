@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Action, ObjectionCase, Role } from "../../../types";
 import { Button, Modal, Notice } from "../../../components/ui";
@@ -138,6 +139,74 @@ export function Field({
         />
       )}
     </label>
+  );
+}
+
+function HearingSection({
+  step,
+  title,
+  required = false,
+  children,
+  className = "",
+}: {
+  step: number;
+  title: string;
+  required?: boolean;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`hearing-form-section ${className}`.trim()}>
+      <div className="hearing-form-section-head">
+        <span className="hearing-form-step" aria-hidden="true">
+          {step}
+        </span>
+        <h3>
+          {title}
+          {required && <span className="required"> *</span>}
+        </h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function HearingChoiceCards({
+  field,
+  value,
+}: {
+  field: FormField;
+  value: string;
+}) {
+  const options = (field.options || []).filter(([optionValue]) => optionValue);
+  return (
+    <fieldset className="hearing-choice-field">
+      <legend>
+        {field.label}
+        {field.required && <span className="required"> *</span>}
+      </legend>
+      <div className="hearing-choice-grid">
+        {options.map(([optionValue, label]) => (
+          <label
+            key={optionValue}
+            className={`hearing-choice-card${
+              value === optionValue ? " selected" : ""
+            }`}
+          >
+            <input
+              type="radio"
+              name={field.name}
+              value={optionValue}
+              checked={value === optionValue}
+              onChange={() => undefined}
+              required={field.required}
+            />
+            <span className="hearing-radio-mark" aria-hidden="true" />
+            <span>{label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
@@ -561,6 +630,34 @@ export default function ActionModal({
     popup.focus();
     popup.print();
   };
+  const isStatementHearingAction =
+    action === "hearing-after-decision-project" &&
+    (c.appealType || "").trim() === "Заявление";
+  const hearingDateField = definition.fields.find(
+    (field) => field.name === "date",
+  );
+  const hearingArgumentsPresenceField = definition.fields.find(
+    (field) => field.name === "hearingArgumentsPresence",
+  );
+  const hearingOutcomeField = definition.fields.find(
+    (field) => field.name === "hearingOutcome",
+  );
+  const hearingPointFields = definition.fields.filter((field) =>
+    field.name.startsWith("additionalArgumentPoint_"),
+  );
+  const hearingArgumentFields = new Map(
+    definition.fields
+      .filter(
+        (field) =>
+          field.name.startsWith("additionalArgument_") &&
+          !field.name.startsWith("additionalArgumentPoint_"),
+      )
+      .map((field) => [field.name.replace("additionalArgument_", ""), field]),
+  );
+  const hearingReasonField = definition.fields.find(
+    (field) =>
+      field.name === "additionalRequestReason" || field.name === "noRequestReason",
+  );
   return (
     <Modal
       title={definition.title}
@@ -1414,26 +1511,118 @@ export default function ActionModal({
         ) : action === "hearing-after-decision-project" ? (
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
-            {definition.fields.length > 0 && (
-              <div className="form-grid">
-                {definition.fields.map((field) => (
-                  <Field key={field.name} field={field} />
-                ))}
+            {isStatementHearingAction ? (
+              <div className="hearing-action-form">
+                <HearingSection step={1} title="Основные сведения">
+                  <div className="hearing-form-grid">
+                    {hearingDateField && <Field field={hearingDateField} />}
+                    {hearingArgumentsPresenceField && (
+                      <Field field={hearingArgumentsPresenceField} />
+                    )}
+                  </div>
+                </HearingSection>
+
+                <HearingSection
+                  step={2}
+                  title="Выберите дальнейшее действие"
+                  required
+                >
+                  {hearingOutcomeField && (
+                    <HearingChoiceCards
+                      field={hearingOutcomeField}
+                      value={values.hearingOutcome || ""}
+                    />
+                  )}
+                  {hearingReasonField && (
+                    <div className="hearing-return-reason">
+                      <Field field={hearingReasonField} />
+                    </div>
+                  )}
+                </HearingSection>
+
+                {values.hearingArgumentsPresence === "yes" && (
+                  <HearingSection
+                    step={3}
+                    title="Выберите пункты с новыми доводами"
+                    className="hearing-points-section"
+                  >
+                    <p className="hearing-points-hint">
+                      Отметьте только те оспариваемые пункты, к которым относятся
+                      новые доводы, и заполните открывшиеся поля.
+                    </p>
+                    <div className="hearing-points-list">
+                      {hearingPointFields.map((field) => {
+                        const pointId = field.name.replace(
+                          "additionalArgumentPoint_",
+                          "",
+                        );
+                        const argumentField = hearingArgumentFields.get(pointId);
+                        const selected = values[field.name] === "on";
+                        return (
+                          <div
+                            key={field.name}
+                            className={`hearing-point-card${
+                              selected ? " selected" : ""
+                            }`}
+                          >
+                            <Field field={field} />
+                            {selected && argumentField && (
+                              <div className="hearing-point-argument">
+                                <Field field={argumentField} />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </HearingSection>
+                )}
+
+                <HearingSection
+                  step={4}
+                  title="Протокол заслушивания"
+                  required
+                  className="hearing-upload-section"
+                >
+                  <label className="field request-attachments-field hearing-upload-field">
+                    <input
+                      type="file"
+                      name="hearingProtocolFiles"
+                      accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                      multiple
+                      required
+                    />
+                    <span className="hearing-upload-label">
+                      Выбрать файл(ы) <small>или перетащите их сюда</small>
+                    </span>
+                    <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
+                  </label>
+                </HearingSection>
               </div>
+            ) : (
+              <>
+                {definition.fields.length > 0 && (
+                  <div className="form-grid">
+                    {definition.fields.map((field) => (
+                      <Field key={field.name} field={field} />
+                    ))}
+                  </div>
+                )}
+                <label className="field request-attachments-field">
+                  <span>
+                    Протокол заслушивания <span className="required">*</span>
+                  </span>
+                  <input
+                    type="file"
+                    name="hearingProtocolFiles"
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
+                    multiple
+                    required
+                  />
+                  <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
+                </label>
+              </>
             )}
-            <label className="field request-attachments-field">
-              <span>
-                Протокол заслушивания <span className="required">*</span>
-              </span>
-              <input
-                type="file"
-                name="hearingProtocolFiles"
-                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt"
-                multiple
-                required
-              />
-              <small>Можно вложить несколько файлов до 2 МБ каждый.</small>
-            </label>
           </>
         ) : [
           "record-decision-project-delivery",
