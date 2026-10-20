@@ -326,6 +326,8 @@ export interface HearingSupplement {
   reason: string;
   byPoint: Record<string, string>;
   requiresRequest: boolean;
+  /** Были ли представлены новые доводы на данном этапе. */
+  hasNewArguments?: boolean;
 }
 
 export interface CaseRequest {
