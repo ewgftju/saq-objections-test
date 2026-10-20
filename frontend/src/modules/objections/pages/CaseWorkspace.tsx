@@ -1767,11 +1767,6 @@ export default function CaseWorkspace({
                 </div>
                 {[
                   {
-                    name: c.document.name,
-                    kind: "source",
-                    date: c.document.date,
-                  },
-                  {
                     name: "Исходное обращение",
                     kind: "original",
                     date: c.filed,
