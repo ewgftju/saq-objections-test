@@ -282,6 +282,35 @@ export function sharedStatementApplication(): ObjectionCase {
   return c;
 }
 
+/**
+ * Второе тестовое заявление, поступившее через SAQ.
+ * Основано на общем заявлении из ОДО, но имеет отдельный системный номер,
+ * номер обращения, канал поступления и БИН заявителя.
+ */
+export function sharedSaqStatementApplication(): ObjectionCase {
+  const c = sharedStatementApplication();
+  c.id = "З-2026-003";
+  c.appealNumber = "003-SAQ";
+  c.channel = "SAQ";
+  c.bin = "001002003004";
+  c.status = "received";
+  c.assignee = "Не назначен";
+  c.unread = true;
+  if (c.history[0]) {
+    c.history[0] = {
+      ...c.history[0],
+      actor: "Объект",
+      title: "Обращение поступило через SAQ",
+      text: "Обращение направлено директору ДАВГА для выбора исполнителя рабочего органа.",
+    };
+  }
+  return c;
+}
+
 export function seed(): ObjectionCase[] {
-  return [sharedAuditObjection(), sharedStatementApplication()];
+  return [
+    sharedAuditObjection(),
+    sharedStatementApplication(),
+    sharedSaqStatementApplication(),
+  ];
 }
