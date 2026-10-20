@@ -931,6 +931,17 @@ export function applyAction(
       c.status = "accepted";
       title = "Исполнитель рабочего органа назначен";
       note = `Директор ДАВГА назначил исполнителем: ${c.assignee}.`;
+      // Уведомление о поступлении обращения было адресовано директору для
+      // выполнения назначения. После выбора исполнителя оно больше не
+      // должно отображаться директору; единственное новое уведомление
+      // направляется назначенному исполнителю рабочего органа.
+      next.notifications = next.notifications.filter(
+        (notification) =>
+          notification.caseId !== c.id ||
+          !/Поступило обращение[\s\S]*Выберите исполнителя рабочего органа/i.test(
+            notification.text,
+          ),
+      );
       next.notifications.push({
         id: `notification-${c.id}-${next.notifications.length + 1}`,
         caseId: c.id,
