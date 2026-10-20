@@ -1650,6 +1650,16 @@ test("обращение из SAQ направляется директору, �
   assert.equal(next.cases[0].status, "accepted");
   assert.equal(next.cases[0].unread, false);
   assert.equal(next.cases[0].assignee, "Главный эксперт ДАВГА");
+  assert.equal(
+    next.notifications.some(
+      (notification) =>
+        notification.caseId === incoming.id &&
+        /Поступило обращение[\s\S]*Выберите исполнителя рабочего органа/i.test(
+          notification.text,
+        ),
+    ),
+    false,
+  );
   assert.equal(next.notifications.at(-1)?.recipient, "Главный эксперт ДАВГА");
 });
 
