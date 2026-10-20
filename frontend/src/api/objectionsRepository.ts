@@ -2,6 +2,7 @@ import {
   COMMISSION_ATTENDANCE_MEMBERS,
   seed,
   sharedAuditObjection,
+  sharedSaqStatementApplication,
   sharedStatementApplication,
 } from "../data/objections";
 import type { DemoState, Role } from "../types";
@@ -269,7 +270,11 @@ export function createDemoRepository(
                 }));
             })
           : [];
-      const sharedCases = [sharedAuditObjection(), sharedStatementApplication()];
+      const sharedCases = [
+        sharedAuditObjection(),
+        sharedStatementApplication(),
+        sharedSaqStatementApplication(),
+      ];
       const casesWithSharedCases: DemoState["cases"] = [...cases];
       sharedCases.forEach((sharedCase) => {
         if (!casesWithSharedCases.some((c) => c.id === sharedCase.id)) {
