@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { Button, Notice, PageHeading } from "../../../components/ui";
 import { CLOSED, OUTCOMES, STATUS, TYPES } from "../../../data/constants";
 import type {
@@ -487,70 +487,125 @@ function SubjectRequestMaterials({
     </div>
   );
 
+  const sortedDocuments = (documents: CaseDocument[]) =>
+    documents
+      .slice()
+      .sort((left, right) => right.date.localeCompare(left.date));
+  const latestDocumentDate = (documents: CaseDocument[], fallback = "") =>
+    documents.reduce(
+      (latest, document) => (document.date > latest ? document.date : latest),
+      fallback,
+    );
+  const sections: Array<{
+    key: string;
+    date: string;
+    order: number;
+    content: ReactNode;
+  }> = [];
+  let sectionOrder = 0;
+  const addSection = (key: string, date: string, content: ReactNode) => {
+    sections.push({ key, date, order: sectionOrder++, content });
+  };
+
+  requests.forEach((request) => {
+    const requestDocuments = c.documents.filter(
+      (document) =>
+        document.requestId === request.id &&
+        ["request", "request-appendix"].includes(document.kind),
+    );
+    const responseDocuments = c.documents.filter(
+      (document) =>
+        document.requestId === request.id &&
+        ["subject-response-attachment", "response-attachment"].includes(
+          document.kind,
+        ),
+    );
+    addSection(
+      `request-${request.id}`,
+      latestDocumentDate(requestDocuments, request.date),
+      <section className="request-documents-section">
+        <h4>Запрос в кабинет Объекта SAQ</h4>
+        <div className="request-documents-list">
+          {sortedDocuments(requestDocuments).map(documentRow)}
+        </div>
+      </section>,
+    );
+    if (request.responded && responseDocuments.length > 0) {
+      addSection(
+        `response-${request.id}`,
+        latestDocumentDate(responseDocuments, request.responded),
+        <section className="request-documents-section">
+          <h4>Ответ на запрос</h4>
+          <div className="request-documents-list">
+            {sortedDocuments(responseDocuments).map(documentRow)}
+          </div>
+        </section>,
+      );
+    }
+  });
+
+  if (decisionProject) {
+    addSection(
+      "decision-project",
+      decisionProject.date,
+      <section className="request-documents-section">
+        <h4>Проект решения</h4>
+        <div className="request-documents-list">
+          {documentRow(decisionProject)}
+        </div>
+      </section>,
+    );
+  }
+  if (comment) {
+    addSection(
+      "decision-project-comment",
+      comment.date,
+      <section className="request-documents-section">
+        <h4>Замечание к проекту решения</h4>
+        <div className="request-documents-list">{documentRow(comment)}</div>
+      </section>,
+    );
+  }
+  if (hearing) {
+    addSection(
+      "hearing",
+      hearing.held || hearing.date || "",
+      <HearingDetails hearing={hearing} />,
+    );
+  }
+  if (hearingNotice) {
+    addSection(
+      "hearing-notice",
+      hearingNotice.date,
+      <section className="request-documents-section">
+        <h4>Извещение о заслушивании</h4>
+        <div className="request-documents-list">{documentRow(hearingNotice)}</div>
+      </section>,
+    );
+  }
+  if (finalResponse) {
+    addSection(
+      "final-response",
+      finalResponse.date,
+      <section className="request-documents-section">
+        <h4>{responseDocumentLabel(c)}</h4>
+        <div className="request-documents-list">
+          {documentRow(finalResponse)}
+        </div>
+      </section>,
+    );
+  }
+  sections.sort(
+    (left, right) =>
+      right.date.localeCompare(left.date) || left.order - right.order,
+  );
+
   return (
     <>
       <h3 className="form-section">Материалы и результаты рассмотрения</h3>
-      {requests.map((request) => {
-        const requestDocuments = c.documents.filter(
-          (document) =>
-            document.requestId === request.id &&
-            ["request", "request-appendix"].includes(document.kind),
-        );
-        const responseDocuments = c.documents.filter(
-          (document) =>
-            document.requestId === request.id &&
-            ["subject-response-attachment", "response-attachment"].includes(
-              document.kind,
-            ),
-        );
-        return (
-          <div key={request.id}>
-            <section className="request-documents-section">
-              <h4>Запрос в кабинет Объекта SAQ</h4>
-              <div className="request-documents-list">
-                {requestDocuments.map(documentRow)}
-              </div>
-            </section>
-            {request.responded && responseDocuments.length > 0 && (
-              <section className="request-documents-section">
-                <h4>Ответ на запрос</h4>
-                <div className="request-documents-list">
-                  {responseDocuments.map(documentRow)}
-                </div>
-              </section>
-            )}
-          </div>
-        );
-      })}
-      {decisionProject && (
-        <section className="request-documents-section">
-          <h4>Проект решения</h4>
-          <div className="request-documents-list">
-            {documentRow(decisionProject)}
-          </div>
-        </section>
-      )}
-      {comment && (
-        <section className="request-documents-section">
-          <h4>Замечание к проекту решения</h4>
-          <div className="request-documents-list">{documentRow(comment)}</div>
-        </section>
-      )}
-      {hearing && <HearingDetails hearing={hearing} />}
-      {hearingNotice && (
-        <section className="request-documents-section">
-          <h4>Извещение о заслушивании</h4>
-          <div className="request-documents-list">{documentRow(hearingNotice)}</div>
-        </section>
-      )}
-      {finalResponse && (
-        <section className="request-documents-section">
-          <h4>{responseDocumentLabel(c)}</h4>
-          <div className="request-documents-list">
-            {documentRow(finalResponse)}
-          </div>
-        </section>
-      )}
+      {sections.map((section) => (
+        <Fragment key={section.key}>{section.content}</Fragment>
+      ))}
     </>
   );
 }
@@ -651,6 +706,7 @@ export default function CaseWorkspace({
         date <= c.decisionProjectRouting.commentsDeadline,
     );
   const recipientLimited = isAuthorityRole(role) || isSubjectRole(role);
+  const isCommission = role === "commission";
   const canViewOverview = !recipientLimited || isAuthorityRole(role);
   const commissionCurrentTaskHidden =
     role === "commission" &&
@@ -991,13 +1047,6 @@ export default function CaseWorkspace({
                     также приостанавливается на этот период.
                   </Notice>
                 )}
-                {c.type === "control" && (
-                  <Notice tone="amber">
-                    Для этого тестового дела выбран общий порядок жалобы.
-                    Компетенция и специальное регулирование подтверждаются при
-                    поступлении; комиссия № 302 автоматически не назначается.
-                  </Notice>
-                )}
               </>
             )}
             {tab === "review" &&
@@ -1133,12 +1182,16 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
-                      <MotivatedResponseRoutingSection
-                        c={c}
-                        onDocument={onDocument}
-                      />
-                      <ResponseDocumentSection c={c} onDocument={onDocument} />
-                      {(() => {
+                      {!isCommission && (
+                        <MotivatedResponseRoutingSection
+                          c={c}
+                          onDocument={onDocument}
+                        />
+                      )}
+                      {!isCommission && (
+                        <ResponseDocumentSection c={c} onDocument={onDocument} />
+                      )}
+                      {!isCommission && (() => {
                         const hearingProtocols = c.documents.filter(
                           (document) =>
                             document.kind === "hearing-protocol-attachment",
@@ -1204,7 +1257,9 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
-                      {c.hearing && <HearingDetails hearing={c.hearing} />}
+                      {!isCommission && c.hearing && (
+                        <HearingDetails hearing={c.hearing} />
+                      )}
                       {(() => {
                         const recommendations = c.documents.filter((document) =>
                           [
@@ -1307,7 +1362,7 @@ export default function CaseWorkspace({
                                 </div>
                               </section>
                             )}
-                            {decisionProject && (
+                            {decisionProject && !isCommission && (
                               <section className="request-documents-section">
                             <h4>Проект решения</h4>
                             <div className="request-documents-list">

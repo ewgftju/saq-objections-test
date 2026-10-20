@@ -194,7 +194,7 @@ function certificateBasisForPoint(
   const additionalApplicantArguments = (sourcePoint.additionalArguments || [])
     .map(
       (argument, index) =>
-        `Дополнительные доводы объекта гос. аудита (заявителя), представленные на заслушивании${
+        `Дополнительные доводы объекта гос. аудита (заявителя)${
           index ? ` №${index + 1}` : ""
         }: ${argument}`,
     )
@@ -538,11 +538,9 @@ export default function ActionModal({
     const finalResponseMajorityByPoint = Object.fromEntries(
       disputed(c).map((point) => [
         point.id,
-        c.decisionProject
-          ? Boolean(point.finalDecisionByMajority)
-          : Object.hasOwn(values, `finalResponseMajority_${point.id}`)
-            ? values[`finalResponseMajority_${point.id}`] === "on"
-            : Boolean(point.finalDecisionByMajority),
+        Object.hasOwn(values, `finalResponseMajority_${point.id}`)
+          ? values[`finalResponseMajority_${point.id}`] === "on"
+          : Boolean(point.finalDecisionByMajority),
       ]),
     );
     const popup = window.open("", "_blank");
@@ -931,26 +929,18 @@ export default function ActionModal({
                       : "Итоговый результат по оспариваемым пунктам"}
                   </span>
                   {disputed(c).map((point) => {
-                    const inheritedFromDecisionProject =
-                      action === "deliver" && Boolean(c.decisionProject);
-                    const checked = inheritedFromDecisionProject
-                      ? Boolean(point.finalDecisionByMajority)
-                      : Object.hasOwn(
-                            values,
-                            `finalResponseMajority_${point.id}`,
-                          )
-                        ? values[`finalResponseMajority_${point.id}`] === "on"
-                        : Boolean(point.finalDecisionByMajority);
+                    const checked = Object.hasOwn(
+                      values,
+                      `finalResponseMajority_${point.id}`,
+                    )
+                      ? values[`finalResponseMajority_${point.id}`] === "on"
+                      : Boolean(point.finalDecisionByMajority);
                     return (
                       <label className="checkbox-row" key={point.id}>
                         <input
                           type="checkbox"
                           name={`finalResponseMajority_${point.id}`}
-                          checked={inheritedFromDecisionProject ? checked : undefined}
-                          defaultChecked={
-                            inheritedFromDecisionProject ? undefined : checked
-                          }
-                          disabled={inheritedFromDecisionProject}
+                          defaultChecked={checked}
                         />
                         <span>По п. {point.number} — с большинством голосов</span>
                       </label>
@@ -977,9 +967,7 @@ export default function ActionModal({
                 finalResponseMajorityByPoint={Object.fromEntries(
                   disputed(c).map((point) => [
                     point.id,
-                    action === "deliver" && c.decisionProject
-                      ? Boolean(point.finalDecisionByMajority)
-                      : Object.hasOwn(values, `finalResponseMajority_${point.id}`)
+                    Object.hasOwn(values, `finalResponseMajority_${point.id}`)
                       ? values[`finalResponseMajority_${point.id}`] === "on"
                       : Boolean(point.finalDecisionByMajority),
                   ]),

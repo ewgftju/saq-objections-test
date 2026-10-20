@@ -1,5 +1,5 @@
 import { useState } from "react";
-import AppShell from "../../components/AppShell";
+import AppShell, { canViewBusinessProcesses } from "../../components/AppShell";
 import { Button, Modal, Notice } from "../../components/ui";
 import { initialState } from "../../api/objectionsRepository";
 import { DEMO_USER } from "../../config";
@@ -2286,7 +2286,12 @@ export default function ObjectionsModule() {
           />
         ) : <Notice tone="amber">Рекомендация не найдена.</Notice>;
       })()}
-      {model.route.page === "processes" && <ProcessesPage />}
+      {model.route.page === "processes" &&
+        (canViewBusinessProcesses(model.role) ? (
+          <ProcessesPage />
+        ) : (
+          <Notice tone="amber">Раздел «Бизнес-процессы» недоступен для этого кабинета.</Notice>
+        ))}
       {model.route.page === "sources" && <SourcesPage />}
       {dialog?.type === "action" && c && (
         <ActionModal

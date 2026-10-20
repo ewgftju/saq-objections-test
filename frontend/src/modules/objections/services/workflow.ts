@@ -143,6 +143,12 @@ function isActiveRequest(request: CaseRequest) {
   return !request.cancelled;
 }
 
+/** Жалобы и заявления не получают отдельное уведомление о направлении запроса. */
+function isComplaintOrStatement(c: ObjectionCase) {
+  const appealType = (c.appealType || "").trim();
+  return appealType.startsWith("Жалоба") || appealType === "Заявление";
+}
+
 export const REQUEST_LIFECYCLE_LABELS: Record<RequestLifecycleStatus, string> =
   {
     draft: "Черновик",
@@ -671,7 +677,13 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       label: "Зафиксировать замечание к проекту решения",
       role: "work",
     });
-  if (c.status === "decision_project_comments")
+  if (
+    [
+      "decision_project_comments",
+      "decision_project_eotinish",
+      "decision_project_hearing",
+    ].includes(c.status)
+  )
     options.push({
       action: "proceed-to-final-response",
       label: "Перейти на этап «Мотивированный ответ»",
@@ -1033,7 +1045,7 @@ export function applyAction(
       });
       if (canSuspendReview(c) && !c.requestPauseStartedAt)
         c.requestPauseStartedAt = sent;
-      if (firstSentRequest)
+      if (firstSentRequest && !isComplaintOrStatement(c))
         next.notifications.push({
           id: `notification-${c.id}-${next.notifications.length + 1}`,
           caseId: c.id,
@@ -1155,16 +1167,17 @@ export function applyAction(
         });
       if (firstSignedRequest) {
         if (canSuspendReview(c)) c.requestPauseStartedAt = date;
-        next.notifications.push({
-          id: `notification-${c.id}-${next.notifications.length + 1}`,
-          caseId: c.id,
-          recipient: c.org,
-          date,
-          read: false,
-          text: canSuspendReview(c)
-            ? `По Вашему обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения обращения приостанавливается на период до поступления ответа на указанный запрос.`
-            : `По Вашему обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения обращения не приостанавливается.`,
-        });
+        if (!isComplaintOrStatement(c))
+          next.notifications.push({
+            id: `notification-${c.id}-${next.notifications.length + 1}`,
+            caseId: c.id,
+            recipient: c.org,
+            date,
+            read: false,
+            text: canSuspendReview(c)
+              ? `По Вашему обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения обращения приостанавливается на период до поступления ответа на указанный запрос.`
+              : `По Вашему обращению №${c.appealNumber || c.id} от ${formatDate(c.appealDate)} направлен запрос о предоставлении необходимых материалов в соответствующие органы. Срок рассмотрения обращения не приостанавливается.`,
+          });
       }
       const unapprovedRequests = c.requests.filter(
         (item) => !item.sent && !item.approved,
@@ -2163,18 +2176,8 @@ export function applyAction(
     case "proceed-to-final-response": {
       if (!c.decisionProjectRouting)
         throw new Error("Сначала зафиксируйте направление проекта решения");
-      if (c.decisionProjectRouting.commentReceivedAt)
-        throw new Error(
-          "По поступившему замечанию необходимо назначить заслушивание",
-        );
-      if (!c.decisionProjectRouting.commentsDeadline)
-        throw new Error("Не зафиксировано направление проекта решения заявителю");
-      if (date <= c.decisionProjectRouting.commentsDeadline)
-        throw new Error(
-          `Срок для замечаний действует до ${c.decisionProjectRouting.commentsDeadline}`,
-        );
       const reason = text("reason", "Причина перехода");
-      c.hearing = { skip: true, reason };
+      c.hearing = { ...(c.hearing || {}), skip: true, reason };
       c.status = "decided";
       title = "Переход к мотивированному ответу зафиксирован";
       note = reason;
@@ -2290,7 +2293,7 @@ export function applyAction(
           c.repeatHearingReadyAt = undefined;
           c.repeatHearingMeetingId = undefined;
           doc(
-            "Дополнительные доводы объекта гос. аудита (заявителя), представленные на заслушивании",
+            "Дополнительные доводы объекта гос. аудита (заявителя)",
             "hearing-additional-arguments",
             reason,
           );
@@ -2434,13 +2437,12 @@ export function applyAction(
           ),
         };
       }
-      // Для жалоб итог по большинству фиксируется в проекте решения.
-      // Окончательный ответ воспроизводит эти значения и не заменяет их.
-      if (!c.decisionProject)
-        disputed(c).forEach((point) => {
-          point.finalDecisionByMajority =
-            form.get(`finalResponseMajority_${point.id}`) === "on";
-        });
+      // Галочка «с большинством голосов» редактируется и при формировании
+      // мотивированного ответа, в том числе если ранее был создан проект решения.
+      disputed(c).forEach((point) => {
+        point.finalDecisionByMajority =
+          form.get(`finalResponseMajority_${point.id}`) === "on";
+      });
       c.status = "final_response_approval";
       doc(
         isMotivatedResponse

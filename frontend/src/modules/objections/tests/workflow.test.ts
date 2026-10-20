@@ -390,6 +390,52 @@ test("направление запроса в другой орган фикс�
   assert.doesNotMatch(processHtml, /Сначала сформируйте обязательный запрос/);
 });
 
+test("жалобы и заявления не получают уведомление о направлении запроса", () => {
+  for (const appealType of ["Жалоба на уведомление", "Заявление"]) {
+    const h = harness();
+    h.c.appealType = appealType;
+    h.c.status = "accepted";
+    h.run("request-other", "work", {
+      recipient: "Экспертная организация",
+      date: h.state.date,
+      registrationNumber: "ИСХ-45",
+      deliveryPath: "СЭД",
+    });
+    assert.equal(
+      h.state.notifications.some(
+        (notification) =>
+          notification.caseId === h.c.id &&
+          notification.text.startsWith("По Вашему обращению №"),
+      ),
+      false,
+    );
+  }
+
+  const h = harness();
+  h.c.appealType = "Заявление";
+  h.c.status = "accepted";
+  h.run("request", "work", {
+    recipient: "ДВГА по Атырауской области",
+    deadline: "2026-09-10T18:00",
+  });
+  h.run("send-request-approval", "work");
+  h.run("approve-request", "deputy", { approved: "on" });
+  h.run("sign-request", "director");
+  assert.equal(
+    h.state.notifications.some(
+      (notification) =>
+        notification.caseId === h.c.id &&
+        notification.text.startsWith("По Вашему обращению №"),
+    ),
+    false,
+  );
+  assert.ok(
+    h.state.notifications.some(
+      (notification) => notification.recipientRole === "dvga",
+    ),
+  );
+});
+
 test("запрос в кабинет SAQ формируется отдельно от внешней фиксации", () => {
   const h = harness();
   screen(h);
@@ -3256,8 +3302,9 @@ test("в приложении окончательного ответа отме
   );
 });
 
-test("мотивированный ответ наследует отметку большинства из проекта решения", () => {
+test("галочка большинства в мотивированном ответе редактируется", () => {
   const h = harness(1);
+  h.c.appealType = "Заявление";
   const [firstPoint, secondPoint] = h.c.issues.filter(
     (point) => point.disputed,
   );
@@ -3279,8 +3326,7 @@ test("мотивированный ответ наследует отметку 
     false,
   );
 
-  // В форме мотивированного ответа прежние значения формы не должны менять
-  // зафиксированный в проекте решения признак большинства.
+  // В форме мотивированного ответа отметка большинства может быть изменена.
   h.c.status = "decided";
   h.run("deliver", "work", {
     number: "ИСХ-2",
@@ -3292,12 +3338,12 @@ test("мотивированный ответ наследует отметку 
   assert.equal(
     h.c.issues.find((point) => point.id === firstPoint.id)
       ?.finalDecisionByMajority,
-    true,
+    false,
   );
   assert.equal(
     h.c.issues.find((point) => point.id === secondPoint.id)
       ?.finalDecisionByMajority,
-    false,
+    true,
   );
   const html = renderToStaticMarkup(
     createElement(DocumentContent, { c: h.c, kind: "final-response" }),
@@ -3675,8 +3721,9 @@ test("заявление после заслушивания запускает 
   );
   assert.match(
     certificateHtml,
-    /Дополнительные доводы объекта гос\. аудита \(заявителя\), представленные на заслушивании/,
+    /Дополнительные доводы объекта гос\. аудита \(заявителя\):/,
   );
+  assert.doesNotMatch(certificateHtml, /представленные на заслушивании/);
   assert.match(certificateHtml, /Дополнительный мотивированный ответ ДВГА/);
 });
 
@@ -4111,14 +4158,54 @@ test("без замечаний по проекту решения рабочи�
     commentsDeadline: "2026-09-10",
     deliveryPath: "E-Otinish",
   };
-  h.state.date = "2026-09-11";
+  h.state.date = "2026-09-09";
+
+  assert.ok(
+    additionalActions(h.c).some(
+      (action) => action.action === "proceed-to-final-response",
+    ),
+  );
 
   h.run("proceed-to-final-response", "work", {
-    reason: "Замечания к проекту решения в установленный срок не поступили.",
+    reason: "Замечания к проекту решения пока не поступили.",
   });
   assert.equal(h.c.status, "decided");
   assert.equal(h.c.hearing?.skip, true);
-  assert.match(h.c.hearing?.reason || "", /не поступили/);
+  assert.match(h.c.hearing?.reason || "", /пока не поступили/);
+});
+
+test("переход к мотивированному ответу не блокируется после поступления замечания", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на действие/бездействие";
+  h.c.channel = "E-Otinish";
+  h.c.status = "decision_project_comments";
+  h.c.decisionProjectRouting = {
+    channel: "external",
+    sentAt: "2026-09-08",
+    receivedAt: "2026-09-08",
+    commentsDeadline: "2026-09-10",
+    deliveryPath: "E-Otinish",
+  };
+  h.state.date = "2026-09-09";
+
+  h.run("record-external-decision-project-comment", "work", {
+    projectCommentReceivedAt: "2026-09-09",
+    projectCommentChannel: "E-Otinish",
+    projectComment: "Поступившее замечание.",
+  });
+  assert.equal(h.c.status, "decision_project_eotinish");
+  assert.ok(
+    additionalActions(h.c).some(
+      (action) => action.action === "proceed-to-final-response",
+    ),
+  );
+
+  h.run("proceed-to-final-response", "work", {
+    reason: "Переход выполнен несмотря на поступившее замечание.",
+  });
+  assert.equal(h.c.status, "decided");
+  assert.equal(h.c.hearing?.skip, true);
+  assert.match(h.c.hearing?.reason || "", /несмотря на поступившее замечание/);
 });
 
 test("истечение срока ожидания замечаний выделяется красным в информационном блоке", () => {
@@ -4142,7 +4229,7 @@ test("истечение срока ожидания замечаний выде
   );
   assert.match(html, /notice red/);
   assert.match(html, /Срок ожидания замечаний к проекту решения истек/);
-  assert.match(html, /Перейдите к формированию мотивированного ответа/);
+  assert.match(html, /Переход к формированию мотивированного ответа доступен/);
 });
 
 test("все виды жалоб проходят маршрут с проектом решения независимо от источника", () => {
