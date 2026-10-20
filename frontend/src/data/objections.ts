@@ -170,6 +170,118 @@ export function sharedAuditObjection(): ObjectionCase {
   return c;
 }
 
+/**
+ * Общее тестовое заявление, зарегистрированное из ОДО.
+ * Хранится в исходных данных приложения, чтобы карточка была доступна
+ * после публикации в любом новом браузере, а не только в localStorage.
+ */
+export function sharedStatementApplication(): ObjectionCase {
+  const c = makeCase({
+    id: "З-2026-002",
+    type: "control",
+    appealType: "Заявление",
+    appealNumber: "002-ОДО",
+    appealDate: "2026-09-03",
+    org: 'Товарищество с ограниченной ответственностью "Building group"',
+    bin: "000000000001",
+    applicantIdentifierType: "БИН",
+    address: "город Астана",
+    applicant: "",
+    registered: "2026-09-08",
+    filed: "2026-09-08",
+    channel: "ОДО",
+    issuer: "КВГА",
+    authority: "Вышестоящий орган — определить компетенцию",
+    document: {
+      number: "",
+      date: "2026-09-03",
+      received: "2026-09-08",
+      name: "Оспариваемый документ",
+    },
+    agendaDetails: {
+      auditObjectName:
+        'Товарищество с ограниченной ответственностью "Building group"',
+      auditObjectBin: "000000000001",
+      applicantIsAuditObjectRepresentative: false,
+    },
+    amount: 0,
+    request: "о расчете сметы по стройке здания",
+    issues: [
+      {
+        id: "statement-point-4",
+        number: "4",
+        title: "Коэффициент использован неправильно",
+        finding: "",
+        argument:
+          "Согласно НПА коэффициент в 2026 году увеличен, в связи с этим расчет был неверен.",
+        evidence: "Доказательства 4.docx",
+        amount: 0,
+        disputed: true,
+      },
+      {
+        id: "statement-point-8",
+        number: "8",
+        title: "Отчет не рассмотрен в полном объеме",
+        finding: "",
+        argument: "Отчет не рассмотрен в полном объеме после аудита.",
+        evidence: "Доказательства 8.docx",
+        amount: 0,
+        disputed: true,
+      },
+    ],
+  });
+  c.documents = [
+    {
+      name: "Требования заявителя(1).docx",
+      filename: "Требования заявителя(1).docx",
+      kind: "attachment",
+      text: "Требования заявителя",
+      author: "Заявитель",
+      date: "2026-09-08",
+      dataUrl: "/test-documents/statement-requirements.docx",
+    },
+    {
+      name: "Доказательства 4.docx",
+      filename: "Доказательства 4.docx",
+      kind: "attachment",
+      text: "Доказательства по оспариваемому пункту 4",
+      author: "Заявитель",
+      date: "2026-09-08",
+      dataUrl: "/test-documents/statement-evidence-4.docx",
+    },
+    {
+      name: "Доказательства 8.docx",
+      filename: "Доказательства 8.docx",
+      kind: "attachment",
+      text: "Доказательства по оспариваемому пункту 8",
+      author: "Заявитель",
+      date: "2026-09-08",
+      dataUrl: "/test-documents/statement-evidence-8.docx",
+    },
+  ];
+  c.history.push(
+    {
+      date: "2026-09-08",
+      actor: "Заявитель",
+      title: "Добавлены требования заявителя",
+      text: "Требования заявителя(1).docx",
+    },
+    {
+      date: "2026-09-08",
+      actor: "Заявитель",
+      title: "Добавлены доказательства по оспариваемому пункту 4",
+      text: "Доказательства 4.docx",
+    },
+    {
+      date: "2026-09-08",
+      actor: "Заявитель",
+      title: "Добавлены доказательства по оспариваемому пункту 8",
+      text: "Доказательства 8.docx",
+    },
+  );
+  return c;
+}
+
 export function seed(): ObjectionCase[] {
-  return [sharedAuditObjection()];
+  return [sharedAuditObjection(), sharedStatementApplication()];
 }

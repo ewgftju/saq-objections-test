@@ -2,6 +2,7 @@ import {
   COMMISSION_ATTENDANCE_MEMBERS,
   seed,
   sharedAuditObjection,
+  sharedStatementApplication,
 } from "../data/objections";
 import type { DemoState, Role } from "../types";
 import { formatDate } from "../utils/dateFormat";
@@ -268,10 +269,13 @@ export function createDemoRepository(
                 }));
             })
           : [];
-      const sharedCase = sharedAuditObjection();
-      const casesWithSharedCase = cases.some((c) => c.id === sharedCase.id)
-        ? cases
-        : [sharedCase, ...cases];
+      const sharedCases = [sharedAuditObjection(), sharedStatementApplication()];
+      const casesWithSharedCases: DemoState["cases"] = [...cases];
+      sharedCases.forEach((sharedCase) => {
+        if (!casesWithSharedCases.some((c) => c.id === sharedCase.id)) {
+          casesWithSharedCases.unshift(sharedCase);
+        }
+      });
       return {
         ...value,
         version: CURRENT_VERSION,
@@ -305,7 +309,7 @@ export function createDemoRepository(
           .filter((poll) => poll.caseIds.length > 0),
         activeCommissionMemberId:
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
-        cases: casesWithSharedCase,
+        cases: casesWithSharedCases,
       };
     },
     save(state) {
