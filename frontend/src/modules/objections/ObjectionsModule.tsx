@@ -1243,6 +1243,8 @@ export default function ObjectionsModule() {
         hearingOutcome === "additional-request" ||
         hearingOutcome === "without-request"
       ) {
+        const hasNewArguments =
+          String(form.get("hearingArgumentsPresence") || "") === "yes";
         postponeMeetingForAdditionalRequest(
           next,
           c.id,
@@ -1255,7 +1257,9 @@ export default function ObjectionsModule() {
           ),
           hearingOutcome === "additional-request"
             ? "направлением дополнительного запроса после заслушивания"
-            : "представлением новых доводов после заслушивания",
+            : hasNewArguments
+              ? "представлением новых доводов после заслушивания"
+              : "необходимостью дополнительного анализа после заслушивания",
         );
       }
     }
