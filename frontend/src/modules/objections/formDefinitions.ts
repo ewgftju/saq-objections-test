@@ -44,10 +44,11 @@ const input = (
 ): FormField => ({ name, label, value, type, required: true });
 const area = (name: string, label: string, value = "") =>
   input(name, label, value, "textarea");
-const check = (name: string, label: string): FormField => ({
+const check = (name: string, label: string, value = ""): FormField => ({
   name,
   label,
   type: "checkbox",
+  value,
   required: true,
 });
 const select = (
@@ -748,41 +749,71 @@ export function actionForm(
       if ((c.appealType || "").trim() === "Заявление") {
         fields.push(
           select(
+            "hearingArgumentsPresence",
+            "Наличие новых доводов заявителя",
+            [
+              ["", "Выберите вариант"],
+              ["yes", "Новые доводы имеются"],
+              ["no", "Новые доводы отсутствуют"],
+            ],
+            values.hearingArgumentsPresence || "",
+          ),
+          select(
             "hearingOutcome",
             "Дальнейшее действие",
             [
               ["", "Выберите действие"],
-              [
-                "additional-request",
-                "Новые доводы требуют дополнительного запроса",
-              ],
-              ["without-request", "Новые доводы не требуют запроса"],
+              ["additional-request", "Вернуть на этап «Запрос»"],
+              ["without-request", "Вернуть на этап «Анализ»"],
               ["proceed", "Перейти на следующий этап"],
             ],
             values.hearingOutcome || "",
           ),
         );
+        if (values.hearingArgumentsPresence === "yes") {
+          fields.push(
+            heading(
+              "additionalArgumentsPoints",
+              "Пункты, по которым представлены новые доводы",
+            ),
+          );
+          disputed(c).forEach((point) => {
+            const pointSelectionName = `additionalArgumentPoint_${point.id}`;
+            fields.push({
+              name: pointSelectionName,
+              label: `Пункт № ${point.number} — ${point.title}`,
+              type: "checkbox",
+              value: values[pointSelectionName] || "",
+              required: false,
+            });
+          });
+          disputed(c)
+            .filter(
+              (point) =>
+                values[`additionalArgumentPoint_${point.id}`] === "on",
+            )
+            .forEach((point) => {
+              const field = area(
+                `additionalArgument_${point.id}`,
+                `Дополнительные доводы объекта гос. аудита (заявителя) по пункту ${point.number}`,
+                values[`additionalArgument_${point.id}`] || "",
+              );
+              field.required = true;
+              fields.push(field);
+            });
+        }
         if (
           values.hearingOutcome === "additional-request" ||
           values.hearingOutcome === "without-request"
         ) {
-          disputed(c).forEach((point) => {
-            const field = area(
-              `additionalArgument_${point.id}`,
-              `Дополнительные доводы объекта гос. аудита (заявителя) по пункту ${point.number}`,
-              values[`additionalArgument_${point.id}`] || "",
-            );
-            field.required = false;
-            fields.push(field);
-          });
           fields.push(
             area(
               values.hearingOutcome === "additional-request"
                 ? "additionalRequestReason"
                 : "noRequestReason",
               values.hearingOutcome === "additional-request"
-                ? "Причина необходимости дополнительного запроса"
-                : "Обоснование отсутствия необходимости в дополнительном запросе",
+                ? "Причина возврата на этап «Запрос»"
+                : "Причина возврата на этап «Анализ»",
               values[
                 values.hearingOutcome === "additional-request"
                   ? "additionalRequestReason"
@@ -792,7 +823,7 @@ export function actionForm(
           );
         }
         note =
-          "Вложите протокол проведённого заслушивания. Выберите дальнейшее действие. При выборе дополнительного запроса или возврата к справке укажите новые доводы и обоснование.";
+          "Вложите протокол проведённого заслушивания. Сначала укажите наличие новых доводов, затем выберите дальнейшее действие. Если доводы имеются, отметьте только те оспариваемые пункты, к которым они относятся, и заполните открывшиеся поля.";
       } else {
         note =
           "Вложите протокол проведённого заслушивания. После сохранения обращение перейдёт к формированию мотивированного ответа.";
