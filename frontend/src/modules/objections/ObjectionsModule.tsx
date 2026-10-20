@@ -473,6 +473,50 @@ export default function ObjectionsModule() {
     );
     close();
   };
+  const respondAttendancePollInMeeting = (
+    pollId: string,
+    memberId: string,
+    response: "yes" | "no",
+  ) => {
+    const next = structuredClone(model.state);
+    const poll = next.attendancePolls.find((item) => item.id === pollId);
+    const member = COMMISSION_ATTENDANCE_MEMBERS.find(
+      (item) => item.id === memberId,
+    );
+    if (!poll || !member || poll.responses[memberId] !== "pending") return;
+
+    poll.responses[memberId] = response;
+    applyDefaultAttendanceChair(poll);
+    syncPollParticipants(next.cases, next.attendancePolls, poll, next.meetings);
+    advanceCasesAfterAttendancePoll(next.cases, poll, next.date);
+    next.notifications.forEach((notification) => {
+      if (
+        notification.kind === "attendance-poll" &&
+        notification.attendancePollId === pollId &&
+        notification.commissionMemberId === memberId
+      ) {
+        notification.read = true;
+      }
+    });
+    poll.caseIds.forEach((caseId) => {
+      const target = next.cases.find((item) => item.id === caseId);
+      target?.history.push({
+        date: next.date,
+        actor: member.name,
+        title:
+          response === "yes"
+            ? "Подтверждено присутствие"
+            : "Отказ от участия в заседании",
+        text: `Ответ на опрос о заседании ${formatDateTime(poll.dateTime)}: ${response === "yes" ? "Да" : "Нет"}.`,
+      });
+    });
+    model.commit(
+      next,
+      response === "yes"
+        ? "Присутствие подтверждено. Карточки обращений открыты."
+        : "Отказ от участия сохранён. Карточки обращений недоступны.",
+    );
+  };
   const updateAttendanceResponse = (
     pollId: string,
     memberId: string,
@@ -2217,6 +2261,7 @@ export default function ObjectionsModule() {
             onOpen={openCase}
             onCreateMeeting={() => setDialog({ type: "meeting" })}
             onUpdateAttendanceResponse={updateAttendanceResponse}
+            onRespondAttendancePoll={respondAttendancePollInMeeting}
             onAddCase={addCaseToMeeting}
             onExcludeCases={excludeCasesFromMeeting}
             onTransferCases={transferCasesToMeeting}

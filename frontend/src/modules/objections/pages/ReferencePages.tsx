@@ -274,6 +274,7 @@ export function SessionsPage({
   onOpen,
   onCreateMeeting,
   onUpdateAttendanceResponse,
+  onRespondAttendancePoll,
   onAddCase,
   onExcludeCases,
   onTransferCases,
@@ -293,6 +294,11 @@ export function SessionsPage({
   onOpen: (c: ObjectionCase) => void;
   onCreateMeeting: () => void;
   onUpdateAttendanceResponse: (
+    pollId: string,
+    memberId: string,
+    response: "yes" | "no",
+  ) => void;
+  onRespondAttendancePoll?: (
     pollId: string,
     memberId: string,
     response: "yes" | "no",
@@ -402,6 +408,7 @@ export function SessionsPage({
         <>
           <PageHeading
             title={"Заседание №" + selectedMeeting.number}
+            subtitle={"Дата и время: " + formatDateTime(selectedMeeting.dateTime)}
             action={
               <Button onClick={() => setSelectedMeetingId(null)}>
                 К реестру заседаний
@@ -428,6 +435,47 @@ export function SessionsPage({
                 <strong>{selectedMeeting.formatAndPlace || "—"}</strong>
               </div>
             </div>
+            {role === "commission" && selectedPoll && (
+              <div className="meeting-access-response">
+                <div>
+                  <span className="meeting-access-response-label">
+                    Ваш ответ на опрос о присутствии
+                  </span>
+                  <strong>
+                    {activeMemberResponse === "no"
+                      ? "Не будет присутствовать"
+                      : "Ответ не направлен"}
+                  </strong>
+                </div>
+                {activeMemberResponse === "pending" && onRespondAttendancePoll && (
+                  <div className="meeting-access-response-actions">
+                    <Button
+                      onClick={() =>
+                        onRespondAttendancePoll(
+                          selectedMeeting.pollId,
+                          activeCommissionMemberId || "",
+                          "no",
+                        )
+                      }
+                    >
+                      Не буду участвовать
+                    </Button>
+                    <Button
+                      primary
+                      onClick={() =>
+                        onRespondAttendancePoll(
+                          selectedMeeting.pollId,
+                          activeCommissionMemberId || "",
+                          "yes",
+                        )
+                      }
+                    >
+                      Буду участвовать
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         </>
       );

@@ -1135,6 +1135,33 @@ td .subline {
   line-height: 1.45;
   white-space: pre-wrap;
 }
+.meeting-access-response {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 24px 24px;
+  padding: 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--blue-soft);
+}
+.meeting-access-response-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.meeting-access-response strong {
+  display: block;
+  font-size: 16px;
+  line-height: 1.4;
+}
+.meeting-access-response-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 .attendance-member-list {
   display: grid;
   gap: 10px;
@@ -2083,6 +2110,12 @@ details[open] summary {
   .meeting-access-details {
     padding-right: 16px;
     padding-left: 16px;
+  }
+  .meeting-access-response {
+    align-items: stretch;
+    flex-direction: column;
+    margin-right: 16px;
+    margin-left: 16px;
   }
   .right-column {
     display: block;

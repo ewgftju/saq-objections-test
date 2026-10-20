@@ -82,17 +82,26 @@ export default function NotificationsPage({
                     </td>
                     <td>
                       {notification.kind === "attendance-poll" ? (
-                        <Button
-                          primary
-                          disabled={notification.read}
-                          onClick={() =>
-                            notification.attendancePollId &&
-                            notification.commissionMemberId &&
-                            onAnswerAttendancePoll(notification.id)
-                          }
-                        >
-                          {notification.read ? "Ответ направлен" : "Ответить"}
-                        </Button>
+                        <div className="notification-actions">
+                          {notification.meetingId && (
+                            <Button
+                              onClick={() => onOpenSessions(notification.meetingId)}
+                            >
+                              Открыть заседание
+                            </Button>
+                          )}
+                          <Button
+                            primary
+                            disabled={notification.read}
+                            onClick={() =>
+                              notification.attendancePollId &&
+                              notification.commissionMemberId &&
+                              onAnswerAttendancePoll(notification.id)
+                            }
+                          >
+                            {notification.read ? "Ответ направлен" : "Ответить"}
+                          </Button>
+                        </div>
                       ) : notification.kind === "recommendation" ||
                         notification.kind === "recommendation-response" ? (
                         <Button primary onClick={onOpenRecommendations}>

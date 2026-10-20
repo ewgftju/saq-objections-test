@@ -234,7 +234,7 @@ export default function CasesList({
         ? c.status === "paused"
           ? null
           : reviewDeadline(c)
-        : executionDeadline(c);
+        : executionDeadline(c, role);
     return [...filtered].sort((left, right) => {
       const leftDeadline = deadline(left);
       const rightDeadline = deadline(right);
@@ -249,6 +249,7 @@ export default function CasesList({
       appealTypeFilter,
       tab,
       deadlineSort,
+      role,
     ]);
 
   const toggleDeadlineSort = (column: Exclude<DeadlineSortColumn, null>) => {
@@ -472,18 +473,20 @@ export default function CasesList({
                     Срок исполнения <span>{sortIcon("execution")}</span>
                   </button>
                 </th>
-                <th>
-                  <button
-                    type="button"
-                    className={`registry-sort-button ${
-                      deadlineSort.column === "review" ? "active" : ""
-                    }`}
-                    onClick={() => toggleDeadlineSort("review")}
-                    aria-label="Сортировать по сроку рассмотрения"
-                  >
-                    Срок рассмотрения <span>{sortIcon("review")}</span>
-                  </button>
-                </th>
+                {!authorityRole && (
+                  <th>
+                    <button
+                      type="button"
+                      className={`registry-sort-button ${
+                        deadlineSort.column === "review" ? "active" : ""
+                      }`}
+                      onClick={() => toggleDeadlineSort("review")}
+                      aria-label="Сортировать по сроку рассмотрения"
+                    >
+                      Срок рассмотрения <span>{sortIcon("review")}</span>
+                    </button>
+                  </th>
+                )}
                 <th>Исполнитель</th>
                 <th />
               </tr>
@@ -499,7 +502,15 @@ export default function CasesList({
                     <button className="text-button" onClick={() => onOpen(c)}>
                       {c.id}
                     </button>
-                    <span className="subline">{formatDate(c.registered)}</span>
+                    <span className="subline">
+                      {formatDate(
+                        authorityRole
+                          ? c.requests.find((request) =>
+                              isRequestForAuthority(request, role),
+                            )?.sent || c.registered
+                          : c.registered,
+                      )}
+                    </span>
                   </td>
                   <td>
                     <strong>{c.org}</strong>
@@ -520,7 +531,7 @@ export default function CasesList({
                   </td>
                   <td>
                     {(() => {
-                      const deadline = executionDeadline(c);
+                      const deadline = executionDeadline(c, role);
                       return deadline ? (
                         <strong
                           className={
@@ -536,19 +547,21 @@ export default function CasesList({
                       );
                     })()}
                   </td>
-                  <td>
-                    <strong
-                      className={
-                        reviewDeadline(c) < date && !CLOSED.includes(c.status)
-                          ? "text-danger"
-                          : ""
-                      }
-                    >
-                      {c.status === "paused"
-                        ? "Приостановлен"
-                        : formatDate(reviewDeadline(c))}
-                    </strong>
-                  </td>
+                  {!authorityRole && (
+                    <td>
+                      <strong
+                        className={
+                          reviewDeadline(c) < date && !CLOSED.includes(c.status)
+                            ? "text-danger"
+                            : ""
+                        }
+                      >
+                        {c.status === "paused"
+                          ? "Приостановлен"
+                          : formatDate(reviewDeadline(c))}
+                      </strong>
+                    </td>
+                  )}
                   <td>
                     <strong>{c.assignee || "Не назначен"}</strong>
                   </td>
@@ -560,7 +573,7 @@ export default function CasesList({
               })}
               {!visible.length && (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={authorityRole ? 7 : 8}>
                     <div className="empty-state">
                       <h3>Обращения не найдены</h3>
                       <p>Измените строку поиска или фильтры.</p>
