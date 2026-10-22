@@ -712,6 +712,15 @@ export default function CaseWorkspace({
     );
   const recipientLimited = isAuthorityRole(role) || isSubjectRole(role);
   const isCommission = role === "commission";
+  const visibleDocuments = isCommission
+    ? c.documents.filter((document) => document.kind !== "conclusion")
+    : c.documents;
+  const visibleHistory = isCommission
+    ? c.history.filter(
+        (event) =>
+          !/заключени[ея] по обращению/i.test(`${event.title} ${event.text}`),
+      )
+    : c.history;
   const canViewOverview = !recipientLimited || isAuthorityRole(role);
   const commissionNextAction =
     role === "commission" ? nextAction(c, role) : null;
@@ -774,7 +783,7 @@ export default function CaseWorkspace({
                 >
                   {label}
                   {value === "documents" && (
-                    <span className="count">{c.documents.length + 2}</span>
+                    <span className="count">{visibleDocuments.length + 2}</span>
                   )}
                 </button>
               ))}
@@ -1149,7 +1158,7 @@ export default function CaseWorkspace({
                       <h3 className="form-section">
                         Материалы и результаты рассмотрения
                       </h3>
-                      {(() => {
+                      {!isCommission && (() => {
                         const conclusions = c.documents.filter(
                           (document) => document.kind === "conclusion",
                         );
@@ -1804,7 +1813,7 @@ export default function CaseWorkspace({
                     </Button>
                   </div>
                 ))}
-                {c.documents
+                {visibleDocuments
                   .filter(
                     (document) =>
                       role === "commission" ||
@@ -1840,7 +1849,7 @@ export default function CaseWorkspace({
             )}
             {tab === "history" && !recipientLimited && (
               <div className="event-list">
-                {[...c.history].reverse().map((event, index) => (
+                {[...visibleHistory].reverse().map((event, index) => (
                   <article className="history-event" key={index}>
                     <div>
                       <span>{formatDate(event.date)}</span>
@@ -1916,6 +1925,7 @@ export default function CaseWorkspace({
                   </div>
                 )}
                 {!isAuthorityRole(role) &&
+                  !isCommission &&
                   c.appealType !== "Жалоба на уведомление" &&
                   c.pauseDays > 0 && (
                     <div className="support-row">
