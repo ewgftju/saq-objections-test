@@ -1,5 +1,5 @@
 import { Button, Notice } from "../../../components/ui";
-import { ROLES, STATUS } from "../../../data/constants";
+import { ROLES } from "../../../data/constants";
 import type {
   Action,
   CaseRecommendation,
@@ -8,6 +8,7 @@ import type {
   Role,
 } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
+import { statusLabelForRole } from "../services/statusPresentation";
 import {
   additionalActions,
   nextAction,
@@ -625,6 +626,7 @@ export default function ConsiderationProcess({
     ? availableExtras.filter((option) => option.action === "supplement")
     : availableExtras;
   const lastEvent = c.history.at(-1);
+  const visibleStatus = statusLabelForRole(c.status, role);
   const caseRecommendations = recommendations.filter(
     (recommendation) => recommendation.caseId === c.id,
   );
@@ -677,7 +679,7 @@ export default function ConsiderationProcess({
         <>
           <div className="section-heading">
             <h3>Процесс рассмотрения</h3>
-            <span className="badge blue">{STATUS[c.status]}</span>
+            {visibleStatus && <span className="badge blue">{visibleStatus}</span>}
           </div>
           <ol className="consideration-stages" aria-label="Этапы рассмотрения">
             {stages.map((stage, index) => {
@@ -959,9 +961,9 @@ export default function ConsiderationProcess({
             </p>
           )}
         </Notice>
-      ) : !requestActionsVisible ? (
+      ) : !requestActionsVisible && visibleStatus ? (
         <Notice tone={c.status === "completed" ? "green" : "amber"}>
-          <strong>{STATUS[c.status]}</strong>
+          <strong>{visibleStatus}</strong>
           <p>
             {c.status === "completed"
               ? "Рассмотрение и учёт исполнения завершены. Результат доступен ниже, сформированные документы — во вкладке «Документы»."

@@ -499,6 +499,9 @@ small,
   gap: 14px;
   margin-bottom: 20px;
 }
+.stats-commission {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .stat {
   position: relative;
   min-height: 130px;

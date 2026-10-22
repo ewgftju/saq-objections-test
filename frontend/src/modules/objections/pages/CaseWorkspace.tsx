@@ -1,6 +1,6 @@
 import { Fragment, useState, type ReactNode } from "react";
 import { Button, Notice, PageHeading } from "../../../components/ui";
-import { CLOSED, OUTCOMES, STATUS, TYPES } from "../../../data/constants";
+import { CLOSED, OUTCOMES, TYPES } from "../../../data/constants";
 import type {
   Action,
   CaseDocument,
@@ -28,6 +28,7 @@ import {
   subjectRoleForCase,
 } from "../services/saqCabinets";
 import { nextAction } from "../services/workflow";
+import { statusLabelForRole } from "../services/statusPresentation";
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
@@ -712,6 +713,7 @@ export default function CaseWorkspace({
     );
   const recipientLimited = isAuthorityRole(role) || isSubjectRole(role);
   const isCommission = role === "commission";
+  const visibleStatus = statusLabelForRole(c.status, role);
   const visibleDocuments = isCommission
     ? c.documents.filter((document) => document.kind !== "conclusion")
     : c.documents;
@@ -742,8 +744,8 @@ export default function CaseWorkspace({
         subtitle={c.org}
         action={
           <>
-            {!recipientLimited && (
-              <span className="badge blue">{STATUS[c.status]}</span>
+            {!recipientLimited && visibleStatus && (
+              <span className="badge blue">{visibleStatus}</span>
             )}
             {!recipientLimited && (
               <Button onClick={() => onDocument("original")}>

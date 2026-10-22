@@ -2107,7 +2107,7 @@ export default function ObjectionsModule() {
           onExport={(cases) =>
             downloadFile(
               "saq-objections.csv",
-              caseCsv(cases),
+              caseCsv(cases, model.role),
               "text/csv;charset=utf-8",
             )
           }

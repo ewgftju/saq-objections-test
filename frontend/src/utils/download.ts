@@ -1,5 +1,6 @@
-import type { ObjectionCase } from "../types";
-import { STATUS, TYPES } from "../data/constants";
+import type { ObjectionCase, Role } from "../types";
+import { TYPES } from "../data/constants";
+import { statusLabelForRole } from "../modules/objections/services/statusPresentation";
 
 export function downloadFile(name: string, content: string, mime: string) {
   const url = URL.createObjectURL(new Blob([content], { type: mime }));
@@ -10,7 +11,7 @@ export function downloadFile(name: string, content: string, mime: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function caseCsv(cases: ObjectionCase[]): string {
+export function caseCsv(cases: ObjectionCase[], role: Role = "work"): string {
   const cell = (value: string) =>
     `"${(/^[=+@\-\t\r]/.test(value) ? "'" + value : value).replace(/"/g, '""')}"`;
   return (
@@ -22,7 +23,7 @@ export function caseCsv(cases: ObjectionCase[]): string {
         c.org,
         c.bin,
         TYPES[c.type],
-        STATUS[c.status],
+        statusLabelForRole(c.status, role) || "",
         c.registered,
       ]),
     ]

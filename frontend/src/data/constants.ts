@@ -35,7 +35,7 @@ export const STATUS = {
   circulated: "Проведение заседания",
   meeting_certificate_approval: "Согласование справки",
   meeting_certificate_signed: "Подписание справки",
-  meeting_certificate_approved: "Справка подписана",
+  meeting_certificate_approved: "Голосование",
   hearing: "Подготовка заслушивания",
   hearing_ready: "Заслушивание",
   meeting: "Формирование протокола",

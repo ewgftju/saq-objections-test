@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { Button, PageHeading } from "../../../components/ui";
-import { CLOSED, STATUS, TYPES } from "../../../data/constants";
+import { CLOSED, TYPES } from "../../../data/constants";
 import type { CaseStatus, ObjectionCase, Role } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import { applicantIdentifierType } from "../services/appealTemplates";
 import { executionDeadline, reviewDeadline } from "../services/deadlines";
 import { isSubjectRole, subjectRoleForCase } from "../services/saqCabinets";
+import { statusLabelForRole } from "../services/statusPresentation";
 
 const APPEAL_TYPE_OPTIONS = [
   "Заявление",
@@ -129,6 +130,7 @@ export default function CasesList({
 }) {
   const authorityRole = isAuthorityRole(role);
   const subjectRole = isSubjectRole(role);
+  const commissionRole = role === "commission";
   const recipientRole = authorityRole || subjectRole;
   const registryCases = authorityRole
     ? cases.filter((c) =>
@@ -277,6 +279,26 @@ export default function CasesList({
       ]
     : subjectRole
       ? [[recipientRequests.length, "Ожидают ответа", "требуется предоставить ответ", "blue"]]
+    : commissionRole
+      ? [
+          [cases.length, "Всего обращений", "зарегистрировано в реестре", "blue"],
+          [
+            cases.filter((c) => c.status === "documents_review").length,
+            "На ознакомлении",
+            "материалы доступны членам АК",
+            "green",
+          ],
+          [
+            cases.filter((c) =>
+              c.history.some(
+                (event) => event.title === "Заседание по данному делу проведено",
+              ),
+            ).length,
+            "Рассмотрено на заседании",
+            "заседание по делу проведено",
+            "violet",
+          ],
+        ]
     : [
         [cases.length, "Всего обращений", "зарегистрировано в реестре", "blue"],
         [
@@ -319,7 +341,7 @@ export default function CasesList({
           </>
         }
       />
-      <div className="stats">
+      <div className={`stats${commissionRole ? " stats-commission" : ""}`}>
         {stats.map(([number, label, description, accent]) => (
           <section className={`stat stat-${accent}`} key={label}>
             <strong className="stat-value">{number}</strong>
@@ -473,7 +495,7 @@ export default function CasesList({
                     Срок исполнения <span>{sortIcon("execution")}</span>
                   </button>
                 </th>
-                {!authorityRole && (
+                {!authorityRole && !commissionRole && (
                   <th>
                     <button
                       type="button"
@@ -496,6 +518,7 @@ export default function CasesList({
                 const unread =
                   ((role === "demo-superuser" || role === "director") && c.unread) ||
                   ((role === "demo-superuser" || role === "work") && c.unreadForAssignee);
+                const visibleStatus = statusLabelForRole(c.status, role);
                 return (
                 <tr key={c.id} className={unread ? "unread-case" : ""}>
                   <td>
@@ -523,11 +546,15 @@ export default function CasesList({
                     <span className="subline">№ {c.document.number}</span>
                   </td>
                   <td>
-                    <span
-                      className={`badge ${CLOSED.includes(c.status) ? "green" : "blue"}`}
-                    >
-                      {STATUS[c.status]}
-                    </span>
+                    {visibleStatus ? (
+                      <span
+                        className={`badge ${CLOSED.includes(c.status) ? "green" : "blue"}`}
+                      >
+                        {visibleStatus}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td>
                     {(() => {
@@ -547,7 +574,7 @@ export default function CasesList({
                       );
                     })()}
                   </td>
-                  {!authorityRole && (
+                  {!authorityRole && !commissionRole && (
                     <td>
                       <strong
                         className={
@@ -573,7 +600,7 @@ export default function CasesList({
               })}
               {!visible.length && (
                 <tr>
-                  <td colSpan={authorityRole ? 7 : 8}>
+                      <td colSpan={authorityRole || commissionRole ? 7 : 8}>
                     <div className="empty-state">
                       <h3>Обращения не найдены</h3>
                       <p>Измените строку поиска или фильтры.</p>
