@@ -60,7 +60,9 @@ function ResponseDocumentSection({
         <div className="request-document-row">
           <span>{finalResponse.name}</span>
           <div className="request-document-actions">
-            <Button onClick={() => onDocument(finalResponse.kind, finalResponse)}>
+            <Button
+              onClick={() => onDocument(finalResponse.kind, finalResponse)}
+            >
               Просмотр
             </Button>
             <Button
@@ -449,8 +451,8 @@ function SubjectRequestMaterials({
       : undefined;
   const comment = isApplicantCabinet
     ? c.documents
-    .filter((document) => document.kind === "decision-project-comment")
-    .at(-1)
+        .filter((document) => document.kind === "decision-project-comment")
+        .at(-1)
     : undefined;
   const hearing =
     isApplicantCabinet && hasSubjectSaqCabinet(c) && !c.hearing?.skip
@@ -580,7 +582,9 @@ function SubjectRequestMaterials({
       hearingNotice.date,
       <section className="request-documents-section">
         <h4>Извещение о заслушивании</h4>
-        <div className="request-documents-list">{documentRow(hearingNotice)}</div>
+        <div className="request-documents-list">
+          {documentRow(hearingNotice)}
+        </div>
       </section>,
     );
   }
@@ -1134,7 +1138,11 @@ export default function CaseWorkspace({
                     />
                   )}
                   {isSubjectRole(role) && (
-                    <SubjectRequestMaterials c={c} role={role} onDocument={onDocument} />
+                    <SubjectRequestMaterials
+                      c={c}
+                      role={role}
+                      onDocument={onDocument}
+                    />
                   )}
                   {!isSubjectRole(role) && (
                     <>
@@ -1194,46 +1202,52 @@ export default function CaseWorkspace({
                         />
                       )}
                       {!isCommission && (
-                        <ResponseDocumentSection c={c} onDocument={onDocument} />
+                        <ResponseDocumentSection
+                          c={c}
+                          onDocument={onDocument}
+                        />
                       )}
-                      {!isCommission && (() => {
-                        const hearingProtocols = c.documents.filter(
-                          (document) =>
-                            document.kind === "hearing-protocol-attachment",
-                        );
-                        return hearingProtocols.length ? (
-                          <section className="request-documents-section">
-                            <h4>Протокол заслушивания</h4>
-                            <div className="request-documents-list">
-                              {hearingProtocols.map((document) => (
-                                <div
-                                  className="request-document-row"
-                                  key={`${document.name}-${document.date}`}
-                                >
-                                  <span>{document.name}</span>
-                                  {document.dataUrl ? (
-                                    <a
-                                      className="button"
-                                      href={document.dataUrl}
-                                      download={document.filename || document.name}
-                                    >
-                                      Скачать
-                                    </a>
-                                  ) : (
-                                    <Button
-                                      onClick={() =>
-                                        onDocument(document.kind, document)
-                                      }
-                                    >
-                                      Просмотр
-                                    </Button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </section>
-                        ) : null;
-                      })()}
+                      {!isCommission &&
+                        (() => {
+                          const hearingProtocols = c.documents.filter(
+                            (document) =>
+                              document.kind === "hearing-protocol-attachment",
+                          );
+                          return hearingProtocols.length ? (
+                            <section className="request-documents-section">
+                              <h4>Протокол заслушивания</h4>
+                              <div className="request-documents-list">
+                                {hearingProtocols.map((document) => (
+                                  <div
+                                    className="request-document-row"
+                                    key={`${document.name}-${document.date}`}
+                                  >
+                                    <span>{document.name}</span>
+                                    {document.dataUrl ? (
+                                      <a
+                                        className="button"
+                                        href={document.dataUrl}
+                                        download={
+                                          document.filename || document.name
+                                        }
+                                      >
+                                        Скачать
+                                      </a>
+                                    ) : (
+                                      <Button
+                                        onClick={() =>
+                                          onDocument(document.kind, document)
+                                        }
+                                      >
+                                        Просмотр
+                                      </Button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </section>
+                          ) : null;
+                        })()}
                       {(() => {
                         const hearingArguments = c.documents.filter(
                           (document) =>
@@ -1326,12 +1340,11 @@ export default function CaseWorkspace({
                             (document) => document.kind === "decision-project",
                           )
                           .at(-1);
-                        const projectComments = c.documents.filter(
-                          (document) =>
-                            [
-                              "decision-project-comment",
-                              "decision-project-comment-attachment",
-                            ].includes(document.kind),
+                        const projectComments = c.documents.filter((document) =>
+                          [
+                            "decision-project-comment",
+                            "decision-project-comment-attachment",
+                          ].includes(document.kind),
                         );
                         return decisionProject || projectComments.length > 0 ? (
                           <>
@@ -1349,7 +1362,9 @@ export default function CaseWorkspace({
                                         <a
                                           className="button"
                                           href={document.dataUrl}
-                                          download={document.filename || document.name}
+                                          download={
+                                            document.filename || document.name
+                                          }
                                         >
                                           Скачать
                                         </a>
@@ -1369,39 +1384,39 @@ export default function CaseWorkspace({
                             )}
                             {decisionProject && !isCommission && (
                               <section className="request-documents-section">
-                            <h4>Проект решения</h4>
-                            <div className="request-documents-list">
-                              <div className="request-document-row">
-                                <span>{decisionProject.name}</span>
-                                <div className="request-document-actions">
-                                  <Button
-                                    onClick={() =>
-                                      onDocument(
-                                        decisionProject.kind,
-                                        decisionProject,
-                                      )
-                                    }
-                                  >
-                                    Просмотр
-                                  </Button>
-                                  <Button
-                                    onClick={() =>
-                                      downloadFile(
-                                        `${c.id}-проект-решения.doc`,
-                                        wordDocumentHtml({
-                                          c,
-                                          kind: decisionProject.kind,
-                                          document: decisionProject,
-                                        }),
-                                        "application/msword",
-                                      )
-                                    }
-                                  >
-                                    Скачать Word
-                                  </Button>
+                                <h4>Проект решения</h4>
+                                <div className="request-documents-list">
+                                  <div className="request-document-row">
+                                    <span>{decisionProject.name}</span>
+                                    <div className="request-document-actions">
+                                      <Button
+                                        onClick={() =>
+                                          onDocument(
+                                            decisionProject.kind,
+                                            decisionProject,
+                                          )
+                                        }
+                                      >
+                                        Просмотр
+                                      </Button>
+                                      <Button
+                                        onClick={() =>
+                                          downloadFile(
+                                            `${c.id}-проект-решения.doc`,
+                                            wordDocumentHtml({
+                                              c,
+                                              kind: decisionProject.kind,
+                                              document: decisionProject,
+                                            }),
+                                            "application/msword",
+                                          )
+                                        }
+                                      >
+                                        Скачать Word
+                                      </Button>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                            </div>
                               </section>
                             )}
                           </>
@@ -1839,106 +1854,97 @@ export default function CaseWorkspace({
             )}
           </div>
         </section>
-        {!isSubjectRole(role) && <aside className="right-column">
-          <section className="card right-card">
-            <div className="card-head">
-              <h3>Сроки</h3>
-            </div>
-            <div className="card-body">
-              {isAuthorityRole(role) ? (
-                (() => {
-                  const authorityRequests = c.requests.filter((item) =>
-                    isRequestForAuthority(item, role),
-                  );
-                  const request =
-                    authorityRequests.find(
-                      (item) => !item.responded && !item.responseSigned,
-                    ) || authorityRequests.at(-1);
-                  return request?.sent ? (
-                    <>
-                      <div className="support-row">
-                        <span>Поступило</span>
-                        <strong>{formatDate(request.sent)}</strong>
-                      </div>
+        {!isSubjectRole(role) && (
+          <aside className="right-column">
+            <section className="card right-card">
+              <div className="card-head">
+                <h3>Сроки</h3>
+              </div>
+              <div className="card-body">
+                {isAuthorityRole(role) ? (
+                  (() => {
+                    const authorityRequests = c.requests.filter((item) =>
+                      isRequestForAuthority(item, role),
+                    );
+                    const request =
+                      authorityRequests.find(
+                        (item) => !item.responded && !item.responseSigned,
+                      ) || authorityRequests.at(-1);
+                    return request?.sent ? (
+                      <>
+                        <div className="support-row">
+                          <span>Поступило</span>
+                          <strong>{formatDate(request.sent)}</strong>
+                        </div>
+                        <div className="support-row">
+                          <span>Исполнить до</span>
+                          <strong>
+                            {formatDate(addWorkdays(request.sent, 2))}
+                          </strong>
+                        </div>
+                      </>
+                    ) : null;
+                  })()
+                ) : (
+                  <>
+                    <div className="support-row">
+                      <span>Поступило</span>
+                      <strong>{formatDate(c.registered)}</strong>
+                    </div>
+                    {currentExecutionDeadline && (
                       <div className="support-row">
                         <span>Исполнить до</span>
+                        <strong>{formatDate(currentExecutionDeadline)}</strong>
+                      </div>
+                    )}
+                    {role !== "commission" && (
+                      <div className="support-row">
+                        <span>Срок рассмотрения</span>
                         <strong>
-                          {formatDate(addWorkdays(request.sent, 2))}
+                          {c.status === "paused"
+                            ? "Приостановлен"
+                            : formatDate(reviewDeadline(c))}
                         </strong>
                       </div>
-                    </>
-                  ) : null;
-                })()
-              ) : (
-                <>
+                    )}
+                  </>
+                )}
+                {!isAuthorityRole(role) && c.extensionDays > 0 && (
                   <div className="support-row">
-                    <span>Поступило</span>
-                    <strong>{formatDate(c.registered)}</strong>
-                  </div>
-                  {currentExecutionDeadline && (
-                    <div className="support-row">
-                      <span>Исполнить до</span>
-                      <strong>{formatDate(currentExecutionDeadline)}</strong>
-                    </div>
-                  )}
-                  {role !== "commission" && (
-                    <div className="support-row">
-                      <span>Срок рассмотрения</span>
-                      <strong>
-                        {c.status === "paused"
-                          ? "Приостановлен"
-                          : formatDate(reviewDeadline(c))}
-                      </strong>
-                    </div>
-                  )}
-                </>
-              )}
-              {!isAuthorityRole(role) && c.extensionDays > 0 && (
-                <div className="support-row">
-                  <span>Продление</span>
-                  <strong>+{c.extensionDays} раб. дн.</strong>
-                </div>
-              )}
-              {!isAuthorityRole(role) &&
-                c.appealType !== "Жалоба на уведомление" &&
-                c.pauseDays > 0 && (
-                  <div className="support-row">
-                    <span>Приостановление</span>
-                    <strong>{c.pauseDays} раб. дн.</strong>
+                    <span>Продление</span>
+                    <strong>+{c.extensionDays} раб. дн.</strong>
                   </div>
                 )}
-              {c.delivery?.received && (
-                <>
-                  <div className="support-row">
-                    <span>Вручение результата</span>
-                    <strong>{formatDate(c.delivery.received)}</strong>
-                  </div>
-                  <div className="support-row">
-                    <span>Месяц для иска об оспаривании</span>
-                    <strong>
-                      {formatDate(addMonths(c.delivery.received, 1))}
-                    </strong>
-                  </div>
-                  <p className="small muted">
-                    Ориентир по ст. 136 АППК; вид иска и специальные правила
-                    проверяются отдельно.
-                  </p>
-                </>
-              )}
-              {c.type !== "control" && (
-                <p className="sources-inline">
-                  <a
-                    href="https://adilet.zan.kz/rus/docs/Z1500000392"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Закон: статьи 58-2, 58-4
-                  </a>
-                </p>
-              )}
-            </div>
-          </section>
-        </aside>}
+                {!isAuthorityRole(role) &&
+                  c.appealType !== "Жалоба на уведомление" &&
+                  c.pauseDays > 0 && (
+                    <div className="support-row">
+                      <span>Приостановление</span>
+                      <strong>{c.pauseDays} раб. дн.</strong>
+                    </div>
+                  )}
+                {c.delivery?.received && (
+                  <>
+                    <div className="support-row">
+                      <span>Вручение результата</span>
+                      <strong>{formatDate(c.delivery.received)}</strong>
+                    </div>
+                    <div className="support-row">
+                      <span>Месяц для иска об оспаривании</span>
+                      <strong>
+                        {formatDate(addMonths(c.delivery.received, 1))}
+                      </strong>
+                    </div>
+                    <p className="small muted">
+                      Ориентир по ст. 136 АППК; вид иска и специальные правила
+                      проверяются отдельно.
+                    </p>
+                  </>
+                )}
+              </div>
+            </section>
+          </aside>
+        )}
       </div>
     </>
   );

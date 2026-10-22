@@ -57,9 +57,7 @@ type DialogState =
   | { type: "new" | "clock" | "reset" | "upload" }
   | null;
 
-function recommendationRecipientRole(
-  recommendation: CaseRecommendation,
-) {
+function recommendationRecipientRole(recommendation: CaseRecommendation) {
   if (recommendation.recipientRole) return recommendation.recipientRole;
   const recipientRoles = {
     ДВГА: "dvga",
@@ -71,7 +69,9 @@ function recommendationRecipientRole(
     "Вышестоящий орган": "higher",
     "Кабинет вышестоящего органа": "higher",
   } as const;
-  return recipientRoles[recommendation.recipient as keyof typeof recipientRoles];
+  return recipientRoles[
+    recommendation.recipient as keyof typeof recipientRoles
+  ];
 }
 
 function addRecommendationActivity(
@@ -127,10 +127,7 @@ function rememberInactiveMeetingCase(
   ];
 }
 
-function forgetInactiveMeetingCase(
-  meeting: CommissionMeeting,
-  caseId: string,
-) {
+function forgetInactiveMeetingCase(meeting: CommissionMeeting, caseId: string) {
   meeting.inactiveCases = (meeting.inactiveCases || []).filter(
     (item) => item.caseId !== caseId,
   );
@@ -268,7 +265,10 @@ function syncPollParticipants(
     const target = cases.find((item) => item.id === caseId);
     // A late response to an earlier poll must not replace the participants
     // of the meeting in which the case is currently included.
-    if (!target || currentPollForCase(target, attendancePolls, meetings)?.id !== poll.id)
+    if (
+      !target ||
+      currentPollForCase(target, attendancePolls, meetings)?.id !== poll.id
+    )
       return;
     if (target) {
       target.members = participants.map((member) => ({ ...member }));
@@ -715,7 +715,7 @@ export default function ObjectionsModule() {
     const poll = meeting
       ? next.attendancePolls.find((item) => item.id === meeting.pollId)
       : undefined;
-    if (!meeting || !poll || meeting.agendaSigned) return;
+    if (!meeting || !poll) return;
     const ids = new Set(
       caseIds.filter((caseId) => meeting.caseIds.includes(caseId)),
     );
@@ -767,7 +767,6 @@ export default function ObjectionsModule() {
     if (
       !meeting ||
       !poll ||
-      meeting.agendaSigned ||
       !target ||
       !["certificate_approved", "documents_review"].includes(target.status) ||
       meeting.caseIds.includes(caseId)
@@ -775,12 +774,13 @@ export default function ObjectionsModule() {
       return;
     }
 
-    // Обращение может состоять только в одном неподписанном заседании.
-    // Подписанные повестки не изменяются.
+    // Обращение может состоять только в одном незавершённом заседании. Если
+    // оно уже было включено в другую повестку, переносим его и там обновляем
+    // печатную форму — это также работает после подписания повестки.
     const previousMeetings = (next.meetings || []).filter(
       (item) =>
         item.id !== meeting.id &&
-        !item.agendaSigned &&
+        !item.completed &&
         item.caseIds.includes(caseId),
     );
     previousMeetings.forEach((previousMeeting) => {
@@ -869,8 +869,7 @@ export default function ObjectionsModule() {
       !toMeeting ||
       !fromPoll ||
       !toPoll ||
-      fromMeeting.agendaSigned ||
-      toMeeting.agendaSigned ||
+      fromMeeting.completed ||
       toMeeting.completed
     ) {
       return;
@@ -928,8 +927,18 @@ export default function ObjectionsModule() {
         meeting.dateTime.slice(0, 10),
       );
     });
-    syncPollParticipants(next.cases, next.attendancePolls, fromPoll, next.meetings);
-    syncPollParticipants(next.cases, next.attendancePolls, toPoll, next.meetings);
+    syncPollParticipants(
+      next.cases,
+      next.attendancePolls,
+      fromPoll,
+      next.meetings,
+    );
+    syncPollParticipants(
+      next.cases,
+      next.attendancePolls,
+      toPoll,
+      next.meetings,
+    );
     model.commit(
       next,
       ids.length === 1
@@ -1196,9 +1205,9 @@ export default function ObjectionsModule() {
                 ? "recommendationFiles"
                 : action === "hearing-after-decision-project"
                   ? "hearingProtocolFiles"
-            : action === "record-final-response-delivery"
-              ? "finalResponseDeliveryFiles"
-                  : "responseFiles",
+                  : action === "record-final-response-delivery"
+                    ? "finalResponseDeliveryFiles"
+                    : "responseFiles",
       )
       .filter(
         (item): item is File => item instanceof File && item.name.length > 0,
@@ -1344,14 +1353,14 @@ export default function ObjectionsModule() {
                       ? "hearing-protocol-attachment"
                       : action === "record-decision-project-delivery"
                         ? "decision-project-delivery-attachment"
-                      : action === "record-final-response-delivery"
-                        ? "motivated-response-delivery-attachment"
-                        : [
-                              "submit-decision-project-comment",
-                              "record-external-decision-project-comment",
-                            ].includes(action)
-                          ? "decision-project-comment-attachment"
-                          : "response-attachment",
+                        : action === "record-final-response-delivery"
+                          ? "motivated-response-delivery-attachment"
+                          : [
+                                "submit-decision-project-comment",
+                                "record-external-decision-project-comment",
+                              ].includes(action)
+                            ? "decision-project-comment-attachment"
+                            : "response-attachment",
           text: ["request", "request-saq", "request-other"].includes(action)
             ? action === "request-other"
               ? "Документ по запросу, направленному через другую систему"
@@ -1370,12 +1379,12 @@ export default function ObjectionsModule() {
                         ? "Подтверждение направления проекта решения"
                         : action === "record-final-response-delivery"
                           ? "Подтверждение направления мотивированного ответа"
-                        : [
-                              "submit-decision-project-comment",
-                              "record-external-decision-project-comment",
-                            ].includes(action)
-                          ? "Вложение к замечанию на проект решения"
-                          : "Полученный ответ на запрос",
+                          : [
+                                "submit-decision-project-comment",
+                                "record-external-decision-project-comment",
+                              ].includes(action)
+                            ? "Вложение к замечанию на проект решения"
+                            : "Полученный ответ на запрос",
           author: ROLES[model.role],
           date: next.date,
           dataUrl,
@@ -1405,12 +1414,12 @@ export default function ObjectionsModule() {
                       ? "Вложено подтверждение направления проекта решения"
                       : action === "record-final-response-delivery"
                         ? "Вложено подтверждение направления мотивированного ответа"
-                      : [
-                            "submit-decision-project-comment",
-                            "record-external-decision-project-comment",
-                          ].includes(action)
-                        ? "Вложен файл к замечанию на проект решения"
-                        : "Вложены полученные файлы",
+                        : [
+                              "submit-decision-project-comment",
+                              "record-external-decision-project-comment",
+                            ].includes(action)
+                          ? "Вложен файл к замечанию на проект решения"
+                          : "Вложены полученные файлы",
         text: attached.map(({ file }) => file.name).join(", "),
       });
     }
@@ -1448,14 +1457,14 @@ export default function ObjectionsModule() {
                         : "Направление проекта решения зафиксировано"
                       : action === "record-final-response-delivery"
                         ? "Направление мотивированного ответа и подтверждающий файл сохранены"
-                      : [
-                            "submit-decision-project-comment",
-                            "record-external-decision-project-comment",
-                          ].includes(action)
-                        ? attached.length
-                          ? "Замечание к проекту решения и вложения сохранены"
-                          : "Замечание к проекту решения сохранено"
-                        : "Полученный ответ и вложения сохранены",
+                        : [
+                              "submit-decision-project-comment",
+                              "record-external-decision-project-comment",
+                            ].includes(action)
+                          ? attached.length
+                            ? "Замечание к проекту решения и вложения сохранены"
+                            : "Замечание к проекту решения сохранено"
+                          : "Полученный ответ и вложения сохранены",
     );
   }
 
@@ -1591,7 +1600,8 @@ export default function ObjectionsModule() {
             const reader = new FileReader();
             reader.onload = () =>
               resolve({ file, dataUrl: String(reader.result) });
-            reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+            reader.onerror = () =>
+              reject(new Error("Не удалось прочитать файл"));
             reader.readAsDataURL(file);
           }),
       ),
@@ -1609,7 +1619,8 @@ export default function ObjectionsModule() {
     recommendation.status = "answered";
     recommendation.answeredAt = responseDate;
     recommendation.responseReceivedAt = responseDate;
-    recommendation.responseRegistrationNumber = responseRegistrationNumber.trim();
+    recommendation.responseRegistrationNumber =
+      responseRegistrationNumber.trim();
     recommendation.revisionDueDate = undefined;
     recommendation.responseVersion = (recommendation.responseVersion || 0) + 1;
     const responseActivityId = addRecommendationActivity(recommendation, {
@@ -1673,7 +1684,9 @@ export default function ObjectionsModule() {
     if (!registrationNumber.trim())
       throw new Error("Укажите номер исходящего документа");
     if (revisionDueDate < sentAt)
-      throw new Error("Новый срок исполнения не может быть раньше даты направления");
+      throw new Error(
+        "Новый срок исполнения не может быть раньше даты направления",
+      );
     if (!reason.trim() && !files.length)
       throw new Error("Укажите причину возврата или вложите файл");
     const allowedFile = /\.(pdf|png|jpe?g|docx?|xlsx?|txt)$/i;
@@ -1690,7 +1703,8 @@ export default function ObjectionsModule() {
             const reader = new FileReader();
             reader.onload = () =>
               resolve({ file, dataUrl: String(reader.result) });
-            reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+            reader.onerror = () =>
+              reject(new Error("Не удалось прочитать файл"));
             reader.readAsDataURL(file);
           }),
       ),
@@ -1743,7 +1757,8 @@ export default function ObjectionsModule() {
     caseItem.history.push({
       date: sentAt,
       actor: ROLES[model.role],
-      title: "Исполнение рекомендации возвращено на доработку через другую систему",
+      title:
+        "Исполнение рекомендации возвращено на доработку через другую систему",
       text: `Исходящий № ${recommendation.returnRegistrationNumber}. Новый срок: ${revisionDueDate}.`,
     });
     model.commit(next, "Возврат по внешней рекомендации зафиксирован");
@@ -1838,7 +1853,8 @@ export default function ObjectionsModule() {
             const reader = new FileReader();
             reader.onload = () =>
               resolve({ file, dataUrl: String(reader.result) });
-            reader.onerror = () => reject(new Error("Не удалось прочитать файл"));
+            reader.onerror = () =>
+              reject(new Error("Не удалось прочитать файл"));
             reader.readAsDataURL(file);
           }),
       ),
@@ -1850,7 +1866,9 @@ export default function ObjectionsModule() {
     if (!recommendation || recommendation.status !== "answered")
       throw new Error("Нет ответа на рекомендацию для возврата");
     if (recommendation.channel === "external")
-      throw new Error("Возврат по внешней рекомендации фиксируется отдельным действием");
+      throw new Error(
+        "Возврат по внешней рекомендации фиксируется отдельным действием",
+      );
     recommendation.status = "return_approval";
     recommendation.reviewDecision = "return";
     recommendation.returnReason = reason.trim();
@@ -1905,16 +1923,21 @@ export default function ObjectionsModule() {
 
   function approveRecommendation(recommendationId: string) {
     if (!["demo-superuser", "deputy"].includes(model.role))
-      throw new Error("Согласовать рекомендацию может только заместитель директора ДАВГА");
+      throw new Error(
+        "Согласовать рекомендацию может только заместитель директора ДАВГА",
+      );
     const next = structuredClone(model.state);
-    const recommendation = next.recommendations.find((item) => item.id === recommendationId);
-    const nextStatus = recommendation?.status === "approval"
-      ? "signature"
-      : recommendation?.status === "acceptance_approval"
-        ? "acceptance_signature"
-        : recommendation?.status === "return_approval"
-          ? "return_signature"
-          : undefined;
+    const recommendation = next.recommendations.find(
+      (item) => item.id === recommendationId,
+    );
+    const nextStatus =
+      recommendation?.status === "approval"
+        ? "signature"
+        : recommendation?.status === "acceptance_approval"
+          ? "acceptance_signature"
+          : recommendation?.status === "return_approval"
+            ? "return_signature"
+            : undefined;
     if (!recommendation || !nextStatus)
       throw new Error("Нет рекомендации для согласования");
     recommendation.status = nextStatus;
@@ -1925,7 +1948,9 @@ export default function ObjectionsModule() {
       title: "Рекомендация согласована",
       text: "Направлена директору ДАВГА для подписания.",
     });
-    const caseItem = next.cases.find((item) => item.id === recommendation.caseId);
+    const caseItem = next.cases.find(
+      (item) => item.id === recommendation.caseId,
+    );
     caseItem?.history.push({
       date: next.date,
       actor: ROLES[model.role],
@@ -1949,10 +1974,19 @@ export default function ObjectionsModule() {
     if (!["demo-superuser", "director"].includes(model.role))
       throw new Error("Подписать рекомендацию может только директор ДАВГА");
     const next = structuredClone(model.state);
-    const recommendation = next.recommendations.find((item) => item.id === recommendationId);
-    if (!recommendation || !["signature", "acceptance_signature", "return_signature"].includes(recommendation.status))
+    const recommendation = next.recommendations.find(
+      (item) => item.id === recommendationId,
+    );
+    if (
+      !recommendation ||
+      !["signature", "acceptance_signature", "return_signature"].includes(
+        recommendation.status,
+      )
+    )
       throw new Error("Нет рекомендации для подписания");
-    const caseItem = next.cases.find((item) => item.id === recommendation.caseId);
+    const caseItem = next.cases.find(
+      (item) => item.id === recommendation.caseId,
+    );
     if (!caseItem) throw new Error("Обращение не найдено");
     const recipientRole = recommendationRecipientRole(recommendation);
     if (recommendation.status === "signature") {
@@ -1971,16 +2005,17 @@ export default function ObjectionsModule() {
         title: "Рекомендация подписана и направлена",
         text: `Направлена в ${recommendation.recipient}.`,
       });
-      if (recipientRole) next.notifications.push({
-        id: `recommendation-delivery-${caseItem.id}-${next.notifications.length + 1}`,
-        caseId: caseItem.id,
-        recipient: recommendation.recipient,
-        recipientRole,
-        date: next.date,
-        read: false,
-        kind: "recommendation",
-        text: `В ваш кабинет направлена рекомендация по обращению №${recommendation.caseReference}. Срок исполнения — ${recommendation.dueDate}.`,
-      });
+      if (recipientRole)
+        next.notifications.push({
+          id: `recommendation-delivery-${caseItem.id}-${next.notifications.length + 1}`,
+          caseId: caseItem.id,
+          recipient: recommendation.recipient,
+          recipientRole,
+          date: next.date,
+          read: false,
+          kind: "recommendation",
+          text: `В ваш кабинет направлена рекомендация по обращению №${recommendation.caseReference}. Срок исполнения — ${recommendation.dueDate}.`,
+        });
       model.commit(next, "Рекомендация подписана и направлена получателю");
       return;
     }
@@ -2001,17 +2036,21 @@ export default function ObjectionsModule() {
         title: "Исполнение рекомендации возвращено на доработку",
         text: `${recommendation.returnReason || "Причина указана во вложении."} Срок: ${recommendation.revisionDueDate}.`,
       });
-      if (recipientRole) next.notifications.push({
-        id: `recommendation-revision-${caseItem.id}-${next.notifications.length + 1}`,
-        caseId: caseItem.id,
-        recipient: recommendation.recipient,
-        recipientRole,
-        date: next.date,
-        read: false,
-        kind: "recommendation",
-        text: `Исполнение рекомендации возвращено на доработку. Причина: ${recommendation.returnReason || "указана во вложении"}. Новый срок — ${recommendation.revisionDueDate}.`,
-      });
-      model.commit(next, "Возврат на доработку подписан и направлен получателю");
+      if (recipientRole)
+        next.notifications.push({
+          id: `recommendation-revision-${caseItem.id}-${next.notifications.length + 1}`,
+          caseId: caseItem.id,
+          recipient: recommendation.recipient,
+          recipientRole,
+          date: next.date,
+          read: false,
+          kind: "recommendation",
+          text: `Исполнение рекомендации возвращено на доработку. Причина: ${recommendation.returnReason || "указана во вложении"}. Новый срок — ${recommendation.revisionDueDate}.`,
+        });
+      model.commit(
+        next,
+        "Возврат на доработку подписан и направлен получателю",
+      );
       return;
     }
     recommendation.status = "executed";
@@ -2029,16 +2068,17 @@ export default function ObjectionsModule() {
       title: "Исполнение рекомендации принято",
       text: `Исполнение подтверждено: ${recommendation.executionResult || "—"}`,
     });
-    if (recipientRole) next.notifications.push({
-      id: `recommendation-executed-${caseItem.id}-${next.notifications.length + 1}`,
-      caseId: caseItem.id,
-      recipient: recommendation.recipient,
-      recipientRole,
-      date: next.date,
-      read: false,
-      kind: "recommendation",
-      text: `Исполнение рекомендации по обращению №${recommendation.caseReference} принято и подписано.`,
-    });
+    if (recipientRole)
+      next.notifications.push({
+        id: `recommendation-executed-${caseItem.id}-${next.notifications.length + 1}`,
+        caseId: caseItem.id,
+        recipient: recommendation.recipient,
+        recipientRole,
+        date: next.date,
+        read: false,
+        kind: "recommendation",
+        text: `Исполнение рекомендации по обращению №${recommendation.caseReference} принято и подписано.`,
+      });
     model.commit(next, "Принятие исполнения подписано");
   }
 
@@ -2360,35 +2400,44 @@ export default function ObjectionsModule() {
           }
         />
       )}
-      {model.route.page === "recommendation" && (() => {
-        const recommendation = model.state.recommendations.find(
-          (item) => item.id === model.route.caseId,
-        );
-        return recommendation ? (
-          <RecommendationDetailsPage
-            recommendation={recommendation}
-            role={model.role}
-            documents={model.state.cases.flatMap((item) => item.documents)}
-            onBack={() => model.navigate({ page: "recommendations" })}
-            onOpenCase={(caseId) => {
-              const target = model.state.cases.find((item) => item.id === caseId);
-              if (target) openCase(target);
-            }}
-            onSubmitResponse={submitRecommendationResponse}
-            onRecordExternalResponse={recordExternalRecommendationResponse}
-            onAcceptResponse={acceptRecommendationResponse}
-            onReturnForRevision={returnRecommendationForRevision}
-            onReturnExternalForRevision={returnExternalRecommendationForRevision}
-            onApprove={approveRecommendation}
-            onSign={signRecommendation}
-          />
-        ) : <Notice tone="amber">Рекомендация не найдена.</Notice>;
-      })()}
+      {model.route.page === "recommendation" &&
+        (() => {
+          const recommendation = model.state.recommendations.find(
+            (item) => item.id === model.route.caseId,
+          );
+          return recommendation ? (
+            <RecommendationDetailsPage
+              recommendation={recommendation}
+              role={model.role}
+              documents={model.state.cases.flatMap((item) => item.documents)}
+              onBack={() => model.navigate({ page: "recommendations" })}
+              onOpenCase={(caseId) => {
+                const target = model.state.cases.find(
+                  (item) => item.id === caseId,
+                );
+                if (target) openCase(target);
+              }}
+              onSubmitResponse={submitRecommendationResponse}
+              onRecordExternalResponse={recordExternalRecommendationResponse}
+              onAcceptResponse={acceptRecommendationResponse}
+              onReturnForRevision={returnRecommendationForRevision}
+              onReturnExternalForRevision={
+                returnExternalRecommendationForRevision
+              }
+              onApprove={approveRecommendation}
+              onSign={signRecommendation}
+            />
+          ) : (
+            <Notice tone="amber">Рекомендация не найдена.</Notice>
+          );
+        })()}
       {model.route.page === "processes" &&
         (canViewBusinessProcesses(model.role) ? (
           <ProcessesPage />
         ) : (
-          <Notice tone="amber">Раздел «Бизнес-процессы» недоступен для этого кабинета.</Notice>
+          <Notice tone="amber">
+            Раздел «Бизнес-процессы» недоступен для этого кабинета.
+          </Notice>
         ))}
       {model.route.page === "sources" && <SourcesPage />}
       {dialog?.type === "action" && c && (

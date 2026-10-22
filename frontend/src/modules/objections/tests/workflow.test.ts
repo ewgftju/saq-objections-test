@@ -254,8 +254,21 @@ test("три исходных дела: разные сроки и перено�
       status: "materials",
       pauseDays: 3,
     }),
-    "2026-09-10",
+    "2026-09-15",
   );
+  for (const status of [
+    "certificate_approval",
+    "certificate_signed",
+  ] as const) {
+    assert.equal(
+      executionDeadline({
+        ...requestStepCase,
+        status,
+        pauseDays: 3,
+      }),
+      "2026-09-15",
+    );
+  }
   assert.equal(
     executionDeadline({
       ...requestStepCase,
@@ -365,10 +378,7 @@ test("направление запроса в другой орган фикс�
     form.fields.map((field) => field.name),
     ["date", "recipient", "registrationNumber", "deliveryPath"],
   );
-  assert.throws(
-    () => h.run("send-request-approval", "work"),
-    /недоступно/,
-  );
+  assert.throws(() => h.run("send-request-approval", "work"), /недоступно/);
 
   h.run("request", "work", { recipient: "ДВГА по Атырауской области" });
   h.run("send-request-approval", "work");
@@ -639,7 +649,9 @@ test("возражение на уведомление использует ед
   );
   assert.match(
     certificate,
-    new RegExp(`В Министерства финансов Республики Казахстан поступило возражение ${details}`),
+    new RegExp(
+      `В Министерства финансов Республики Казахстан поступило возражение ${details}`,
+    ),
   );
   assert.equal(agenda, `Возражение ${details}`);
   assert.match(protocol, new RegExp(`Возражение ${details}`));
@@ -856,10 +868,7 @@ test("системный номер обращения использует об
     nextCaseNumber(cases, "Жалоба на уведомление", "2026-10-11"),
     "Ж-2026-019",
   );
-  assert.equal(
-    nextCaseNumber(cases, "Заявление", "2026-10-11"),
-    "З-2026-019",
-  );
+  assert.equal(nextCaseNumber(cases, "Заявление", "2026-10-11"), "З-2026-019");
 });
 
 test("ответ ДВГА доступен после согласования, даже если создан запрос в другой орган", () => {
@@ -1784,7 +1793,11 @@ test("все виды обращений получают дополнитель
       reason: "Для рассмотрения необходимо получить дополнительные документы.",
     });
     assert.equal(analysisCase.c.status, "accepted", appealType);
-    assert.equal(analysisCase.c.requestRoute, "additional-analysis", appealType);
+    assert.equal(
+      analysisCase.c.requestRoute,
+      "additional-analysis",
+      appealType,
+    );
 
     const commissionCase = harness(2);
     commissionCase.c.appealType = appealType;
@@ -1974,12 +1987,14 @@ test("кабинет объекта получает возможность на
   );
 
   h.run("send-request-approval", "work");
-  h.c.requests.filter((request) => !request.sent).forEach((request) =>
-    h.run("approve-request", "deputy", {
-      requestId: request.id,
-      approved: "on",
-    }),
-  );
+  h.c.requests
+    .filter((request) => !request.sent)
+    .forEach((request) =>
+      h.run("approve-request", "deputy", {
+        requestId: request.id,
+        approved: "on",
+      }),
+    );
   const subjectRequest = h.c.requests.find(
     (request) => request.saqRecipient === "subject",
   )!;
@@ -2043,15 +2058,19 @@ test("внешний ответ можно зафиксировать до по�
     customRequestText: "Просим предоставить заключение.",
   });
   h.run("send-request-approval", "work");
-  h.c.requests.filter((request) => !request.sent).forEach((request) =>
-    h.run("approve-request", "deputy", {
-      requestId: request.id,
-      approved: "on",
-    }),
-  );
-  h.c.requests.filter((request) => !request.sent).forEach((request) =>
-    h.run("sign-request", "director", { requestId: request.id }),
-  );
+  h.c.requests
+    .filter((request) => !request.sent)
+    .forEach((request) =>
+      h.run("approve-request", "deputy", {
+        requestId: request.id,
+        approved: "on",
+      }),
+    );
+  h.c.requests
+    .filter((request) => !request.sent)
+    .forEach((request) =>
+      h.run("sign-request", "director", { requestId: request.id }),
+    );
   const external = h.c.requests.find(
     (request) => request.recipient === "Экспертная организация",
   )!;
@@ -2316,10 +2335,7 @@ test("дело открывает процесс, а одно действие �
   assert.match(workProcessHtml, /Ожидание ответа на запрос/);
   assert.doesNotMatch(workProcessHtml, /Заполнить ответ ДВГА\/КВГА/);
   assert.match(workProcessHtml, /Сформировать запрос в кабинет SAQ/);
-  assert.doesNotMatch(
-    workProcessHtml,
-    /Формирование новых запросов завершено/,
-  );
+  assert.doesNotMatch(workProcessHtml, /Формирование новых запросов завершено/);
 
   h.run("request-saq", "work", {
     saqRecipient: "subject",
@@ -2328,10 +2344,7 @@ test("дело открывает процесс, а одно действие �
   assert.equal(h.c.status, "request_approved");
   h.run("send-request-approval", "work");
   assert.equal(h.c.status, "request_approval");
-  assert.equal(
-    h.c.requests.at(-1)?.recipient,
-    "Кабинет Объекта SAQ",
-  );
+  assert.equal(h.c.requests.at(-1)?.recipient, "Кабинет Объекта SAQ");
   assert.equal(h.c.requests.at(-1)?.approved, undefined);
 
   const control = harness(2);
@@ -3241,9 +3254,11 @@ test("мотивированный ответ и проект решения ф�
   );
 
   h.c.appealType = "Жалоба на уведомление";
-  h.c.issues.filter((point) => point.disputed).forEach((point) => {
-    point.final = "partial";
-  });
+  h.c.issues
+    .filter((point) => point.disputed)
+    .forEach((point) => {
+      point.final = "partial";
+    });
 
   const finalHtml = renderToStaticMarkup(
     createElement(DocumentContent, { c: h.c, kind: "final-response" }),
@@ -3252,9 +3267,15 @@ test("мотивированный ответ и проект решения ф�
     createElement(DocumentContent, { c: h.c, kind: "decision-project" }),
   );
 
-  assert.match(finalHtml, /қарсылықты ішінара қанағаттандыру туралы шешім қабылдады/);
+  assert.match(
+    finalHtml,
+    /қарсылықты ішінара қанағаттандыру туралы шешім қабылдады/,
+  );
   assert.match(finalHtml, /91-бабының 6-тармағына сәйкес/);
-  assert.match(projectHtml, /қарсылықты ішінара қанағаттандыру туралы шешім қабылдады/);
+  assert.match(
+    projectHtml,
+    /қарсылықты ішінара қанағаттандыру туралы шешім қабылдады/,
+  );
   assert.match(projectHtml, /73-бабына сәйкес алдын ала шешімге/);
   assert.doesNotMatch(projectHtml, /91-бабының 6-тармағына сәйкес/);
 
@@ -3266,13 +3287,18 @@ test("мотивированный ответ и проект решения ф�
       ["reject", "қанағаттандырудан бас тарту"],
     ] as const
   ).forEach(([outcome, label]) => {
-    h.c.issues.filter((point) => point.disputed).forEach((point) => {
-      point.final = outcome;
-    });
+    h.c.issues
+      .filter((point) => point.disputed)
+      .forEach((point) => {
+        point.final = outcome;
+      });
     const html = renderToStaticMarkup(
       createElement(DocumentContent, { c: h.c, kind: "final-response" }),
     );
-    assert.match(html, new RegExp(`қарсылықты ${label} туралы шешім қабылдады`));
+    assert.match(
+      html,
+      new RegExp(`қарсылықты ${label} туралы шешім қабылдады`),
+    );
   });
 
   assert.equal(
@@ -3693,7 +3719,9 @@ test("заявление после заслушивания запускает 
     h.state.date,
     {},
   );
-  assert.ok(hearingForm.fields.some((field) => field.name === "hearingOutcome"));
+  assert.ok(
+    hearingForm.fields.some((field) => field.name === "hearingOutcome"),
+  );
   const additionalHearingForm = actionForm(
     "hearing-after-decision-project",
     h.c,
@@ -3827,8 +3855,10 @@ test("заявление без дополнительного запроса в
     hearingArgumentsPresence: "yes",
     hearingOutcome: "without-request",
     [`additionalArgumentPoint_${point.id}`]: "on",
-    [`additionalArgument_${point.id}`]: "Новый довод, подтверждённый материалами дела",
-    noRequestReason: "Все необходимые документы уже находятся в материалах дела",
+    [`additionalArgument_${point.id}`]:
+      "Новый довод, подтверждённый материалами дела",
+    noRequestReason:
+      "Все необходимые документы уже находятся в материалах дела",
   });
   assert.equal(h.c.status, "materials");
   assert.equal(h.c.repeatHearingStatus, "required");
@@ -4013,10 +4043,7 @@ test("повторное заседание заявления после пер
   assert.equal(h.c.repeatHearingStatus, undefined);
   assert.equal(nextAction(h.c)?.action, "deliver");
   assert.equal(nextAction(h.c)?.label, "Сформировать мотивированный ответ");
-  assert.equal(
-    h.c.documents.at(-1)?.name,
-    "Подписанный протокол заседания",
-  );
+  assert.equal(h.c.documents.at(-1)?.name, "Подписанный протокол заседания");
 });
 
 test("рабочий орган видит статус согласования и подписания проекта решения", () => {
@@ -4172,7 +4199,8 @@ test("проект решения направляется только заяв
 
   assert.equal(h.c.status, "decision_project_delivery");
   assert.equal(
-    h.c.decisionProjectRouting?.recipients.find((item) => item.id === "subject")?.status,
+    h.c.decisionProjectRouting?.recipients.find((item) => item.id === "subject")
+      ?.status,
     "pending",
   );
   assert.equal(h.c.decisionProjectRouting?.recipients.length, 1);
@@ -4185,7 +4213,8 @@ test("проект решения направляется только заяв
 
   assert.equal(h.c.status, "decision_project_comments");
   assert.equal(
-    h.c.decisionProjectRouting?.recipients.find((item) => item.id === "subject")?.registrationNumber,
+    h.c.decisionProjectRouting?.recipients.find((item) => item.id === "subject")
+      ?.registrationNumber,
     "ИСХ-25",
   );
 });
@@ -4290,12 +4319,12 @@ test("форма проекта решения показывает доступ
     {},
   );
   assert.equal(
-    availableForm.fields.find((field) => field.name === "subjectCabinetStatus")?.value,
+    availableForm.fields.find((field) => field.name === "subjectCabinetStatus")
+      ?.value,
     "Кабинет заявителя SAQ доступен (БИН: 000000000002).",
   );
   assert.deepEqual(
-    availableForm.fields
-      .find((field) => field.name === "projectSubjectChannel")
+    availableForm.fields.find((field) => field.name === "projectSubjectChannel")
       ?.options,
     [
       ["saq", "В кабинет SAQ"],
@@ -4312,15 +4341,15 @@ test("форма проекта решения показывает доступ
     {},
   );
   assert.equal(
-    unavailableForm.fields
-      .find((field) => field.name === "subjectCabinetStatus")
-      ?.value,
+    unavailableForm.fields.find(
+      (field) => field.name === "subjectCabinetStatus",
+    )?.value,
     "Кабинет заявителя SAQ не зарегистрирован (БИН: 000000000001).",
   );
   assert.deepEqual(
-    unavailableForm.fields
-      .find((field) => field.name === "projectSubjectChannel")
-      ?.options,
+    unavailableForm.fields.find(
+      (field) => field.name === "projectSubjectChannel",
+    )?.options,
     [["external", "Через другую систему"]],
   );
 });
@@ -4334,7 +4363,9 @@ test("проект решения не направляется в SAQ при о
   });
 
   assert.equal(
-    h.c.decisionProjectRecipients?.find((recipient) => recipient.id === "subject")?.channel,
+    h.c.decisionProjectRecipients?.find(
+      (recipient) => recipient.id === "subject",
+    )?.channel,
     "external",
   );
 });

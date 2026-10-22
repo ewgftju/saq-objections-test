@@ -1,4 +1,10 @@
-import { Button, Icon, Modal, Notice, PageHeading } from "../../../components/ui";
+import {
+  Button,
+  Icon,
+  Modal,
+  Notice,
+  PageHeading,
+} from "../../../components/ui";
 import { agendaItemText } from "../components/AgendaModal";
 import { AgendaResultsTable } from "../components/AgendaResultsModal";
 import { useState } from "react";
@@ -45,7 +51,9 @@ function inactiveMeetingCaseLabel(
   if (entry.reason === "excluded") return "Исключено из заседания";
   if (entry.reason === "postponed")
     return "Перенесено для дополнительного запроса";
-  const target = meetings.find((meeting) => meeting.id === entry.targetMeetingId);
+  const target = meetings.find(
+    (meeting) => meeting.id === entry.targetMeetingId,
+  );
   return target
     ? `Перенесено в заседание №${target.number}`
     : "Перенесено в другое заседание";
@@ -372,23 +380,28 @@ export function SessionsPage({
   const inactiveMeetingEntries = selectedMeeting
     ? (() => {
         const activeCaseIds = new Set(selectedMeeting.caseIds);
-        const fallbackEntries = cases.flatMap<InactiveMeetingCase>((caseItem) => {
-          if (activeCaseIds.has(caseItem.id)) return [];
-          if (selectedMeeting.postponedCaseIds?.includes(caseItem.id)) {
-            return [{ caseId: caseItem.id, reason: "postponed" }];
-          }
-          if (caseItem.excludedFromMeetingIds?.includes(selectedMeeting.id)) {
-            return [{ caseId: caseItem.id, reason: "excluded" }];
-          }
-          if (caseItem.transferredFromMeetingIds?.includes(selectedMeeting.id)) {
-            return [{ caseId: caseItem.id, reason: "transferred" }];
-          }
-          return [];
-        });
+        const fallbackEntries = cases.flatMap<InactiveMeetingCase>(
+          (caseItem) => {
+            if (activeCaseIds.has(caseItem.id)) return [];
+            if (selectedMeeting.postponedCaseIds?.includes(caseItem.id)) {
+              return [{ caseId: caseItem.id, reason: "postponed" }];
+            }
+            if (caseItem.excludedFromMeetingIds?.includes(selectedMeeting.id)) {
+              return [{ caseId: caseItem.id, reason: "excluded" }];
+            }
+            if (
+              caseItem.transferredFromMeetingIds?.includes(selectedMeeting.id)
+            ) {
+              return [{ caseId: caseItem.id, reason: "transferred" }];
+            }
+            return [];
+          },
+        );
         const entries = new Map<string, InactiveMeetingCase>();
         fallbackEntries.forEach((entry) => entries.set(entry.caseId, entry));
         (selectedMeeting.inactiveCases || []).forEach((entry) => {
-          if (!activeCaseIds.has(entry.caseId)) entries.set(entry.caseId, entry);
+          if (!activeCaseIds.has(entry.caseId))
+            entries.set(entry.caseId, entry);
         });
         return [...entries.values()];
       })()
@@ -403,28 +416,32 @@ export function SessionsPage({
           .filter(
             (
               item,
-            ): item is { entry: InactiveMeetingCase; caseItem: ObjectionCase } =>
-              Boolean(item.caseItem),
+            ): item is {
+              entry: InactiveMeetingCase;
+              caseItem: ObjectionCase;
+            } => Boolean(item.caseItem),
           )
       : [];
-  const addableCases =
-    selectedMeeting && !selectedMeeting.agendaSigned
-      ? cases.filter(
-          (caseItem) =>
-            ["certificate_approved", "documents_review"].includes(
-              caseItem.status,
-            ) && !selectedMeeting.caseIds.includes(caseItem.id),
-        )
-      : [];
+  const addableCases = selectedMeeting
+    ? cases.filter(
+        (caseItem) =>
+          ["certificate_approved", "documents_review"].includes(
+            caseItem.status,
+          ) &&
+          !selectedMeeting.caseIds.includes(caseItem.id) &&
+          !meetings.some(
+            (meeting) =>
+              meeting.id !== selectedMeeting.id &&
+              meeting.caseIds.includes(caseItem.id),
+          ),
+      )
+    : [];
   const selectedMeetingCaseIds = meetingCases
     .map((caseItem) => caseItem.id)
     .filter((caseId) => selectedCaseIds.has(caseId));
   const transferTargets = selectedMeeting
     ? meetings.filter(
-        (meeting) =>
-          meeting.id !== selectedMeeting.id &&
-          !meeting.agendaSigned &&
-          !meeting.completed,
+        (meeting) => meeting.id !== selectedMeeting.id && !meeting.completed,
       )
     : [];
   const scheduledCaseIds = new Set(
@@ -464,7 +481,9 @@ export function SessionsPage({
         <>
           <PageHeading
             title={"Заседание №" + selectedMeeting.number}
-            subtitle={"Дата и время: " + formatDateTime(selectedMeeting.dateTime)}
+            subtitle={
+              "Дата и время: " + formatDateTime(selectedMeeting.dateTime)
+            }
             action={
               <Button onClick={() => setSelectedMeetingId(null)}>
                 К реестру заседаний
@@ -477,7 +496,9 @@ export function SessionsPage({
                 <Icon name="sessions" />
               </div>
               <div>
-                <p className="meeting-access-card-eyebrow">Информация о заседании</p>
+                <p className="meeting-access-card-eyebrow">
+                  Информация о заседании
+                </p>
                 <h3>Параметры проведения</h3>
               </div>
             </div>
@@ -503,33 +524,34 @@ export function SessionsPage({
                       : "Ответ не направлен"}
                   </strong>
                 </div>
-                {activeMemberResponse === "pending" && onRespondAttendancePoll && (
-                  <div className="meeting-access-response-actions">
-                    <Button
-                      onClick={() =>
-                        onRespondAttendancePoll(
-                          selectedMeeting.pollId,
-                          activeCommissionMemberId || "",
-                          "no",
-                        )
-                      }
-                    >
-                      Не буду участвовать
-                    </Button>
-                    <Button
-                      primary
-                      onClick={() =>
-                        onRespondAttendancePoll(
-                          selectedMeeting.pollId,
-                          activeCommissionMemberId || "",
-                          "yes",
-                        )
-                      }
-                    >
-                      Буду участвовать
-                    </Button>
-                  </div>
-                )}
+                {activeMemberResponse === "pending" &&
+                  onRespondAttendancePoll && (
+                    <div className="meeting-access-response-actions">
+                      <Button
+                        onClick={() =>
+                          onRespondAttendancePoll(
+                            selectedMeeting.pollId,
+                            activeCommissionMemberId || "",
+                            "no",
+                          )
+                        }
+                      >
+                        Не буду участвовать
+                      </Button>
+                      <Button
+                        primary
+                        onClick={() =>
+                          onRespondAttendancePoll(
+                            selectedMeeting.pollId,
+                            activeCommissionMemberId || "",
+                            "yes",
+                          )
+                        }
+                      >
+                        Буду участвовать
+                      </Button>
+                    </div>
+                  )}
               </div>
             )}
           </section>
@@ -556,11 +578,13 @@ export function SessionsPage({
         {selectedMeeting.postponedCaseIds?.length ? (
           <Notice tone="amber">
             <strong>
-              Отложено для дополнительного запроса: {selectedMeeting.postponedCaseIds.length}
+              Отложено для дополнительного запроса:{" "}
+              {selectedMeeting.postponedCaseIds.length}
             </strong>
             <p>
               Эти обращения исключены из текущей повестки. После подписания
-              обновлённой справки система включит их в ближайшее новое заседание.
+              обновлённой справки система включит их в ближайшее новое
+              заседание.
             </p>
             <ul>
               {selectedMeeting.postponedCaseIds.map((caseId) => {
@@ -589,12 +613,16 @@ export function SessionsPage({
           <section className="card">
             <div className="card-head">
               <h3>Опрос</h3>
-              <span className="muted">Ответы членов Апелляционной комиссии</span>
+              <span className="muted">
+                Ответы членов Апелляционной комиссии
+              </span>
             </div>
             <div className="attendance-member-list">
               {commissionMembers.map((member) => {
-                const response = selectedPoll?.responses[member.id] || "pending";
-                const changed = selectedPoll?.manualResponseChanges?.[member.id];
+                const response =
+                  selectedPoll?.responses[member.id] || "pending";
+                const changed =
+                  selectedPoll?.manualResponseChanges?.[member.id];
                 const isViceMinister = member.id === "kenbeil-dm";
                 const isDavgaDirector = member.id === "kurenbek-shb";
                 const isChair = selectedPoll?.chairId === member.id;
@@ -635,7 +663,9 @@ export function SessionsPage({
                       </span>
                     </div>
                     <div className="attendance-member-change">
-                      <span className="attendance-member-label">Изменение рабочего органа</span>
+                      <span className="attendance-member-label">
+                        Изменение рабочего органа
+                      </span>
                       <span>
                         {changed
                           ? changed.changedBy +
@@ -646,7 +676,9 @@ export function SessionsPage({
                     </div>
                     {(role === "demo-superuser" || role === "work") && (
                       <label className="attendance-member-control">
-                        <span className="attendance-member-label">Отметить вручную</span>
+                        <span className="attendance-member-label">
+                          Отметить вручную
+                        </span>
                         <select
                           value={response}
                           aria-label={"Отметить присутствие: " + member.name}
@@ -702,7 +734,6 @@ export function SessionsPage({
               {(role === "demo-superuser" || role === "director") && (
                 <div className="agenda-registry-actions">
                   <Button
-                    disabled={Boolean(selectedMeeting.agendaSigned)}
                     onClick={() => {
                       setCaseIdToAdd("");
                       setIsAddingCase(true);
@@ -711,10 +742,7 @@ export function SessionsPage({
                     Добавить обращение
                   </Button>
                   <Button
-                    disabled={
-                      Boolean(selectedMeeting.agendaSigned) ||
-                      !selectedMeetingCaseIds.length
-                    }
+                    disabled={!selectedMeetingCaseIds.length}
                     onClick={() => {
                       onExcludeCases(
                         selectedMeeting.id,
@@ -726,10 +754,7 @@ export function SessionsPage({
                     Исключить обращение
                   </Button>
                   <Button
-                    disabled={
-                      Boolean(selectedMeeting.agendaSigned) ||
-                      !selectedMeetingCaseIds.length
-                    }
+                    disabled={!selectedMeetingCaseIds.length}
                     onClick={() => {
                       setTransferMeetingId("");
                       setIsTransferringCases(true);
@@ -745,8 +770,7 @@ export function SessionsPage({
                 <thead>
                   <tr>
                     <th>
-                      {(role === "demo-superuser" || role === "director") &&
-                      !selectedMeeting.agendaSigned ? (
+                      {role === "demo-superuser" || role === "director" ? (
                         <input
                           type="checkbox"
                           aria-label="Выбрать все обращения"
@@ -780,8 +804,7 @@ export function SessionsPage({
                   {meetingCases.map((caseItem, index) => (
                     <tr key={caseItem.id}>
                       <td>
-                        {(role === "demo-superuser" || role === "director") &&
-                        !selectedMeeting.agendaSigned ? (
+                        {role === "demo-superuser" || role === "director" ? (
                           <input
                             type="checkbox"
                             aria-label={`Выбрать обращение ${caseItem.id}`}
@@ -857,8 +880,8 @@ export function SessionsPage({
                         <div className="empty-state">
                           <h3>В заседание не включены обращения</h3>
                           <p>
-                            Директор ДАВГА может исключить обращение до
-                            подписания повестки дня.
+                            Директор ДАВГА может изменить состав обращений до
+                            проведения заседания.
                           </p>
                         </div>
                       </td>
@@ -971,7 +994,7 @@ export function SessionsPage({
                 </>
               ) : (
                 <Notice>
-                  Нет другого неподписанного заседания для переноса.
+                  Нет другого незавершённого заседания для переноса.
                 </Notice>
               )}
             </Modal>
@@ -984,7 +1007,7 @@ export function SessionsPage({
                 <h3>Повестка дня</h3>
                 <p className="muted">
                   {selectedMeeting.agendaSigned
-                    ? "Повестка подписана и направлена в кабинеты членов АК."
+                    ? "Повестка подписана и направлена в кабинеты членов АК. Директор ДАВГА может скорректировать состав обращений."
                     : "До подписания директор ДАВГА может изменить порядок пунктов."}
                 </p>
               </div>
@@ -1093,115 +1116,119 @@ export function SessionsPage({
       {visibleSessionsTab === "meetings" ? (
         <>
           <section className="card">
-          <div className="table-scroll">
-            <table className="registry-table">
-              <thead>
-                <tr>
-                  {role !== "commission" && <th>Заседание</th>}
-                  <th>Дата и время</th>
-                  {role === "commission" ? (
-                    <th>Формат и место проведения</th>
-                  ) : (
-                    <>
-                      <th>Обращения</th>
-                      <th>Опрос</th>
-                      <th>Повестка дня</th>
-                      <th>Заседание проведено</th>
-                    </>
-                  )}
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {[...meetings]
-                  .sort((left, right) =>
-                    right.dateTime.localeCompare(left.dateTime),
-                  )
-                  .map((meeting) => {
-                    const poll = attendancePolls.find(
-                      (item) => item.id === meeting.pollId,
-                    );
-                    const answers = poll ? Object.values(poll.responses) : [];
-                    const yes = answers.filter(
-                      (answer) => answer === "yes",
-                    ).length;
-                    return (
-                      <tr key={meeting.id}>
-                        {role !== "commission" && <td>№ {meeting.number}</td>}
-                        <td>
-                          {formatDateTime(meeting.dateTime)}
-                          {role !== "commission" && meeting.formatAndPlace && (
-                            <small className="muted">
-                              {" "}
-                              {meeting.formatAndPlace}
-                            </small>
-                          )}
-                        </td>
-                        {role === "commission" ? (
-                          <td>{meeting.formatAndPlace || "—"}</td>
-                        ) : (
-                          <>
-                            <td>{meeting.caseIds.length}</td>
-                            <td>
-                              {poll ? "Подтвердили: " + yes : "Не направлен"}
-                            </td>
-                            <td>
-                              <span
-                                className={
-                                  "badge " +
-                                  (meeting.agendaSigned ? "green" : "amber")
-                                }
-                              >
-                                {meeting.agendaSigned
-                                  ? "Подписана"
-                                  : "Ожидает подписания"}
-                              </span>
-                            </td>
-                            <td>
-                              {meeting.completed ? (
-                                <span className="badge green">Проведено</span>
-                              ) : role === "demo-superuser" || role === "work" ? (
-                                <Button
-                                  disabled={
-                                    !meeting.agendaSigned ||
-                                    date < meeting.dateTime.slice(0, 10)
-                                  }
-                                  onClick={() => onCompleteMeeting(meeting.id)}
-                                >
-                                  Заседание проведено
-                                </Button>
-                              ) : (
-                                "—"
-                              )}
-                            </td>
-                          </>
-                        )}
-                        <td>
-                          <Button
-                            onClick={() => setSelectedMeetingId(meeting.id)}
-                          >
-                            Открыть
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                {!meetings.length && (
+            <div className="table-scroll">
+              <table className="registry-table">
+                <thead>
                   <tr>
-                    <td colSpan={role === "commission" ? 3 : 7}>
-                      <div className="empty-state">
-                        <h3>Заседания ещё не созданы</h3>
-                        <p>
-                          Исполнитель рабочего органа создаёт карточку заседания
-                          и указывает дату и время.
-                        </p>
-                      </div>
-                    </td>
+                    {role !== "commission" && <th>Заседание</th>}
+                    <th>Дата и время</th>
+                    {role === "commission" ? (
+                      <th>Формат и место проведения</th>
+                    ) : (
+                      <>
+                        <th>Обращения</th>
+                        <th>Опрос</th>
+                        <th>Повестка дня</th>
+                        <th>Заседание проведено</th>
+                      </>
+                    )}
+                    <th />
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {[...meetings]
+                    .sort((left, right) =>
+                      right.dateTime.localeCompare(left.dateTime),
+                    )
+                    .map((meeting) => {
+                      const poll = attendancePolls.find(
+                        (item) => item.id === meeting.pollId,
+                      );
+                      const answers = poll ? Object.values(poll.responses) : [];
+                      const yes = answers.filter(
+                        (answer) => answer === "yes",
+                      ).length;
+                      return (
+                        <tr key={meeting.id}>
+                          {role !== "commission" && <td>№ {meeting.number}</td>}
+                          <td>
+                            {formatDateTime(meeting.dateTime)}
+                            {role !== "commission" &&
+                              meeting.formatAndPlace && (
+                                <small className="muted">
+                                  {" "}
+                                  {meeting.formatAndPlace}
+                                </small>
+                              )}
+                          </td>
+                          {role === "commission" ? (
+                            <td>{meeting.formatAndPlace || "—"}</td>
+                          ) : (
+                            <>
+                              <td>{meeting.caseIds.length}</td>
+                              <td>
+                                {poll ? "Подтвердили: " + yes : "Не направлен"}
+                              </td>
+                              <td>
+                                <span
+                                  className={
+                                    "badge " +
+                                    (meeting.agendaSigned ? "green" : "amber")
+                                  }
+                                >
+                                  {meeting.agendaSigned
+                                    ? "Подписана"
+                                    : "Ожидает подписания"}
+                                </span>
+                              </td>
+                              <td>
+                                {meeting.completed ? (
+                                  <span className="badge green">Проведено</span>
+                                ) : role === "demo-superuser" ||
+                                  role === "work" ? (
+                                  <Button
+                                    disabled={
+                                      !meeting.agendaSigned ||
+                                      date < meeting.dateTime.slice(0, 10)
+                                    }
+                                    onClick={() =>
+                                      onCompleteMeeting(meeting.id)
+                                    }
+                                  >
+                                    Заседание проведено
+                                  </Button>
+                                ) : (
+                                  "—"
+                                )}
+                              </td>
+                            </>
+                          )}
+                          <td>
+                            <Button
+                              onClick={() => setSelectedMeetingId(meeting.id)}
+                            >
+                              Открыть
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {!meetings.length && (
+                    <tr>
+                      <td colSpan={role === "commission" ? 3 : 7}>
+                        <div className="empty-state">
+                          <h3>Заседания ещё не созданы</h3>
+                          <p>
+                            Исполнитель рабочего органа создаёт карточку
+                            заседания и указывает дату и время.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </section>
         </>
       ) : (

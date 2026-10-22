@@ -113,7 +113,20 @@ function authorityResponseDeadline(c: ObjectionCase, role?: Role) {
     .sort()[0];
 }
 
-export function executionDeadline(c: ObjectionCase, role?: Role): string | null {
+/**
+ * Срок формирования справки считается от даты поступления обращения. Для
+ * возражений период ожидания ответа на направленный запрос не включается в
+ * эти пять рабочих дней: после фиксации ответа накопленное количество дней
+ * хранится в pauseDays и добавляется к исходному сроку.
+ */
+function certificateDeadline(c: ObjectionCase) {
+  return addWorkdays(c.document.received, 5 + reviewPauseDays(c));
+}
+
+export function executionDeadline(
+  c: ObjectionCase,
+  role?: Role,
+): string | null {
   if (role === "dvga" || role === "kvga") {
     const deadline = authorityResponseDeadline(c, role);
     if (deadline) return deadline;
@@ -140,7 +153,7 @@ export function executionDeadline(c: ObjectionCase, role?: Role): string | null 
       c.status,
     )
   )
-    return addWorkdays(c.document.received, 5);
+    return certificateDeadline(c);
   if (
     [
       "certificate_approved",
@@ -189,9 +202,7 @@ export function executionDeadline(c: ObjectionCase, role?: Role): string | null 
       "final_response_approval",
       "final_response_signed",
       "final_response_delivery",
-    ].includes(
-      c.status,
-    )
+    ].includes(c.status)
   )
     return reviewDeadline(c);
   return null;
