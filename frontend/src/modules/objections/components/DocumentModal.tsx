@@ -702,10 +702,12 @@ export function DocumentContent({
         <article className="print-document final-response-template">
           <div className="final-response-recipient">
             <p>
-              {isDecisionProject ? <strong>{snapshot.org}</strong> : snapshot.org}
+              <strong>{snapshot.org}</strong>
             </p>
             {!isDecisionProject && (
-              <p>{auditAuthorityKazakhName(snapshot.issuer)}</p>
+              <p>
+                <strong>{auditAuthorityKazakhName(snapshot.issuer)}</strong>
+              </p>
             )}
           </div>
           <div className="final-response-body">
