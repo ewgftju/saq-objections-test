@@ -701,7 +701,9 @@ export function DocumentContent({
       <div className="final-response-document">
         <article className="print-document final-response-template">
           <div className="final-response-recipient">
-            <p>{snapshot.org}</p>
+            <p>
+              {isDecisionProject ? <strong>{snapshot.org}</strong> : snapshot.org}
+            </p>
             {!isDecisionProject && (
               <p>{auditAuthorityKazakhName(snapshot.issuer)}</p>
             )}

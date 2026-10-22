@@ -160,8 +160,16 @@ export function executionDeadline(c: ObjectionCase, role?: Role): string | null 
     return meetingDate ? addWorkdays(meetingDate, 1) : null;
   }
   if (c.status === "protocol") {
-    const meetingDate = c.attendanceMeetingDate ?? c.agendaMeetingDate;
-    return meetingDate ? addWorkdays(meetingDate, 1) : null;
+    // После формирования проект протокола передаётся членам комиссии на
+    // подписание. Срок подписи считается от даты получения проекта, а не от
+    // даты заседания. Для старых карточек без projectReceived сохраняем
+    // совместимость, используя дату заседания как резервное значение.
+    const protocolReceivedDate =
+      c.meeting?.projectReceived ??
+      c.meeting?.date ??
+      c.attendanceMeetingDate ??
+      c.agendaMeetingDate;
+    return protocolReceivedDate ? addWorkdays(protocolReceivedDate, 1) : null;
   }
   if (
     [
