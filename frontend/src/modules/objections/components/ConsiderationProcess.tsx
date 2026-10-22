@@ -8,7 +8,7 @@ import type {
   Role,
 } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
-import { statusLabelForRole } from "../services/statusPresentation";
+import { caseStatusLabelForRole } from "../services/statusPresentation";
 import {
   additionalActions,
   nextAction,
@@ -626,7 +626,7 @@ export default function ConsiderationProcess({
     ? availableExtras.filter((option) => option.action === "supplement")
     : availableExtras;
   const lastEvent = c.history.at(-1);
-  const visibleStatus = statusLabelForRole(c.status, role);
+  const visibleStatus = caseStatusLabelForRole(c, role);
   const caseRecommendations = recommendations.filter(
     (recommendation) => recommendation.caseId === c.id,
   );

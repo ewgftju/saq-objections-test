@@ -28,7 +28,7 @@ import {
   subjectRoleForCase,
 } from "../services/saqCabinets";
 import { nextAction } from "../services/workflow";
-import { statusLabelForRole } from "../services/statusPresentation";
+import { caseStatusLabelForRole } from "../services/statusPresentation";
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
@@ -713,7 +713,7 @@ export default function CaseWorkspace({
     );
   const recipientLimited = isAuthorityRole(role) || isSubjectRole(role);
   const isCommission = role === "commission";
-  const visibleStatus = statusLabelForRole(c.status, role);
+  const visibleStatus = caseStatusLabelForRole(c, role);
   const visibleDocuments = isCommission
     ? c.documents.filter((document) => document.kind !== "conclusion")
     : c.documents;

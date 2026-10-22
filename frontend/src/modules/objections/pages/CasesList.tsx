@@ -6,7 +6,10 @@ import { formatDate } from "../../../utils/dateFormat";
 import { applicantIdentifierType } from "../services/appealTemplates";
 import { executionDeadline, reviewDeadline } from "../services/deadlines";
 import { isSubjectRole, subjectRoleForCase } from "../services/saqCabinets";
-import { statusLabelForRole } from "../services/statusPresentation";
+import {
+  caseStatusLabelForRole,
+  hasBeenConsideredAtMeeting,
+} from "../services/statusPresentation";
 
 const APPEAL_TYPE_OPTIONS = [
   "Заявление",
@@ -289,11 +292,7 @@ export default function CasesList({
             "green",
           ],
           [
-            cases.filter((c) =>
-              c.history.some(
-                (event) => event.title === "Заседание по данному делу проведено",
-              ),
-            ).length,
+            cases.filter(hasBeenConsideredAtMeeting).length,
             "Рассмотрено на заседании",
             "заседание по делу проведено",
             "violet",
@@ -518,7 +517,7 @@ export default function CasesList({
                 const unread =
                   ((role === "demo-superuser" || role === "director") && c.unread) ||
                   ((role === "demo-superuser" || role === "work") && c.unreadForAssignee);
-                const visibleStatus = statusLabelForRole(c.status, role);
+                const visibleStatus = caseStatusLabelForRole(c, role);
                 return (
                 <tr key={c.id} className={unread ? "unread-case" : ""}>
                   <td>

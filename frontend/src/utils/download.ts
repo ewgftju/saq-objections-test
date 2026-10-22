@@ -1,6 +1,6 @@
 import type { ObjectionCase, Role } from "../types";
 import { TYPES } from "../data/constants";
-import { statusLabelForRole } from "../modules/objections/services/statusPresentation";
+import { caseStatusLabelForRole } from "../modules/objections/services/statusPresentation";
 
 export function downloadFile(name: string, content: string, mime: string) {
   const url = URL.createObjectURL(new Blob([content], { type: mime }));
@@ -23,7 +23,7 @@ export function caseCsv(cases: ObjectionCase[], role: Role = "work"): string {
         c.org,
         c.bin,
         TYPES[c.type],
-        statusLabelForRole(c.status, role) || "",
+        caseStatusLabelForRole(c, role) || "",
         c.registered,
       ]),
     ]

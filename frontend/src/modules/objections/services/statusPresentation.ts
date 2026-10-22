@@ -1,5 +1,5 @@
 import { STATUS } from "../../../data/constants";
-import type { CaseStatus, Role } from "../../../types";
+import type { CaseStatus, ObjectionCase, Role } from "../../../types";
 
 /** Членам АК показываем только статусы, относящиеся к их работе с делом. */
 const COMMISSION_STATUS: Partial<Record<CaseStatus, string>> = {
@@ -15,4 +15,17 @@ const COMMISSION_STATUS: Partial<Record<CaseStatus, string>> = {
 
 export function statusLabelForRole(status: CaseStatus, role: Role) {
   return role === "commission" ? COMMISSION_STATUS[status] : STATUS[status];
+}
+
+export function hasBeenConsideredAtMeeting(c: ObjectionCase): boolean {
+  return c.history.some(
+    (event) => event.title === "Заседание по данному делу проведено",
+  );
+}
+
+export function caseStatusLabelForRole(c: ObjectionCase, role: Role) {
+  if (role === "commission" && hasBeenConsideredAtMeeting(c)) {
+    return "Рассмотрено на заседании";
+  }
+  return statusLabelForRole(c.status, role);
 }

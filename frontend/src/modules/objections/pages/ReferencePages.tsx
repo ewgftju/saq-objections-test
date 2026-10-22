@@ -8,7 +8,7 @@ import {
 import { agendaItemText } from "../components/AgendaModal";
 import { AgendaResultsTable } from "../components/AgendaResultsModal";
 import { meetingAgendaCaseIds } from "../services/meetingAgenda";
-import { statusLabelForRole } from "../services/statusPresentation";
+import { caseStatusLabelForRole } from "../services/statusPresentation";
 import { useState } from "react";
 import { STATUS } from "../../../data/constants";
 import type {
@@ -833,7 +833,7 @@ export function SessionsPage({
                       <td>{index + 1}</td>
                       <td>{caseItem.id}</td>
                       <td>{caseItem.org}</td>
-                      <td>{statusLabelForRole(caseItem.status, role) || "—"}</td>
+                      <td>{caseStatusLabelForRole(caseItem, role) || "—"}</td>
                       <td>
                         <span
                           className={
