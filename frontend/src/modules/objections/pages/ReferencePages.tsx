@@ -369,9 +369,33 @@ export function SessionsPage({
         .map((caseId) => cases.find((caseItem) => caseItem.id === caseId))
         .filter((caseItem): caseItem is ObjectionCase => Boolean(caseItem))
     : [];
+  const inactiveMeetingEntries = selectedMeeting
+    ? (() => {
+        const activeCaseIds = new Set(selectedMeeting.caseIds);
+        const fallbackEntries = cases.flatMap<InactiveMeetingCase>((caseItem) => {
+          if (activeCaseIds.has(caseItem.id)) return [];
+          if (selectedMeeting.postponedCaseIds?.includes(caseItem.id)) {
+            return [{ caseId: caseItem.id, reason: "postponed" }];
+          }
+          if (caseItem.excludedFromMeetingIds?.includes(selectedMeeting.id)) {
+            return [{ caseId: caseItem.id, reason: "excluded" }];
+          }
+          if (caseItem.transferredFromMeetingIds?.includes(selectedMeeting.id)) {
+            return [{ caseId: caseItem.id, reason: "transferred" }];
+          }
+          return [];
+        });
+        const entries = new Map<string, InactiveMeetingCase>();
+        fallbackEntries.forEach((entry) => entries.set(entry.caseId, entry));
+        (selectedMeeting.inactiveCases || []).forEach((entry) => {
+          if (!activeCaseIds.has(entry.caseId)) entries.set(entry.caseId, entry);
+        });
+        return [...entries.values()];
+      })()
+    : [];
   const inactiveMeetingCases =
     selectedMeeting && canViewInactiveMeetingCases(role)
-      ? (selectedMeeting.inactiveCases || [])
+      ? inactiveMeetingEntries
           .map((entry) => ({
             entry,
             caseItem: cases.find((caseItem) => caseItem.id === entry.caseId),

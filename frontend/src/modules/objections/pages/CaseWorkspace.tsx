@@ -1842,9 +1842,13 @@ export default function CaseWorkspace({
             <div className="card-body">
               {isAuthorityRole(role) ? (
                 (() => {
-                  const request = c.requests.find((item) =>
+                  const authorityRequests = c.requests.filter((item) =>
                     isRequestForAuthority(item, role),
                   );
+                  const request =
+                    authorityRequests.find(
+                      (item) => !item.responded && !item.responseSigned,
+                    ) || authorityRequests.at(-1);
                   return request?.sent ? (
                     <>
                       <div className="support-row">
