@@ -849,6 +849,10 @@ export function DocumentContent({
     const decision = overallResult
       ? OUTCOMES[overallResult].toLocaleLowerCase("ru-RU")
       : "—";
+    const appealTypeLabel = snapshot.appealType
+      ? snapshot.appealType.charAt(0).toLocaleLowerCase("ru-RU") +
+        snapshot.appealType.slice(1)
+      : "обращение";
     const protocolIntro =
       agendaOrProtocolIntro(snapshot) ||
       (snapshot.appealType === "Жалоба на уведомление"
@@ -983,7 +987,7 @@ export function DocumentContent({
             </>
           ) : (
             <>
-              {snapshot.appealType} {snapshot.org} от{" "}
+              {appealTypeLabel} {snapshot.org} от{" "}
               {formatDate(snapshot.appealDate || snapshot.filed)} года №
               {snapshot.appealNumber || snapshot.document.number}.
             </>
