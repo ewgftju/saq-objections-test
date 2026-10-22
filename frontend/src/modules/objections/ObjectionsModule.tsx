@@ -12,6 +12,7 @@ import type {
   CommissionAttendancePoll,
   CommissionMeeting,
   DemoState,
+  InactiveMeetingCase,
   ObjectionCase,
   RequestDraftKind,
 } from "../../types";
@@ -113,6 +114,29 @@ function applyDefaultAttendanceChair(poll: CommissionAttendancePoll) {
   }
 }
 
+function rememberInactiveMeetingCase(
+  meeting: CommissionMeeting,
+  caseId: string,
+  reason: InactiveMeetingCase["reason"],
+  removedAt: string,
+  targetMeetingId?: string,
+) {
+  meeting.inactiveCases = [
+    ...(meeting.inactiveCases || []).filter((item) => item.caseId !== caseId),
+    { caseId, reason, removedAt, targetMeetingId },
+  ];
+}
+
+function forgetInactiveMeetingCase(
+  meeting: CommissionMeeting,
+  caseId: string,
+) {
+  meeting.inactiveCases = (meeting.inactiveCases || []).filter(
+    (item) => item.caseId !== caseId,
+  );
+  if (!meeting.inactiveCases.length) delete meeting.inactiveCases;
+}
+
 /**
  * Returns the poll of the meeting that currently contains the case.  A case
  * can retain earlier polls after it was rescheduled, so the last item in the
@@ -171,6 +195,7 @@ function postponeMeetingForAdditionalRequest(
   meeting.postponedCaseIds = [
     ...new Set([...(meeting.postponedCaseIds || []), caseId]),
   ];
+  rememberInactiveMeetingCase(meeting, caseId, "postponed", state.date);
   meeting.caseIds = meeting.caseIds.filter((id) => id !== caseId);
   const poll = state.attendancePolls.find((item) => item.id === meeting.pollId);
   if (poll) poll.caseIds = poll.caseIds.filter((id) => id !== caseId);
@@ -709,6 +734,7 @@ export default function ObjectionsModule() {
     ids.forEach((caseId) => {
       const target = next.cases.find((item) => item.id === caseId);
       if (!target) return;
+      rememberInactiveMeetingCase(meeting, caseId, "excluded", next.date);
       target.excludedFromMeetingIds = [
         ...new Set([...(target.excludedFromMeetingIds || []), meeting.id]),
       ];
@@ -758,6 +784,13 @@ export default function ObjectionsModule() {
         item.caseIds.includes(caseId),
     );
     previousMeetings.forEach((previousMeeting) => {
+      rememberInactiveMeetingCase(
+        previousMeeting,
+        caseId,
+        "transferred",
+        next.date,
+        meeting.id,
+      );
       previousMeeting.caseIds = previousMeeting.caseIds.filter(
         (id) => id !== caseId,
       );
@@ -779,6 +812,7 @@ export default function ObjectionsModule() {
     });
 
     meeting.caseIds.push(caseId);
+    forgetInactiveMeetingCase(meeting, caseId);
     poll.caseIds.push(caseId);
     const selectedCases = meeting.caseIds
       .map((id) => next.cases.find((item) => item.id === id))
@@ -847,10 +881,20 @@ export default function ObjectionsModule() {
     if (!ids.length) return;
 
     const movedIds = new Set(ids);
+    ids.forEach((caseId) =>
+      rememberInactiveMeetingCase(
+        fromMeeting,
+        caseId,
+        "transferred",
+        next.date,
+        toMeeting.id,
+      ),
+    );
     fromMeeting.caseIds = fromMeeting.caseIds.filter((id) => !movedIds.has(id));
     fromPoll.caseIds = fromPoll.caseIds.filter((id) => !movedIds.has(id));
     ids.forEach((caseId) => {
       if (!toMeeting.caseIds.includes(caseId)) toMeeting.caseIds.push(caseId);
+      forgetInactiveMeetingCase(toMeeting, caseId);
       if (!toPoll.caseIds.includes(caseId)) toPoll.caseIds.push(caseId);
       const target = next.cases.find((item) => item.id === caseId);
       if (!target) return;

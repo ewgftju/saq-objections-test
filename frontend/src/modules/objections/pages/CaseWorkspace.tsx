@@ -1834,7 +1834,7 @@ export default function CaseWorkspace({
             )}
           </div>
         </section>
-        {!recipientLimited && <aside className="right-column">
+        {!isSubjectRole(role) && <aside className="right-column">
           <section className="card right-card">
             <div className="card-head">
               <h3>Сроки</h3>
@@ -1872,14 +1872,16 @@ export default function CaseWorkspace({
                       <strong>{formatDate(currentExecutionDeadline)}</strong>
                     </div>
                   )}
-                  <div className="support-row">
-                    <span>Срок рассмотрения</span>
-                    <strong>
-                      {c.status === "paused"
-                        ? "Приостановлен"
-                        : formatDate(reviewDeadline(c))}
-                    </strong>
-                  </div>
+                  {role !== "commission" && (
+                    <div className="support-row">
+                      <span>Срок рассмотрения</span>
+                      <strong>
+                        {c.status === "paused"
+                          ? "Приостановлен"
+                          : formatDate(reviewDeadline(c))}
+                      </strong>
+                    </div>
+                  )}
                 </>
               )}
               {!isAuthorityRole(role) && c.extensionDays > 0 && (
@@ -1914,17 +1916,17 @@ export default function CaseWorkspace({
                   </p>
                 </>
               )}
-              <p className="sources-inline">
-                <a
-                  href={`https://adilet.zan.kz/rus/docs/${c.type === "control" ? "K2000000350" : "Z1500000392"}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {c.type === "control"
-                    ? "АППК: статьи 92, 99"
-                    : "Закон: статьи 58-2, 58-4"}
-                </a>
-              </p>
+              {c.type !== "control" && (
+                <p className="sources-inline">
+                  <a
+                    href="https://adilet.zan.kz/rus/docs/Z1500000392"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Закон: статьи 58-2, 58-4
+                  </a>
+                </p>
+              )}
             </div>
           </section>
         </aside>}

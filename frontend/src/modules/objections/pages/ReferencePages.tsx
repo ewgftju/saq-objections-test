@@ -7,6 +7,7 @@ import type {
   CommissionMeeting,
   CommissionAttendanceMember,
   CommissionAttendancePoll,
+  InactiveMeetingCase,
   ObjectionCase,
   Role,
 } from "../../../types";
@@ -32,6 +33,23 @@ const REVIEWED_CASE_STATUSES = new Set([
   "completed",
   "refused",
 ]);
+
+function canViewInactiveMeetingCases(role: Role) {
+  return role === "director" || role === "work" || role === "demo-superuser";
+}
+
+function inactiveMeetingCaseLabel(
+  entry: InactiveMeetingCase,
+  meetings: CommissionMeeting[],
+) {
+  if (entry.reason === "excluded") return "Исключено из заседания";
+  if (entry.reason === "postponed")
+    return "Перенесено для дополнительного запроса";
+  const target = meetings.find((meeting) => meeting.id === entry.targetMeetingId);
+  return target
+    ? `Перенесено в заседание №${target.number}`
+    : "Перенесено в другое заседание";
+}
 
 const sources = [
   [
@@ -330,7 +348,7 @@ export function SessionsPage({
   const [sessionsTab, setSessionsTab] = useState<"meetings" | "excluded">(
     "meetings",
   );
-  const canViewExcludedCases = role !== "commission";
+  const canViewExcludedCases = canViewInactiveMeetingCases(role);
   const visibleSessionsTab = canViewExcludedCases ? sessionsTab : "meetings";
   const [isAddingCase, setIsAddingCase] = useState(false);
   const [caseIdToAdd, setCaseIdToAdd] = useState("");
@@ -351,6 +369,20 @@ export function SessionsPage({
         .map((caseId) => cases.find((caseItem) => caseItem.id === caseId))
         .filter((caseItem): caseItem is ObjectionCase => Boolean(caseItem))
     : [];
+  const inactiveMeetingCases =
+    selectedMeeting && canViewInactiveMeetingCases(role)
+      ? (selectedMeeting.inactiveCases || [])
+          .map((entry) => ({
+            entry,
+            caseItem: cases.find((caseItem) => caseItem.id === entry.caseId),
+          }))
+          .filter(
+            (
+              item,
+            ): item is { entry: InactiveMeetingCase; caseItem: ObjectionCase } =>
+              Boolean(item.caseItem),
+          )
+      : [];
   const addableCases =
     selectedMeeting && !selectedMeeting.agendaSigned
       ? cases.filter(
@@ -770,7 +802,32 @@ export function SessionsPage({
                       </td>
                     </tr>
                   ))}
-                  {!meetingCases.length && (
+                  {inactiveMeetingCases.map(({ entry, caseItem }) => (
+                    <tr
+                      className="meeting-case-inactive"
+                      key={`inactive-${selectedMeeting.id}-${caseItem.id}`}
+                    >
+                      <td />
+                      <td>—</td>
+                      <td>
+                        <strong>{caseItem.id}</strong>
+                        <small className="subline">Неактивное обращение</small>
+                      </td>
+                      <td>{caseItem.org}</td>
+                      <td>{STATUS[caseItem.status]}</td>
+                      <td>
+                        <span className="badge gray">
+                          {inactiveMeetingCaseLabel(entry, meetings)}
+                        </span>
+                      </td>
+                      <td className="agenda-registry-actions">
+                        <Button onClick={() => onOpen(caseItem)}>
+                          Открыть
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {!meetingCases.length && !inactiveMeetingCases.length && (
                     <tr>
                       <td colSpan={7}>
                         <div className="empty-state">

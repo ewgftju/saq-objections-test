@@ -409,6 +409,15 @@ export interface CaseCertificate {
   memberPositions: CertificateMemberPosition[];
 }
 
+/** Обращение, снятое директором ДАВГА с конкретной повестки. */
+export interface InactiveMeetingCase {
+  caseId: string;
+  reason: "excluded" | "transferred" | "postponed";
+  /** Заполняется, если обращение перенесено в другое заседание. */
+  targetMeetingId?: string;
+  removedAt?: string;
+}
+
 export interface CommissionMeeting {
   id: string;
   number: number;
@@ -423,6 +432,8 @@ export interface CommissionMeeting {
   agendaSignedAt?: string;
   /** Обращения, снятые с этого заседания из-за дополнительного запроса. */
   postponedCaseIds?: string[];
+  /** Обращения, которые должны оставаться в карточке заседания неактивными. */
+  inactiveCases?: InactiveMeetingCase[];
   /** Рабочий орган зафиксировал завершение заседания. */
   completed?: boolean;
   completedAt?: string;

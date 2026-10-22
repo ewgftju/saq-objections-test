@@ -297,8 +297,24 @@ export function createDemoRepository(
             postponedCaseIds: meeting.postponedCaseIds
               ? normalizeCaseIds(meeting.postponedCaseIds)
               : undefined,
+            inactiveCases: meeting.inactiveCases
+              ?.map((item) =>
+                item && typeof item.caseId === "string"
+                  ? { ...item, caseId: migratedCaseId(item.caseId) }
+                  : item,
+              )
+              .filter(
+                (item) =>
+                  item &&
+                  typeof item.caseId === "string" &&
+                  !isRemovedDemoCase(item.caseId),
+              ),
           }))
-          .filter((meeting) => meeting.caseIds.length > 0),
+          .filter(
+            (meeting) =>
+              meeting.caseIds.length > 0 ||
+              Boolean(meeting.inactiveCases?.length),
+          ),
         notifications: [...previousNotifications, ...legacyFinalResponseNotifications],
         recommendations: (value.recommendations || [])
           .filter((recommendation) => !isRemovedDemoCase(recommendation.caseId))
@@ -311,7 +327,11 @@ export function createDemoRepository(
             ...poll,
             caseIds: normalizeCaseIds(poll.caseIds),
           }))
-          .filter((poll) => poll.caseIds.length > 0),
+          .filter(
+            (poll) =>
+              poll.caseIds.length > 0 ||
+              (value.meetings || []).some((meeting) => meeting.pollId === poll.id),
+          ),
         activeCommissionMemberId:
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
         cases: casesWithSharedCases,

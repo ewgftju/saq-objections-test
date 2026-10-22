@@ -395,6 +395,20 @@ small,
 .registry-table tr.unread-case td {
   font-weight: 700;
 }
+.registry-table tr.meeting-case-inactive {
+  color: #8a96a3;
+  background: #f7f9fb;
+}
+.registry-table tr.meeting-case-inactive td {
+  opacity: 0.72;
+}
+.registry-table tr.meeting-case-inactive td:first-child {
+  border-left: 3px solid #c7d0d9;
+}
+.registry-table tr.meeting-case-inactive .button {
+  color: #6f7d8b;
+  background: #fff;
+}
 .button {
   min-height: 38px;
   display: inline-flex;

@@ -53,6 +53,12 @@ const KAZAKH_OUTCOMES: Record<Outcome, string> = {
   refuse: "қараудан бас тарту",
 };
 
+function appealObjectLabel(c: Pick<ObjectionCase, "appealType">) {
+  if (c.appealType?.startsWith("Жалоба")) return "жалобу";
+  if (c.appealType === "Заявление") return "заявление";
+  return "возражение";
+}
+
 function appealDateAndNumber(c: ObjectionCase) {
   return `${formatDate(c.appealDate || c.filed)} жылғы ${c.appealNumber || "—"}`;
 }
@@ -696,7 +702,9 @@ export function DocumentContent({
         <article className="print-document final-response-template">
           <div className="final-response-recipient">
             <p>{snapshot.org}</p>
-            <p>{auditAuthorityKazakhName(snapshot.issuer)}</p>
+            {!isDecisionProject && (
+              <p>{auditAuthorityKazakhName(snapshot.issuer)}</p>
+            )}
           </div>
           <div className="final-response-body">
             <p>{kazakhDecisionIntro(snapshot)}</p>
@@ -742,7 +750,7 @@ export function DocumentContent({
           </p>
         </article>
         <article className="print-document final-response-template final-response-appendix">
-          <h2>Қосымша</h2>
+          <h2 className="final-response-appendix-title">Қосымша</h2>
           {appendixPoints.map((point) => {
             return (
               <section
@@ -755,7 +763,8 @@ export function DocumentContent({
                 <p className="final-response-point-reason">{point.reason}.</p>
                 <p className="final-response-point-decision">
                   На основании вышеизложенного, Апелляционной комиссией принято
-                  решение {point.decision}
+                  решение {point.decision} {appealObjectLabel(snapshot)} по
+                  данному вопросу
                   {point.decidedByMajority ? " большинством голосов" : ""}.
                 </p>
               </section>
@@ -961,9 +970,20 @@ export function DocumentContent({
         </table>
         <p className="protocol-template-result">
           На основании результатов голосования членов Апелляционной комиссии
-          принято РЕШЕНИЕ {decision} {snapshot.appealType} {snapshot.org} от{" "}
-          {formatDate(snapshot.appealDate || snapshot.filed)} года №
-          {snapshot.appealNumber || snapshot.document.number}.
+          принято РЕШЕНИЕ {decision}{" "}
+          {snapshot.appealType?.startsWith("Жалоба") ? (
+            <>
+              жалобу {snapshot.org} от{" "}
+              {formatDate(snapshot.appealDate || snapshot.filed)} года №{" "}
+              {snapshot.appealNumber || snapshot.document.number}.
+            </>
+          ) : (
+            <>
+              {snapshot.appealType} {snapshot.org} от{" "}
+              {formatDate(snapshot.appealDate || snapshot.filed)} года №
+              {snapshot.appealNumber || snapshot.document.number}.
+            </>
+          )}
         </p>
         {recommendations && recommendations !== "—" && (
           <p className="protocol-template-recommendations">
@@ -1449,7 +1469,7 @@ export default function DocumentModal(props: {
   const appendixTemplateCss =
     ".appendix-template{box-sizing:border-box;min-height:680px;padding:52px 54px 96px;font-family:'Times New Roman',Times,serif;overflow:hidden}.appendix-template-number{margin:0 14px 14px 0;text-align:right;font-size:16px}.appendix-template-table-wrap{max-width:100%;overflow-x:auto}.appendix-template table{width:100%;min-width:700px;table-layout:fixed;font-size:14px;line-height:1.35}.appendix-template th,.appendix-template td{box-sizing:border-box;border:1px solid #111;padding:7px 9px;vertical-align:top;white-space:normal;overflow-wrap:anywhere;word-break:normal}.appendix-template th{text-align:center;font-size:14px;background:white}.appendix-template th:first-child,.appendix-template td:first-child{width:5%;text-align:center;font-weight:700}.appendix-template th:nth-child(2),.appendix-template td:nth-child(2){width:23%}.appendix-template th:nth-child(3),.appendix-template td:nth-child(3){width:31%}.appendix-template th:nth-child(4),.appendix-template td:nth-child(4){width:41%}";
   const finalResponseCss =
-    ".final-response-template{box-sizing:border-box;min-height:950px;padding:56px 62px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.35}.final-response-template p{white-space:normal}.final-response-recipient{margin:0 0 46px auto;width:54%;text-align:left}.final-response-recipient p{margin:0 0 8px}.final-response-body p{text-align:justify;text-indent:30px;margin:0 0 10px}.final-response-attachment-note{margin-top:30px!important;text-indent:0!important}.final-response-signature{display:grid;grid-template-columns:1fr auto;gap:26px;align-items:end;margin:60px 0 35px}.final-response-signature span{max-width:320px}.final-response-executor{font-size:13px!important;line-height:1.25}.final-response-appendix{break-before:page;page-break-before:always}.final-response-appendix h2{font-family:'Times New Roman',Times,serif;font-size:19px;font-style:italic}.final-response-appendix-point{margin:26px 0}.final-response-point-title{font-weight:700}.final-response-point-reason,.final-response-point-decision{text-align:justify;text-indent:30px}.final-response-point-decision{margin-top:12px!important}";
+    ".final-response-template{box-sizing:border-box;min-height:950px;padding:56px 62px;font-family:'Times New Roman',Times,serif;font-size:16px;line-height:1.35}.final-response-template p{white-space:normal}.final-response-recipient{margin:0 0 46px auto;width:54%;text-align:left}.final-response-recipient p{margin:0 0 8px}.final-response-body p{text-align:justify;text-indent:30px;margin:0 0 10px}.final-response-attachment-note{margin-top:30px!important;text-indent:0!important}.final-response-signature{display:grid;grid-template-columns:1fr auto;gap:26px;align-items:end;margin:60px 0 35px}.final-response-signature span{max-width:320px}.final-response-executor{font-size:13px!important;line-height:1.25}.final-response-appendix{break-before:page;page-break-before:always}.final-response-appendix h2,.final-response-appendix-title{margin:0 0 24px;text-align:right;font-family:'Times New Roman',Times,serif;font-size:19px;font-style:italic;font-weight:700}.final-response-appendix-point{margin:26px 0}.final-response-point-title{font-weight:700}.final-response-point-reason,.final-response-point-decision{text-align:justify;text-indent:30px}.final-response-point-decision{margin-top:12px!important}";
   const certificatePointVotesCss =
     ".certificate-point-votes-table{width:100%;margin:24px 0 12px;table-layout:fixed}.certificate-point-votes-table th,.certificate-point-votes-table td{min-width:0;padding:7px 5px;overflow-wrap:anywhere;word-break:break-word;white-space:normal}.certificate-point-votes-table th{text-align:center;font-size:11px;line-height:1.2}.certificate-point-votes-table td{text-align:center;font-size:12px;line-height:1.25}.certificate-point-votes-table td b{display:inline-block;margin-bottom:8px}";
   const certificateLayoutCss =

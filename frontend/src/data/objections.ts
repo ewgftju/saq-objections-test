@@ -9,7 +9,7 @@ export const COMMISSION_ATTENDANCE_MEMBERS: CommissionAttendanceMember[] = [
   { id: "alieva-at", name: "Директор ДМБУА Алиева А.Т." },
   { id: "urkhumbayeva-tzh", name: "Руководитель управления ДМБУА Урхумбаева Т.Ж." },
   { id: "abetova-ku", name: "Заместитель директора ДЮС Абетова К.У." },
-  { id: "kenbeil-dm", name: "Вице-министр Кенбеил Д.М." },
+  { id: "kenbeil-dm", name: "Вице-министр Кеңбеил Д.М" },
   { id: "kurenbek-shb", name: "Директор ДАВГА Күреңбек тегі Ш.Б." },
   { id: "akhmetov-rk", name: "Заместитель Председателя КВГА Ахметов Р.К." },
   { id: "turgeldiev-ra", name: "Заместитель председателя КВГА Тургелдиев Р.А." },
