@@ -27,6 +27,7 @@ import {
   isSubjectRole,
   subjectRoleForCase,
 } from "../services/saqCabinets";
+import { nextAction } from "../services/workflow";
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
@@ -708,10 +709,14 @@ export default function CaseWorkspace({
   const recipientLimited = isAuthorityRole(role) || isSubjectRole(role);
   const isCommission = role === "commission";
   const canViewOverview = !recipientLimited || isAuthorityRole(role);
+  const commissionNextAction =
+    role === "commission" ? nextAction(c, role) : null;
   const commissionCurrentTaskHidden =
     role === "commission" &&
-    commissionMeetingCompleted &&
-    c.status !== "protocol";
+    ((commissionMeetingCompleted && c.status !== "protocol") ||
+      Boolean(
+        commissionNextAction && commissionNextAction.role !== "commission",
+      ));
   return (
     <>
       <div className="back-row">

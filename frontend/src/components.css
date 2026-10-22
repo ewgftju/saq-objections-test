@@ -589,7 +589,7 @@
 @media print {
   .final-response-document { display: block; }
 }
-.final-response-appendix h2 { font-size: 19px; font-family: "Times New Roman", Times, serif; font-style: italic; }
+.final-response-appendix h2 { text-align: right; font-size: 19px; font-family: "Times New Roman", Times, serif; font-style: italic; font-weight: 700; }
 .final-response-appendix-point { margin: 26px 0; }
 .final-response-point-title { font-weight: 700; }
 .final-response-point-reason, .final-response-point-decision { text-align: justify; text-indent: 30px; }
