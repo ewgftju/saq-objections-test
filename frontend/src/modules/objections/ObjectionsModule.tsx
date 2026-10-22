@@ -1236,7 +1236,8 @@ export default function ObjectionsModule() {
     const updated = next.cases.find((item) => item.id === c.id)!;
     if (
       action === "hearing-after-decision-project" &&
-      (updated.appealType || "").trim() === "Заявление"
+      ((updated.appealType || "").trim().startsWith("Жалоба") ||
+        (updated.appealType || "").trim() === "Заявление")
     ) {
       const hearingOutcome = String(form.get("hearingOutcome") || "");
       if (
@@ -1390,7 +1391,11 @@ export default function ObjectionsModule() {
                   ? "Рекомендация и вложение сохранены"
                   : "Рекомендация сохранена"
                 : action === "hearing-after-decision-project"
-                  ? "Протокол заслушивания вложен. Переход к мотивированному ответу выполнен"
+                  ? updated.status === "accepted"
+                    ? "Протокол заслушивания вложен. Обращение возвращено на этап «Запрос»"
+                    : updated.status === "materials"
+                      ? "Протокол заслушивания вложен. Обращение возвращено на этап «Анализ»"
+                      : "Протокол заслушивания вложен. Переход к мотивированному ответу выполнен"
                   : action === "record-external-response"
                     ? "Ответ другого органа и вложения сохранены"
                     : action === "record-decision-project-delivery"

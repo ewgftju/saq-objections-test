@@ -301,10 +301,6 @@ function requiresMotivatedResponse(c: ObjectionCase) {
   );
 }
 
-function isStatement(c: ObjectionCase) {
-  return (c.appealType || "").trim() === "Заявление";
-}
-
 const REQUEST_STAGE_STATUSES: ObjectionCase["status"][] = [
   "accepted",
   "requested",
@@ -633,14 +629,14 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   const options: ActionOption[] = [
     { action: "upload", label: "Добавить материал", role: subjectRoleForCase(c) },
   ];
-  if (isStatement(c) && c.status === "materials") {
+  if (c.status === "materials") {
     options.push({
       action: "start-analysis-additional-request",
       label: "Направить дополнительный запрос",
       role: "work",
     });
   }
-  if (isStatement(c) && COMMISSION_STAGE_STATUSES.includes(c.status)) {
+  if (COMMISSION_STAGE_STATUSES.includes(c.status)) {
     options.push({
       action: "start-commission-additional-request",
       label: "Направить дополнительный запрос",
@@ -890,10 +886,6 @@ export function applyAction(
   switch (action) {
     case "start-analysis-additional-request":
     case "start-commission-additional-request": {
-      if (!isStatement(c))
-        throw new Error(
-          "Дополнительный маршрут в этой версии доступен только для заявления",
-        );
       const reason = text(
         "reason",
         "Причина необходимости направления дополнительного запроса",
@@ -1969,12 +1961,11 @@ export function applyAction(
         date,
         number: c.meeting.number,
       };
-      // Если заявление уже прошло первый проект решения и повторное
+      // Если жалоба или заявление уже прошли первый проект решения и повторное
       // заседание было назначено после дополнительных доводов/запроса,
       // второй проект решения не формируется. После подписания повторного
       // протокола обращение сразу переходит к мотивированному ответу.
       const repeatHearingAfterDecisionProject =
-        isStatement(c) &&
         Boolean(c.decisionProject) &&
         c.repeatHearingStatus === "scheduled";
       c.status =
@@ -1987,6 +1978,8 @@ export function applyAction(
         title = "Повторный протокол подписан";
         note =
           "Повторное заседание завершено. Второй проект решения не формируется; обращение переведено к формированию мотивированного ответа.";
+      } else if (c.repeatHearingStatus === "scheduled") {
+        c.repeatHearingStatus = undefined;
       }
       doc("Подписанный протокол заседания", "protocol", c.result.reason);
       break;
@@ -2251,7 +2244,7 @@ export function applyAction(
         throw new Error("Вложите протокол заслушивания");
       if (c.hearing) c.hearing.held = date;
 
-      if (isStatement(c)) {
+      if (isComplaintOrStatement(c)) {
         const hearingArgumentsPresence = String(
           form.get("hearingArgumentsPresence") || "",
         ).trim();

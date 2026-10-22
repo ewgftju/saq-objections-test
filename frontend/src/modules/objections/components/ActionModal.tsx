@@ -630,9 +630,10 @@ export default function ActionModal({
     popup.focus();
     popup.print();
   };
-  const isStatementHearingAction =
+  const isComplaintOrStatementHearingAction =
     action === "hearing-after-decision-project" &&
-    (c.appealType || "").trim() === "Заявление";
+    ((c.appealType || "").trim().startsWith("Жалоба") ||
+      (c.appealType || "").trim() === "Заявление");
   const hearingDateField = definition.fields.find(
     (field) => field.name === "date",
   );
@@ -1511,7 +1512,7 @@ export default function ActionModal({
         ) : action === "hearing-after-decision-project" ? (
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
-            {isStatementHearingAction ? (
+            {isComplaintOrStatementHearingAction ? (
               <div className="hearing-action-form">
                 <HearingSection step={1} title="Основные сведения">
                   <div className="hearing-form-grid">

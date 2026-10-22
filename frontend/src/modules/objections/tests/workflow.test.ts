@@ -1761,6 +1761,54 @@ test("заявление использует три маршрута этапа
   );
 });
 
+test("все виды обращений получают дополнительные запросы на этапах анализа и заседания", () => {
+  for (const appealType of [
+    "Возражение на аудиторский отчет",
+    "Возражение на уведомление",
+    "Жалоба на уведомление",
+    "Жалоба на решение КВГА/ДВГА",
+    "Жалоба на действие/бездействие",
+    "Заявление",
+  ]) {
+    const analysisCase = harness(2);
+    analysisCase.c.appealType = appealType;
+    analysisCase.c.status = "materials";
+    assert.equal(
+      additionalActions(analysisCase.c).find(
+        (action) => action.action === "start-analysis-additional-request",
+      )?.label,
+      "Направить дополнительный запрос",
+      appealType,
+    );
+    analysisCase.run("start-analysis-additional-request", "work", {
+      reason: "Для рассмотрения необходимо получить дополнительные документы.",
+    });
+    assert.equal(analysisCase.c.status, "accepted", appealType);
+    assert.equal(analysisCase.c.requestRoute, "additional-analysis", appealType);
+
+    const commissionCase = harness(2);
+    commissionCase.c.appealType = appealType;
+    commissionCase.c.status = "commission_voting";
+    assert.equal(
+      additionalActions(commissionCase.c).find(
+        (action) => action.action === "start-commission-additional-request",
+      )?.label,
+      "Направить дополнительный запрос",
+      appealType,
+    );
+    commissionCase.run("start-commission-additional-request", "work", {
+      reason: "Комиссии нужны дополнительные пояснения органа аудита.",
+    });
+    assert.equal(commissionCase.c.status, "accepted", appealType);
+    assert.equal(
+      commissionCase.c.requestRoute,
+      "additional-commission",
+      appealType,
+    );
+    assert.equal(commissionCase.c.repeatHearingStatus, "required", appealType);
+  }
+});
+
 test("обращение после дополнительного запроса автоматически включается в новое заседание", () => {
   const state = initialState();
   const target = state.cases[0];
@@ -3547,6 +3595,8 @@ test("жалоба из E-Otinish проходит проект решения �
   );
   h.run("hearing-after-decision-project", "work", {
     hearingProtocolAttached: "on",
+    hearingArgumentsPresence: "no",
+    hearingOutcome: "proceed",
   });
   assert.equal(h.c.status, "decided");
   assert.equal(h.c.hearing?.held, h.state.date);
@@ -3833,6 +3883,70 @@ test("заявление без новых доводов можно верну�
   assert.equal(analysisCase.c.status, "materials");
   assert.equal(analysisCase.c.hearingSupplements?.[0]?.hasNewArguments, false);
   assert.equal(nextAction(analysisCase.c)?.action, "analysis");
+});
+
+test("жалобы используют логику новых доводов после заслушивания", () => {
+  for (const appealType of [
+    "Жалоба на уведомление",
+    "Жалоба на решение КВГА/ДВГА",
+    "Жалоба на действие/бездействие",
+  ]) {
+    const h = harness(2);
+    h.c.appealType = appealType;
+    h.c.status = "decision_project_hearing";
+    h.c.decisionProject = {
+      date: h.state.date,
+      number: "ПР-Ж-1",
+      receipt: "SAQ-Ж-1",
+      channel: "saq",
+      appealCourt: "—",
+      appealProcedure: "—",
+    };
+    h.c.hearing = { skip: false, date: `${h.state.date}T10:00` };
+    const point = h.c.issues.find((item) => item.disputed)!;
+    const form = actionForm(
+      "hearing-after-decision-project",
+      h.c,
+      h.state.date,
+      {},
+    );
+    assert.ok(
+      form.fields.some((field) => field.name === "hearingArgumentsPresence"),
+      appealType,
+    );
+    assert.ok(
+      form.fields.some((field) => field.name === "hearingOutcome"),
+      appealType,
+    );
+    const modalHtml = renderToStaticMarkup(
+      createElement(ActionModal, {
+        action: "hearing-after-decision-project",
+        c: h.c,
+        date: h.state.date,
+        role: "work",
+        onSubmit: () => undefined,
+        onClose: () => undefined,
+      }),
+    );
+    assert.match(modalHtml, /Выберите дальнейшее действие/, appealType);
+
+    h.run("hearing-after-decision-project", "work", {
+      hearingProtocolAttached: "on",
+      hearingArgumentsPresence: "yes",
+      hearingOutcome: "without-request",
+      [`additionalArgumentPoint_${point.id}`]: "on",
+      [`additionalArgument_${point.id}`]: "Новый довод по жалобе",
+      noRequestReason: "Дополнительный запрос не требуется.",
+    });
+    assert.equal(h.c.status, "materials", appealType);
+    assert.equal(h.c.repeatHearingStatus, "required", appealType);
+    assert.equal(
+      h.c.hearingSupplements?.[0]?.byPoint[point.id],
+      "Новый довод по жалобе",
+      appealType,
+    );
+    assert.equal(nextAction(h.c)?.action, "analysis", appealType);
+  }
 });
 
 test("повторное заседание заявления после первого проекта сразу ведёт к мотивированному ответу", () => {

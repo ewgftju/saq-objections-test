@@ -746,7 +746,10 @@ export function actionForm(
       break;
     case "hearing-after-decision-project":
       title = "Заслушивание проведено";
-      if ((c.appealType || "").trim() === "Заявление") {
+      if (
+        (c.appealType || "").trim().startsWith("Жалоба") ||
+        (c.appealType || "").trim() === "Заявление"
+      ) {
         fields.push(
           select(
             "hearingArgumentsPresence",
