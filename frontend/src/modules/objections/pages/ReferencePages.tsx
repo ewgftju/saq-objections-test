@@ -7,6 +7,7 @@ import {
 } from "../../../components/ui";
 import { agendaItemText } from "../components/AgendaModal";
 import { AgendaResultsTable } from "../components/AgendaResultsModal";
+import { meetingAgendaCaseIds } from "../services/meetingAgenda";
 import { useState } from "react";
 import { STATUS } from "../../../data/constants";
 import type {
@@ -377,6 +378,14 @@ export function SessionsPage({
         .map((caseId) => cases.find((caseItem) => caseItem.id === caseId))
         .filter((caseItem): caseItem is ObjectionCase => Boolean(caseItem))
     : [];
+  const agendaCases = selectedMeeting
+    ? (canViewInactiveMeetingCases(role)
+        ? meetingAgendaCaseIds(selectedMeeting)
+        : selectedMeeting.caseIds
+      )
+        .map((caseId) => cases.find((caseItem) => caseItem.id === caseId))
+        .filter((caseItem): caseItem is ObjectionCase => Boolean(caseItem))
+    : [];
   const inactiveMeetingEntries = selectedMeeting
     ? (() => {
         const activeCaseIds = new Set(selectedMeeting.caseIds);
@@ -742,7 +751,7 @@ export function SessionsPage({
                     Добавить обращение
                   </Button>
                   <Button
-                    disabled={!selectedMeetingCaseIds.length}
+                    disabled={selectedMeeting.completed || !selectedMeetingCaseIds.length}
                     onClick={() => {
                       onExcludeCases(
                         selectedMeeting.id,
@@ -1036,36 +1045,44 @@ export function SessionsPage({
             )}
             <div className="card-body">
               <ol className="agenda-order-list">
-                {meetingCases.map((caseItem, index) => (
-                  <li key={caseItem.id}>
-                    <span>{agendaItemText(caseItem)}</span>
-                    {(role === "demo-superuser" || role === "director") &&
-                      !selectedMeeting.agendaSigned && (
-                        <span className="agenda-registry-actions">
-                          <Button
-                            disabled={index === 0}
-                            onClick={() =>
-                              onMoveCase(selectedMeeting.id, caseItem.id, "up")
-                            }
-                          >
-                            Выше
-                          </Button>
-                          <Button
-                            disabled={index === meetingCases.length - 1}
-                            onClick={() =>
-                              onMoveCase(
-                                selectedMeeting.id,
-                                caseItem.id,
-                                "down",
-                              )
-                            }
-                          >
-                            Ниже
-                          </Button>
-                        </span>
+                {agendaCases.map((caseItem) => {
+                  const activeIndex = meetingCases.findIndex(
+                    (item) => item.id === caseItem.id,
+                  );
+                  const excluded = activeIndex < 0;
+                  return (
+                    <li
+                      key={caseItem.id}
+                      className={excluded ? "agenda-item-excluded" : undefined}
+                    >
+                      <span>{agendaItemText(caseItem)}</span>
+                      {excluded && (
+                        <span className="badge gray">Исключено из заседания</span>
                       )}
-                  </li>
-                ))}
+                      {(role === "demo-superuser" || role === "director") &&
+                        !selectedMeeting.agendaSigned && !excluded && (
+                          <span className="agenda-registry-actions">
+                            <Button
+                              disabled={activeIndex === 0}
+                              onClick={() =>
+                                onMoveCase(selectedMeeting.id, caseItem.id, "up")
+                              }
+                            >
+                              Выше
+                            </Button>
+                            <Button
+                              disabled={activeIndex === meetingCases.length - 1}
+                              onClick={() =>
+                                onMoveCase(selectedMeeting.id, caseItem.id, "down")
+                              }
+                            >
+                              Ниже
+                            </Button>
+                          </span>
+                        )}
+                    </li>
+                  );
+                })}
               </ol>
             </div>
           </section>

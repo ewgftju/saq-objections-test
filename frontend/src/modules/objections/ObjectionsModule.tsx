@@ -34,6 +34,10 @@ import {
 } from "./pages/ReferencePages";
 import { dateObject } from "./services/deadlines";
 import {
+  excludeCasesFromMeetingState,
+  refreshMeetingAgenda,
+} from "./services/meetingAgenda";
+import {
   normalizeVoteChoice,
   pointOutcomeFromVotes,
   presidingChairId,
@@ -157,6 +161,10 @@ function currentPollForCase(
     ? attendancePolls.find((poll) => poll.id === matchingMeeting.pollId)
     : undefined;
 
+  // Исключённое обращение не должно оставаться доступным членам АК по
+  // устаревшему опросу прежнего заседания, пока его не назначат заново.
+  if (!matchingMeeting && c.excludedFromMeetingIds?.length) return undefined;
+
   return (
     meetingPoll ||
     attendancePolls.filter((poll) => poll.caseIds.includes(c.id)).at(-1)
@@ -199,13 +207,7 @@ function postponeMeetingForAdditionalRequest(
   // Подписанная повестка остаётся неизменяемой исторической формой. Для
   // неподписанной повестки обновляем состав и печатную форму сразу.
   if (!meeting.agendaSigned) {
-    const remainingCases = meeting.caseIds
-      .map((id) => state.cases.find((item) => item.id === id))
-      .filter((item): item is ObjectionCase => Boolean(item));
-    meeting.agendaHtml = agendaDocumentHtml(
-      remainingCases,
-      meeting.dateTime.slice(0, 10),
-    );
+    refreshMeetingAgenda(meeting, state.cases);
   }
   target.repeatHearingPreviousMeetingId = meeting.id;
   target.repeatHearingPreviousMeetingNumber = meeting.number;
@@ -711,49 +713,18 @@ export default function ObjectionsModule() {
 
   const excludeCasesFromMeeting = (meetingId: string, caseIds: string[]) => {
     const next = structuredClone(model.state);
-    const meeting = next.meetings?.find((item) => item.id === meetingId);
-    const poll = meeting
-      ? next.attendancePolls.find((item) => item.id === meeting.pollId)
-      : undefined;
-    if (!meeting || !poll) return;
-    const ids = new Set(
-      caseIds.filter((caseId) => meeting.caseIds.includes(caseId)),
-    );
-    if (!ids.size) return;
-
-    meeting.caseIds = meeting.caseIds.filter((id) => !ids.has(id));
-    poll.caseIds = poll.caseIds.filter((id) => !ids.has(id));
-    const remainingCases = meeting.caseIds
-      .map((id) => next.cases.find((item) => item.id === id))
-      .filter((item): item is ObjectionCase => Boolean(item));
-    meeting.agendaHtml = agendaDocumentHtml(
-      remainingCases,
-      meeting.dateTime.slice(0, 10),
-    );
-
-    ids.forEach((caseId) => {
-      const target = next.cases.find((item) => item.id === caseId);
-      if (!target) return;
-      rememberInactiveMeetingCase(meeting, caseId, "excluded", next.date);
-      target.excludedFromMeetingIds = [
-        ...new Set([...(target.excludedFromMeetingIds || []), meeting.id]),
-      ];
-      if (target.attendanceMeetingDate === meeting.dateTime.slice(0, 10)) {
-        delete target.attendanceMeetingDate;
-      }
-      target.history.push({
-        date: next.date,
-        actor: ROLES.director,
-        title: "Обращение исключено из заседания",
-        text: "Заседание №" + meeting.number + ".",
-      });
-    });
-    syncPollParticipants(next.cases, next.attendancePolls, poll, next.meetings);
+    const count = excludeCasesFromMeetingState(next, meetingId, caseIds);
+    if (!count) return;
+    const meeting = next.meetings!.find((item) => item.id === meetingId)!;
+    const poll = next.attendancePolls.find((item) => item.id === meeting.pollId);
+    if (poll) {
+      syncPollParticipants(next.cases, next.attendancePolls, poll, next.meetings);
+    }
     model.commit(
       next,
-      ids.size === 1
-        ? "Обращение исключено и будет включено в ближайшее следующее заседание."
-        : "Выбранные обращения исключены и будут включены в ближайшее следующее заседание.",
+      count === 1
+        ? "Обращение исключено из заседания, сохранено в повестке и доступно для нового заседания."
+        : "Обращения исключены из заседания, сохранены в повестке и доступны для нового заседания.",
     );
   };
 
@@ -766,6 +737,7 @@ export default function ObjectionsModule() {
     const target = next.cases.find((item) => item.id === caseId);
     if (
       !meeting ||
+      meeting.completed ||
       !poll ||
       !target ||
       !["certificate_approved", "documents_review"].includes(target.status) ||
@@ -802,29 +774,21 @@ export default function ObjectionsModule() {
           (id) => id !== caseId,
         );
       }
-      const previousCases = previousMeeting.caseIds
-        .map((id) => next.cases.find((item) => item.id === id))
-        .filter((item): item is ObjectionCase => Boolean(item));
-      previousMeeting.agendaHtml = agendaDocumentHtml(
-        previousCases,
-        previousMeeting.dateTime.slice(0, 10),
-      );
+      refreshMeetingAgenda(previousMeeting, next.cases);
     });
 
     meeting.caseIds.push(caseId);
     forgetInactiveMeetingCase(meeting, caseId);
     poll.caseIds.push(caseId);
-    const selectedCases = meeting.caseIds
-      .map((id) => next.cases.find((item) => item.id === id))
-      .filter((item): item is ObjectionCase => Boolean(item));
-    meeting.agendaHtml = agendaDocumentHtml(
-      selectedCases,
-      meeting.dateTime.slice(0, 10),
-    );
+    refreshMeetingAgenda(meeting, next.cases);
     target.excludedFromMeetingIds = (
       target.excludedFromMeetingIds || []
     ).filter((id) => id !== meeting.id);
     target.attendanceMeetingDate = meeting.dateTime.slice(0, 10);
+    if (meeting.agendaSigned) {
+      (meeting.statusBeforeAgenda ??= {})[caseId] = target.status;
+      target.status = "commission_voting";
+    }
     if (target.repeatHearingStatus === "ready") {
       target.repeatHearingStatus = "scheduled";
       target.repeatHearingMeetingId = meeting.id;
@@ -919,13 +883,7 @@ export default function ObjectionsModule() {
       });
     });
     [fromMeeting, toMeeting].forEach((meeting) => {
-      const agendaCases = meeting.caseIds
-        .map((id) => next.cases.find((item) => item.id === id))
-        .filter((item): item is ObjectionCase => Boolean(item));
-      meeting.agendaHtml = agendaDocumentHtml(
-        agendaCases,
-        meeting.dateTime.slice(0, 10),
-      );
+      refreshMeetingAgenda(meeting, next.cases);
     });
     syncPollParticipants(
       next.cases,
@@ -963,13 +921,7 @@ export default function ObjectionsModule() {
       meeting.caseIds[nextIndex],
       meeting.caseIds[index],
     ];
-    const selectedCases = meeting.caseIds
-      .map((id) => next.cases.find((item) => item.id === id))
-      .filter((item): item is ObjectionCase => Boolean(item));
-    meeting.agendaHtml = agendaDocumentHtml(
-      selectedCases,
-      meeting.dateTime.slice(0, 10),
-    );
+    refreshMeetingAgenda(meeting, next.cases);
     model.commit(next, "Порядок пунктов повестки дня изменён.");
   };
 
@@ -985,6 +937,7 @@ export default function ObjectionsModule() {
     }
     meeting.agendaSigned = true;
     meeting.agendaSignedAt = next.date;
+    meeting.agendaCaseIds ??= [...meeting.caseIds];
     const meetingCases = meeting.caseIds
       .map((id) => next.cases.find((item) => item.id === id))
       .filter((item): item is ObjectionCase => Boolean(item));
@@ -1014,6 +967,7 @@ export default function ObjectionsModule() {
     });
     meetingCases.forEach((item) => {
       if (["certificate_approved", "documents_review"].includes(item.status)) {
+        (meeting.statusBeforeAgenda ??= {})[item.id] = item.status;
         item.status = "commission_voting";
         item.history.push({
           date: next.date,

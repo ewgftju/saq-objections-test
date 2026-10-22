@@ -409,6 +409,16 @@ small,
   color: #6f7d8b;
   background: #fff;
 }
+.agenda-order-list .agenda-item-excluded {
+  color: #82909d;
+  background: #f7f9fb;
+  border-radius: 6px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+.agenda-item-excluded .badge {
+  margin-left: 8px;
+}
 .button {
   min-height: 38px;
   display: inline-flex;

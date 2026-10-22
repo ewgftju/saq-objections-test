@@ -426,6 +426,10 @@ export interface CommissionMeeting {
   formatAndPlace?: string;
   /** Обращения, включённые в данное заседание; порядок используется в повестке дня. */
   caseIds: string[];
+  /** Состав повестки с исключёнными обращениями; в отличие от caseIds сохраняет их историческую запись. */
+  agendaCaseIds?: string[];
+  /** Статус обращения перед подписанием повестки, необходимый при исключении. */
+  statusBeforeAgenda?: Partial<Record<string, CaseStatus>>;
   pollId: string;
   agendaHtml: string;
   agendaSigned?: boolean;

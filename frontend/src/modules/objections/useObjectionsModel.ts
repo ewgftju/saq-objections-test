@@ -11,7 +11,7 @@ import type {
   Role,
   Route,
 } from "../../types";
-import { agendaDocumentHtml } from "./components/AgendaModal";
+import { refreshMeetingAgenda } from "./services/meetingAgenda";
 import { applyAction } from "./services/workflow";
 import { pathForRoute, routeFromPath } from "./routing";
 
@@ -165,13 +165,7 @@ function synchronizeUpcomingMeetingCases(state: DemoState) {
 
   changedMeetings.forEach((meetingId) => {
     const meeting = next.meetings!.find((item) => item.id === meetingId)!;
-    const meetingCases = meeting.caseIds
-      .map((caseId) => next.cases.find((item) => item.id === caseId))
-      .filter((item): item is ObjectionCase => Boolean(item));
-    meeting.agendaHtml = agendaDocumentHtml(
-      meetingCases,
-      meeting.dateTime.slice(0, 10),
-    );
+    refreshMeetingAgenda(meeting, next.cases);
   });
 
   return changedMeetings.size ? next : state;
