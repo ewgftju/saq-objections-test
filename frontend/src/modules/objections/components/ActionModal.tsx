@@ -414,6 +414,7 @@ function MeetingCertificateFields({
               const saved = savedPositions.get(`${point.id}_${member.id}`) || savedPositions.get(`legacy_${member.id}`);
               const resultName = `meetingCertificateResult_${point.id}_${member.id}`;
               const commentName = `meetingCertificateComment_${point.id}_${member.id}`;
+              const votedComment = c.votes?.[point.id]?.voteReasons?.[member.id] || "";
               return (
                 <tr key={`${point.id}-${member.id}`}>
                   <td>{index === 0 ? point.number : ""}</td>
@@ -421,7 +422,7 @@ function MeetingCertificateFields({
                   <td>{member.name}</td>
                   <td>{electronic ? OUTCOMES[electronic] : <span className="muted">Нет голоса</span>}</td>
                   <td><select name={resultName} defaultValue={values[resultName] || ""}><option value="">Не изменять</option>{Object.entries(OUTCOMES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td>
-                  <td><textarea name={commentName} defaultValue={values[commentName] ?? saved?.comment ?? ""} rows={2} aria-label={`Комментарий ${member.name} по пункту ${point.number}`} /></td>
+                  <td><textarea name={commentName} defaultValue={values[commentName] ?? saved?.comment ?? votedComment} rows={2} aria-label={`Комментарий ${member.name} по пункту ${point.number}`} /></td>
                 </tr>
               );
             }))}
@@ -469,7 +470,10 @@ export default function ActionModal({
       return Object.fromEntries(
         disputed(c).flatMap((point) => c.members.map((member) => [
           `meetingCertificateComment_${point.id}_${member.id}`,
-          savedPositions.get(`${point.id}_${member.id}`)?.comment || savedPositions.get(`legacy_${member.id}`)?.comment || "",
+          savedPositions.get(`${point.id}_${member.id}`)?.comment ??
+            savedPositions.get(`legacy_${member.id}`)?.comment ??
+            c.votes?.[point.id]?.voteReasons?.[member.id] ??
+            "",
         ])),
       );
     }
@@ -1431,7 +1435,7 @@ export default function ActionModal({
                     <th>№</th>
                     <th>Описание оспариваемого пункта</th>
                     <th>Голос</th>
-                    <th>Обоснование</th>
+                    <th>Комментарий</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1458,7 +1462,7 @@ export default function ActionModal({
                         <textarea
                           name={`commissionReason_${point.id}`}
                           rows={2}
-                          aria-label={`Обоснование по пункту ${point.number}`}
+                          aria-label={`Комментарий по пункту ${point.number}`}
                         />
                       </td>
                     </tr>

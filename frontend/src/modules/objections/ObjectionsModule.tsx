@@ -33,6 +33,7 @@ import {
   SourcesPage,
 } from "./pages/ReferencePages";
 import { dateObject } from "./services/deadlines";
+import { awaitsDirectorAssignment, caseVisibleToRole } from "./services/caseVisibility";
 import {
   excludeCasesFromMeetingState,
   refreshMeetingAgenda,
@@ -315,6 +316,9 @@ export default function ObjectionsModule() {
   const [dialogError, setDialogError] = useState("");
   const [uploading, setUploading] = useState(false);
   const c = model.state.cases.find((item) => item.id === model.route.caseId);
+  const visibleCases = model.state.cases.filter((item) =>
+    caseVisibleToRole(item, model.role),
+  );
   const activeCommissionMember =
     COMMISSION_ATTENDANCE_MEMBERS.find(
       (member) => member.id === model.state.activeCommissionMemberId,
@@ -356,6 +360,10 @@ export default function ObjectionsModule() {
     setDialogError("");
   };
   const openCase = (c: ObjectionCase) => {
+    if (!caseVisibleToRole(c, model.role)) {
+      model.setToast("Обращение станет доступно после назначения исполнителя директором ДАВГА.");
+      return;
+    }
     if (model.role === "commission" && !commissionCanOpenCase(c.id)) {
       model.setToast(
         "Карточка станет доступна после подтверждения присутствия на заседании.",
@@ -2074,8 +2082,12 @@ export default function ObjectionsModule() {
         model.state.notifications.filter(
           (notification) =>
             !notification.read &&
-            (model.role !== "commission" ||
-              notification.commissionMemberId === activeCommissionMember.id),
+            (model.role === "commission"
+              ? notification.commissionMemberId === activeCommissionMember.id
+              : notification.recipientRole
+                ? notification.recipientRole === model.role
+                : notification.kind !== "attendance-poll" &&
+                  notification.kind !== "agenda-signed"),
         ).length
       }
       onRoleChange={model.setRole}
@@ -2095,10 +2107,10 @@ export default function ObjectionsModule() {
         <CasesList
           cases={
             model.role === "commission"
-              ? model.state.cases.filter((item) =>
+              ? visibleCases.filter((item) =>
                   commissionCanOpenCase(item.id),
                 )
-              : model.state.cases
+              : visibleCases
           }
           date={model.state.date}
           role={model.role}
@@ -2115,7 +2127,11 @@ export default function ObjectionsModule() {
       )}
       {model.route.page === "detail" &&
         (c ? (
-          model.role === "commission" && !commissionCanOpenCase(c.id) ? (
+          !caseVisibleToRole(c, model.role) ? (
+            <Notice tone="amber">
+              Обращение станет доступно после назначения исполнителя директором ДАВГА.
+            </Notice>
+          ) : model.role === "commission" && !commissionCanOpenCase(c.id) ? (
             <Notice tone="amber">
               Карточка обращения доступна члену АК только после ответа «Да» в
               опросе о присутствии на заседании.
@@ -2298,7 +2314,7 @@ export default function ObjectionsModule() {
       {model.route.page === "sessions" &&
         !["dvga", "kvga", "subject", "subject2"].includes(model.role) && (
           <SessionsPage
-            cases={model.state.cases}
+            cases={visibleCases}
             meetings={model.state.meetings ?? []}
             attendancePolls={model.state.attendancePolls}
             commissionMembers={COMMISSION_ATTENDANCE_MEMBERS}
@@ -2662,7 +2678,13 @@ export default function ObjectionsModule() {
           onClose={close}
           onSave={(next, caseId) => {
             model.commit(next, "Тестовое обращение зарегистрировано");
-            model.navigate({ page: "detail", caseId });
+            const createdCase = next.cases.find((item) => item.id === caseId);
+            model.navigate(
+              createdCase && awaitsDirectorAssignment(createdCase) &&
+                !caseVisibleToRole(createdCase, model.role)
+                ? { page: "registry" }
+                : { page: "detail", caseId },
+            );
           }}
         />
       )}

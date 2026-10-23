@@ -942,6 +942,7 @@ export function applyAction(
         id: `notification-${c.id}-${next.notifications.length + 1}`,
         caseId: c.id,
         recipient: c.assignee,
+        recipientRole: "work",
         date,
         read: false,
         text: `Вам назначено обращение №${c.appealNumber || c.id} от ${formatDate(c.appealDate || c.registered)}. Необходимо сформировать запрос в ДВГА/КВГА.`,
@@ -1394,10 +1395,11 @@ export function applyAction(
           pointNumber: point.number,
           result: normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id]),
           comment: String(
-            form.get(`meetingCertificateComment_${point.id}_${member.id}`) ||
-              form.get(`meetingCertificateComment_${member.id}`) ||
-              savedPositions.get(`${point.id}_${member.id}`)?.comment ||
-              savedPositions.get(`legacy_${member.id}`)?.comment ||
+            form.get(`meetingCertificateComment_${point.id}_${member.id}`) ??
+              form.get(`meetingCertificateComment_${member.id}`) ??
+              savedPositions.get(`${point.id}_${member.id}`)?.comment ??
+              savedPositions.get(`legacy_${member.id}`)?.comment ??
+              c.votes?.[point.id]?.voteReasons?.[member.id] ??
               "",
           ).trim(),
         })),

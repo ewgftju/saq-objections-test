@@ -16,6 +16,7 @@ import {
   nextAction,
 } from "../services/workflow";
 import { casesEligibleForMeeting } from "../useObjectionsModel";
+import { caseVisibleToRole } from "../services/caseVisibility";
 import {
   addWorkdays,
   addMonths,
@@ -1647,6 +1648,9 @@ test("обращение из SAQ направляется директору, �
   assert.equal(incoming.status, "received");
   assert.equal(incoming.unread, true);
   assert.equal(nextAction(incoming)?.action, "assign-work-executor");
+  assert.equal(caseVisibleToRole(incoming, "director"), true);
+  assert.equal(caseVisibleToRole(incoming, "work"), false);
+  assert.equal(caseVisibleToRole(incoming, "deputy"), false);
   const form = new FormData();
   form.set("assignee", "Главный эксперт ДАВГА");
   const next = applyAction(
@@ -1659,6 +1663,7 @@ test("обращение из SAQ направляется директору, �
   assert.equal(next.cases[0].status, "accepted");
   assert.equal(next.cases[0].unread, false);
   assert.equal(next.cases[0].assignee, "Главный эксперт ДАВГА");
+  assert.equal(caseVisibleToRole(next.cases[0], "work"), true);
   assert.equal(
     next.notifications.some(
       (notification) =>
@@ -1670,6 +1675,71 @@ test("обращение из SAQ направляется директору, �
     false,
   );
   assert.equal(next.notifications.at(-1)?.recipient, "Главный эксперт ДАВГА");
+  assert.equal(next.notifications.at(-1)?.recipientRole, "work");
+});
+
+test("комментарий члена АК из голосования подставляется в справку", () => {
+  const h = harness(1);
+  h.c.status = "commission_voting";
+  h.c.members = [
+    { id: "chair", name: "Председатель", present: true, recused: false, reason: "" },
+    { id: "deputy", name: "Член АК", present: true, recused: false, reason: "" },
+  ];
+  h.c.certificate = { davgaArguments: "", memberPositions: [] };
+  const point = h.c.issues.find((item) => item.disputed)!;
+  const votingForm = renderToStaticMarkup(
+    createElement(ActionModal, {
+      action: "commission-vote",
+      c: h.c,
+      date: h.state.date,
+      role: "commission",
+      onSubmit() {},
+      onClose() {},
+    }),
+  );
+  assert.match(votingForm, /<th>Комментарий<\/th>/);
+  assert.match(votingForm, /aria-label="Комментарий по пункту/);
+
+  for (const member of h.c.members) {
+    h.run("commission-vote", "commission", {
+      commissionMember: member.id,
+      ...Object.fromEntries(
+        h.c.issues.filter((item) => item.disputed).flatMap((item) => [
+          [`commissionVote_${item.id}`, "accept"],
+          [`commissionReason_${item.id}`, `Комментарий ${member.name} по пункту ${item.number}`],
+        ]),
+      ),
+    });
+  }
+  const fillForm = renderToStaticMarkup(
+    createElement(ActionModal, {
+      action: "fill-meeting-certificate",
+      c: h.c,
+      date: h.state.date,
+      role: "work",
+      onSubmit() {},
+      onClose() {},
+    }),
+  );
+  assert.match(
+    fillForm,
+    new RegExp(`name="meetingCertificateComment_${point.id}_chair"[^>]*>Комментарий Председатель по пункту ${point.number}<\\/textarea>`),
+  );
+  h.run("fill-meeting-certificate", "work", {
+    [`meetingCertificateComment_${point.id}_chair`]: "Уточнение рабочего органа",
+  });
+  assert.equal(
+    h.c.certificate?.memberPositions.find(
+      (position) => position.pointId === point.id && position.id === "chair",
+    )?.comment,
+    "Уточнение рабочего органа",
+  );
+  assert.equal(
+    h.c.certificate?.memberPositions.find(
+      (position) => position.pointId === point.id && position.id === "deputy",
+    )?.comment,
+    `Комментарий Член АК по пункту ${point.number}`,
+  );
 });
 
 test("направленные членам АК материалы сразу появляются в реестре заседаний", () => {
