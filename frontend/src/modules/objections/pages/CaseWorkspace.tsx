@@ -726,6 +726,8 @@ export default function CaseWorkspace({
     );
   const recipientLimited = isAuthorityRole(role) || isSubjectRole(role);
   const isCommission = role === "commission";
+  const showIntakeChannel =
+    role === "work" || role === "deputy" || role === "director";
   const visibleStatus = caseStatusLabelForRole(c, role);
   const authorityAnswerSent =
     isAuthorityRole(role) && visibleStatus === "Ответ направлен";
@@ -1885,7 +1887,9 @@ export default function CaseWorkspace({
         {((!isSubjectRole(role) && (!isCommission || currentExecutionDeadline)) ||
           (subjectProjectReceivedAt && subjectProjectCommentsDeadline)) && (
           <aside className="right-column">
-            <section className="card right-card">
+            <section
+              className={`card right-card${showIntakeChannel ? " right-card--intake-channel" : ""}`}
+            >
               <div className="card-head">
                 <h3>Сроки</h3>
               </div>
@@ -1930,6 +1934,14 @@ export default function CaseWorkspace({
                       <span>Поступило</span>
                       <strong>{formatDate(c.registered)}</strong>
                     </div>
+                    {showIntakeChannel && (
+                      <div className="support-row support-row--channel">
+                        <span>Поступило через</span>
+                        <strong className="intake-channel-badge">
+                          {c.channel.trim() || "Не указано"}
+                        </strong>
+                      </div>
+                    )}
                     {currentExecutionDeadline && (
                       <div className="support-row">
                         <span>Исполнить до</span>

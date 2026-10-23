@@ -2141,6 +2141,35 @@ td .subline {
 .support-row span:first-child {
   color: var(--muted);
 }
+.right-card--intake-channel .support-row {
+  align-items: center;
+  min-height: 43px;
+  padding: 10px 0;
+  margin-bottom: 0;
+  border-bottom: 1px solid #f1f3f7;
+}
+.right-card--intake-channel .support-row:last-of-type {
+  border-bottom: 0;
+}
+.support-row--channel {
+  align-items: center;
+}
+.intake-channel-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 58%;
+  padding: 4px 10px;
+  border: 1px solid #d7e7f6;
+  border-radius: 999px;
+  background: #f0f7fd;
+  color: #205a88;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
 details summary {
   cursor: pointer;
   color: var(--blue);
