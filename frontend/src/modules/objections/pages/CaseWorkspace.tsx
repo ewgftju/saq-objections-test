@@ -694,20 +694,35 @@ export default function CaseWorkspace({
   const authorityHasPendingRequest = authorityRequests.some(
     (request) => !request.responseSigned,
   );
-  const subjectRequest = c.requests.find(
-    (request) =>
-      request.template === "other" &&
-      request.saqRecipient === "subject" &&
-      Boolean(request.sent) &&
-      !request.responded,
-  );
-  const subjectCanCommentOnDecisionProject =
+  const subjectRequest =
+    isSubjectRole(role) && subjectRoleForCase(c) === role
+      ? c.requests.find(
+          (request) =>
+            request.template === "other" &&
+            request.saqRecipient === "subject" &&
+            Boolean(request.sent) &&
+            !request.responded,
+        )
+      : undefined;
+  const subjectProjectRouting =
+    isSubjectRole(role) &&
+    subjectRoleForCase(c) === role &&
     c.status === "decision_project_comments" &&
-    c.decisionProjectRouting?.channel === "saq" &&
+    c.decisionProjectRouting?.channel === "saq"
+      ? c.decisionProjectRouting
+      : undefined;
+  const subjectProjectReceivedAt =
+    subjectProjectRouting?.receivedAt || subjectProjectRouting?.sentAt;
+  const subjectProjectCommentsDeadline = subjectProjectReceivedAt
+    ? subjectProjectRouting?.commentsDeadline ||
+      addWorkdays(subjectProjectReceivedAt, 2)
+    : undefined;
+  const subjectCanCommentOnDecisionProject =
+    Boolean(subjectProjectRouting) &&
     Boolean(
       !date ||
-        !c.decisionProjectRouting.commentsDeadline ||
-        date <= c.decisionProjectRouting.commentsDeadline,
+        !subjectProjectCommentsDeadline ||
+        date <= subjectProjectCommentsDeadline,
     );
   const recipientLimited = isAuthorityRole(role) || isSubjectRole(role);
   const isCommission = role === "commission";
@@ -1867,14 +1882,26 @@ export default function CaseWorkspace({
             )}
           </div>
         </section>
-        {!isSubjectRole(role) && (!isCommission || currentExecutionDeadline) && (
+        {((!isSubjectRole(role) && (!isCommission || currentExecutionDeadline)) ||
+          (subjectProjectReceivedAt && subjectProjectCommentsDeadline)) && (
           <aside className="right-column">
             <section className="card right-card">
               <div className="card-head">
                 <h3>Сроки</h3>
               </div>
               <div className="card-body">
-                {isCommission ? (
+                {isSubjectRole(role) ? (
+                  <>
+                    <div className="support-row">
+                      <span>Поступило</span>
+                      <strong>{formatDate(subjectProjectReceivedAt!)}</strong>
+                    </div>
+                    <div className="support-row">
+                      <span>Исполнить до</span>
+                      <strong>{formatDate(subjectProjectCommentsDeadline!)}</strong>
+                    </div>
+                  </>
+                ) : isCommission ? (
                   <div className="support-row">
                     <span>Исполнить до</span>
                     <strong>{formatDate(currentExecutionDeadline!)}</strong>
@@ -1919,13 +1946,14 @@ export default function CaseWorkspace({
                     </div>
                   </>
                 )}
-                {!isAuthorityRole(role) && !isCommission && c.extensionDays > 0 && (
+                {!isSubjectRole(role) && !isAuthorityRole(role) && !isCommission && c.extensionDays > 0 && (
                   <div className="support-row">
                     <span>Продление</span>
                     <strong>+{c.extensionDays} раб. дн.</strong>
                   </div>
                 )}
-                {!isAuthorityRole(role) &&
+                {!isSubjectRole(role) &&
+                  !isAuthorityRole(role) &&
                   !isCommission &&
                   c.appealType !== "Жалоба на уведомление" &&
                   c.pauseDays > 0 && (
@@ -1934,7 +1962,7 @@ export default function CaseWorkspace({
                       <strong>{c.pauseDays} раб. дн.</strong>
                     </div>
                   )}
-                {!isCommission && c.delivery?.received && (
+                {!isSubjectRole(role) && !isCommission && c.delivery?.received && (
                   <>
                     <div className="support-row">
                       <span>Вручение результата</span>
