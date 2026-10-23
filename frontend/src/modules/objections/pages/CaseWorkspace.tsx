@@ -1865,14 +1865,19 @@ export default function CaseWorkspace({
             )}
           </div>
         </section>
-        {!isSubjectRole(role) && (
+        {!isSubjectRole(role) && (!isCommission || currentExecutionDeadline) && (
           <aside className="right-column">
             <section className="card right-card">
               <div className="card-head">
                 <h3>Сроки</h3>
               </div>
               <div className="card-body">
-                {isAuthorityRole(role) ? (
+                {isCommission ? (
+                  <div className="support-row">
+                    <span>Исполнить до</span>
+                    <strong>{formatDate(currentExecutionDeadline!)}</strong>
+                  </div>
+                ) : isAuthorityRole(role) ? (
                   (() => {
                     const authorityRequests = c.requests.filter((item) =>
                       isRequestForAuthority(item, role),
@@ -1908,19 +1913,17 @@ export default function CaseWorkspace({
                         <strong>{formatDate(currentExecutionDeadline)}</strong>
                       </div>
                     )}
-                    {role !== "commission" && (
-                      <div className="support-row">
-                        <span>Срок рассмотрения</span>
-                        <strong>
-                          {c.status === "paused"
-                            ? "Приостановлен"
-                            : formatDate(reviewDeadline(c))}
-                        </strong>
-                      </div>
-                    )}
+                    <div className="support-row">
+                      <span>Срок рассмотрения</span>
+                      <strong>
+                        {c.status === "paused"
+                          ? "Приостановлен"
+                          : formatDate(reviewDeadline(c))}
+                      </strong>
+                    </div>
                   </>
                 )}
-                {!isAuthorityRole(role) && c.extensionDays > 0 && (
+                {!isAuthorityRole(role) && !isCommission && c.extensionDays > 0 && (
                   <div className="support-row">
                     <span>Продление</span>
                     <strong>+{c.extensionDays} раб. дн.</strong>
@@ -1935,7 +1938,7 @@ export default function CaseWorkspace({
                       <strong>{c.pauseDays} раб. дн.</strong>
                     </div>
                   )}
-                {c.delivery?.received && (
+                {!isCommission && c.delivery?.received && (
                   <>
                     <div className="support-row">
                       <span>Вручение результата</span>

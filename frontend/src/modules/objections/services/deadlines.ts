@@ -127,6 +127,15 @@ export function executionDeadline(
   c: ObjectionCase,
   role?: Role,
 ): string | null {
+  if (role === "commission") {
+    // Члены АК видят срок только своих действий: ознакомления, голосования
+    // и подписания протокола. Сроки рабочего органа им не показываются.
+    return ["documents_review", "commission_voting", "protocol"].includes(
+      c.status,
+    )
+      ? executionDeadline(c)
+      : null;
+  }
   if (role === "dvga" || role === "kvga") {
     const deadline = authorityResponseDeadline(c, role);
     if (deadline) return deadline;

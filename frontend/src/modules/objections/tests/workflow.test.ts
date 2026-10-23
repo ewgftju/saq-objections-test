@@ -347,6 +347,76 @@ test("три исходных дела: разные сроки и перено�
   );
 });
 
+test("кабинет АК показывает только сроки собственных действий", () => {
+  const c = structuredClone(initialState().cases[1]);
+  c.attendanceMeetingDate = "2026-09-25";
+  c.extensionDays = 3;
+  c.pauseDays = 2;
+  for (const status of ["accepted", "materials", "meeting", "decided"] as const) {
+    c.status = status;
+    assert.equal(executionDeadline(c, "commission"), null, status);
+  }
+  for (const status of ["documents_review", "commission_voting"] as const) {
+    c.status = status;
+    assert.equal(executionDeadline(c, "commission"), "2026-09-25", status);
+  }
+  c.status = "circulated";
+  assert.equal(executionDeadline(c, "commission"), null);
+  c.status = "protocol";
+  c.meeting = {
+    date: "2026-09-25",
+    number: "ПР-01",
+    audio: "",
+    projectReceived: "2026-09-28",
+  };
+  assert.equal(executionDeadline(c, "commission"), "2026-09-29");
+
+  const workspace = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c,
+      tab: "review",
+      role: "commission",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  const aside = workspace.split('<aside class="right-column">')[1];
+  assert.ok(aside);
+  assert.match(aside, /Исполнить до/);
+  assert.match(aside, /29\.09\.2026/);
+  assert.doesNotMatch(aside, /Поступило|Продление|Приостановление|Срок рассмотрения|Вручение результата/);
+
+  c.status = "meeting";
+  const waitingWorkspace = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c,
+      tab: "review",
+      role: "commission",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  assert.doesNotMatch(waitingWorkspace, /<aside class="right-column">/);
+  const registry = renderToStaticMarkup(
+    createElement(CasesList, {
+      cases: [c],
+      date: "2026-09-28",
+      role: "commission",
+      onOpen() {},
+      onCreate() {},
+      onExport() {},
+    }),
+  );
+  assert.match(registry, /Исполнить до/);
+  assert.doesNotMatch(registry, /Срок исполнения|Срок рассмотрения/);
+});
+
 test("направление запроса в другой орган фиксируется без кабинета SAQ", () => {
   const h = harness();
   screen(h);

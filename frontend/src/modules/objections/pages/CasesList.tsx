@@ -491,7 +491,8 @@ export default function CasesList({
                     onClick={() => toggleDeadlineSort("execution")}
                     aria-label="Сортировать по сроку исполнения"
                   >
-                    Срок исполнения <span>{sortIcon("execution")}</span>
+                    {commissionRole ? "Исполнить до" : "Срок исполнения"}{" "}
+                    <span>{sortIcon("execution")}</span>
                   </button>
                 </th>
                 {!authorityRole && !commissionRole && (
