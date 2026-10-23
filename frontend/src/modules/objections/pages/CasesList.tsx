@@ -7,8 +7,10 @@ import { applicantIdentifierType } from "../services/appealTemplates";
 import { executionDeadline, reviewDeadline } from "../services/deadlines";
 import { isSubjectRole, subjectRoleForCase } from "../services/saqCabinets";
 import {
+  authorityStatusRequest,
   caseStatusLabelForRole,
   hasBeenConsideredAtMeeting,
+  isRequestForAuthority,
 } from "../services/statusPresentation";
 
 const APPEAL_TYPE_OPTIONS = [
@@ -80,18 +82,6 @@ function countCasesByStatus(
 
 function isAuthorityRole(role: Role) {
   return role === "dvga" || role === "kvga";
-}
-
-function isRequestForAuthority(
-  request: ObjectionCase["requests"][number],
-  role: Role,
-) {
-  if (!isAuthorityRole(role) || request.template === "other" || !request.sent)
-    return false;
-  const recipient = request.recipient.toUpperCase();
-  return role === "kvga"
-    ? recipient.includes("КВГА")
-    : recipient.includes("ДВГА");
 }
 
 function isRequestForSubject(request: ObjectionCase["requests"][number]) {
@@ -519,6 +509,9 @@ export default function CasesList({
                   ((role === "demo-superuser" || role === "director") && c.unread) ||
                   ((role === "demo-superuser" || role === "work") && c.unreadForAssignee);
                 const visibleStatus = caseStatusLabelForRole(c, role);
+                const completedForRole = authorityRole
+                  ? visibleStatus === "Ответ направлен"
+                  : CLOSED.includes(c.status);
                 return (
                 <tr key={c.id} className={unread ? "unread-case" : ""}>
                   <td>
@@ -528,9 +521,7 @@ export default function CasesList({
                     <span className="subline">
                       {formatDate(
                         authorityRole
-                          ? c.requests.find((request) =>
-                              isRequestForAuthority(request, role),
-                            )?.sent || c.registered
+                          ? authorityStatusRequest(c, role)?.sent || c.registered
                           : c.registered,
                       )}
                     </span>
@@ -548,7 +539,7 @@ export default function CasesList({
                   <td>
                     {visibleStatus ? (
                       <span
-                        className={`badge ${CLOSED.includes(c.status) ? "green" : "blue"}`}
+                        className={`badge ${completedForRole ? "green" : "blue"}`}
                       >
                         {visibleStatus}
                       </span>
@@ -562,7 +553,7 @@ export default function CasesList({
                       return deadline ? (
                         <strong
                           className={
-                            deadline < date && !CLOSED.includes(c.status)
+                            deadline < date && !completedForRole
                               ? "text-danger"
                               : ""
                           }

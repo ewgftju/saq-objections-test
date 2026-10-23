@@ -28,7 +28,12 @@ import {
   subjectRoleForCase,
 } from "../services/saqCabinets";
 import { nextAction } from "../services/workflow";
-import { caseStatusLabelForRole } from "../services/statusPresentation";
+import {
+  authorityRequestStatusLabel,
+  authorityStatusRequest,
+  caseStatusLabelForRole,
+  isRequestForAuthority,
+} from "../services/statusPresentation";
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
@@ -305,18 +310,6 @@ function isAuthorityRole(role: Role) {
   return role === "dvga" || role === "kvga";
 }
 
-function isRequestForAuthority(
-  request: ObjectionCase["requests"][number],
-  role: Role,
-) {
-  if (!isAuthorityRole(role) || request.template === "other" || !request.sent)
-    return false;
-  const recipient = request.recipient.toUpperCase();
-  return role === "kvga"
-    ? recipient.includes("КВГА")
-    : recipient.includes("ДВГА");
-}
-
 function AuthorityRequestMaterials({
   c,
   role,
@@ -362,7 +355,12 @@ function AuthorityRequestMaterials({
         return (
           <div key={request.id}>
             <section className="request-documents-section">
-              <h4>Запрос в {authorityLabel}</h4>
+              <h4>
+                Запрос в {authorityLabel}{" "}
+                <span className={`badge ${request.responseSigned ? "green" : "blue"}`}>
+                  {authorityRequestStatusLabel(request)}
+                </span>
+              </h4>
               <div className="request-documents-list">
                 {documents.map((document) => (
                   <div className="request-document-row" key={document.name}>
@@ -714,6 +712,8 @@ export default function CaseWorkspace({
   const recipientLimited = isAuthorityRole(role) || isSubjectRole(role);
   const isCommission = role === "commission";
   const visibleStatus = caseStatusLabelForRole(c, role);
+  const authorityAnswerSent =
+    isAuthorityRole(role) && visibleStatus === "Ответ направлен";
   const visibleDocuments = isCommission
     ? c.documents.filter((document) => document.kind !== "conclusion")
     : c.documents;
@@ -744,8 +744,10 @@ export default function CaseWorkspace({
         subtitle={c.org}
         action={
           <>
-            {!recipientLimited && visibleStatus && (
-              <span className="badge blue">{visibleStatus}</span>
+            {(!recipientLimited || isAuthorityRole(role)) && visibleStatus && (
+              <span className={`badge ${authorityAnswerSent ? "green" : "blue"}`}>
+                {visibleStatus}
+              </span>
             )}
             {!recipientLimited && (
               <Button onClick={() => onDocument("original")}>
@@ -1879,13 +1881,7 @@ export default function CaseWorkspace({
                   </div>
                 ) : isAuthorityRole(role) ? (
                   (() => {
-                    const authorityRequests = c.requests.filter((item) =>
-                      isRequestForAuthority(item, role),
-                    );
-                    const request =
-                      authorityRequests.find(
-                        (item) => !item.responded && !item.responseSigned,
-                      ) || authorityRequests.at(-1);
+                    const request = authorityStatusRequest(c, role);
                     return request?.sent ? (
                       <>
                         <div className="support-row">

@@ -1,4 +1,5 @@
 import type { ObjectionCase, Role } from "../../../types";
+import { authorityStatusRequest } from "./statusPresentation";
 export const holidays = ["2026-08-31", "2026-10-26", "2026-12-16"];
 export function dateObject(s: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s || ""))
@@ -137,8 +138,10 @@ export function executionDeadline(
       : null;
   }
   if (role === "dvga" || role === "kvga") {
-    const deadline = authorityResponseDeadline(c, role);
-    if (deadline) return deadline;
+    const request = authorityStatusRequest(c, role);
+    return request?.sent && !request.responseSigned
+      ? addWorkdays(request.sent, 2)
+      : null;
   }
   if (c.status === "received") return c.document.received;
   if (

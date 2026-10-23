@@ -971,8 +971,12 @@ export default function ConsiderationProcess({
           </p>
         </Notice>
       ) : null}
-      <RecommendationStatusPanel recommendations={caseRecommendations} />
-      <FinalResponseApprovalPanel c={c} />
+      {role !== "dvga" && role !== "kvga" && (
+        <>
+          <RecommendationStatusPanel recommendations={caseRecommendations} />
+          <FinalResponseApprovalPanel c={c} />
+        </>
+      )}
       {(role === "demo-superuser" || role === "work") && (
         <DecisionProjectApprovalPanel c={c} />
       )}
