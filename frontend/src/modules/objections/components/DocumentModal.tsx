@@ -53,11 +53,18 @@ const KAZAKH_OUTCOMES: Record<Outcome, string> = {
   refuse: "қараудан бас тарту",
 };
 
-function appealObjectLabel(c: Pick<ObjectionCase, "appealType">) {
-  if (c.appealType?.startsWith("Жалоба")) return "жалобу";
-  if (c.appealType === "Заявление") return "заявление";
-  return "возражение";
+function appealObjectLabel(
+  c: Pick<ObjectionCase, "appealType">,
+  outcome?: Outcome,
+) {
+  const denied = outcome === "reject" || outcome === "refuse";
+  if (c.appealType?.startsWith("Жалоба")) return denied ? "жалобы" : "жалобу";
+  if (c.appealType === "Заявление") return denied ? "заявления" : "заявление";
+  return denied ? "возражения" : "возражение";
 }
+
+const KAZAKH_DIRECTOR_TITLE =
+  "Ішкі мемлекеттік аудит бойынша апелляция департаментінің директоры";
 
 function appealDateAndNumber(c: ObjectionCase) {
   return `${formatDate(c.appealDate || c.filed)} жылғы ${c.appealNumber || "—"}`;
@@ -83,6 +90,7 @@ type AppendixPageItem = Pick<ViolationPoint, "number" | "title"> & {
   reason: string;
   decision: string;
   decidedByMajority: boolean;
+  outcome?: Outcome;
 };
 
 /**
@@ -693,6 +701,7 @@ export function DocumentContent({
         reason,
         decision: pointDecision,
         decidedByMajority,
+        outcome: winningOutcome || outcome || undefined,
       };
     });
     const appendixPages = appendixPageCount(appendixPoints);
@@ -740,7 +749,11 @@ export function DocumentContent({
           </div>
           <div className="final-response-signature">
             <span>
-              Ішкі мемлекеттік аудит бойынша апелляция департаментінің директоры
+              {isDecisionProject ? (
+                <strong>{KAZAKH_DIRECTOR_TITLE}</strong>
+              ) : (
+                KAZAKH_DIRECTOR_TITLE
+              )}
             </span>
             <b>Ш. Күреңбек тегі</b>
           </div>
@@ -767,7 +780,7 @@ export function DocumentContent({
                 <p className="final-response-point-reason">{point.reason}.</p>
                 <p className="final-response-point-decision">
                   На основании вышеизложенного, Апелляционной комиссией принято
-                  решение {point.decision} {appealObjectLabel(snapshot)} по
+                  решение {point.decision} {appealObjectLabel(snapshot, point.outcome)} по
                   данному вопросу
                   {point.decidedByMajority ? " большинством голосов" : ""}.
                 </p>

@@ -3404,6 +3404,56 @@ test("мотивированный ответ и проект решения ф�
   );
 });
 
+test("приложения проекта решения и мотивированного ответа склоняют вид обращения по результату пункта", () => {
+  const h = harness(1);
+  const kinds = ["decision-project", "final-response"] as const;
+  const appealTypes = [
+    ["Жалоба на уведомление", "жалобу", "жалобы"],
+    ["Возражение на аудиторский отчет", "возражение", "возражения"],
+    ["Заявление", "заявление", "заявления"],
+  ] as const;
+  const decisions = [
+    ["accept", "удовлетворить", false],
+    ["partial", "частично удовлетворить", false],
+    ["reject", "отказать в удовлетворении", true],
+    ["refuse", "отказать в рассмотрении", true],
+  ] as const;
+  for (const [appealType, accusative, genitive] of appealTypes) {
+    h.c.appealType = appealType;
+    for (const [outcome, decision, denied] of decisions) {
+      h.c.issues.filter((point) => point.disputed).forEach((point) => {
+        point.final = outcome;
+      });
+      for (const kind of kinds) {
+        const html = renderToStaticMarkup(
+          createElement(DocumentContent, { c: h.c, kind }),
+        );
+        assert.match(
+          html,
+          new RegExp(`решение ${decision} ${denied ? genitive : accusative} по данному вопросу`),
+          `${kind}: ${appealType}, ${decision}`,
+        );
+        if (kind === "decision-project") {
+          assert.match(
+            html,
+            /<span><strong>Ішкі мемлекеттік аудит бойынша апелляция департаментінің директоры<\/strong><\/span>/,
+          );
+        }
+      }
+    }
+  }
+
+  h.c.appealType = "Жалоба на уведомление";
+  const [first, second] = h.c.issues.filter((point) => point.disputed);
+  first.final = "reject";
+  second.final = "accept";
+  const mixed = renderToStaticMarkup(
+    createElement(DocumentContent, { c: h.c, kind: "decision-project" }),
+  );
+  assert.match(mixed, /решение отказать в удовлетворении жалобы по данному вопросу/);
+  assert.match(mixed, /решение удовлетворить жалобу по данному вопросу/);
+});
+
 test("в приложении окончательного ответа отмечается решение большинством голосов", () => {
   const h = harness(1);
   h.c.status = "decided";
