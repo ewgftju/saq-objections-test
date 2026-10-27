@@ -285,17 +285,6 @@ function certificateBasisForPoint(
   ].filter(Boolean).join("\n\n");
 }
 
-function protocolReasonForMember(
-  c: ObjectionCase,
-  point: ReturnType<typeof disputed>[number],
-  memberId: string,
-) {
-  const basis = certificateBasisForPoint(c, point);
-  const memberReason = c.votes?.[point.id]?.voteReasons?.[memberId]?.trim();
-  if (!memberReason || memberReason === basis) return basis;
-  return `${basis}\n\n${memberReason}`;
-}
-
 function ProtocolVotesFields({
   c,
   members,
@@ -500,7 +489,7 @@ export default function ActionModal({
           ],
           [
             `protocolReason_${point.id}_${member.id}`,
-            protocolReasonForMember(c, point, member.id),
+            certificateBasisForPoint(c, point),
           ],
         ]),
       ),
