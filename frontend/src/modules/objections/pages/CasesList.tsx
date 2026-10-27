@@ -9,7 +9,6 @@ import { isSubjectRole, subjectRoleForCase } from "../services/saqCabinets";
 import {
   authorityStatusRequest,
   caseStatusLabelForRole,
-  hasBeenConsideredAtMeeting,
   isRequestForAuthority,
 } from "../services/statusPresentation";
 
@@ -287,16 +286,16 @@ export default function CasesList({
             "yellow",
           ],
           [
-            cases.filter(hasBeenConsideredAtMeeting).length,
-            "Рассмотрено на заседании",
-            "заседание по делу проведено",
-            "violet",
-          ],
-          [
             cases.filter((c) => c.status === "protocol").length,
             "Подписать протокол",
             "ожидают подписания протокола",
             "blue",
+          ],
+          [
+            cases.filter((c) => Boolean(c.meeting?.signed)).length,
+            "Завершено",
+            "протоколы подписаны",
+            "violet",
           ],
         ]
     : [
