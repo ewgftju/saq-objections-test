@@ -36,7 +36,6 @@ import {
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
-import ProtocolChanges from "../components/ProtocolChanges";
 
 function responseDocumentLabel(c: ObjectionCase) {
   return (c.appealType || "").trim().startsWith("Жалоба") ||
@@ -1163,9 +1162,6 @@ export default function CaseWorkspace({
                       <h3 className="form-section">
                         Материалы и результаты рассмотрения
                       </h3>
-                      {(role === "work" || role === "deputy" || role === "director" || role === "demo-superuser") && (
-                        <ProtocolChanges reviews={c.protocolReviews || []} />
-                      )}
                       {!isCommission && (() => {
                         const conclusions = c.documents.filter(
                           (document) => document.kind === "conclusion",

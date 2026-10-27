@@ -1,6 +1,5 @@
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
-import { protocolReasonForMember } from "./protocolReasons";
 import { formatDate } from "../../../utils/dateFormat";
 import type {
   Action,
@@ -546,7 +545,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     protocol: {
       action: "sign",
       label: "Подписать протокол",
-      role: "director",
+      role: "commission",
     },
     decision_project: {
       action: "create-decision-project",
@@ -625,11 +624,6 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   const options: ActionOption[] = [
     { action: "upload", label: "Добавить материал", role: subjectRoleForCase(c) },
   ];
-  if (c.status === "protocol") options.push({
-    action: "return-protocol",
-    label: "Вернуть протокол на доработку",
-    role: "director",
-  });
   if (c.status === "materials") {
     options.push({
       action: "start-analysis-additional-request",
@@ -1865,23 +1859,6 @@ export function applyAction(
         throw new Error(
           "В последнем опросе о присутствии нет участников с ответом «Да»",
         );
-      const previousReview = c.protocolReviews?.at(-1);
-      const previousReasons = previousReview?.status === "returned" ? previousReview.changes : [];
-      const changedAt = new Date().toISOString();
-      const author = c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee;
-      const originalReasons = Object.fromEntries(disputed(c).map((point) => [
-        point.id,
-        Object.fromEntries(c.members.map((member) => [member.id,
-          (previousReview?.status === "returned" ? previousReview.originalReasons?.[point.id]?.[member.id] : undefined) ?? protocolReasonForMember(c, point, member.id),
-        ])),
-      ]));
-      const changes = disputed(c).flatMap((point) => c.members.flatMap((member) => {
-        const original = previousReasons.find((item) => item.pointId === point.id && item.memberId === member.id)?.original ?? originalReasons[point.id][member.id];
-        const revised = String(form.get(`protocolReason_${point.id}_${member.id}`) || "").trim();
-        if (original.trim() === revised) return [];
-        return [{ pointId: point.id, pointNumber: point.number, memberId: member.id, memberName: member.name, vote: String(form.get(`protocolVote_${point.id}_${member.id}`) || ""), original, revised, author, changedAt }];
-      }));
-      c.protocolReviews = [...(c.protocolReviews || []), { changes, originalReasons, originalVotes: previousReview?.status === "returned" ? previousReview.originalVotes : structuredClone(c.votes), createdAt: changedAt, status: "pending" }];
       c.votes = {};
       for (const point of disputed(c)) {
         const memberVotes = Object.fromEntries(
@@ -1966,12 +1943,6 @@ export function applyAction(
       );
       if (!c.meeting) throw new Error("Протокол не сформирован");
       c.meeting.signed = date;
-      const protocolReview = c.protocolReviews?.at(-1);
-      if (protocolReview?.status === "pending") {
-        protocolReview.status = "signed";
-        protocolReview.decidedAt = new Date().toISOString();
-        protocolReview.decidedBy = ROLES[role];
-      }
       const [year, month] = date.split("-");
       const signedProtocolCount = next.cases.filter((item) =>
         Boolean(item.meeting?.signed),
@@ -2007,19 +1978,6 @@ export function applyAction(
         c.repeatHearingStatus = undefined;
       }
       doc("Подписанный протокол заседания", "protocol", c.result.reason);
-      break;
-    }
-    case "return-protocol": {
-      note = text("reason", "Замечание директора ДАВГА");
-      const protocolReview = c.protocolReviews?.at(-1);
-      if (protocolReview?.status === "pending") {
-        protocolReview.status = "returned";
-        protocolReview.decidedAt = new Date().toISOString();
-        protocolReview.decidedBy = ROLES[role];
-        protocolReview.comment = note;
-      }
-      c.status = "meeting";
-      title = "Протокол возвращён на доработку";
       break;
     }
     case "create-decision-project": {

@@ -870,17 +870,6 @@
 .request-documents-section {
   margin: 14px 0 18px;
 }
-
-.protocol-change-reviews { margin: 16px 0; }
-.protocol-change-reviews details { border: 1px solid #d3e2ed; border-radius: 8px; background: #f7fafc; padding: 14px 16px; margin: 10px 0; }
-.protocol-change-reviews summary { color: #005b91; font-weight: 600; cursor: pointer; }
-.protocol-change-reviews details > p { margin: 10px 0; }
-.protocol-change-card { background: white; border: 1px solid #dfe7ed; border-radius: 6px; margin-top: 14px; padding: 14px; }
-.protocol-change-card h4, .protocol-change-card > p { margin: 0 0 8px; }
-.protocol-change-text { padding: 10px; margin-top: 8px; background: #f5f8fa; border-radius: 5px; }
-.protocol-change-text p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0 0; }
-.protocol-change-text del { background: #ffe2df; }
-.protocol-change-text mark { background: #d4f1d9; }
 .request-documents-section h4 {
   margin: 0;
   font-size: 14px;

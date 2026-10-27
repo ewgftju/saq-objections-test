@@ -50,8 +50,6 @@ import { pathForRoute, routeFromPath } from "../routing";
 import { DEMO_USER } from "../../../config";
 import { actionForm } from "../formDefinitions";
 import { nextCaseNumber } from "../services/caseNumbering";
-import { protocolReasonForMember } from "../services/protocolReasons";
-import ProtocolChanges from "../components/ProtocolChanges";
 import {
   agendaOrProtocolIntro,
   certificateTemplateIntro,
@@ -3215,41 +3213,6 @@ test("итоги повестки фильтруются по дате и пок
     }),
   );
   assert.match(emptyHtml, /нет направленных пунктов повестки дня/);
-});
-
-test("изменения обоснований сохраняются по строкам и проверяются директором", () => {
-  const h = harness();
-  h.c.status = "meeting";
-  h.c.members = [{ id: "chair", name: "Председатель", present: true, isChair: true, recused: false, reason: "" }];
-  const point = h.c.issues.find((item) => item.disputed)!;
-  h.c.issues = [point];
-  h.c.votes = { [point.id]: { yes: 1, no: 0, approved: true, chair: "chair", present: 1, eligible: 1, votes: { chair: "accept" }, voteReasons: { chair: "Исходный комментарий" } } };
-  const original = protocolReasonForMember(h.c, point, "chair");
-  const values = { protocolDate: "2026-09-10", [`protocolVote_${point.id}_chair`]: "accept", [`protocolReason_${point.id}_chair`]: `${original}\nУточнение рабочего органа` };
-  h.run("vote", "work", values);
-  assert.equal(nextAction(h.c)?.role, "director");
-  assert.equal(h.c.protocolReviews?.[0].changes[0].original, original);
-  assert.equal(h.c.protocolReviews?.[0].originalVotes?.[point.id].voteReasons?.chair, "Исходный комментарий");
-  const compare = renderToStaticMarkup(createElement(ProtocolChanges, { reviews: h.c.protocolReviews! }));
-  assert.match(compare, /Уточнение рабочего органа/);
-  assert.match(compare, /Из справки/);
-  assert.match(compare, /Для протокола/);
-  const signingForm = renderToStaticMarkup(createElement(ActionModal, {
-    action: "sign", c: h.c, date: h.state.date, role: "director", onSubmit() {}, onClose() {},
-  }));
-  assert.match(signingForm, /посмотреть изменения/);
-  assert.match(signingForm, /Подписать протокол/);
-  assert.throws(() => h.run("sign", "commission", { secretary: "on", signed_chair: "on", reason: "Решение" }), /недоступно/);
-  h.run("return-protocol", "director", { reason: "Уточнить текст" });
-  assert.equal(h.c.protocolReviews?.[0].status, "returned");
-  h.run("vote", "work", values);
-  assert.equal(h.c.protocolReviews?.[1].changes[0].original, original);
-  h.run("sign", "director", { secretary: "on", signed_chair: "on", reason: "Решение" });
-  assert.equal(h.c.protocolReviews?.[1].status, "signed");
-  assert.ok(h.c.protocolReviews?.[1].decidedAt);
-  const document = renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "protocol" }));
-  assert.match(document, /Уточнение рабочего органа/);
-  assert.doesNotMatch(document, /<mark>|Из справки/);
 });
 
 test("протокол формируется с выбранными участниками и голосами по пунктам", () => {

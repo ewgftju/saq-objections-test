@@ -584,10 +584,6 @@ export function actionForm(
       note =
         "Проект протокола — следующий рабочий день после заседания; подписи — в течение рабочего дня после получения проекта.";
       break;
-    case "return-protocol":
-      title = "Вернуть протокол на доработку";
-      fields.push(area("reason", "Замечание директора ДАВГА"));
-      break;
     case "forward":
       title = "Передача жалобы вышестоящему органу";
       fields.push(
@@ -1077,11 +1073,7 @@ export function actionForm(
     fields,
     note,
     submit:
-      action === "sign"
-        ? "Подписать протокол"
-        : action === "return-protocol"
-          ? "Вернуть на доработку"
-      : action === "edit-certificate"
+      action === "edit-certificate"
         ? "Сохранить"
         : action === "approve-request"
           ? "Согласовать запрос"
