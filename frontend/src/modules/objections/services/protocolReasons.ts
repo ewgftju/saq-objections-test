@@ -80,11 +80,8 @@ function certificateBasisForPoint(
 export function protocolReasonForMember(
   c: ObjectionCase,
   point: ReturnType<typeof disputed>[number],
-  memberId: string,
+  _memberId: string,
 ) {
-  const basis = certificateBasisForPoint(c, point);
-  const memberReason = c.votes?.[point.id]?.voteReasons?.[memberId]?.trim();
-  if (!memberReason || memberReason === basis) return basis;
-  return `${basis}\n\nДополнительное обоснование члена АК:\n${memberReason}`;
+  return certificateBasisForPoint(c, point);
 }
 
