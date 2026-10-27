@@ -293,7 +293,7 @@ function protocolReasonForMember(
   const basis = certificateBasisForPoint(c, point);
   const memberReason = c.votes?.[point.id]?.voteReasons?.[memberId]?.trim();
   if (!memberReason || memberReason === basis) return basis;
-  return `${basis}\n\nДополнительное обоснование члена АК:\n${memberReason}`;
+  return `${basis}\n\n${memberReason}`;
 }
 
 function ProtocolVotesFields({
