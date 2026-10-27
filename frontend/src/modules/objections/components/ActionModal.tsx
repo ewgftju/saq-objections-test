@@ -10,6 +10,8 @@ import { DocumentContent } from "./DocumentModal";
 import { DEMO_USER } from "../../../config";
 import { OUTCOMES } from "../../../data/constants";
 import { downloadFile } from "../../../utils/download";
+import { protocolReasonForMember } from "../services/protocolReasons";
+import ProtocolChanges from "./ProtocolChanges";
 
 function appendixDocumentHtml(c: ObjectionCase, document: NonNullable<ObjectionCase["documents"][number]>) {
   const safeTitle = document.name.replace(/[&<>"']/g, (character) =>
@@ -210,92 +212,6 @@ function HearingChoiceCards({
   );
 }
 
-function certificateBasisForPoint(
-  c: ObjectionCase,
-  point: ReturnType<typeof disputed>[number],
-) {
-  const latestCertificate = [...c.documents]
-    .reverse()
-    .find(
-      (document) =>
-        document.kind === "certificate" && Boolean(document.snapshot?.certificate),
-    );
-  const source = latestCertificate?.snapshot;
-  const sourcePoint = source?.issues.find((item) => item.id === point.id) || point;
-  const sourceRequests = source?.requests || c.requests;
-  const responses = sourceRequests
-    .map((request) => ({
-      authority: request.recipient.toUpperCase().includes("КВГА") ? "КВГА" : "ДВГА",
-      response: request.authorityResponses?.[point.id],
-      route: request.route,
-    }))
-    .filter(
-      (
-        item,
-      ): item is {
-        authority: "ДВГА" | "КВГА";
-        response: { finding: string; response: string };
-        route: ObjectionCase["requests"][number]["route"];
-      } => Boolean(item.response),
-    );
-  const authorityArguments =
-    responses
-      .map(({ authority, response, route }) =>
-        response.finding
-          ? `${route && route !== "initial" ? "Дополнительные доводы" : "Доводы"} ${authority}: ${response.finding}`
-          : "",
-      )
-      .filter(Boolean)
-      .join("\n\n") ||
-    sourcePoint.authorityFinding ||
-    "—";
-  const authorityReply =
-    responses
-      .map(({ authority, response, route }) =>
-        response.response
-          ? `${route && route !== "initial" ? "Дополнительный мотивированный ответ" : "Мотивированный ответ"} ${authority}: ${response.response}`
-          : "",
-      )
-      .filter(Boolean)
-      .join("\n\n") ||
-    sourcePoint.position ||
-    "—";
-  const davgaArguments =
-    source?.certificate?.davgaArgumentsByPoint?.[point.id] ||
-    source?.certificate?.davgaArguments ||
-    c.certificate?.davgaArgumentsByPoint?.[point.id] ||
-    c.certificate?.davgaArguments ||
-    "—";
-  const additionalApplicantArguments = (sourcePoint.additionalArguments || [])
-    .map(
-      (argument, index) =>
-        `Дополнительные доводы объекта гос. аудита (заявителя)${
-          index ? ` №${index + 1}` : ""
-        }: ${argument}`,
-    )
-    .join("\n\n");
-  return [
-    responses.length ? authorityArguments : `Доводы ДВГА/КВГА: ${authorityArguments}`,
-    `Доводы объекта государственного аудита (заявителя): ${sourcePoint.argument || "—"}`,
-    additionalApplicantArguments,
-    responses.length
-      ? authorityReply
-      : `Мотивированный ответ ДВГА/КВГА: ${authorityReply}`,
-    `Доводы рабочего органа (ДАВГА МФ РК): ${davgaArguments}`,
-  ].filter(Boolean).join("\n\n");
-}
-
-function protocolReasonForMember(
-  c: ObjectionCase,
-  point: ReturnType<typeof disputed>[number],
-  memberId: string,
-) {
-  const basis = certificateBasisForPoint(c, point);
-  const memberReason = c.votes?.[point.id]?.voteReasons?.[memberId]?.trim();
-  if (!memberReason || memberReason === basis) return basis;
-  return `${basis}\n\nДополнительное обоснование члена АК:\n${memberReason}`;
-}
-
 function ProtocolVotesFields({
   c,
   members,
@@ -334,8 +250,10 @@ function ProtocolVotesFields({
                 const voteName = `protocolVote_${point.id}_${member.id}`;
                 const reasonName = `protocolReason_${point.id}_${member.id}`;
                 const vote = normalizeVoteChoice(values[voteName]);
-                const certificateBasis = certificateBasisForPoint(c, point);
-                const reason = values[reasonName] ?? certificateBasis;
+                const original = c.protocolReviews?.at(-1)?.status === "returned"
+                  ? c.protocolReviews.at(-1)?.originalReasons?.[point.id]?.[member.id] ?? protocolReasonForMember(c, point, member.id)
+                  : protocolReasonForMember(c, point, member.id);
+                const reason = values[reasonName] ?? original;
                 return (
                   <tr key={`${point.id}-${member.id}`}>
                     <td>{index === 0 ? point.number : ""}</td>
@@ -348,6 +266,7 @@ function ProtocolVotesFields({
                         : <span className="muted">Нет голоса</span>}
                     </td>
                     <td>
+                      {reason.trim() !== original.trim() && <span className="badge amber">Изменено</span>}
                       <textarea
                         name={reasonName}
                         value={reason}
@@ -500,7 +419,9 @@ export default function ActionModal({
           ],
           [
             `protocolReason_${point.id}_${member.id}`,
-            protocolReasonForMember(c, point, member.id),
+            c.protocolReviews?.at(-1)?.status === "returned"
+              ? c.votes?.[point.id]?.voteReasons?.[member.id] ?? protocolReasonForMember(c, point, member.id)
+              : protocolReasonForMember(c, point, member.id),
           ],
         ]),
       ),
@@ -669,6 +590,7 @@ export default function ActionModal({
       onClose={onClose}
       wide={
         action === "vote" ||
+        action === "sign" ||
         isRequest ||
         action === "fill-request-response" ||
         action === "analysis" ||
@@ -1393,6 +1315,12 @@ export default function ActionModal({
                 }}
               />
             </div>
+          </>
+        ) : action === "sign" ? (
+          <>
+            <ProtocolChanges reviews={c.protocolReviews?.slice(-1) || []} />
+            <div className="request-print-preview"><DocumentContent c={c} kind="protocol" /></div>
+            {definition.fields.map((field) => <Field key={field.name} field={field} />)}
           </>
         ) : action === "commission-vote" ? (
           <>

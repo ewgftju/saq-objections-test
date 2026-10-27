@@ -2163,6 +2163,8 @@ export default function ObjectionsModule() {
                   action === "submit-decision-project-comment" ||
                   action === "record-external-decision-project-comment" ||
                   action === "proceed-to-final-response" ||
+                  action === "sign" ||
+                  action === "return-protocol" ||
                   action === "hearing-after-decision-project"
                 ) {
                   setDialog({ type: "action", action, requestId });
@@ -2205,8 +2207,7 @@ export default function ObjectionsModule() {
                   action === "approve-certificate" ||
                   action === "sign-certificate" ||
                   action === "review-commission-documents" ||
-                  action === "members" ||
-                  action === "sign"
+                  action === "members"
                 ) {
                   const form = new FormData();
                   if (action === "screen") {
@@ -2233,18 +2234,6 @@ export default function ObjectionsModule() {
                   }
                   if (action === "members") {
                     form.set("meetingConducted", "on");
-                  }
-                  if (action === "sign") {
-                    form.set("secretary", "on");
-                    c.members
-                      .filter((member) => member.present)
-                      .forEach((member) =>
-                        form.set(`signed_${member.id}`, "on"),
-                      );
-                    form.set(
-                      "reason",
-                      "Результаты голосования членов АК зафиксированы в протоколе.",
-                    );
                   }
                   if (action === "sign-request") {
                     form.set("requestId", requestId || "");
@@ -2283,9 +2272,7 @@ export default function ObjectionsModule() {
                                           ? "Члены АК ознакомились с документами"
                                           : action === "members"
                                             ? "Заседание по данному делу проведено"
-                                            : action === "sign"
-                                              ? "Протокол подписан"
-                                              : "Запрос направлен на согласование",
+                                            : "Запрос направлен на согласование",
                   );
                   return;
                 }

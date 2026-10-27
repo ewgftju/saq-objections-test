@@ -142,6 +142,29 @@ export interface Meeting {
   signed?: string;
 }
 
+export interface ProtocolReasonChange {
+  pointId: string;
+  pointNumber: string;
+  memberId: string;
+  memberName: string;
+  vote: string;
+  original: string;
+  revised: string;
+  author: string;
+  changedAt: string;
+}
+
+export interface ProtocolReview {
+  changes: ProtocolReasonChange[];
+  originalReasons?: Record<string, Record<string, string>>;
+  originalVotes?: Record<string, VoteResult> | null;
+  createdAt: string;
+  status: "pending" | "signed" | "returned";
+  decidedAt?: string;
+  decidedBy?: string;
+  comment?: string;
+}
+
 export interface RecommendationActivity {
   id: string;
   date: string;
@@ -596,6 +619,7 @@ export interface ObjectionCase {
   analysisDraft?: RequestDraft;
   members: CommissionMember[];
   history: HistoryEvent[];
+  protocolReviews?: ProtocolReview[];
   screening?: string;
   actEffect?: string;
   memberPosition?: string;
@@ -715,6 +739,7 @@ export type Action =
   | "hearing-held"
   | "vote"
   | "sign"
+  | "return-protocol"
   | "create-decision-project"
   | "approve-decision-project"
   | "sign-decision-project"
