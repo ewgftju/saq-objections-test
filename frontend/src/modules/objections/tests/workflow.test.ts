@@ -4375,7 +4375,43 @@ test("проект решения направляется только заяв
   );
 });
 
-test("заявитель с кабинетом SAQ видит блок заслушивания в материалах", () => {
+test("материалы заявителя показываются от новых к старым, включая документы за один день", () => {
+  const h = harness(2);
+  h.c.appealType = "Жалоба на уведомление";
+  h.c.bin = "001002003004";
+  h.c.decisionProjectRouting = { channel: "saq", recipients: [] };
+  h.c.delivery = {
+    date: "2026-09-10",
+    number: "",
+    receipt: "",
+    channel: "Кабинет SAQ",
+    appealCourt: "",
+    appealProcedure: "",
+    recipientRoles: ["subject2"],
+  };
+  h.c.documents = [
+    { name: "Проект тест", kind: "decision-project", date: "2026-09-09", text: "", author: "" },
+    { name: "Замечание тест", kind: "decision-project-comment", date: "2026-09-10", text: "", author: "" },
+    { name: "Ответ тест", kind: "final-response", date: "2026-09-10", text: "", author: "" },
+  ];
+  const html = renderToStaticMarkup(
+    createElement(CaseWorkspace, {
+      c: h.c,
+      tab: "review",
+      role: "subject2",
+      onBack() {},
+      onTab() {},
+      onAction() {},
+      onDocument() {},
+      onUpload() {},
+    }),
+  );
+  assert.ok(html.indexOf("Ответ тест") < html.indexOf("Замечание тест"));
+  assert.ok(html.indexOf("Замечание тест") < html.indexOf("Проект тест"));
+  assert.ok(html.includes("Проект тест"));
+});
+
+test("блок заслушивания не отображается в материалах", () => {
   const h = harness(2);
   h.c.appealType = "Жалоба на уведомление";
   h.c.status = "decision_project_hearing";
@@ -4387,22 +4423,22 @@ test("заявитель с кабинетом SAQ видит блок засл�
     noticeChannel: "saq",
   };
 
-  const html = renderToStaticMarkup(
-    createElement(CaseWorkspace, {
-      c: h.c,
-      tab: "review",
-      role: "subject",
-      onBack() {},
-      onTab() {},
-      onAction() {},
-      onDocument() {},
-      onUpload() {},
-    }),
-  );
-  assert.match(html, /<strong>Заслушивание<\/strong>/);
-  assert.match(html, /Дата и время: 14\.09\.2026 10:00/);
-  assert.match(html, /Место или формат: онлайн, Qosyl/);
-  assert.match(html, /Уведомление направлено: 11\.09\.2026 · saq/);
+  for (const role of ["subject", "work"] as const) {
+    const html = renderToStaticMarkup(
+      createElement(CaseWorkspace, {
+        c: h.c,
+        tab: "review",
+        role,
+        onBack() {},
+        onTab() {},
+        onAction() {},
+        onDocument() {},
+        onUpload() {},
+      }),
+    );
+    assert.doesNotMatch(html, /<strong>Заслушивание<\/strong>/);
+    assert.doesNotMatch(html, /Место или формат: онлайн, Qosyl/);
+  }
 });
 
 test("заявитель с БИН Объекта №2 получает проект решения в свой кабинет", () => {

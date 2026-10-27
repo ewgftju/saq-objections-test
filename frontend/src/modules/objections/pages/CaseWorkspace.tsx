@@ -12,7 +12,6 @@ import type {
 } from "../../../types";
 import {
   formatDate,
-  formatDateTime,
   formatMoney,
 } from "../../../utils/dateFormat";
 import {
@@ -153,33 +152,6 @@ function MotivatedResponseRoutingSection({
         </div>
       )}
     </section>
-  );
-}
-
-function HearingDetails({
-  hearing,
-}: {
-  hearing: NonNullable<ObjectionCase["hearing"]>;
-}) {
-  return (
-    <Notice>
-      <strong>Заслушивание</strong>
-      {hearing.skip ? (
-        <p>Не проводилось: {hearing.reason}</p>
-      ) : (
-        <>
-          <p>Дата и время: {formatDateTime(hearing.date)}</p>
-          <p>Место или формат: {hearing.location || "—"}</p>
-          <p>
-            Уведомление направлено: {formatDate(hearing.notice)}
-            {hearing.noticeChannel ? ` · ${hearing.noticeChannel}` : ""}
-          </p>
-        </>
-      )}
-      {hearing.subject && <p>Заявитель: {hearing.subject}</p>}
-      {hearing.issuer && <p>Орган: {hearing.issuer}</p>}
-      {hearing.note && <p>{hearing.note}</p>}
-    </Notice>
   );
 }
 
@@ -453,10 +425,6 @@ function SubjectRequestMaterials({
         .filter((document) => document.kind === "decision-project-comment")
         .at(-1)
     : undefined;
-  const hearing =
-    isApplicantCabinet && hasSubjectSaqCabinet(c) && !c.hearing?.skip
-      ? c.hearing
-      : undefined;
   const hearingNotice =
     isApplicantCabinet && hasSubjectSaqCabinet(c)
       ? c.documents.filter((document) => document.kind === "hearing").at(-1)
@@ -492,7 +460,11 @@ function SubjectRequestMaterials({
   const sortedDocuments = (documents: CaseDocument[]) =>
     documents
       .slice()
-      .sort((left, right) => right.date.localeCompare(left.date));
+      .sort(
+        (left, right) =>
+          right.date.localeCompare(left.date) ||
+          c.documents.indexOf(right) - c.documents.indexOf(left),
+      );
   const latestDocumentDate = (documents: CaseDocument[], fallback = "") =>
     documents.reduce(
       (latest, document) => (document.date > latest ? document.date : latest),
@@ -502,11 +474,21 @@ function SubjectRequestMaterials({
     key: string;
     date: string;
     order: number;
+    documentOrder: number;
     content: ReactNode;
   }> = [];
   let sectionOrder = 0;
-  const addSection = (key: string, date: string, content: ReactNode) => {
-    sections.push({ key, date, order: sectionOrder++, content });
+  const addSection = (
+    key: string,
+    date: string,
+    content: ReactNode,
+    documents: CaseDocument[],
+  ) => {
+    const documentOrder = Math.max(
+      -1,
+      ...documents.map((document) => c.documents.indexOf(document)),
+    );
+    sections.push({ key, date, order: sectionOrder++, documentOrder, content });
   };
 
   requests.forEach((request) => {
@@ -531,6 +513,7 @@ function SubjectRequestMaterials({
           {sortedDocuments(requestDocuments).map(documentRow)}
         </div>
       </section>,
+      requestDocuments,
     );
     if (request.responded && responseDocuments.length > 0) {
       addSection(
@@ -542,6 +525,7 @@ function SubjectRequestMaterials({
             {sortedDocuments(responseDocuments).map(documentRow)}
           </div>
         </section>,
+        responseDocuments,
       );
     }
   });
@@ -556,6 +540,7 @@ function SubjectRequestMaterials({
           {documentRow(decisionProject)}
         </div>
       </section>,
+      [decisionProject],
     );
   }
   if (comment) {
@@ -566,13 +551,7 @@ function SubjectRequestMaterials({
         <h4>Замечание к проекту решения</h4>
         <div className="request-documents-list">{documentRow(comment)}</div>
       </section>,
-    );
-  }
-  if (hearing) {
-    addSection(
-      "hearing",
-      hearing.held || hearing.date || "",
-      <HearingDetails hearing={hearing} />,
+      [comment],
     );
   }
   if (hearingNotice) {
@@ -585,6 +564,7 @@ function SubjectRequestMaterials({
           {documentRow(hearingNotice)}
         </div>
       </section>,
+      [hearingNotice],
     );
   }
   if (finalResponse) {
@@ -597,11 +577,14 @@ function SubjectRequestMaterials({
           {documentRow(finalResponse)}
         </div>
       </section>,
+      [finalResponse],
     );
   }
   sections.sort(
     (left, right) =>
-      right.date.localeCompare(left.date) || left.order - right.order,
+      right.date.localeCompare(left.date) ||
+      right.documentOrder - left.documentOrder ||
+      right.order - left.order,
   );
 
   return (
@@ -1306,9 +1289,6 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
-                      {!isCommission && c.hearing && (
-                        <HearingDetails hearing={c.hearing} />
-                      )}
                       {(() => {
                         const recommendations = c.documents.filter((document) =>
                           [
