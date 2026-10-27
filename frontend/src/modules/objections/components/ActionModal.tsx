@@ -679,7 +679,6 @@ export default function ActionModal({
         action === "request-other" ||
         action === "deliver" ||
         action === "create-decision-project" ||
-        action === "send-decision-project-eotinish" ||
         action === "record-decision-project-delivery" ||
         action === "record-final-response-delivery" ||
         action === "submit-decision-project-comment" ||

@@ -25,7 +25,6 @@ const COMPLETED_MEETING_STATUSES: CaseStatus[] = [
   "decision_project_signed",
   "decision_project_delivery",
   "decision_project_comments",
-  "decision_project_eotinish",
   "decision_project_hearing",
   "decided",
   "final_response_approval",

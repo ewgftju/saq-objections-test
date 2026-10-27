@@ -291,7 +291,6 @@ test("три исходных дела: разные сроки и перено�
     "decision_project",
     "decision_project_approval",
     "decision_project_signed",
-    "decision_project_eotinish",
     "decision_project_hearing",
   ] as const) {
     assert.equal(
@@ -3784,27 +3783,8 @@ test("жалоба из E-Otinish проходит проект решения �
     projectCommentChannel: "E-Otinish",
     projectComment: "Просим провести заслушивание.",
   });
-  assert.equal(h.c.status, "decision_project_eotinish");
-  const hearingAssignmentForm = actionForm(
-    "send-decision-project-eotinish",
-    h.c,
-    h.state.date,
-    {},
-  );
-  assert.equal(hearingAssignmentForm.title, "Назначить заслушивание");
-  assert.ok(
-    hearingAssignmentForm.fields.some(
-      (field) => field.name === "hearingDateTime",
-    ),
-  );
-  h.run("send-decision-project-eotinish", "work", {
-    hearingDateTime: "2026-09-16T10:30",
-    hearingLocation: "онлайн, Qosyl",
-    hearingNoticeChannel: "eotinish",
-    hearingNoticeDate: "2026-09-11",
-  });
   assert.equal(h.c.status, "decision_project_hearing");
-  assert.equal(h.c.hearing?.location, "онлайн, Qosyl");
+  assert.equal(nextAction(h.c)?.action, "hearing-after-decision-project");
   assert.throws(
     () => h.run("hearing-after-decision-project", "work"),
     /Вложите протокол заслушивания/,
@@ -4350,7 +4330,7 @@ test("проект решения по жалобе направляется в 
   h.run("submit-decision-project-comment", "subject", {
     projectComment: "Не согласны с проектом решения.",
   });
-  assert.equal(h.c.status, "decision_project_eotinish");
+  assert.equal(h.c.status, "decision_project_hearing");
   assert.equal(h.c.decisionProjectRouting?.commentChannel, "Кабинет SAQ");
   assert.ok(
     h.c.documents.some(
@@ -4358,21 +4338,7 @@ test("проект решения по жалобе направляется в 
     ),
   );
 
-  h.run("send-decision-project-eotinish", "work", {
-    hearingDateTime: "2026-09-14T10:00",
-    hearingLocation: "г. Астана, онлайн",
-    hearingNoticeChannel: "E-Otinish",
-    hearingNoticeDate: "2026-09-11",
-  });
-  assert.equal(h.c.status, "decision_project_hearing");
-  assert.ok(
-    h.state.notifications.some(
-      (notification) =>
-        notification.caseId === h.c.id &&
-        notification.recipientRole === "subject" &&
-        /извещение о заслушивании/i.test(notification.text),
-    ),
-  );
+  assert.equal(nextAction(h.c)?.action, "hearing-after-decision-project");
 });
 
 test("проект решения направляется только заявителю и ждёт внешнюю фиксацию", () => {
@@ -4406,41 +4372,6 @@ test("проект решения направляется только заяв
     h.c.decisionProjectRouting?.recipients.find((item) => item.id === "subject")
       ?.registrationNumber,
     "ИСХ-25",
-  );
-});
-
-test("заявитель с кабинетом SAQ получает извещение о заслушивании при внешнем направлении проекта", () => {
-  const h = harness(2);
-  h.c.appealType = "Жалоба на уведомление";
-  h.c.status = "decision_project_eotinish";
-  h.c.decisionProject = {
-    date: "2026-09-08",
-    number: "",
-    receipt: "",
-    channel: "",
-    appealCourt: "",
-    appealProcedure: "",
-  };
-  h.c.decisionProjectRouting = {
-    channel: "external",
-    recipients: [],
-    commentReceivedAt: "2026-09-09",
-  };
-
-  h.run("send-decision-project-eotinish", "work", {
-    hearingDateTime: "2026-09-14T10:00",
-    hearingLocation: "онлайн, Qosyl",
-    hearingNoticeChannel: "E-Otinish",
-    hearingNoticeDate: "2026-09-11",
-  });
-
-  assert.ok(
-    h.state.notifications.some(
-      (notification) =>
-        notification.caseId === h.c.id &&
-        notification.recipientRole === "subject" &&
-        /извещение о заслушивании/i.test(notification.text),
-    ),
   );
 });
 
@@ -4607,7 +4538,7 @@ test("переход к мотивированному ответу не бло�
     projectCommentChannel: "E-Otinish",
     projectComment: "Поступившее замечание.",
   });
-  assert.equal(h.c.status, "decision_project_eotinish");
+  assert.equal(h.c.status, "decision_project_hearing");
   assert.ok(
     additionalActions(h.c).some(
       (action) => action.action === "proceed-to-final-response",

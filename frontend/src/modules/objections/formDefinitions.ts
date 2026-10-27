@@ -169,7 +169,6 @@ export function actionForm(
     action === "vote" ||
     action === "analysis" ||
     action === "assign-work-executor" ||
-    action === "send-decision-project-eotinish" ||
     action === "record-decision-project-delivery" ||
     action === "record-final-response-delivery" ||
     action === "submit-decision-project-comment" ||
@@ -716,33 +715,6 @@ export function actionForm(
             : requiresConclusion(c)
               ? "Оформление — 2 рабочих дня с решения; публикация закупочного решения — 1 рабочий день после направления. Для уведомления формируется заключение по структуре приложения 7. Вручение фиксируется отдельно."
             : "Оформление — 2 рабочих дня с решения; публикация закупочного решения — 1 рабочий день после направления. После формирования мотивированный ответ направляется на согласование и подписание.";
-      break;
-    case "send-decision-project-eotinish":
-      title = "Назначить заслушивание";
-      fields.push(
-        input(
-          "hearingDateTime",
-          "Дата и время заслушивания",
-          `${date}T09:00`,
-          "datetime-local",
-        ),
-        input("hearingLocation", "Место или формат проведения заслушивания"),
-        select("hearingNoticeChannel", "Канал отправки уведомления", [
-          ["eotinish", "E-Otinish"],
-          ["portal", "Веб-портал"],
-          ["digital", "Цифровая система"],
-          ["saq", "Кабинет SAQ"],
-          ["other", "Другое"],
-        ]),
-        input(
-          "hearingNoticeDate",
-          "Дата направления уведомления",
-          date,
-          "date",
-        ),
-      );
-      note =
-        "Если выбран кабинет SAQ, извещение будет автоматически направлено в кабинет заявителя.";
       break;
     case "hearing-after-decision-project":
       title = "Заслушивание проведено";

@@ -349,7 +349,6 @@ export default function ObjectionsModule() {
             item.decisionProjectRouting?.channel === "saq" &&
               [
                 "decision_project_comments",
-                "decision_project_eotinish",
                 "decision_project_hearing",
               ].includes(item.status),
           )))
@@ -2159,7 +2158,6 @@ export default function ObjectionsModule() {
               onAction={(action, role, requestId) => {
                 if (
                   action === "record-external-response" ||
-                  action === "send-decision-project-eotinish" ||
                   action === "record-decision-project-delivery" ||
                   action === "record-final-response-delivery" ||
                   action === "submit-decision-project-comment" ||

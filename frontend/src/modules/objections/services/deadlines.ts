@@ -203,7 +203,6 @@ export function executionDeadline(
       "decision_project_signed",
       "decision_project_delivery",
       "decision_project_comments",
-      "decision_project_eotinish",
       "decision_project_hearing",
     ].includes(c.status)
   )

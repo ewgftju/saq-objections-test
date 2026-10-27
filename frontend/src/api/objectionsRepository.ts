@@ -16,7 +16,7 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 12;
+const CURRENT_VERSION = 13;
 
 /**
  * Карточки из старого демонстрационного набора больше не должны появляться
@@ -72,7 +72,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -174,7 +174,9 @@ export function createDemoRepository(
           requests.length > 0 &&
           requests.every((request) => Boolean(request.sent))
             ? "request_approved"
-            : normalized.status;
+            : (normalized.status as string) === "decision_project_eotinish"
+              ? "decision_project_hearing"
+              : normalized.status;
         // Файлы, внесённые рабочим органом при единой фиксации ответов,
         // относятся к ответу внешнего органа, а не к ответу ДВГА/КВГА.
         const otherRequest = requests.find(

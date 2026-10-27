@@ -80,7 +80,6 @@ const OBJECTION_STAGES: ProcessStage[] = [
       "decision_project_signed",
       "decision_project_delivery",
       "decision_project_comments",
-      "decision_project_eotinish",
       "decision_project_hearing",
       "delivered",
       "completed",
@@ -487,7 +486,6 @@ function executionSubstep(status: CaseStatus) {
   if (
     [
       "decision_project_comments",
-      "decision_project_eotinish",
       "decision_project_hearing",
     ].includes(status)
   )
@@ -559,8 +557,6 @@ const TASK_HELP: Partial<Record<Action, string>> = {
     "Зарегистрируйте замечание, поступившее к проекту решения через внешнюю систему.",
   "proceed-to-final-response":
     "В любой момент зафиксируйте причину перехода к мотивированному ответу; поступление замечания не блокирует действие.",
-  "send-decision-project-eotinish":
-    "Укажите реквизиты заслушивания и канал направления извещения заявителю.",
   "hearing-after-decision-project":
     "Зафиксируйте проведение заслушивания, наличие новых доводов и дальнейший маршрут по обращению. При необходимости выберите конкретные оспариваемые пункты и верните дело на запрос или анализ.",
   "approve-final-response":

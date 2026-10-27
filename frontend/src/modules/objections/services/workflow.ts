@@ -567,11 +567,6 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
       label: "Зафиксировать направление проекта решения",
       role: "work",
     },
-    decision_project_eotinish: {
-      action: "send-decision-project-eotinish",
-      label: "Заслушивание назначено",
-      role: "work",
-    },
     decision_project_hearing: {
       action: "hearing-after-decision-project",
       label: "Заслушивание проведено",
@@ -680,7 +675,6 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   if (
     [
       "decision_project_comments",
-      "decision_project_eotinish",
       "decision_project_hearing",
     ].includes(c.status)
   )
@@ -2133,10 +2127,10 @@ export function applyAction(
       c.decisionProjectRouting.commentReceivedAt = date;
       c.decisionProjectRouting.commentChannel = "Кабинет SAQ";
       c.decisionProjectRouting.commentText = commentText;
-      c.status = "decision_project_eotinish";
+      c.status = "decision_project_hearing";
       title = "Замечание к проекту решения направлено";
       note =
-        "Замечание поступило рабочему органу. Доступно назначение заслушивания.";
+        "Замечание поступило рабочему органу. Доступна фиксация результатов заслушивания.";
       doc(
         "Замечание к проекту решения",
         "decision-project-comment",
@@ -2173,9 +2167,9 @@ export function applyAction(
         String(form.get("projectCommentRegistrationNumber") || "").trim() ||
         undefined;
       c.decisionProjectRouting.commentText = commentText;
-      c.status = "decision_project_eotinish";
+      c.status = "decision_project_hearing";
       title = "Замечание к проекту решения зафиксировано";
-      note = "Замечание зарегистрировано. Доступно назначение заслушивания.";
+      note = "Замечание зарегистрировано. Доступна фиксация результатов заслушивания.";
       doc(
         "Замечание к проекту решения",
         "decision-project-comment",
@@ -2193,58 +2187,12 @@ export function applyAction(
       note = reason;
       break;
     }
-    case "send-decision-project-eotinish":
-      if (!c.decisionProject)
-        throw new Error("Проект решения ещё не сформирован");
-      if (!c.decisionProjectRouting?.commentReceivedAt)
-        throw new Error(
-          "Заслушивание назначается после поступления замечания к проекту решения",
-        );
-      const hearingDateTime = text(
-        "hearingDateTime",
-        "Дата и время заслушивания",
-      );
-      if (!hearingDateTime.includes("T"))
-        throw new Error("Укажите дату и время заслушивания");
-      const hearingLocation = text(
-        "hearingLocation",
-        "Место или формат проведения заслушивания",
-      );
-      const hearingNoticeDate = text(
-        "hearingNoticeDate",
-        "Дата направления уведомления",
-      );
-      c.status = "decision_project_hearing";
-      c.hearing = {
-        skip: false,
-        date: hearingDateTime,
-        location: hearingLocation,
-        notice: hearingNoticeDate,
-        noticeChannel: text(
-          "hearingNoticeChannel",
-          "Канал отправки уведомления",
-        ),
-      };
-      title = "Заслушивание назначено";
-      note = `Дата и время: ${hearingDateTime}. Место или формат: ${hearingLocation}. Уведомление направлено ${hearingNoticeDate} через ${c.hearing.noticeChannel}.`;
-      doc("Извещение о назначении заслушивания", "hearing", note);
-      if (hasSubjectSaqCabinet(c))
-        next.notifications.push({
-          id: `hearing-notice-${c.id}-${next.notifications.length + 1}`,
-          caseId: c.id,
-          recipient: ROLES[subjectRoleForCase(c)],
-          recipientRole: subjectRoleForCase(c),
-          date,
-          read: false,
-          text: `В кабинет направлено извещение о заслушивании по обращению №${c.appealNumber || c.id}: ${hearingDateTime}.`,
-        });
-      break;
     case "hearing-after-decision-project":
       if (!c.decisionProject)
         throw new Error("Проект решения ещё не сформирован");
       if (!form.has("hearingProtocolAttached"))
         throw new Error("Вложите протокол заслушивания");
-      if (c.hearing) c.hearing.held = date;
+      c.hearing = { ...(c.hearing || {}), skip: false, held: date };
 
       if (isComplaintOrStatement(c)) {
         const hearingArgumentsPresence = String(
