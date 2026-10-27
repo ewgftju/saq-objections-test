@@ -24,6 +24,25 @@ function request(id: string, recipient: string): CaseRequest {
   };
 }
 
+test("баннеры комиссии считают голосование, рассмотренные дела и протоколы на подписи", () => {
+  const sample = initialState().cases[0];
+  const history = [{ date: "2026-09-09", actor: "Рабочий орган", title: "Заседание по данному делу проведено", text: "" }];
+  const cases = [
+    { ...sample, id: "voting-1", status: "commission_voting" as const, history: [] },
+    { ...sample, id: "voting-2", status: "circulated" as const, history: [] },
+    { ...sample, id: "signing", status: "protocol" as const, history },
+    { ...sample, id: "considered", status: "decided" as const, history },
+  ];
+  const html = renderToStaticMarkup(createElement(CasesList, {
+    cases, date: "2026-09-09", role: "commission", onOpen() {}, onCreate() {}, onExport() {},
+  }));
+  assert.match(html, /stat-value">2<\/strong><span class="stat-label">Голосование/);
+  assert.match(html, /stat-value">2<\/strong><span class="stat-label">Рассмотрено на заседании/);
+  assert.match(html, /stat-value">1<\/strong><span class="stat-label">Подписать протокол/);
+  assert.ok(html.indexOf('stat-label">Голосование') < html.indexOf('stat-label">Рассмотрено на заседании'));
+  assert.ok(html.indexOf('stat-label">Рассмотрено на заседании') < html.indexOf('stat-label">Подписать протокол'));
+});
+
 test("КВГА и ДВГА видят статусы только своих запросов независимо от этапа дела", () => {
   const c = initialState().cases[0];
   const dvgaRequest = request("dvga-1", "ДВГА по области");

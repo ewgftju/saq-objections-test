@@ -281,10 +281,22 @@ export default function CasesList({
             "green",
           ],
           [
+            cases.filter((c) => caseStatusLabelForRole(c, "commission") === "Голосование").length,
+            "Голосование",
+            "обращений на голосовании",
+            "yellow",
+          ],
+          [
             cases.filter(hasBeenConsideredAtMeeting).length,
             "Рассмотрено на заседании",
             "заседание по делу проведено",
             "violet",
+          ],
+          [
+            cases.filter((c) => c.status === "protocol").length,
+            "Подписать протокол",
+            "ожидают подписания протокола",
+            "blue",
           ],
         ]
     : [
