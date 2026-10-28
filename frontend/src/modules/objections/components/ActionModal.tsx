@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Action, ObjectionCase, Role } from "../../../types";
 import { Button, Modal, Notice } from "../../../components/ui";
-import { actionForm, requiresConclusion } from "../formDefinitions";
+import { actionForm, requiresConclusion, requiresMotivatedResponse } from "../formDefinitions";
 import type { FormField, FormValues } from "../formDefinitions";
 import { disputed, normalizeVoteChoice } from "../services/decisions";
 import { DocumentContent } from "./DocumentModal";
@@ -1017,12 +1017,10 @@ export default function ActionModal({
             </div>
             <div hidden={requestTab !== "form"} className="form-grid">
               {definition.fields.map((field) => <Field key={field.name} field={field} />)}
-              {(action === "deliver" || action === "create-decision-project") && disputed(c).length > 0 && (
+              {action === "deliver" && !requiresMotivatedResponse(c) && disputed(c).length > 0 && (
                 <div className="field wide">
                   <span>
-                    {action === "create-decision-project"
-                      ? "Решение по оспариваемым пунктам"
-                      : "Итоговый результат по оспариваемым пунктам"}
+                    Итоговый результат по оспариваемым пунктам
                   </span>
                   {disputed(c).map((point) => {
                     const checked = Object.hasOwn(

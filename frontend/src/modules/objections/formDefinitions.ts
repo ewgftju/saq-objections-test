@@ -141,7 +141,7 @@ export function requiresConclusion(c: ObjectionCase) {
   );
 }
 
-function requiresMotivatedResponse(c: ObjectionCase) {
+export function requiresMotivatedResponse(c: ObjectionCase) {
   const appealType = (c.appealType || "").trim();
   return (
     appealType.startsWith("Жалоба") ||

@@ -2012,10 +2012,6 @@ export function applyAction(
           status: "pending",
         },
       ];
-      disputed(c).forEach((point) => {
-        point.finalDecisionByMajority =
-          form.get(`finalResponseMajority_${point.id}`) === "on";
-      });
       c.status = "decision_project_approval";
       doc(
         c.appealType === "Заявление"
@@ -2415,12 +2411,12 @@ export function applyAction(
           ),
         };
       }
-      // Галочка «с большинством голосов» редактируется и при формировании
-      // мотивированного ответа, в том числе если ранее был создан проект решения.
-      disputed(c).forEach((point) => {
-        point.finalDecisionByMajority =
-          form.get(`finalResponseMajority_${point.id}`) === "on";
-      });
+      if (!isMotivatedResponse) {
+        disputed(c).forEach((point) => {
+          point.finalDecisionByMajority =
+            form.get(`finalResponseMajority_${point.id}`) === "on";
+        });
+      }
       c.status = "final_response_approval";
       doc(
         isMotivatedResponse
