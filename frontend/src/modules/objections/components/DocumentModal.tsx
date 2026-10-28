@@ -974,7 +974,7 @@ export function DocumentContent({
                             return vote ? OUTCOMES[vote] : "—";
                           })()}
                     </td>
-                    <td>
+                    <td style={{ whiteSpace: "pre-wrap" }}>
                       {protocolPreview?.voteReasons?.[point.id]?.[member.id] ||
                         (
                           votes?.[point.id] as
