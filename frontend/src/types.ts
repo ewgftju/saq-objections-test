@@ -146,6 +146,7 @@ export interface Meeting {
 }
 
 export interface ProtocolVersion {
+  certificateRevision?: number;
   createdAt: string;
   author: string;
   rows: Array<{ pointId: string; pointNumber: string | number; memberId: string; memberName: string; vote: string; original: string; edited: string; changedAt?: string; changedBy?: string }>;
@@ -422,6 +423,17 @@ export interface CaseCertificate {
   memberPositions: CertificateMemberPosition[];
 }
 
+export interface CertificateChangeRequest {
+  proposedAt: string;
+  proposedBy: string;
+  reason?: string;
+  status: "pending" | "reviewed";
+  reviewedAt?: string;
+  reviewedBy?: string;
+  reviewComment?: string;
+  changes: Array<{ pointId: string; pointNumber: string; before: string; proposed: string; decision?: "accepted" | "rejected" }>;
+}
+
 /** Обращение, снятое директором ДАВГА с конкретной повестки. */
 export interface InactiveMeetingCase {
   caseId: string;
@@ -625,6 +637,8 @@ export interface ObjectionCase {
   /** Заседания, из которых обращение перенесено в другое заседание. */
   transferredFromMeetingIds?: string[];
   certificate?: CaseCertificate | null;
+  certificateChangeRequests?: CertificateChangeRequest[];
+  certificateRevision?: number;
   hearing?: Hearing | null;
   meeting?: Meeting | null;
   agendaDetails?: AgendaDetails;
@@ -724,6 +738,8 @@ export type Action =
   | "position"
   | "analysis"
   | "edit-certificate"
+  | "propose-certificate-change"
+  | "review-certificate-change"
   | "members"
   | "hearing"
   | "hearing-held"

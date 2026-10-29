@@ -6,7 +6,7 @@ import { Button, Modal, Notice } from "../../../components/ui";
 import { actionForm, requiresConclusion, requiresMotivatedResponse } from "../formDefinitions";
 import type { FormField, FormValues } from "../formDefinitions";
 import { disputed, normalizeVoteChoice } from "../services/decisions";
-import { certificateBasisForPoint, protocolDavgaFromReason, replaceProtocolDavga } from "../services/protocolReason";
+import { certificateBasisForPoint, currentProtocolRows, protocolDavgaFromReason, replaceProtocolDavga } from "../services/protocolReason";
 import { DocumentContent } from "./DocumentModal";
 import { DEMO_USER } from "../../../config";
 import { OUTCOMES } from "../../../data/constants";
@@ -109,6 +109,7 @@ export function Field({
           placeholder={field.placeholder}
           required={required}
           disabled={disabled}
+          readOnly={field.readOnly}
           rows={3}
         />
       ) : field.type === "select" ? (
@@ -250,7 +251,7 @@ function ProtocolVotesFields({
                 const reasonName = `protocolDavga_${point.id}_${member.id}`;
                 const vote = normalizeVoteChoice(values[voteName]);
                 const certificateBasis = certificateBasisForPoint(c, point);
-                const existing = c.meeting?.protocolVersions?.at(-1)?.rows.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasis;
+                const existing = currentProtocolRows(c)?.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasis;
                 const reason = values[reasonName] ?? protocolDavgaFromReason(existing);
                 const fullReason = replaceProtocolDavga(existing, reason);
                 return (
@@ -419,7 +420,7 @@ export default function ActionModal({
           ],
           [
             `protocolDavga_${point.id}_${member.id}`,
-            protocolDavgaFromReason(c.meeting?.protocolVersions?.at(-1)?.rows.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point)),
+            protocolDavgaFromReason(currentProtocolRows(c)?.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point)),
           ],
         ]),
       ),
@@ -1302,7 +1303,7 @@ export default function ActionModal({
                       Object.fromEntries(
                         protocolMembers.map((member) => [
                           member.id,
-                          replaceProtocolDavga(c.meeting?.protocolVersions?.at(-1)?.rows.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point), values[`protocolDavga_${point.id}_${member.id}`] ?? ""),
+                          replaceProtocolDavga(currentProtocolRows(c)?.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point), values[`protocolDavga_${point.id}_${member.id}`] ?? ""),
                         ]),
                       ),
                     ]),

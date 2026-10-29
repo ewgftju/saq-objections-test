@@ -1,7 +1,7 @@
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
-import { certificateBasisForPoint, replaceProtocolDavga } from "./protocolReason";
+import { certificateBasisForPoint, protocolDavgaFromReason, replaceProtocolDavga } from "./protocolReason";
 import type {
   Action,
   ActionOption,
@@ -402,6 +402,8 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     if (authorityAction) return authorityAction;
     return null;
   }
+  if (c.status === "meeting" && c.certificateChangeRequests?.at(-1)?.status === "pending")
+    return { action: "review-certificate-change", label: "Рассмотреть изменения справки", role: "director" };
   const authorityInProgress = [
     "request_approved",
     "response_approval",
@@ -730,7 +732,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       label: "Дополнение к возражению",
       role: "work",
     });
-    if (["commission_voting", "meeting"].includes(c.status)) {
+    if (["commission_voting", "meeting"].includes(c.status) && c.certificateChangeRequests?.at(-1)?.status !== "pending") {
       options.push({
         action: "vote",
         label: "Сформировать протокол заседания",
@@ -738,8 +740,8 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       });
       if (c.certificate)
         options.push({
-          action: "edit-certificate",
-          label: "Редактировать справку",
+          action: c.status === "meeting" ? "propose-certificate-change" : "edit-certificate",
+          label: c.status === "meeting" ? "Предложить изменение справки" : "Редактировать справку",
           role: "work",
         });
     }
@@ -858,6 +860,8 @@ export function applyAction(
   const next = structuredClone(state);
   const c = next.cases.find((item) => item.id === caseId);
   if (!c) throw new Error("Обращение не найдено");
+  if (c.status === "meeting" && c.certificateChangeRequests?.at(-1)?.status === "pending" && action !== "review-certificate-change" && action !== "upload")
+    throw new Error("Сначала директор должен рассмотреть предложенные изменения справки");
   const available = [nextAction(c, role), ...additionalActions(c)].find(
     (item) => item?.action === action,
   );
@@ -880,6 +884,50 @@ export function applyAction(
   let note = "";
 
   switch (action) {
+    case "propose-certificate-change": {
+      if (!c.certificate) throw new Error("Справка ещё не сформирована");
+      const changes = disputed(c).map((point) => ({
+        pointId: point.id,
+        pointNumber: point.number,
+        before: protocolDavgaFromReason(certificateBasisForPoint(c, point)),
+        proposed: String(form.get(`proposedDavga_${point.id}`) ?? "").trim(),
+      })).filter((change) => change.before !== change.proposed);
+      if (!changes.length) throw new Error("Измените доводы хотя бы по одному пункту");
+      if (changes.some((change) => !change.proposed)) throw new Error("Заполните предлагаемые доводы по изменённым пунктам");
+      c.certificateChangeRequests ||= [];
+      const proposedAt = new Date().toISOString();
+      const reason = String(form.get("changeReason") || "").trim();
+      c.certificateChangeRequests.push({ proposedAt, proposedBy: c.assignee, reason, status: "pending", changes });
+      title = "Предложены изменения справки";
+      note = `Предложил: ${c.assignee} · ${new Date(proposedAt).toLocaleString("ru-RU")}${reason ? `\nПричина: ${reason}` : ""}\n\n` + changes.map((change) => `Пункт № ${change.pointNumber}: было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n");
+      next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: ROLES.director, recipientRole: "director", date, read: false, text: `По обращению №${c.appealNumber || c.id} предложены изменения справки.` });
+      break;
+    }
+    case "review-certificate-change": {
+      const request = c.certificateChangeRequests?.at(-1);
+      if (!request || request.status !== "pending" || !c.certificate) throw new Error("Нет изменений справки, ожидающих рассмотрения");
+      for (const change of request.changes) {
+        const decision = String(form.get(`decision_${change.pointId}`) || "");
+        if (decision !== "accepted" && decision !== "rejected") throw new Error(`Выберите решение по пункту № ${change.pointNumber}`);
+        change.decision = decision;
+      }
+      request.status = "reviewed";
+      request.reviewedAt = new Date().toISOString();
+      request.reviewedBy = ROLES[role];
+      request.reviewComment = String(form.get("reviewComment") || "").trim();
+      const accepted = request.changes.filter((change) => change.decision === "accepted");
+      if (accepted.length) {
+        c.certificate.davgaArgumentsByPoint = { ...c.certificate.davgaArgumentsByPoint };
+        for (const change of accepted) c.certificate.davgaArgumentsByPoint[change.pointId] = change.proposed;
+        c.certificateRevision = (c.certificateRevision || 0) + 1;
+        const version = c.documents.filter((document) => document.kind === "certificate").length + 1;
+        doc(`Справка: результаты голосования членов АК. Версия ${version}`, "certificate", "Изменения доводов приняты директором ДАВГА. Повторное подписание не требуется.");
+      }
+      title = "Директор рассмотрел изменения справки";
+      note = `Рассмотрено: ${new Date(request.reviewedAt).toLocaleString("ru-RU")}\n\n` + request.changes.map((change) => `Пункт № ${change.pointNumber}: ${change.decision === "accepted" ? "принято" : "отклонено"}. Было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n") + (request.reviewComment ? `\nКомментарий: ${request.reviewComment}` : "");
+      next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: ROLES.work, recipientRole: "work", date, read: false, text: `Директор рассмотрел изменения справки по обращению №${c.appealNumber || c.id}.` });
+      break;
+    }
     case "start-analysis-additional-request":
     case "start-commission-additional-request": {
       const reason = text(
@@ -1836,8 +1884,9 @@ export function applyAction(
     case "vote": {
       const previousVersions = c.meeting?.protocolVersions || [];
       const previousOriginalVotes = c.meeting?.originalVotes ?? structuredClone(c.votes || null);
-      const originalRows = previousVersions[0]?.rows || [];
-      const previousRows = previousVersions.at(-1)?.rows || [];
+      const currentVersions = previousVersions.filter((version) => (version.certificateRevision ?? 0) === (c.certificateRevision ?? 0));
+      const originalRows = currentVersions[0]?.rows || [];
+      const previousRows = currentVersions.at(-1)?.rows || [];
       const changedAt = new Date().toISOString();
       // New protocol forms use the participants of the latest attendance poll.
       // The fallback supports cases that were created before attendance polls.
@@ -1941,7 +1990,7 @@ export function applyAction(
         projectReceived: date,
         recommendations: recommendationText || undefined,
         originalVotes: previousOriginalVotes,
-        protocolVersions: [...previousVersions, { createdAt: changedAt, author: c.assignee, rows: protocolRows }],
+        protocolVersions: [...previousVersions, { createdAt: changedAt, author: c.assignee, certificateRevision: c.certificateRevision ?? 0, rows: protocolRows }],
       };
       const changes = protocolRows.filter((row) => row.edited !== (previousRows.find((previous) => previous.pointId === row.pointId && previous.memberId === row.memberId)?.edited ?? row.original));
       if (changes.length) c.history.push({ date, actor: c.assignee, title: "Изменены обоснования протокола", text: changes.map((row) => `Пункт № ${row.pointNumber}, ${row.memberName}: было: ${previousRows.find((previous) => previous.pointId === row.pointId && previous.memberId === row.memberId)?.edited ?? row.original}\nСтало: ${row.edited}`).join("\n\n") });

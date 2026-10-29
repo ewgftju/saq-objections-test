@@ -2158,6 +2158,8 @@ export default function ObjectionsModule() {
               onAction={(action, role, requestId) => {
                 if (
                   action === "record-external-response" ||
+                  action === "propose-certificate-change" ||
+                  action === "review-certificate-change" ||
                   action === "record-decision-project-delivery" ||
                   action === "record-final-response-delivery" ||
                   action === "submit-decision-project-comment" ||

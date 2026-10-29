@@ -3,6 +3,11 @@ import { disputed } from "./decisions";
 
 const DAVGA_LABEL = "Доводы рабочего органа (ДАВГА МФ РК): ";
 
+export function currentProtocolRows(c: ObjectionCase) {
+  const latest = c.meeting?.protocolVersions?.at(-1);
+  return (latest?.certificateRevision ?? 0) === (c.certificateRevision ?? 0) ? latest?.rows : undefined;
+}
+
 export function protocolDavgaFromReason(reason: string) {
   const index = reason.lastIndexOf(DAVGA_LABEL);
   return index < 0 ? "" : reason.slice(index + DAVGA_LABEL.length);

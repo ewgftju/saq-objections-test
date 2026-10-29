@@ -4,6 +4,7 @@ import { DEMO_USER } from "../../config";
 import { OUTCOMES } from "../../data/constants";
 import { addWorkdays, filingDeadline } from "./services/deadlines";
 import { disputed } from "./services/decisions";
+import { certificateBasisForPoint, protocolDavgaFromReason } from "./services/protocolReason";
 import { controlDecisions } from "./services/workflow";
 import { hasSubjectSaqCabinet, subjectSaqCabinetLabel } from "./services/saqCabinets";
 
@@ -182,6 +183,25 @@ export function actionForm(
   let title = "Действие по обращению";
   let note = "";
   switch (action) {
+    case "propose-certificate-change":
+      title = "Предложить изменение справки";
+      note = "Измените доводы по нужным пунктам. До решения директора действующая справка не изменится.";
+      fields.push(...disputed(c).map((point) => area(`proposedDavga_${point.id}`, `Доводы ДАВГА по пункту № ${point.number}`, protocolDavgaFromReason(certificateBasisForPoint(c, point)))));
+      fields.push({ ...area("changeReason", "Причина изменения"), required: false });
+      break;
+    case "review-certificate-change": {
+      title = "Рассмотреть изменения справки";
+      const request = c.certificateChangeRequests?.at(-1);
+      if (request?.reason) fields.push({ ...area("proposalReason", "Причина предложения", request.reason), readOnly: true, required: false });
+      for (const change of request?.changes || []) {
+        fields.push(heading(`changeHeading_${change.pointId}`, `Пункт № ${change.pointNumber}`));
+        fields.push({ ...area(`before_${change.pointId}`, "Доводы в справке", change.before), readOnly: true, required: false });
+        fields.push({ ...area(`proposed_${change.pointId}`, "Предлагаемые доводы", change.proposed), readOnly: true, required: false });
+        fields.push(select(`decision_${change.pointId}`, "Решение директора", [["", "Выберите решение"], ["accepted", "Принять"], ["rejected", "Отклонить"]]));
+      }
+      fields.push({ ...area("reviewComment", "Комментарий директора"), required: false });
+      break;
+    }
     case "start-analysis-additional-request":
       title = "Направить дополнительный запрос по результатам анализа";
       fields.push(
@@ -1076,7 +1096,11 @@ export function actionForm(
     fields,
     note,
     submit:
-      action === "edit-certificate"
+      action === "propose-certificate-change"
+        ? "Направить директору"
+        : action === "review-certificate-change"
+          ? "Сохранить решение"
+        : action === "edit-certificate"
         ? "Сохранить"
         : action === "approve-request"
           ? "Согласовать запрос"
