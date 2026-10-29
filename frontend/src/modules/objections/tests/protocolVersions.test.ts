@@ -15,7 +15,7 @@ test("таблица показывает последнюю версию пер
   assert.ok(html.indexOf("Версия 2") < html.indexOf("Версия 1"));
   assert.match(html, /На подписании/);
   assert.match(html, /Возвращена на доработку/);
-  assert.match(html, /Пункт № 5 · обоснований: 1/);
+  assert.doesNotMatch(html, /Дата и время|Что изменено|Пункт № 5/);
   assert.equal((html.match(/aria-expanded="false"/g) || []).length, 2);
   assert.doesNotMatch(html, /Исправить/);
 });
