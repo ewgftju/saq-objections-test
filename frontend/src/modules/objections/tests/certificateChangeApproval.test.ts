@@ -30,7 +30,8 @@ test("директор принимает и отклоняет изменени
   let saved = state.cases.find((item) => item.id === c.id)!;
   assert.equal(saved.certificate?.davgaArgumentsByPoint?.[first.id], "Исходные доводы 1");
   assert.equal(nextAction(saved)?.action, "review-certificate-change");
-  assert.throws(() => applyAction(state, c.id, "vote", "work", new FormData()), /Сначала директор/);
+  assert.equal(nextAction(saved, "work")?.action, "vote");
+  assert.throws(() => applyAction(state, c.id, "vote", "work", new FormData()), /подтвердите отзыв/);
   assert.throws(() => applyAction(state, c.id, "review-certificate-change", "work", new FormData()));
   const fields = actionForm("review-certificate-change", saved, state.date, {}).fields;
   assert.equal(fields.find((field) => field.name === `before_${first.id}`)?.value, "Исходные доводы 1");
@@ -52,6 +53,8 @@ test("директор принимает и отклоняет изменени
   assert.equal(saved.certificateChangeRequests?.at(-1)?.reviewComment, "Проверено");
   assert.equal(currentProtocolRows(saved), undefined);
   assert.equal(nextAction(saved)?.action, "vote");
+  const staleForm = new FormData(); staleForm.set("certificateRevisionAtOpen", "0");
+  assert.throws(() => applyAction(state, c.id, "vote", "work", staleForm), /Справка изменилась/);
   const protocolForm = new FormData();
   protocolForm.set("protocolDate", state.date);
   for (const point of [first, second]) {
@@ -63,6 +66,48 @@ test("директор принимает и отклоняет изменени
   assert.equal(saved.meeting?.protocolVersions?.length, 2);
   assert.match(saved.meeting!.protocolVersions![1].rows[0].original, /Новые доводы 1/);
   assert.equal(saved.meeting!.protocolVersions![1].rows[0].original, saved.meeting!.protocolVersions![1].rows[0].edited);
+});
+
+test("формирование протокола с подтверждением отзывает только ожидающее предложение", () => {
+  let state = initialState();
+  const c = state.cases[0];
+  c.status = "meeting";
+  c.members = [{ id: "chair", name: "Председатель", present: true, recused: false, reason: "" }];
+  c.documents = c.documents.filter((document) => document.kind !== "certificate");
+  c.certificate = { davgaArguments: "Исходные доводы", memberPositions: [] };
+  const points = c.issues.filter((point) => point.disputed);
+  const proposal = new FormData();
+  for (const point of points) proposal.set(`proposedDavga_${point.id}`, "Предложенные доводы");
+  state = applyAction(state, c.id, "propose-certificate-change", "work", proposal);
+  let saved = state.cases.find((item) => item.id === c.id)!;
+  const request = saved.certificateChangeRequests!.at(-1)!;
+  const html = renderToStaticMarkup(createElement(ActionModal, { c: saved, action: "vote", date: state.date, role: "work", onSubmit() {}, onClose() {} }));
+  assert.match(html, /предложение будет отозвано/);
+  assert.match(html, /Сформировать протокол и отозвать предложение/);
+  assert.equal(nextAction(saved, "director")?.action, "review-certificate-change");
+  assert.equal(nextAction(saved, "work")?.action, "vote");
+  assert.throws(() => applyAction(state, c.id, "vote", "work", new FormData()), /подтвердите отзыв/);
+  const bad = new FormData(); bad.set("withdrawCertificateProposal", request.proposedAt);
+  assert.throws(() => applyAction(state, c.id, "vote", "work", bad));
+  assert.equal(state.cases.find((item) => item.id === c.id)?.certificateChangeRequests?.at(-1)?.status, "pending");
+  const protocol = new FormData();
+  protocol.set("withdrawCertificateProposal", request.proposedAt);
+  protocol.set("certificateRevisionAtOpen", "0");
+  protocol.set("protocolDate", state.date);
+  for (const point of points) {
+    protocol.set(`protocolVote_${point.id}_chair`, "accept");
+    protocol.set(`protocolDavga_${point.id}_chair`, "Исходные доводы");
+  }
+  state = applyAction(state, c.id, "vote", "work", protocol);
+  saved = state.cases.find((item) => item.id === c.id)!;
+  assert.equal(saved.certificateChangeRequests?.at(-1)?.status, "withdrawn");
+  assert.equal(saved.certificateChangeRequests?.at(-1)?.changes[0].proposed, "Предложенные доводы");
+  assert.equal(saved.certificate?.davgaArguments, "Исходные доводы");
+  assert.match(saved.meeting!.protocolVersions!.at(-1)!.rows[0].original, /Исходные доводы/);
+  assert.ok(saved.history.some((event) => event.title.includes("отозвано при формировании протокола")));
+  assert.ok(state.notifications.some((notification) => notification.recipientRole === "director" && notification.text.includes("отозвано")));
+  assert.notEqual(nextAction(saved, "director")?.action, "review-certificate-change");
+  assert.throws(() => applyAction(state, c.id, "review-certificate-change", "director", new FormData()));
 });
 
 test("при отказе по всем пунктам справка и её версия не меняются", () => {

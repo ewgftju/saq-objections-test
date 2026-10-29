@@ -376,6 +376,11 @@ export default function ActionModal({
   onSaveDraft?: (form: FormData) => void | Promise<void>;
   onClose: () => void;
 }) {
+  const [certificateRevisionAtOpen] = useState(c.certificateRevision ?? 0);
+  const [pendingCertificateRequestAtOpen] = useState(() => {
+    const request = c.certificateChangeRequests?.at(-1);
+    return request?.status === "pending" ? request.proposedAt : undefined;
+  });
   const [values, setValues] = useState<FormValues>(() => {
     if (action === "request" || action === "request-saq")
       return { ...(c.requestDrafts?.[action]?.values || {}) };
@@ -1235,6 +1240,11 @@ export default function ActionModal({
           </>
         ) : action === "vote" ? (
           <>
+            <input type="hidden" name="certificateRevisionAtOpen" value={certificateRevisionAtOpen} />
+            {pendingCertificateRequestAtOpen && <>
+              <input type="hidden" name="withdrawCertificateProposal" value={pendingCertificateRequestAtOpen} />
+              <Notice>Изменения справки ещё не рассмотрены директором ДАВГА. При формировании протокола предложение будет отозвано, а в протокол подтянутся доводы из действующей справки.</Notice>
+            </>}
             <div className="request-modal-details">
               <div>
                 <span>Автор</span>
@@ -1766,6 +1776,8 @@ export default function ActionModal({
                   ? "Сохранить ответ"
                 : action === "subject-response"
                   ? "Направить ответ"
+                : action === "vote" && pendingCertificateRequestAtOpen
+                  ? "Сформировать протокол и отозвать предложение"
                 : definition.submit}
           </Button>
         </div>

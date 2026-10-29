@@ -427,7 +427,9 @@ export interface CertificateChangeRequest {
   proposedAt: string;
   proposedBy: string;
   reason?: string;
-  status: "pending" | "reviewed";
+  status: "pending" | "reviewed" | "withdrawn";
+  withdrawnAt?: string;
+  withdrawnBy?: string;
   reviewedAt?: string;
   reviewedBy?: string;
   reviewComment?: string;
