@@ -546,7 +546,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     protocol: {
       action: "sign",
       label: "Подписать протокол",
-      role: c.meeting?.commissionSigned ? "director" : "commission",
+      role: "commission",
     },
     decision_project: {
       action: "create-decision-project",
@@ -1949,19 +1949,13 @@ export function applyAction(
       doc(
         "Проект протокола заседания",
         "protocol",
-        "Состав участников зафиксирован. Ожидаются подписи участников и секретаря.",
+        "Состав участников зафиксирован. Ожидаются подписи членов АК.",
       );
       break;
     }
     case "sign": {
       if (!c.meeting) throw new Error("Протокол не сформирован");
-      if (!c.meeting.commissionSigned) {
-        checked(form, "secretary", ...c.members.filter((member) => member.present).map((member) => `signed_${member.id}`));
-        c.meeting.commissionSigned = date;
-        title = "Подписи членов АК и секретаря зафиксированы";
-        note = "Протокол направлен директору ДАВГА для подписания.";
-        break;
-      }
+      checked(form, ...c.members.filter((member) => member.present).map((member) => `signed_${member.id}`));
       const version = c.meeting.protocolVersions?.at(-1);
       if (version) { version.signedAt = new Date().toISOString(); version.signedBy = ROLES[role]; }
       c.meeting.signed = date;

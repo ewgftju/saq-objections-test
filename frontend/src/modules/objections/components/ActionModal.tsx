@@ -7,7 +7,6 @@ import { actionForm, requiresConclusion, requiresMotivatedResponse } from "../fo
 import type { FormField, FormValues } from "../formDefinitions";
 import { disputed, normalizeVoteChoice } from "../services/decisions";
 import { certificateBasisForPoint, protocolDavgaFromReason, replaceProtocolDavga } from "../services/protocolReason";
-import { ProtocolChanges } from "./ProtocolChanges";
 import { DocumentContent } from "./DocumentModal";
 import { DEMO_USER } from "../../../config";
 import { OUTCOMES } from "../../../data/constants";
@@ -1709,7 +1708,6 @@ export default function ActionModal({
           </>
         ) : (
           <>
-            {action === "sign" && role === "director" && c.meeting?.protocolVersions?.at(-1) && <ProtocolChanges version={c.meeting.protocolVersions.at(-1)!} />}
             {definition.note && <Notice>{definition.note}</Notice>}
             {definition.fields.map((field) => (
               <Field key={field.name} field={field} />

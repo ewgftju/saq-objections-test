@@ -43,13 +43,14 @@ test("изменения обоснования сохраняются, дост
   assert.equal(saved.meeting?.protocolVersions?.length, 2);
   assert.equal(saved.meeting?.protocolVersions?.[1].rows[0].edited, original);
   assert.equal(saved.history.filter((event) => event.title === "Изменены обоснования протокола").length, 2);
-  const commissionSign = new FormData(); commissionSign.set("secretary", "on"); commissionSign.set("signed_chair", "on");
+  // Ранее дело могло остаться на ожидании подписи директора.
+  saved.meeting!.commissionSigned = state.date;
+  assert.equal(nextAction(saved, "commission")?.role, "commission");
+  const commissionSign = new FormData(); commissionSign.set("signed_chair", "on"); commissionSign.set("reason", "Итог");
   state = applyAction(state, c.id, "sign", "commission", commissionSign);
-  assert.equal(nextAction(state.cases.find((item) => item.id === c.id)!, "director")?.role, "director");
-  const sign = new FormData(); sign.set("reason", "Итог");
-  state = applyAction(state, c.id, "sign", "director", sign);
   saved = state.cases.find((item) => item.id === c.id)!;
   assert.ok(saved.meeting?.protocolVersions?.[1].signedAt);
+  assert.notEqual(saved.status, "protocol");
   const html = renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "protocol" }));
   assert.doesNotMatch(html, /Изменены обоснования|Посмотреть изменения/);
 });

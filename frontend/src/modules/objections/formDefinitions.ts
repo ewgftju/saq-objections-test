@@ -565,16 +565,15 @@ export function actionForm(
     case "sign":
       title = "Подписание протокола";
       fields.push(
-        ...(c.meeting?.commissionSigned ? [] : c.members
+        ...c.members
           .filter((member) => member.present)
           .map((member) =>
             check(
               `signed_${member.id}`,
               `${member.name}: подпись зафиксирована`,
             ),
-          )),
-        ...(c.meeting?.commissionSigned ? [] : [check("secretary", "Секретарь подписал протокол")]),
-        ...(c.meeting?.commissionSigned ? [area(
+          ),
+        area(
           "reason",
           "Итоговая мотивировка",
           disputed(c)
@@ -583,7 +582,7 @@ export function actionForm(
                 `Пункт ${point.number}: ${point.analysis || ""} ${point.legal || ""}`,
             )
             .join("\n"),
-        )] : []),
+        ),
       );
       note =
         "Проект протокола — следующий рабочий день после заседания; подписи — в течение рабочего дня после получения проекта.";
