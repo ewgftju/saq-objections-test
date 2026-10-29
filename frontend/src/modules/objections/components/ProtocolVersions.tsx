@@ -1,6 +1,6 @@
 import { Fragment, useState } from "react";
 import type { CaseStatus, ProtocolVersion } from "../../../types";
-import { ProtocolChanges } from "./ProtocolChanges";
+import { davgaChanges, ProtocolChanges } from "./ProtocolChanges";
 
 export function ProtocolVersions({ versions, status }: { versions: ProtocolVersion[]; status: CaseStatus }) {
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -11,7 +11,7 @@ export function ProtocolVersions({ versions, status }: { versions: ProtocolVersi
       <table className="data-table" style={{ minWidth: 620 }}>
         <thead><tr><th>Версия</th><th>Дата и время</th><th>Что изменено</th><th>Статус</th><th>Действие</th></tr></thead>
         <tbody>{ordered.map(({ version, index }) => {
-          const changes = version.rows.filter((row) => row.original !== row.edited);
+          const changes = davgaChanges(version);
           const points = [...new Set(changes.map((row) => row.pointNumber))];
           const statusLabel = version.signedAt ? "Подписана" : version.returnedAt ? "Возвращена на доработку" : index === versions.length - 1 && status === "protocol" ? "На подписании" : "Сформирована";
           const isOpen = expanded === index;

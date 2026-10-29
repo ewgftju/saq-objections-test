@@ -5,6 +5,20 @@ import { normalizeVoteChoice } from "../services/decisions";
 
 type DiffPart = { text: string; kind: "same" | "removed" | "added" };
 
+function davgaText(reason: string) {
+  const label = /(?:Доводы рабочего органа\s*\(ДАВГА МФ РК\)|Доводы ДАВГА)\s*:\s*/gi;
+  let match: RegExpExecArray | null;
+  let start = -1;
+  while ((match = label.exec(reason))) start = match.index + match[0].length;
+  if (start >= 0) return reason.slice(start);
+  return /(?:Доводы ДВГА|Доводы КВГА|Доводы объекта|Мотивированный ответ)/i.test(reason) ? "" : reason;
+}
+
+export function davgaChanges(version: ProtocolVersion) {
+  return version.rows.map((row) => ({ ...row, original: davgaText(row.original), edited: davgaText(row.edited) }))
+    .filter((row) => row.original !== row.edited);
+}
+
 function compareText(original: string, edited: string): DiffPart[] {
   const beforeAll = Array.from(original);
   const afterAll = Array.from(edited);
@@ -46,8 +60,8 @@ function compareText(original: string, edited: string): DiffPart[] {
 }
 
 export function ProtocolChanges({ version, expanded = false }: { version: ProtocolVersion; expanded?: boolean }) {
-  const changes = version.rows.filter((row) => row.original !== row.edited);
-  if (!changes.length) return <p>Обоснования соответствуют справке.</p>;
+  const changes = davgaChanges(version);
+  if (!changes.length) return <p>Доводы ДАВГА соответствуют справке.</p>;
   const groups = new Map<string, typeof changes>();
   for (const row of changes) {
     const key = JSON.stringify([row.pointId, row.original, row.edited]);
@@ -68,7 +82,7 @@ export function ProtocolChanges({ version, expanded = false }: { version: Protoc
             {row.changedAt && <div>Изменил: {row.changedBy} · {new Date(row.changedAt).toLocaleString("ru-RU")}</div>}
           </div>;
         })}
-        <p style={{ whiteSpace: "pre-wrap" }}><b>Обоснование протокола</b><br />{compareText(first.original, first.edited).map((part, index) => part.kind === "same"
+        <p style={{ whiteSpace: "pre-wrap" }}><b>Доводы ДАВГА</b><br />{compareText(first.original, first.edited).map((part, index) => part.kind === "same"
           ? <Fragment key={index}>{part.text}</Fragment>
           : <mark key={index} title={part.kind === "removed" ? "Удалено" : "Добавлено"} style={part.kind === "removed" ? { color: "#b42318", background: "#fee4e2", textDecoration: "line-through" } : { color: "#175cd3", background: "#dbeafe" }}>{part.text}</mark>)}</p>
       </section>;
