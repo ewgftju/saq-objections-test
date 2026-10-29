@@ -1713,3 +1713,9 @@
     padding: 16px;
   }
 }
+.applicant-status-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 28px;
+}

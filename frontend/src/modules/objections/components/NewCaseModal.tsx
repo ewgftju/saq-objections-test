@@ -115,6 +115,11 @@ export default function NewCaseModal({
   const [requirementFiles, setRequirementFiles] = useState<File[]>([]);
   const [isApplicantRepresentative, setIsApplicantRepresentative] =
     useState(false);
+  const [isApplicantAuditObject, setIsApplicantAuditObject] = useState(false);
+  const [applicantName, setApplicantName] = useState("");
+  const [applicantIdentifier, setApplicantIdentifier] = useState("");
+  const [auditObjectName, setAuditObjectName] = useState("");
+  const [auditObjectIdentifier, setAuditObjectIdentifier] = useState("");
   const [powerOfAttorneyFile, setPowerOfAttorneyFile] = useState<File | null>(
     null,
   );
@@ -513,14 +518,10 @@ export default function NewCaseModal({
           </select>
         </label>
         <div className="form-grid">
-          <Field
-            field={{
-              name: "org",
-              label: applicantNameLabel,
-              type: "text",
-              required: true,
-            }}
-          />
+          <label className="field">
+            <span>{applicantNameLabel}<span className="required"> *</span></span>
+            <input name="org" type="text" required value={applicantName} onChange={(event) => setApplicantName(event.target.value)} />
+          </label>
           <label className="field">
             <span>
               Тип идентификатора заявителя
@@ -539,23 +540,25 @@ export default function NewCaseModal({
               <option value="ИИН">ИИН</option>
             </select>
           </label>
-          <Field
-            field={{
-              name: "bin",
-              label: applicantIdentifierLabel,
-              type: "text",
-              required: true,
-            }}
-          />
+          <label className="field">
+            <span>{applicantIdentifierLabel}<span className="required"> *</span></span>
+            <input name="bin" type="text" required value={applicantIdentifier} onChange={(event) => setApplicantIdentifier(event.target.value)} />
+          </label>
         </div>
         {supportsRepresentativeConfirmation && (
           <section className="representative-confirmation">
+            <div className="applicant-status-options">
             <label className="checkbox-row">
               <input
                 type="checkbox"
                 checked={isApplicantRepresentative}
                 onChange={(event) => {
                   setIsApplicantRepresentative(event.target.checked);
+                  if (event.target.checked && isApplicantAuditObject) {
+                    setAuditObjectName(applicantName);
+                    setAuditObjectIdentifier(applicantIdentifier);
+                    setIsApplicantAuditObject(false);
+                  }
                   if (!event.target.checked) {
                     setPowerOfAttorneyFile(null);
                     if (powerOfAttorneyInput.current)
@@ -565,6 +568,24 @@ export default function NewCaseModal({
               />
               Заявитель является представителем объекта аудита
             </label>
+            {hasSeparateAuditObject && (
+              <label className="checkbox-row">
+                <input type="checkbox" checked={isApplicantAuditObject} onChange={(event) => {
+                  const checked = event.target.checked;
+                  if (!checked) {
+                    setAuditObjectName(applicantName);
+                    setAuditObjectIdentifier(applicantIdentifier);
+                  } else {
+                    setIsApplicantRepresentative(false);
+                    setPowerOfAttorneyFile(null);
+                    if (powerOfAttorneyInput.current) powerOfAttorneyInput.current.value = "";
+                  }
+                  setIsApplicantAuditObject(checked);
+                }} />
+                Заявитель является объектом аудита
+              </label>
+            )}
+            </div>
             {isApplicantRepresentative && (
               <div className="point-evidence-field representative-power-of-attorney">
                 <span>Вложить доверенность</span>
@@ -624,22 +645,14 @@ export default function NewCaseModal({
         <div className="form-grid">
           {hasSeparateAuditObject && (
             <>
-              <Field
-                field={{
-                  name: "auditObjectName",
-                  label: "Наименование объекта аудита",
-                  type: "text",
-                  required: true,
-                }}
-              />
-              <Field
-                field={{
-                  name: "auditObjectBin",
-                  label: "БИН/ИИН",
-                  type: "text",
-                  required: true,
-                }}
-              />
+              <label className="field">
+                <span>Наименование объекта аудита<span className="required"> *</span></span>
+                <input name="auditObjectName" type="text" required readOnly={isApplicantAuditObject} value={isApplicantAuditObject ? applicantName : auditObjectName} onChange={(event) => setAuditObjectName(event.target.value)} />
+              </label>
+              <label className="field">
+                <span>БИН/ИИН<span className="required"> *</span></span>
+                <input name="auditObjectBin" type="text" required readOnly={isApplicantAuditObject} value={isApplicantAuditObject ? applicantIdentifier : auditObjectIdentifier} onChange={(event) => setAuditObjectIdentifier(event.target.value)} />
+              </label>
             </>
           )}
           {[
