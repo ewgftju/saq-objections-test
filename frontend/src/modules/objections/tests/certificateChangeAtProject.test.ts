@@ -17,7 +17,8 @@ function setup() {
   c.issues = [first, second];
   c.documents = c.documents.filter((doc) => doc.kind !== "certificate");
   c.certificate = { davgaArguments: "", davgaArgumentsByPoint: { [first.id]: "Первоначальные доводы 1", [second.id]: "Первоначальные доводы 2" }, memberPositions: [] };
-  c.meeting = { date: state.date, number: "ПЗ-1", audio: "", signed: state.date };
+  c.votes = Object.fromEntries([first, second].map((point) => [point.id, { yes: 1, no: 0, approved: true, chair: "chair", present: 1, eligible: 1, votes: { chair: "accept" } }]));
+  c.meeting = { date: state.date, number: "ПЗ-1", audio: "", signed: state.date, protocolVersions: [{ createdAt: state.date, signedAt: state.date, author: "Исполнитель", rows: [first, second].map((point, index) => ({ pointId: point.id, pointNumber: point.number, memberId: "chair", memberName: "Председатель", vote: "accept", original: `Доводы рабочего органа (ДАВГА МФ РК): Первоначальные доводы ${index + 1}`, edited: `Доводы рабочего органа (ДАВГА МФ РК): Доводы протокола ${index + 1}` })) }] };
   addDocument(c, "work", state.date, "Подписанная справка", "certificate", "");
   addDocument(c, "commission", state.date, "Подписанный протокол", "protocol", "");
   return { state, c, first, second };
@@ -53,8 +54,9 @@ test("на этапе проекта директор принимает или 
   saved = state.cases.find((item) => item.id === c.id)!;
   const project = saved.documents.filter((doc) => doc.kind === "decision-project").at(-1)!;
   const html = renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "decision-project", document: project }));
-  assert.match(html, /Принятые доводы 1/);
-  assert.match(html, /Первоначальные доводы 2/);
+  assert.match(html, /Доводы протокола 1/);
+  assert.match(html, /Доводы протокола 2/);
+  assert.doesNotMatch(html, /Принятые доводы 1/);
   assert.doesNotMatch(html, /Отклонённые доводы 2/);
 });
 
