@@ -21,5 +21,20 @@ test("сравнение группирует одинаковые измене�
   assert.match(html, /Алиева/); assert.match(html, /Кенбеил/);
   assert.doesNotMatch(html, /Другой/);
   assert.equal((html.match(/Другие изменения — полное сравнение/g) || []).length, 1);
-  assert.match(html, /НОВЫЙ ТЕКСТ/);
+  assert.match(html, /НОВЫЙ<\/mark> ТЕКСТ/);
+});
+
+test("удалённые слова зачёркнуты, а добавленные выделены в своей редакции", () => {
+  const prefix = "Доводы рабочего органа (ДАВГА МФ РК): ";
+  const original = prefix + "документы не подтверждают вывод и не учитывают данные";
+  const version: ProtocolVersion = { author: "Исполнитель", createdAt: "2026-10-29T10:00:00Z", rows: [
+    { pointId: "1", pointNumber: "1", memberId: "a", memberName: "Алиева", vote: "accept", original, edited: prefix + "документы частично подтверждают вывод и учитывают данные" },
+    { pointId: "1", pointNumber: "1", memberId: "b", memberName: "Другой", vote: "reject", original, edited: prefix + "документы не подтверждают новый вывод и не учитывают данные" },
+  ] };
+  const html = renderToStaticMarkup(createElement(ProtocolChanges, { version }));
+  assert.match(html, /text-decoration:line-through/);
+  assert.match(html, /<mark[^>]*>не<\/mark>/);
+  assert.match(html, /<mark[^>]*>частично\s*<\/mark>/);
+  assert.match(html, /<mark[^>]*>новый\s*<\/mark>/);
+  assert.equal((html.match(/<b>Стало<\/b>/g) || []).length, 2);
 });
