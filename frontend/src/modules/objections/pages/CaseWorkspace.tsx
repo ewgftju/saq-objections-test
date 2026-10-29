@@ -1,5 +1,5 @@
 import { Fragment, useState, type ReactNode } from "react";
-import { Button, Notice, PageHeading } from "../../../components/ui";
+import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import { ProtocolVersions } from "../components/ProtocolVersions";
 import { CLOSED, OUTCOMES, TYPES } from "../../../data/constants";
 import type {
@@ -625,6 +625,7 @@ export default function CaseWorkspace({
   onUpload: () => void;
 }) {
   const [issuesExpanded, setIssuesExpanded] = useState(true);
+  const [protocolHistoryOpen, setProtocolHistoryOpen] = useState(false);
   const agendaDetails = c.agendaDetails;
   const isActionComplaint = c.appealType === "Жалоба на действие/бездействие";
   const actionAppealAuthorities = agendaDetails?.actionAppealAuthorities || [];
@@ -1163,9 +1164,6 @@ export default function CaseWorkspace({
                       <h3 className="form-section">
                         Материалы и результаты рассмотрения
                       </h3>
-                      {(role === "work" || role === "director" || role === "demo-superuser") && c.meeting?.protocolVersions?.length ? (
-                        <ProtocolVersions versions={c.meeting.protocolVersions} status={c.status} />
-                      ) : null}
                       {!isCommission && (() => {
                         const conclusions = c.documents.filter(
                           (document) => document.kind === "conclusion",
@@ -1469,9 +1467,19 @@ export default function CaseWorkspace({
                                   >
                                     Скачать Word
                                   </Button>
+                                  {(role === "work" || role === "director" || role === "demo-superuser") && Boolean(c.meeting?.protocolVersions?.length) && (
+                                    <Button onClick={() => setProtocolHistoryOpen(true)}>
+                                      История изменений
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </div>
+                            {protocolHistoryOpen && (role === "work" || role === "director" || role === "demo-superuser") && c.meeting?.protocolVersions?.length ? (
+                              <Modal title="История изменений протокола" wide onClose={() => setProtocolHistoryOpen(false)}>
+                                <ProtocolVersions versions={c.meeting.protocolVersions} status={c.status} />
+                              </Modal>
+                            ) : null}
                           </section>
                         ) : null;
                       })()}
