@@ -18,6 +18,7 @@ import {
 } from "../../../utils/auditAuthority";
 import { downloadFile } from "../../../utils/download";
 import { DEMO_USER } from "../../../config";
+import { requiresMotivatedResponse } from "../formDefinitions";
 import {
   normalizeVoteChoice,
   overall,
@@ -662,6 +663,8 @@ export function DocumentContent({
 
   if (kind === "final-response" || kind === "decision-project") {
     const isDecisionProject = kind === "decision-project";
+    const isMotivatedResponse = kind === "final-response" && (document ? /мотивированн/i.test(document.name) : requiresMotivatedResponse(snapshot));
+    const useDavgaArguments = isDecisionProject || isMotivatedResponse;
     const outcome = overall(snapshot);
     const decision = outcome
       ? OUTCOMES[outcome].toLocaleLowerCase("ru-RU")
@@ -683,7 +686,7 @@ export function DocumentContent({
           normalizeVoteChoice(vote) === winningOutcome &&
           Boolean(pointVotes?.voteReasons?.[memberId]?.trim()),
       )?.[0];
-      const reason = isDecisionProject
+      const reason = useDavgaArguments
         ? snapshot.certificate?.davgaArgumentsByPoint
           ? snapshot.certificate.davgaArgumentsByPoint[point.id]?.trim() || "—"
           : snapshot.certificate?.davgaArguments?.trim() || "—"
@@ -780,7 +783,7 @@ export function DocumentContent({
                 <p className="final-response-point-title">
                   - по п. {point.number}:
                 </p>
-                <p className="final-response-point-reason" style={isDecisionProject ? { whiteSpace: "pre-wrap" } : undefined}>{point.reason}{isDecisionProject && (point.reason === "—" || /[.!?…]$/.test(point.reason)) ? "" : "."}</p>
+                <p className="final-response-point-reason" style={useDavgaArguments ? { whiteSpace: "pre-wrap" } : undefined}>{point.reason}{useDavgaArguments && (point.reason === "—" || /[.!?…]$/.test(point.reason)) ? "" : "."}</p>
                 <p className="final-response-point-decision">
                   На основании вышеизложенного, Апелляционной комиссией принято
                   решение {point.decision} {appealObjectLabel(snapshot, point.outcome)} по

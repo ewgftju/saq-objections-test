@@ -424,7 +424,7 @@ export interface CaseCertificate {
 }
 
 export interface CertificateChangeRequest {
-  stage?: "protocol" | "decision-project";
+  stage?: "protocol" | "decision-project" | "motivated-response";
   proposedAt: string;
   proposedBy: string;
   reason?: string;

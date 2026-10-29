@@ -302,6 +302,14 @@ function requiresMotivatedResponse(c: ObjectionCase) {
   );
 }
 
+function isMotivatedResponseStage(c: ObjectionCase) {
+  return c.status === "decided" && requiresMotivatedResponse(c);
+}
+
+function certificateChangeStageLabel(stage: "protocol" | "decision-project" | "motivated-response" | undefined) {
+  return stage === "protocol" ? "Формирование протокола" : stage === "decision-project" ? "Формирование проекта решения" : stage === "motivated-response" ? "Формирование мотивированного ответа" : "Не указан";
+}
+
 const REQUEST_STAGE_STATUSES: ObjectionCase["status"][] = [
   "accepted",
   "requested",
@@ -402,11 +410,13 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     if (authorityAction) return authorityAction;
     return null;
   }
-  if (["meeting", "decision_project"].includes(c.status) && c.certificateChangeRequests?.at(-1)?.status === "pending")
+  if ((["meeting", "decision_project"].includes(c.status) || isMotivatedResponseStage(c)) && c.certificateChangeRequests?.at(-1)?.status === "pending")
     return role === "work"
       ? c.status === "meeting"
         ? { action: "vote", label: "Сформировать протокол заседания", role: "work" }
-        : { action: "create-decision-project", label: "Сформировать проект решения", role: "work" }
+        : c.status === "decision_project"
+          ? { action: "create-decision-project", label: "Сформировать проект решения", role: "work" }
+          : { action: "deliver", label: "Сформировать мотивированный ответ", role: "work" }
       : { action: "review-certificate-change", label: "Рассмотреть изменения справки", role: "director" };
   const authorityInProgress = [
     "request_approved",
@@ -631,6 +641,11 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   const options: ActionOption[] = [
     { action: "upload", label: "Добавить материал", role: subjectRoleForCase(c) },
   ];
+  if (isMotivatedResponseStage(c) && c.certificate) {
+    if (c.certificateChangeRequests?.at(-1)?.status !== "pending")
+      options.push({ action: "propose-certificate-change", label: "Предложить изменение справки", role: "work" });
+    else options.push({ action: "deliver", label: "Сформировать мотивированный ответ", role: "work" });
+  }
   if (c.status === "protocol") options.push({ action: "return-protocol", label: "Вернуть протокол на доработку", role: "director" });
   if (c.status === "materials") {
     options.push({
@@ -868,7 +883,7 @@ export function applyAction(
   const next = structuredClone(state);
   const c = next.cases.find((item) => item.id === caseId);
   if (!c) throw new Error("Обращение не найдено");
-  if (["meeting", "decision_project"].includes(c.status) && c.certificateChangeRequests?.at(-1)?.status === "pending" && action !== "review-certificate-change" && action !== "vote" && action !== "create-decision-project" && action !== "upload")
+  if ((["meeting", "decision_project"].includes(c.status) || isMotivatedResponseStage(c)) && c.certificateChangeRequests?.at(-1)?.status === "pending" && action !== "review-certificate-change" && action !== "vote" && action !== "create-decision-project" && action !== "deliver" && action !== "upload")
     throw new Error("Сначала директор должен рассмотреть предложенные изменения справки");
   const available = [nextAction(c, role), ...additionalActions(c)].find(
     (item) => item?.action === action,
@@ -891,7 +906,7 @@ export function applyAction(
   let title: string = available.label;
   let note = "";
 
-  if (action === "vote" || action === "create-decision-project") {
+  if (action === "vote" || action === "create-decision-project" || (action === "deliver" && isMotivatedResponseStage(c))) {
       if (form.has("certificateRevisionAtOpen") && String(form.get("certificateRevisionAtOpen")) !== String(c.certificateRevision ?? 0))
         throw new Error("Справка изменилась после открытия формы. Закройте её и откройте формирование документа заново.");
       const pendingChange = c.certificateChangeRequests?.at(-1);
@@ -901,12 +916,13 @@ export function applyAction(
         pendingChange.status = "withdrawn";
         pendingChange.withdrawnAt = new Date().toISOString();
         pendingChange.withdrawnBy = c.assignee;
-        const stageLabel = pendingChange.stage === "protocol" ? "Формирование протокола" : pendingChange.stage === "decision-project" ? "Формирование проекта решения" : "Не указан";
-        c.history.push({ date, actor: c.assignee, title: `Предложение об изменении справки отозвано при формировании ${action === "vote" ? "протокола" : "проекта решения"}`, text: `Этап: ${stageLabel}\nОтозвано: ${new Date(pendingChange.withdrawnAt).toLocaleString("ru-RU")}. Справка не изменена.` });
+        const stageLabel = certificateChangeStageLabel(pendingChange.stage);
+        const documentName = action === "vote" ? "протокола" : action === "create-decision-project" ? "проекта решения" : "мотивированного ответа";
+        c.history.push({ date, actor: c.assignee, title: `Предложение об изменении справки отозвано при формировании ${documentName}`, text: `Этап: ${stageLabel}\nОтозвано: ${new Date(pendingChange.withdrawnAt).toLocaleString("ru-RU")}. Справка не изменена.` });
         for (const notification of next.notifications) {
           if (notification.caseId === c.id && notification.recipientRole === "director" && notification.text.includes("предложены изменения справки")) notification.read = true;
         }
-        next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: ROLES.director, recipientRole: "director", date, read: false, text: `Предложение об изменении справки по обращению №${c.appealNumber || c.id} отозвано при формировании ${action === "vote" ? "протокола" : "проекта решения"}.` });
+        next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: ROLES.director, recipientRole: "director", date, read: false, text: `Предложение об изменении справки по обращению №${c.appealNumber || c.id} отозвано при формировании ${documentName}.` });
       }
   }
 
@@ -924,8 +940,8 @@ export function applyAction(
       c.certificateChangeRequests ||= [];
       const proposedAt = new Date().toISOString();
       const reason = String(form.get("changeReason") || "").trim();
-      const stage = c.status === "decision_project" ? "decision-project" : "protocol";
-      const stageLabel = stage === "decision-project" ? "Формирование проекта решения" : "Формирование протокола";
+      const stage = c.status === "decision_project" ? "decision-project" : isMotivatedResponseStage(c) ? "motivated-response" : "protocol";
+      const stageLabel = certificateChangeStageLabel(stage);
       c.certificateChangeRequests.push({ stage, proposedAt, proposedBy: c.assignee, reason, status: "pending", changes });
       title = "Предложены изменения справки";
       note = `Этап: ${stageLabel}\nПредложил: ${c.assignee} · ${new Date(proposedAt).toLocaleString("ru-RU")}${reason ? `\nПричина: ${reason}` : ""}\n\n` + changes.map((change) => `Пункт № ${change.pointNumber}: было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n");
@@ -953,7 +969,7 @@ export function applyAction(
         doc(`Справка: результаты голосования членов АК. Версия ${version}`, "certificate", "Изменения доводов приняты директором ДАВГА. Повторное подписание не требуется.");
       }
       title = "Директор рассмотрел изменения справки";
-      const stageLabel = request.stage === "protocol" ? "Формирование протокола" : request.stage === "decision-project" ? "Формирование проекта решения" : "Не указан";
+      const stageLabel = certificateChangeStageLabel(request.stage);
       note = `Этап: ${stageLabel}\nРассмотрено: ${new Date(request.reviewedAt).toLocaleString("ru-RU")}\n\n` + request.changes.map((change) => `Пункт № ${change.pointNumber}: ${change.decision === "accepted" ? "принято" : "отклонено"}. Было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n") + (request.reviewComment ? `\nКомментарий: ${request.reviewComment}` : "");
       next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: ROLES.work, recipientRole: "work", date, read: false, text: `Директор рассмотрел изменения справки по обращению №${c.appealNumber || c.id}.` });
       break;

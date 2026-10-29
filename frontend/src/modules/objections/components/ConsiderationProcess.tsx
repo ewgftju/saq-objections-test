@@ -615,6 +615,7 @@ export default function ConsiderationProcess({
       option.action !== "vote" &&
       option.action !== "fill-meeting-certificate" &&
       (option.action !== "create-decision-project" || role === "demo-superuser") &&
+      (option.action !== "deliver" || role === "demo-superuser") &&
       (option.action !== "propose-certificate-change" || role === "work" || role === "demo-superuser") &&
       option.action !== "supplement" &&
       option.action !== "court" &&

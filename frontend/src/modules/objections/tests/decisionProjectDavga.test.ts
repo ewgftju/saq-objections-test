@@ -23,6 +23,6 @@ test("приложение проекта решения использует д
   const saved = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "decision-project", document }));
   assert.match(saved, /Доводы ДАВГА по первому пункту/);
   assert.doesNotMatch(saved, /Позднее изменённые доводы/);
-  const finalResponse = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "final-response" }));
+  const finalResponse = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "final-response", document: { ...document, name: "Проект окончательного ответа" } }));
   assert.match(finalResponse, /Результаты голосования членов АК зафиксированы в протоколе/);
 });

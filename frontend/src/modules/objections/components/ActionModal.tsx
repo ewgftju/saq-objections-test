@@ -942,10 +942,10 @@ export default function ActionModal({
           </>
         ) : action === "deliver" || action === "create-decision-project" ? (
           <>
-            {action === "create-decision-project" && <input type="hidden" name="certificateRevisionAtOpen" value={certificateRevisionAtOpen} />}
-            {action === "create-decision-project" && pendingCertificateRequestAtOpen && <>
+            {(action === "create-decision-project" || (action === "deliver" && requiresMotivatedResponse(c))) && <input type="hidden" name="certificateRevisionAtOpen" value={certificateRevisionAtOpen} />}
+            {(action === "create-decision-project" || (action === "deliver" && requiresMotivatedResponse(c))) && pendingCertificateRequestAtOpen && <>
               <input type="hidden" name="withdrawCertificateProposal" value={pendingCertificateRequestAtOpen} />
-              <Notice>Изменения справки ещё не рассмотрены директором ДАВГА. При формировании проекта решения предложение будет отозвано, а в приложение подтянутся доводы из действующей справки.</Notice>
+              <Notice>Изменения справки ещё не рассмотрены директором ДАВГА. При формировании {action === "deliver" ? "мотивированного ответа" : "проекта решения"} предложение будет отозвано, а в приложение подтянутся доводы из действующей справки.</Notice>
             </>}
             <div className="request-modal-details">
               <div><span>Автор</span><b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b></div>
@@ -1785,6 +1785,8 @@ export default function ActionModal({
                   ? "Сформировать протокол и отозвать предложение"
                 : action === "create-decision-project" && pendingCertificateRequestAtOpen
                   ? "Сформировать проект решения и отозвать предложение"
+                : action === "deliver" && requiresMotivatedResponse(c) && pendingCertificateRequestAtOpen
+                  ? "Сформировать мотивированный ответ и отозвать предложение"
                 : definition.submit}
           </Button>
         </div>
