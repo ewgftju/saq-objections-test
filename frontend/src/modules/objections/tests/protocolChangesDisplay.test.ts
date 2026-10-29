@@ -16,7 +16,8 @@ test("сравнение показывает только доводы ДАВГ
     { pointId: "3", pointNumber: "3", memberId: "d", memberName: "Без изменений ДАВГА", vote: "accept", original, edited: original.replace("СТАРЫЙ ТЕКСТ", "НОВЫЙ ТЕКСТ") },
   ] };
   const html = renderToStaticMarkup(createElement(ProtocolChanges, { version }));
-  assert.equal((html.match(/Доводы ДАВГА/g) || []).length, 2);
+  assert.equal((html.match(/Доводы ДАВГА из справки/g) || []).length, 2);
+  assert.equal((html.match(/Доводы ДАВГА из протокола/g) || []).length, 2);
   const firstPoint = html.split("Пункт № 2")[0];
   assert.equal((firstPoint.match(/дополнена/g) || []).length, 1);
   assert.match(html, /Алиева/); assert.match(html, /Кенбеил/);
@@ -24,6 +25,7 @@ test("сравнение показывает только доводы ДАВГ
   assert.doesNotMatch(html, /Доводы ДВГА|СТАРЫЙ ТЕКСТ|НОВЫЙ ТЕКСТ/);
   assert.doesNotMatch(html, /Без изменений ДАВГА|Пункт № 3|title="Удалено"/);
   assert.match(html, /title="Добавлено"/);
+  assert.match(firstPoint, /<td[^>]*>Позиция<\/td><td[^>]*>Позиция<mark title="Добавлено"/);
 });
 
 test("повторяющиеся цифры сравниваются посимвольно со справкой", () => {

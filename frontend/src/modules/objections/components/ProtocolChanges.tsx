@@ -82,9 +82,17 @@ export function ProtocolChanges({ version, expanded = false }: { version: Protoc
             {row.changedAt && <div>Изменил: {row.changedBy} · {new Date(row.changedAt).toLocaleString("ru-RU")}</div>}
           </div>;
         })}
-        <p style={{ whiteSpace: "pre-wrap" }}><b>Доводы ДАВГА</b><br />{compareText(first.original, first.edited).map((part, index) => part.kind === "same"
-          ? <Fragment key={index}>{part.text}</Fragment>
-          : <mark key={index} title={part.kind === "removed" ? "Удалено" : "Добавлено"} style={part.kind === "removed" ? { color: "#b42318", background: "#fee4e2", textDecoration: "line-through" } : { color: "#175cd3", background: "#dbeafe" }}>{part.text}</mark>)}</p>
+        <div style={{ overflowX: "auto", marginTop: 12 }}>
+          <table className="data-table" style={{ minWidth: 600, tableLayout: "fixed", width: "100%" }}>
+            <thead><tr><th scope="col">Доводы ДАВГА из справки</th><th scope="col">Доводы ДАВГА из протокола</th></tr></thead>
+            <tbody><tr>
+              <td style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", verticalAlign: "top" }}>{first.original || "—"}</td>
+              <td style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", verticalAlign: "top" }}>{compareText(first.original, first.edited).map((part, index) => part.kind === "same"
+                ? <Fragment key={index}>{part.text}</Fragment>
+                : <mark key={index} title={part.kind === "removed" ? "Удалено" : "Добавлено"} style={part.kind === "removed" ? { color: "#b42318", background: "#fee4e2", textDecoration: "line-through" } : { color: "#175cd3", background: "#dbeafe" }}>{part.text}</mark>)}</td>
+            </tr></tbody>
+          </table>
+        </div>
       </section>;
     })}
   </details>;
