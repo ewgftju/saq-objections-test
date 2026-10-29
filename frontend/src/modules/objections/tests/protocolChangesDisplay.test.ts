@@ -5,7 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ProtocolVersion } from "../../../types";
 import { ProtocolChanges } from "../components/ProtocolChanges";
 
-test("сравнение группирует одинаковые изменения по пункту и сохраняет доступ к старым правкам", () => {
+test("сравнение показывает полное обоснование и группирует одинаковые изменения", () => {
   const original = "Доводы ДВГА: СТАРЫЙ ТЕКСТ\n\nДоводы рабочего органа (ДАВГА МФ РК): Позиция";
   const edited = "Доводы ДВГА: СТАРЫЙ ТЕКСТ\n\nДоводы рабочего органа (ДАВГА МФ РК): Позиция дополнена";
   const version: ProtocolVersion = { author: "Исполнитель", createdAt: "2026-10-29T10:00:00Z", rows: [
@@ -15,11 +15,25 @@ test("сравнение группирует одинаковые измене�
     { pointId: "2", pointNumber: "2", memberId: "a", memberName: "Алиева", vote: "accept", original, edited: edited.replace("СТАРЫЙ ТЕКСТ", "НОВЫЙ ТЕКСТ") },
   ] };
   const html = renderToStaticMarkup(createElement(ProtocolChanges, { version }));
-  assert.equal((html.match(/Доводы ДАВГА из справки/g) || []).length, 2);
+  assert.equal((html.match(/Обоснование протокола/g) || []).length, 2);
   const firstPoint = html.split("Пункт № 2")[0];
   assert.equal((firstPoint.match(/дополнена/g) || []).length, 1);
   assert.match(html, /Алиева/); assert.match(html, /Кенбеил/);
   assert.doesNotMatch(html, /Другой/);
-  assert.equal((html.match(/Другие изменения — полное сравнение/g) || []).length, 1);
-  assert.match(html, /НОВЫЙ ТЕКСТ/);
+  assert.match(firstPoint, /Доводы ДВГА: СТАРЫЙ ТЕКСТ/);
+  assert.match(html, /title="Удалено"[^>]*>СТАРЫЙ<\/mark>/);
+  assert.match(html, /title="Добавлено"[^>]*>НОВЫЙ<\/mark>/);
+});
+
+test("удалённые и добавленные слова отображаются вместе с полным текстом", () => {
+  const original = "Доводы заявителя: текст\n\nДоводы ДАВГА: документы не подтверждают вывод и не учитывают данные";
+  const edited = "Доводы заявителя: текст\n\nДоводы ДАВГА: документы частично подтверждают вывод и учитывают данные";
+  const version: ProtocolVersion = { author: "Исполнитель", createdAt: "2026-10-29T10:00:00Z", rows: [
+    { pointId: "1", pointNumber: "1", memberId: "a", memberName: "Алиева", vote: "accept", original, edited },
+  ] };
+  const html = renderToStaticMarkup(createElement(ProtocolChanges, { version }));
+  assert.match(html, /Доводы заявителя: текст/);
+  assert.match(html, /title="Удалено"[^>]*text-decoration:line-through[^>]*>не<\/mark>/);
+  assert.match(html, /title="Добавлено"[^>]*>частично\s*<\/mark>/);
+  assert.equal((html.match(/title="Удалено"/g) || []).length, 2);
 });

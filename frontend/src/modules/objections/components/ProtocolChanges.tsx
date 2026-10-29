@@ -1,55 +1,74 @@
+import { Fragment } from "react";
 import type { ProtocolVersion } from "../../../types";
 import { OUTCOMES } from "../../../data/constants";
 import { normalizeVoteChoice } from "../services/decisions";
-import { protocolDavgaFromReason, replaceProtocolDavga } from "../services/protocolReason";
 
-function highlighted(text: string, other: string, color: string) {
-  let start = 0;
-  while (start < text.length && start < other.length && text[start] === other[start]) start++;
-  let end = 0;
-  while (end < text.length - start && end < other.length - start && text[text.length - end - 1] === other[other.length - end - 1]) end++;
-  return <>{text.slice(0, start)}<mark style={{ background: color }}>{text.slice(start, text.length - end)}</mark>{end ? text.slice(-end) : ""}</>;
+type DiffPart = { text: string; kind: "same" | "removed" | "added" };
+
+function compareText(original: string, edited: string): DiffPart[] {
+  const before = original.match(/\s+|[^\s]+/g) ?? [];
+  const after = edited.match(/\s+|[^\s]+/g) ?? [];
+  const width = after.length + 1;
+  const parts: DiffPart[] = [];
+  const append = (text: string, kind: DiffPart["kind"]) => {
+    if (!text) return;
+    const previous = parts.at(-1);
+    if (previous?.kind === kind) previous.text += text;
+    else parts.push({ text, kind });
+  };
+  if (before.length * after.length > 250_000) {
+    let prefix = 0;
+    while (prefix < original.length && prefix < edited.length && original[prefix] === edited[prefix]) prefix++;
+    let suffix = 0;
+    while (suffix < original.length - prefix && suffix < edited.length - prefix && original[original.length - suffix - 1] === edited[edited.length - suffix - 1]) suffix++;
+    append(original.slice(0, prefix), "same");
+    append(original.slice(prefix, original.length - suffix), "removed");
+    append(edited.slice(prefix, edited.length - suffix), "added");
+    if (suffix) append(original.slice(-suffix), "same");
+    return parts;
+  }
+  const lengths = new Uint32Array((before.length + 1) * width);
+  for (let i = before.length - 1; i >= 0; i--) for (let j = after.length - 1; j >= 0; j--) {
+    lengths[i * width + j] = before[i] === after[j] ? 1 + lengths[(i + 1) * width + j + 1] : Math.max(lengths[(i + 1) * width + j], lengths[i * width + j + 1]);
+  }
+  let i = 0, j = 0;
+  while (i < before.length && j < after.length) {
+    if (before[i] === after[j]) { append(before[i++], "same"); j++; }
+    else if (lengths[(i + 1) * width + j] >= lengths[i * width + j + 1]) append(before[i++], "removed");
+    else append(after[j++], "added");
+  }
+  while (i < before.length) append(before[i++], "removed");
+  while (j < after.length) append(after[j++], "added");
+  return parts;
 }
 
 export function ProtocolChanges({ version }: { version: ProtocolVersion }) {
   const changes = version.rows.filter((row) => row.original !== row.edited);
   if (!changes.length) return <p>Обоснования соответствуют справке.</p>;
-
-  // Старые версии могут содержать разные исходные тексты даже для одного пункта.
-  const points = new Map<string, { number: string | number; original: string; variants: Map<string, typeof changes> }>();
+  const groups = new Map<string, typeof changes>();
   for (const row of changes) {
-    const original = protocolDavgaFromReason(row.original);
-    const edited = protocolDavgaFromReason(row.edited);
-    const key = JSON.stringify([row.pointId, original]);
-    if (!points.has(key)) points.set(key, { number: row.pointNumber, original, variants: new Map() });
-    const variants = points.get(key)!.variants;
-    if (!variants.has(edited)) variants.set(edited, []);
-    variants.get(edited)!.push(row);
+    const key = JSON.stringify([row.pointId, row.original, row.edited]);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(row);
   }
-
   return <details>
     <summary>Изменены обоснования: {changes.length} · Посмотреть изменения</summary>
-    {[...points.entries()].map(([key, point]) => <section key={key} style={{ border: "1px solid #dce5ed", borderRadius: 8, padding: 16, margin: "12px 0" }}>
-      <strong>Пункт № {point.number}</strong>
-      <p style={{ whiteSpace: "pre-wrap" }}><b>Доводы ДАВГА из справки</b><br />{point.original || "—"}</p>
-      <b>Изменения в протоколе</b>
-      {[...point.variants.entries()].map(([edited, rows], index) => <div key={index} style={{ borderTop: "1px solid #e6edf3", marginTop: 10, paddingTop: 10 }}>
+    <p><span style={{ color: "#b42318", textDecoration: "line-through" }}>Удалено</span> · <span style={{ color: "#175cd3" }}>Добавлено</span></p>
+    {[...groups.entries()].map(([key, rows]) => {
+      const first = rows[0];
+      return <section key={key} style={{ border: "1px solid #dce5ed", borderRadius: 8, padding: 16, margin: "12px 0" }}>
+        <strong>Пункт № {first.pointNumber}</strong>
         {rows.map((row) => {
           const vote = normalizeVoteChoice(row.vote);
-          const otherChanged = replaceProtocolDavga(row.original, protocolDavgaFromReason(row.original)) !== replaceProtocolDavga(row.edited, protocolDavgaFromReason(row.original));
-          const legacyMissing = !row.original.includes("Доводы рабочего органа (ДАВГА МФ РК): ") || !row.edited.includes("Доводы рабочего органа (ДАВГА МФ РК): ");
-          return <div key={`${row.pointId}-${row.memberId}`}>
+          return <div key={`${row.pointId}-${row.memberId}`} style={{ marginTop: 8 }}>
             <strong>{row.memberName}</strong> · Голос: {vote ? OUTCOMES[vote] : "—"}
             {row.changedAt && <div>Изменил: {row.changedBy} · {new Date(row.changedAt).toLocaleString("ru-RU")}</div>}
-            {(otherChanged || legacyMissing) && <details style={{ margin: "8px 0" }}>
-              <summary>Другие изменения — полное сравнение</summary>
-              <p style={{ whiteSpace: "pre-wrap" }}><b>Из справки: </b>{highlighted(row.original, row.edited, "#ffe1e1")}</p>
-              <p style={{ whiteSpace: "pre-wrap" }}><b>В протоколе: </b>{highlighted(row.edited, row.original, "#dbf1ff")}</p>
-            </details>}
           </div>;
         })}
-        <p style={{ whiteSpace: "pre-wrap" }}>{highlighted(edited || "—", point.original || "—", "#dbf1ff")}</p>
-      </div>)}
-    </section>)}
+        <p style={{ whiteSpace: "pre-wrap" }}><b>Обоснование протокола</b><br />{compareText(first.original, first.edited).map((part, index) => part.kind === "same"
+          ? <Fragment key={index}>{part.text}</Fragment>
+          : <mark key={index} title={part.kind === "removed" ? "Удалено" : "Добавлено"} style={part.kind === "removed" ? { color: "#b42318", background: "#fee4e2", textDecoration: "line-through" } : { color: "#175cd3", background: "#dbeafe" }}>{part.text}</mark>)}</p>
+      </section>;
+    })}
   </details>;
 }
