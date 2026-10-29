@@ -402,9 +402,11 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     if (authorityAction) return authorityAction;
     return null;
   }
-  if (c.status === "meeting" && c.certificateChangeRequests?.at(-1)?.status === "pending")
+  if (["meeting", "decision_project"].includes(c.status) && c.certificateChangeRequests?.at(-1)?.status === "pending")
     return role === "work"
-      ? { action: "vote", label: "Сформировать протокол заседания", role: "work" }
+      ? c.status === "meeting"
+        ? { action: "vote", label: "Сформировать протокол заседания", role: "work" }
+        : { action: "create-decision-project", label: "Сформировать проект решения", role: "work" }
       : { action: "review-certificate-change", label: "Рассмотреть изменения справки", role: "director" };
   const authorityInProgress = [
     "request_approved",
@@ -723,6 +725,10 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
     !CLOSED.includes(c.status) &&
     !["protocol", "decided", "delivered", "court"].includes(c.status);
   if (active) {
+    if (c.status === "decision_project" && c.certificate && c.certificateChangeRequests?.at(-1)?.status !== "pending")
+      options.push({ action: "propose-certificate-change", label: "Предложить изменение справки", role: "work" });
+    if (c.status === "decision_project" && c.certificateChangeRequests?.at(-1)?.status === "pending")
+      options.push({ action: "create-decision-project", label: "Сформировать проект решения", role: "work" });
     if (pendingOtherRequest(c))
       options.push({
         action: "record-external-response",
@@ -862,7 +868,7 @@ export function applyAction(
   const next = structuredClone(state);
   const c = next.cases.find((item) => item.id === caseId);
   if (!c) throw new Error("Обращение не найдено");
-  if (c.status === "meeting" && c.certificateChangeRequests?.at(-1)?.status === "pending" && action !== "review-certificate-change" && action !== "vote" && action !== "upload")
+  if (["meeting", "decision_project"].includes(c.status) && c.certificateChangeRequests?.at(-1)?.status === "pending" && action !== "review-certificate-change" && action !== "vote" && action !== "create-decision-project" && action !== "upload")
     throw new Error("Сначала директор должен рассмотреть предложенные изменения справки");
   const available = [nextAction(c, role), ...additionalActions(c)].find(
     (item) => item?.action === action,
@@ -884,6 +890,24 @@ export function applyAction(
   ) => addDocument(c, role, date, name, kind, content, requestId);
   let title: string = available.label;
   let note = "";
+
+  if (action === "vote" || action === "create-decision-project") {
+      if (form.has("certificateRevisionAtOpen") && String(form.get("certificateRevisionAtOpen")) !== String(c.certificateRevision ?? 0))
+        throw new Error("Справка изменилась после открытия формы. Закройте её и откройте формирование документа заново.");
+      const pendingChange = c.certificateChangeRequests?.at(-1);
+      if (pendingChange?.status === "pending") {
+        if (form.get("withdrawCertificateProposal") !== pendingChange.proposedAt)
+          throw new Error("Для формирования документа подтвердите отзыв предложения об изменении справки.");
+        pendingChange.status = "withdrawn";
+        pendingChange.withdrawnAt = new Date().toISOString();
+        pendingChange.withdrawnBy = c.assignee;
+        c.history.push({ date, actor: c.assignee, title: `Предложение об изменении справки отозвано при формировании ${action === "vote" ? "протокола" : "проекта решения"}`, text: `Отозвано: ${new Date(pendingChange.withdrawnAt).toLocaleString("ru-RU")}. Справка не изменена.` });
+        for (const notification of next.notifications) {
+          if (notification.caseId === c.id && notification.recipientRole === "director" && notification.text.includes("предложены изменения справки")) notification.read = true;
+        }
+        next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: ROLES.director, recipientRole: "director", date, read: false, text: `Предложение об изменении справки по обращению №${c.appealNumber || c.id} отозвано при формировании ${action === "vote" ? "протокола" : "проекта решения"}.` });
+      }
+  }
 
   switch (action) {
     case "propose-certificate-change": {
@@ -1884,21 +1908,6 @@ export function applyAction(
       doc("Протокол заслушивания", "hearing", c.hearing.note);
       break;
     case "vote": {
-      if (form.has("certificateRevisionAtOpen") && String(form.get("certificateRevisionAtOpen")) !== String(c.certificateRevision ?? 0))
-        throw new Error("Справка изменилась после открытия формы. Закройте её и откройте формирование протокола заново.");
-      const pendingChange = c.certificateChangeRequests?.at(-1);
-      if (pendingChange?.status === "pending") {
-        if (form.get("withdrawCertificateProposal") !== pendingChange.proposedAt)
-          throw new Error("Для формирования протокола подтвердите отзыв предложения об изменении справки.");
-        pendingChange.status = "withdrawn";
-        pendingChange.withdrawnAt = new Date().toISOString();
-        pendingChange.withdrawnBy = c.assignee;
-        c.history.push({ date, actor: c.assignee, title: "Предложение об изменении справки отозвано при формировании протокола", text: `Отозвано: ${new Date(pendingChange.withdrawnAt).toLocaleString("ru-RU")}. Справка не изменена.` });
-        for (const notification of next.notifications) {
-          if (notification.caseId === c.id && notification.recipientRole === "director" && notification.text.includes("предложены изменения справки")) notification.read = true;
-        }
-        next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: ROLES.director, recipientRole: "director", date, read: false, text: `Предложение об изменении справки по обращению №${c.appealNumber || c.id} отозвано при формировании протокола.` });
-      }
       const previousVersions = c.meeting?.protocolVersions || [];
       const previousOriginalVotes = c.meeting?.originalVotes ?? structuredClone(c.votes || null);
       const currentVersions = previousVersions.filter((version) => (version.certificateRevision ?? 0) === (c.certificateRevision ?? 0));

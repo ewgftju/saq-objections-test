@@ -1,0 +1,68 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { initialState } from "../../../api/objectionsRepository";
+import { addDocument, additionalActions, applyAction, nextAction } from "../services/workflow";
+import { DocumentContent } from "../components/DocumentModal";
+import ActionModal from "../components/ActionModal";
+
+function setup() {
+  const state = initialState();
+  const c = state.cases[0];
+  c.status = "decision_project";
+  c.appealType = "Жалоба на уведомление";
+  const first = c.issues.find((point) => point.disputed)!;
+  const second = { ...first, id: "point-two-project", number: "2", disputed: true };
+  c.issues = [first, second];
+  c.documents = c.documents.filter((doc) => doc.kind !== "certificate");
+  c.certificate = { davgaArguments: "", davgaArgumentsByPoint: { [first.id]: "Первоначальные доводы 1", [second.id]: "Первоначальные доводы 2" }, memberPositions: [] };
+  c.meeting = { date: state.date, number: "ПЗ-1", audio: "", signed: state.date };
+  addDocument(c, "work", state.date, "Подписанная справка", "certificate", "");
+  addDocument(c, "commission", state.date, "Подписанный протокол", "protocol", "");
+  return { state, c, first, second };
+}
+
+test("на этапе проекта директор принимает или отклоняет доводы по пунктам", () => {
+  const fixture = setup(); let { state } = fixture; const { c, first, second } = fixture;
+  assert.ok(additionalActions(c).some((option) => option.action === "propose-certificate-change" && option.role === "work"));
+  const proposal = new FormData(); proposal.set(`proposedDavga_${first.id}`, "Принятые доводы 1"); proposal.set(`proposedDavga_${second.id}`, "Отклонённые доводы 2");
+  state = applyAction(state, c.id, "propose-certificate-change", "work", proposal);
+  let saved = state.cases.find((item) => item.id === c.id)!;
+  assert.equal(nextAction(saved, "director")?.action, "review-certificate-change");
+  assert.equal(nextAction(saved, "work")?.action, "create-decision-project");
+  assert.equal(saved.certificate?.davgaArgumentsByPoint?.[first.id], "Первоначальные доводы 1");
+  const review = new FormData(); review.set(`decision_${first.id}`, "accepted"); review.set(`decision_${second.id}`, "rejected");
+  state = applyAction(state, c.id, "review-certificate-change", "director", review);
+  saved = state.cases.find((item) => item.id === c.id)!;
+  assert.equal(saved.status, "decision_project");
+  assert.equal(saved.documents.find((doc) => doc.kind === "protocol")?.snapshot?.certificate?.davgaArgumentsByPoint?.[first.id], "Первоначальные доводы 1");
+  const stale = new FormData(); stale.set("certificateRevisionAtOpen", "0");
+  assert.throws(() => applyAction(state, c.id, "create-decision-project", "work", stale), /Справка изменилась/);
+  const form = new FormData(); form.set("certificateRevisionAtOpen", "1");
+  state = applyAction(state, c.id, "create-decision-project", "work", form);
+  saved = state.cases.find((item) => item.id === c.id)!;
+  const project = saved.documents.filter((doc) => doc.kind === "decision-project").at(-1)!;
+  const html = renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "decision-project", document: project }));
+  assert.match(html, /Принятые доводы 1/);
+  assert.match(html, /Первоначальные доводы 2/);
+  assert.doesNotMatch(html, /Отклонённые доводы 2/);
+});
+
+test("проект решения можно сформировать с отзывом нерассмотренного предложения", () => {
+  const fixture = setup(); let { state } = fixture; const { c, first, second } = fixture;
+  const proposal = new FormData(); proposal.set(`proposedDavga_${first.id}`, "Предложение 1"); proposal.set(`proposedDavga_${second.id}`, "Предложение 2");
+  state = applyAction(state, c.id, "propose-certificate-change", "work", proposal);
+  let saved = state.cases.find((item) => item.id === c.id)!;
+  const html = renderToStaticMarkup(createElement(ActionModal, { c: saved, action: "create-decision-project", date: state.date, role: "work", onSubmit() {}, onClose() {} }));
+  assert.match(html, /При формировании проекта решения предложение будет отозвано/);
+  assert.match(html, /Сформировать проект решения и отозвать предложение/);
+  assert.throws(() => applyAction(state, c.id, "create-decision-project", "work", new FormData()), /подтвердите отзыв/);
+  const form = new FormData(); form.set("certificateRevisionAtOpen", "0"); form.set("withdrawCertificateProposal", saved.certificateChangeRequests!.at(-1)!.proposedAt);
+  state = applyAction(state, c.id, "create-decision-project", "work", form);
+  saved = state.cases.find((item) => item.id === c.id)!;
+  assert.equal(saved.certificateChangeRequests!.at(-1)!.status, "withdrawn");
+  assert.equal(saved.certificate?.davgaArgumentsByPoint?.[first.id], "Первоначальные доводы 1");
+  assert.ok(saved.history.some((event) => event.title.includes("отозвано при формировании проекта решения")));
+  assert.notEqual(nextAction(saved, "director")?.action, "review-certificate-change");
+});

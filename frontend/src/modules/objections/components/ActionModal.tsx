@@ -942,6 +942,11 @@ export default function ActionModal({
           </>
         ) : action === "deliver" || action === "create-decision-project" ? (
           <>
+            {action === "create-decision-project" && <input type="hidden" name="certificateRevisionAtOpen" value={certificateRevisionAtOpen} />}
+            {action === "create-decision-project" && pendingCertificateRequestAtOpen && <>
+              <input type="hidden" name="withdrawCertificateProposal" value={pendingCertificateRequestAtOpen} />
+              <Notice>Изменения справки ещё не рассмотрены директором ДАВГА. При формировании проекта решения предложение будет отозвано, а в приложение подтянутся доводы из действующей справки.</Notice>
+            </>}
             <div className="request-modal-details">
               <div><span>Автор</span><b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b></div>
               <div><span>Печатная форма</span><b>{action === "create-decision-project" ? "Проект решения и приложение" : (c.appealType || "").trim().startsWith("Жалоба") || c.appealType === "Заявление" || c.appealType === "Возражение на аудиторский отчет" || c.appealType === "Возражение на аудиторский отчёт" ? "Мотивированный ответ и приложение" : "Окончательный ответ и приложение"}</b></div>
@@ -1778,6 +1783,8 @@ export default function ActionModal({
                   ? "Направить ответ"
                 : action === "vote" && pendingCertificateRequestAtOpen
                   ? "Сформировать протокол и отозвать предложение"
+                : action === "create-decision-project" && pendingCertificateRequestAtOpen
+                  ? "Сформировать проект решения и отозвать предложение"
                 : definition.submit}
           </Button>
         </div>
