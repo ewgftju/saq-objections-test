@@ -6,8 +6,14 @@ import { normalizeVoteChoice } from "../services/decisions";
 type DiffPart = { text: string; kind: "same" | "removed" | "added" };
 
 function compareText(original: string, edited: string): DiffPart[] {
-  const before = original.match(/\s+|[^\s]+/g) ?? [];
-  const after = edited.match(/\s+|[^\s]+/g) ?? [];
+  const beforeAll = Array.from(original);
+  const afterAll = Array.from(edited);
+  let prefix = 0;
+  while (prefix < beforeAll.length && prefix < afterAll.length && beforeAll[prefix] === afterAll[prefix]) prefix++;
+  let suffix = 0;
+  while (suffix < beforeAll.length - prefix && suffix < afterAll.length - prefix && beforeAll[beforeAll.length - suffix - 1] === afterAll[afterAll.length - suffix - 1]) suffix++;
+  const before = beforeAll.slice(prefix, beforeAll.length - suffix);
+  const after = afterAll.slice(prefix, afterAll.length - suffix);
   const width = after.length + 1;
   const parts: DiffPart[] = [];
   const append = (text: string, kind: DiffPart["kind"]) => {
@@ -16,15 +22,11 @@ function compareText(original: string, edited: string): DiffPart[] {
     if (previous?.kind === kind) previous.text += text;
     else parts.push({ text, kind });
   };
-  if (before.length * after.length > 250_000) {
-    let prefix = 0;
-    while (prefix < original.length && prefix < edited.length && original[prefix] === edited[prefix]) prefix++;
-    let suffix = 0;
-    while (suffix < original.length - prefix && suffix < edited.length - prefix && original[original.length - suffix - 1] === edited[edited.length - suffix - 1]) suffix++;
-    append(original.slice(0, prefix), "same");
-    append(original.slice(prefix, original.length - suffix), "removed");
-    append(edited.slice(prefix, edited.length - suffix), "added");
-    if (suffix) append(original.slice(-suffix), "same");
+  append(beforeAll.slice(0, prefix).join(""), "same");
+  if (before.length * after.length > 2_000_000) {
+    append(before.join(""), "removed");
+    append(after.join(""), "added");
+    if (suffix) append(beforeAll.slice(-suffix).join(""), "same");
     return parts;
   }
   const lengths = new Uint32Array((before.length + 1) * width);
@@ -39,10 +41,11 @@ function compareText(original: string, edited: string): DiffPart[] {
   }
   while (i < before.length) append(before[i++], "removed");
   while (j < after.length) append(after[j++], "added");
+  if (suffix) append(beforeAll.slice(-suffix).join(""), "same");
   return parts;
 }
 
-export function ProtocolChanges({ version }: { version: ProtocolVersion }) {
+export function ProtocolChanges({ version, expanded = false }: { version: ProtocolVersion; expanded?: boolean }) {
   const changes = version.rows.filter((row) => row.original !== row.edited);
   if (!changes.length) return <p>Обоснования соответствуют справке.</p>;
   const groups = new Map<string, typeof changes>();
@@ -51,7 +54,7 @@ export function ProtocolChanges({ version }: { version: ProtocolVersion }) {
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(row);
   }
-  return <details>
+  return <details open={expanded || undefined}>
     <summary>Изменены обоснования: {changes.length} · Посмотреть изменения</summary>
     <p><span style={{ color: "#b42318", textDecoration: "line-through" }}>Удалено</span> · <span style={{ color: "#175cd3" }}>Добавлено</span></p>
     {[...groups.entries()].map(([key, rows]) => {

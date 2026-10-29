@@ -21,8 +21,19 @@ test("сравнение показывает полное обосновани�
   assert.match(html, /Алиева/); assert.match(html, /Кенбеил/);
   assert.doesNotMatch(html, /Другой/);
   assert.match(firstPoint, /Доводы ДВГА: СТАРЫЙ ТЕКСТ/);
-  assert.match(html, /title="Удалено"[^>]*>СТАРЫЙ<\/mark>/);
-  assert.match(html, /title="Добавлено"[^>]*>НОВЫЙ<\/mark>/);
+  assert.match(html, /title="Удалено"/);
+  assert.match(html, /title="Добавлено"/);
+});
+
+test("повторяющиеся цифры сравниваются посимвольно со справкой", () => {
+  const original = "Доводы ДАВГА: 111";
+  const edited = "Доводы ДАВГА: 11";
+  const version: ProtocolVersion = { author: "Исполнитель", createdAt: "2026-10-29T10:00:00Z", rows: [
+    { pointId: "1", pointNumber: "1", memberId: "a", memberName: "Алиева", vote: "accept", original, edited },
+  ] };
+  const html = renderToStaticMarkup(createElement(ProtocolChanges, { version }));
+  assert.match(html, /Доводы ДАВГА: 11<mark title="Удалено"[^>]*>1<\/mark>/);
+  assert.doesNotMatch(html, /<mark title="Добавлено"/);
 });
 
 test("удалённые и добавленные слова отображаются вместе с полным текстом", () => {
@@ -33,7 +44,10 @@ test("удалённые и добавленные слова отображаю
   ] };
   const html = renderToStaticMarkup(createElement(ProtocolChanges, { version }));
   assert.match(html, /Доводы заявителя: текст/);
-  assert.match(html, /title="Удалено"[^>]*text-decoration:line-through[^>]*>не<\/mark>/);
-  assert.match(html, /title="Добавлено"[^>]*>частично\s*<\/mark>/);
+  assert.match(html, /title="Удалено"[^>]*text-decoration:line-through/);
+  assert.match(html, /title="Добавлено"/);
+  const toPlain = (s: string) => s.replace(/<[^>]+>/g, "").replace(/\s+/g, " ");
+  assert.match(toPlain(html.replace(/<mark title="Добавлено"[^>]*>[\s\S]*?<\/mark>/g, "")), /документы не подтверждают вывод и не учитывают данные/);
+  assert.match(toPlain(html.replace(/<mark title="Удалено"[^>]*>[\s\S]*?<\/mark>/g, "")), /документы частично подтверждают вывод и учитывают данные/);
   assert.equal((html.match(/title="Удалено"/g) || []).length, 2);
 });
