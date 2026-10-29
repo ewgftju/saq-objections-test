@@ -4209,6 +4209,7 @@ test("повторное заседание заявления после пер
     "signed_repeat-member": "on",
     reason: "Итоговая мотивировка повторного заседания",
   });
+  h.run("sign", "director", { reason: "Итоговая мотивировка повторного заседания" });
   assert.equal(h.c.status, "decided");
   assert.equal(h.c.repeatHearingStatus, undefined);
   assert.equal(nextAction(h.c)?.action, "deliver");
@@ -4638,6 +4639,8 @@ test("все виды жалоб проходят маршрут с проект
         h.c.members.map((member) => [`signed_${member.id}`, "on"]),
       ),
     });
+
+    h.run("sign", "director", { reason: "Решение комиссии сформировано." });
 
     assert.equal(h.c.status, "decision_project", appealType);
     assert.equal(

@@ -286,7 +286,7 @@ export default function CasesList({
             "yellow",
           ],
           [
-            cases.filter((c) => c.status === "protocol").length,
+            cases.filter((c) => c.status === "protocol" && !c.meeting?.commissionSigned).length,
             "Подписать протокол",
             "ожидают подписания протокола",
             "blue",

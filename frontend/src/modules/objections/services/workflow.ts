@@ -1,6 +1,7 @@
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
+import { certificateBasisForPoint } from "./protocolReason";
 import type {
   Action,
   ActionOption,
@@ -545,7 +546,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
     protocol: {
       action: "sign",
       label: "Подписать протокол",
-      role: "commission",
+      role: c.meeting?.commissionSigned ? "director" : "commission",
     },
     decision_project: {
       action: "create-decision-project",
@@ -624,6 +625,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   const options: ActionOption[] = [
     { action: "upload", label: "Добавить материал", role: subjectRoleForCase(c) },
   ];
+  if (c.status === "protocol") options.push({ action: "return-protocol", label: "Вернуть протокол на доработку", role: "director" });
   if (c.status === "materials") {
     options.push({
       action: "start-analysis-additional-request",
@@ -1832,6 +1834,11 @@ export function applyAction(
       doc("Протокол заслушивания", "hearing", c.hearing.note);
       break;
     case "vote": {
+      const previousVersions = c.meeting?.protocolVersions || [];
+      const previousOriginalVotes = c.meeting?.originalVotes ?? structuredClone(c.votes || null);
+      const originalRows = previousVersions[0]?.rows || [];
+      const previousRows = previousVersions.at(-1)?.rows || [];
+      const changedAt = new Date().toISOString();
       // New protocol forms use the participants of the latest attendance poll.
       // The fallback supports cases that were created before attendance polls.
       const legacyMembers = Array.from(form.entries())
@@ -1859,6 +1866,7 @@ export function applyAction(
         throw new Error(
           "В последнем опросе о присутствии нет участников с ответом «Да»",
         );
+      const protocolRows: NonNullable<NonNullable<ObjectionCase["meeting"]>["protocolVersions"]>[number]["rows"] = [];
       c.votes = {};
       for (const point of disputed(c)) {
         const memberVotes = Object.fromEntries(
@@ -1887,6 +1895,13 @@ export function applyAction(
         const outcome = pointOutcomeFromVotes(memberVotes, chairId);
         if (!outcome)
           throw new Error("Не удалось определить результат голосования");
+        for (const member of c.members) {
+          const original = originalRows.find((row) => row.pointId === point.id && row.memberId === member.id)?.original ?? certificateBasisForPoint(c, point);
+          const edited = String(form.get(`protocolReason_${point.id}_${member.id}`) || "").trim();
+          const previous = previousRows.find((row) => row.pointId === point.id && row.memberId === member.id);
+          const changed = edited !== (previous?.edited ?? original);
+          protocolRows.push({ pointId: point.id, pointNumber: point.number, memberId: member.id, memberName: member.name, vote: memberVotes[member.id], original, edited, changedBy: changed ? c.assignee : previous?.changedBy, changedAt: changed ? changedAt : previous?.changedAt });
+        }
         c.votes[point.id] = {
           yes,
           no,
@@ -1898,9 +1913,7 @@ export function applyAction(
           voteReasons: Object.fromEntries(
             c.members.map((member) => [
               member.id,
-              String(
-                form.get(`protocolReason_${point.id}_${member.id}`) || "",
-              ).trim(),
+              previousOriginalVotes?.[point.id]?.voteReasons?.[member.id] ?? "",
             ]),
           ),
         };
@@ -1924,7 +1937,11 @@ export function applyAction(
         format: meetingFormat,
         projectReceived: date,
         recommendations: recommendationText || undefined,
+        originalVotes: previousOriginalVotes,
+        protocolVersions: [...previousVersions, { createdAt: changedAt, author: c.assignee, rows: protocolRows }],
       };
+      const changes = protocolRows.filter((row) => row.edited !== (previousRows.find((previous) => previous.pointId === row.pointId && previous.memberId === row.memberId)?.edited ?? row.original));
+      if (changes.length) c.history.push({ date, actor: c.assignee, title: "Изменены обоснования протокола", text: changes.map((row) => `Пункт № ${row.pointNumber}, ${row.memberName}: было: ${previousRows.find((previous) => previous.pointId === row.pointId && previous.memberId === row.memberId)?.edited ?? row.original}\nСтало: ${row.edited}`).join("\n\n") });
       c.status = "protocol";
       doc(
         "Проект протокола заседания",
@@ -1934,14 +1951,16 @@ export function applyAction(
       break;
     }
     case "sign": {
-      checked(
-        form,
-        "secretary",
-        ...c.members
-          .filter((member) => member.present)
-          .map((member) => `signed_${member.id}`),
-      );
       if (!c.meeting) throw new Error("Протокол не сформирован");
+      if (!c.meeting.commissionSigned) {
+        checked(form, "secretary", ...c.members.filter((member) => member.present).map((member) => `signed_${member.id}`));
+        c.meeting.commissionSigned = date;
+        title = "Подписи членов АК и секретаря зафиксированы";
+        note = "Протокол направлен директору ДАВГА для подписания.";
+        break;
+      }
+      const version = c.meeting.protocolVersions?.at(-1);
+      if (version) { version.signedAt = new Date().toISOString(); version.signedBy = ROLES[role]; }
       c.meeting.signed = date;
       const [year, month] = date.split("-");
       const signedProtocolCount = next.cases.filter((item) =>
@@ -1978,6 +1997,14 @@ export function applyAction(
         c.repeatHearingStatus = undefined;
       }
       doc("Подписанный протокол заседания", "protocol", c.result.reason);
+      break;
+    }
+    case "return-protocol": {
+      const reason = text("returnComment", "Замечание");
+      const version = c.meeting?.protocolVersions?.at(-1);
+      if (version) { version.returnedAt = new Date().toISOString(); version.returnedBy = ROLES[role]; version.returnComment = reason; }
+      c.status = "meeting";
+      note = reason;
       break;
     }
     case "create-decision-project": {

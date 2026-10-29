@@ -976,6 +976,7 @@ export function DocumentContent({
                     </td>
                     <td style={{ whiteSpace: "pre-wrap" }}>
                       {protocolPreview?.voteReasons?.[point.id]?.[member.id] ||
+                        snapshot.meeting?.protocolVersions?.at(-1)?.rows.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ||
                         (
                           votes?.[point.id] as
                             | { voteReasons?: Record<string, string> }

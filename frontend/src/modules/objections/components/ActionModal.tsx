@@ -6,6 +6,8 @@ import { Button, Modal, Notice } from "../../../components/ui";
 import { actionForm, requiresConclusion, requiresMotivatedResponse } from "../formDefinitions";
 import type { FormField, FormValues } from "../formDefinitions";
 import { disputed, normalizeVoteChoice } from "../services/decisions";
+import { certificateBasisForPoint } from "../services/protocolReason";
+import { ProtocolChanges } from "./ProtocolChanges";
 import { DocumentContent } from "./DocumentModal";
 import { DEMO_USER } from "../../../config";
 import { OUTCOMES } from "../../../data/constants";
@@ -210,81 +212,6 @@ function HearingChoiceCards({
   );
 }
 
-function certificateBasisForPoint(
-  c: ObjectionCase,
-  point: ReturnType<typeof disputed>[number],
-) {
-  const latestCertificate = [...c.documents]
-    .reverse()
-    .find(
-      (document) =>
-        document.kind === "certificate" && Boolean(document.snapshot?.certificate),
-    );
-  const source = latestCertificate?.snapshot;
-  const sourcePoint = source?.issues.find((item) => item.id === point.id) || point;
-  const sourceRequests = source?.requests || c.requests;
-  const responses = sourceRequests
-    .map((request) => ({
-      authority: request.recipient.toUpperCase().includes("КВГА") ? "КВГА" : "ДВГА",
-      response: request.authorityResponses?.[point.id],
-      route: request.route,
-    }))
-    .filter(
-      (
-        item,
-      ): item is {
-        authority: "ДВГА" | "КВГА";
-        response: { finding: string; response: string };
-        route: ObjectionCase["requests"][number]["route"];
-      } => Boolean(item.response),
-    );
-  const authorityArguments =
-    responses
-      .map(({ authority, response, route }) =>
-        response.finding
-          ? `${route && route !== "initial" ? "Дополнительные доводы" : "Доводы"} ${authority}: ${response.finding}`
-          : "",
-      )
-      .filter(Boolean)
-      .join("\n\n") ||
-    sourcePoint.authorityFinding ||
-    "—";
-  const authorityReply =
-    responses
-      .map(({ authority, response, route }) =>
-        response.response
-          ? `${route && route !== "initial" ? "Дополнительный мотивированный ответ" : "Мотивированный ответ"} ${authority}: ${response.response}`
-          : "",
-      )
-      .filter(Boolean)
-      .join("\n\n") ||
-    sourcePoint.position ||
-    "—";
-  const davgaArguments =
-    source?.certificate?.davgaArgumentsByPoint?.[point.id] ||
-    source?.certificate?.davgaArguments ||
-    c.certificate?.davgaArgumentsByPoint?.[point.id] ||
-    c.certificate?.davgaArguments ||
-    "—";
-  const additionalApplicantArguments = (sourcePoint.additionalArguments || [])
-    .map(
-      (argument, index) =>
-        `Дополнительные доводы объекта гос. аудита (заявителя)${
-          index ? ` №${index + 1}` : ""
-        }: ${argument}`,
-    )
-    .join("\n\n");
-  return [
-    responses.length ? authorityArguments : `Доводы ДВГА/КВГА: ${authorityArguments}`,
-    `Доводы объекта государственного аудита (заявителя): ${sourcePoint.argument || "—"}`,
-    additionalApplicantArguments,
-    responses.length
-      ? authorityReply
-      : `Мотивированный ответ ДВГА/КВГА: ${authorityReply}`,
-    `Доводы рабочего органа (ДАВГА МФ РК): ${davgaArguments}`,
-  ].filter(Boolean).join("\n\n");
-}
-
 function ProtocolVotesFields({
   c,
   members,
@@ -345,6 +272,7 @@ function ProtocolVotesFields({
                         aria-label={`Обоснование ${member.name} по пункту ${point.number}`}
                         onChange={(event) => onReasonChange(reasonName, event.currentTarget.value)}
                       />
+                      {reason !== certificateBasis && <small>Изменено</small>}
                     </td>
                   </tr>
                 );
@@ -489,7 +417,7 @@ export default function ActionModal({
           ],
           [
             `protocolReason_${point.id}_${member.id}`,
-            certificateBasisForPoint(c, point),
+            c.meeting?.protocolVersions?.at(-1)?.rows.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point),
           ],
         ]),
       ),
@@ -1778,6 +1706,7 @@ export default function ActionModal({
           </>
         ) : (
           <>
+            {action === "sign" && role === "director" && c.meeting?.protocolVersions?.at(-1) && <ProtocolChanges version={c.meeting.protocolVersions.at(-1)!} />}
             {definition.note && <Notice>{definition.note}</Notice>}
             {definition.fields.map((field) => (
               <Field key={field.name} field={field} />

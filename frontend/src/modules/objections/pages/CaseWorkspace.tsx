@@ -1,5 +1,6 @@
 import { Fragment, useState, type ReactNode } from "react";
 import { Button, Notice, PageHeading } from "../../../components/ui";
+import { ProtocolChanges } from "../components/ProtocolChanges";
 import { CLOSED, OUTCOMES, TYPES } from "../../../data/constants";
 import type {
   Action,
@@ -1162,6 +1163,12 @@ export default function CaseWorkspace({
                       <h3 className="form-section">
                         Материалы и результаты рассмотрения
                       </h3>
+                      {(role === "work" || role === "director" || role === "demo-superuser") && c.meeting?.protocolVersions?.length ? (
+                        <section className="request-documents-section">
+                          <h4>Изменения обоснований протокола</h4>
+                          {c.meeting.protocolVersions.map((version, index) => <div key={`${version.createdAt}-${index}`}><b>Версия {index + 1}</b><ProtocolChanges version={version} />{version.returnComment && <p>Возвращено на доработку: {version.returnComment}</p>}</div>)}
+                        </section>
+                      ) : null}
                       {!isCommission && (() => {
                         const conclusions = c.documents.filter(
                           (document) => document.kind === "conclusion",

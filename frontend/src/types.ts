@@ -140,6 +140,20 @@ export interface Meeting {
   projectReceived?: string;
   recommendations?: string;
   signed?: string;
+  commissionSigned?: string;
+  protocolVersions?: ProtocolVersion[];
+  originalVotes?: Record<string, VoteResult> | null;
+}
+
+export interface ProtocolVersion {
+  createdAt: string;
+  author: string;
+  rows: Array<{ pointId: string; pointNumber: string | number; memberId: string; memberName: string; vote: string; original: string; edited: string; changedAt?: string; changedBy?: string }>;
+  returnedAt?: string;
+  returnedBy?: string;
+  returnComment?: string;
+  signedAt?: string;
+  signedBy?: string;
 }
 
 export interface RecommendationActivity {
@@ -715,6 +729,7 @@ export type Action =
   | "hearing-held"
   | "vote"
   | "sign"
+  | "return-protocol"
   | "create-decision-project"
   | "approve-decision-project"
   | "sign-decision-project"

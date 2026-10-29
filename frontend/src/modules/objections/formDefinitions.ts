@@ -558,19 +558,23 @@ export function actionForm(
       note =
         "В форме показаны электронные голоса участников заседания. При необходимости исполнитель рабочего органа может внести результат и комментарий вручную.";
       break;
+    case "return-protocol":
+      title = "Вернуть протокол на доработку";
+      fields.push(area("returnComment", "Замечание"));
+      break;
     case "sign":
       title = "Подписание протокола";
       fields.push(
-        ...c.members
+        ...(c.meeting?.commissionSigned ? [] : c.members
           .filter((member) => member.present)
           .map((member) =>
             check(
               `signed_${member.id}`,
               `${member.name}: подпись зафиксирована`,
             ),
-          ),
-        check("secretary", "Секретарь подписал протокол"),
-        area(
+          )),
+        ...(c.meeting?.commissionSigned ? [] : [check("secretary", "Секретарь подписал протокол")]),
+        ...(c.meeting?.commissionSigned ? [area(
           "reason",
           "Итоговая мотивировка",
           disputed(c)
@@ -579,7 +583,7 @@ export function actionForm(
                 `Пункт ${point.number}: ${point.analysis || ""} ${point.legal || ""}`,
             )
             .join("\n"),
-        ),
+        )] : []),
       );
       note =
         "Проект протокола — следующий рабочий день после заседания; подписи — в течение рабочего дня после получения проекта.";
