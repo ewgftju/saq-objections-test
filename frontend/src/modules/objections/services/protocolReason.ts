@@ -1,6 +1,18 @@
 import type { ObjectionCase } from "../../../types";
 import { disputed } from "./decisions";
 
+const DAVGA_LABEL = "Доводы рабочего органа (ДАВГА МФ РК): ";
+
+export function protocolDavgaFromReason(reason: string) {
+  const index = reason.lastIndexOf(DAVGA_LABEL);
+  return index < 0 ? "" : reason.slice(index + DAVGA_LABEL.length);
+}
+
+export function replaceProtocolDavga(reason: string, davga: string) {
+  const index = reason.lastIndexOf(DAVGA_LABEL);
+  return `${index < 0 ? `${reason}\n\n` : reason.slice(0, index)}${DAVGA_LABEL}${davga}`;
+}
+
 export function certificateBasisForPoint(
   c: ObjectionCase,
   point: ReturnType<typeof disputed>[number],

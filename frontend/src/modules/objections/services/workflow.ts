@@ -1,7 +1,7 @@
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
-import { certificateBasisForPoint } from "./protocolReason";
+import { certificateBasisForPoint, replaceProtocolDavga } from "./protocolReason";
 import type {
   Action,
   ActionOption,
@@ -1897,8 +1897,11 @@ export function applyAction(
           throw new Error("Не удалось определить результат голосования");
         for (const member of c.members) {
           const original = originalRows.find((row) => row.pointId === point.id && row.memberId === member.id)?.original ?? certificateBasisForPoint(c, point);
-          const edited = String(form.get(`protocolReason_${point.id}_${member.id}`) || "").trim();
           const previous = previousRows.find((row) => row.pointId === point.id && row.memberId === member.id);
+          const davgaName = `protocolDavga_${point.id}_${member.id}`;
+          const edited = form.has(davgaName)
+            ? replaceProtocolDavga(previous?.edited ?? original, String(form.get(davgaName) ?? "").trim())
+            : String(form.get(`protocolReason_${point.id}_${member.id}`) || "").trim();
           const changed = edited !== (previous?.edited ?? original);
           protocolRows.push({ pointId: point.id, pointNumber: point.number, memberId: member.id, memberName: member.name, vote: memberVotes[member.id], original, edited, changedBy: changed ? c.assignee : previous?.changedBy, changedAt: changed ? changedAt : previous?.changedAt });
         }

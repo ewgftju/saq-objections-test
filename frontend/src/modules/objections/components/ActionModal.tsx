@@ -6,7 +6,7 @@ import { Button, Modal, Notice } from "../../../components/ui";
 import { actionForm, requiresConclusion, requiresMotivatedResponse } from "../formDefinitions";
 import type { FormField, FormValues } from "../formDefinitions";
 import { disputed, normalizeVoteChoice } from "../services/decisions";
-import { certificateBasisForPoint } from "../services/protocolReason";
+import { certificateBasisForPoint, protocolDavgaFromReason, replaceProtocolDavga } from "../services/protocolReason";
 import { ProtocolChanges } from "./ProtocolChanges";
 import { DocumentContent } from "./DocumentModal";
 import { DEMO_USER } from "../../../config";
@@ -241,17 +241,19 @@ function ProtocolVotesFields({
               <th>Описание оспариваемого пункта</th>
               <th>Член АК</th>
               <th>Голос</th>
-              <th>Обоснование</th>
+              <th>Доводы ДАВГА</th>
             </tr>
           </thead>
           <tbody>
             {disputed(c).flatMap((point) =>
               members.map((member, index) => {
                 const voteName = `protocolVote_${point.id}_${member.id}`;
-                const reasonName = `protocolReason_${point.id}_${member.id}`;
+                const reasonName = `protocolDavga_${point.id}_${member.id}`;
                 const vote = normalizeVoteChoice(values[voteName]);
                 const certificateBasis = certificateBasisForPoint(c, point);
-                const reason = values[reasonName] ?? certificateBasis;
+                const existing = c.meeting?.protocolVersions?.at(-1)?.rows.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasis;
+                const reason = values[reasonName] ?? protocolDavgaFromReason(existing);
+                const fullReason = replaceProtocolDavga(existing, reason);
                 return (
                   <tr key={`${point.id}-${member.id}`}>
                     <td>{index === 0 ? point.number : ""}</td>
@@ -264,15 +266,16 @@ function ProtocolVotesFields({
                         : <span className="muted">Нет голоса</span>}
                     </td>
                     <td>
+                      <input type="hidden" name={`protocolReason_${point.id}_${member.id}`} value={fullReason} />
                       <textarea
                         name={reasonName}
                         value={reason}
                         rows={8}
                         required
-                        aria-label={`Обоснование ${member.name} по пункту ${point.number}`}
+                        aria-label={`Доводы ДАВГА: ${member.name}, пункт ${point.number}`}
                         onChange={(event) => onReasonChange(reasonName, event.currentTarget.value)}
                       />
-                      {reason !== certificateBasis && <small>Изменено</small>}
+                      {fullReason !== certificateBasis && <small>Изменено</small>}
                     </td>
                   </tr>
                 );
@@ -416,8 +419,8 @@ export default function ActionModal({
             normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id]),
           ],
           [
-            `protocolReason_${point.id}_${member.id}`,
-            c.meeting?.protocolVersions?.at(-1)?.rows.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point),
+            `protocolDavga_${point.id}_${member.id}`,
+            protocolDavgaFromReason(c.meeting?.protocolVersions?.at(-1)?.rows.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point)),
           ],
         ]),
       ),
@@ -1300,7 +1303,7 @@ export default function ActionModal({
                       Object.fromEntries(
                         protocolMembers.map((member) => [
                           member.id,
-                          values[`protocolReason_${point.id}_${member.id}`] || "",
+                          replaceProtocolDavga(c.meeting?.protocolVersions?.at(-1)?.rows.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point), values[`protocolDavga_${point.id}_${member.id}`] ?? ""),
                         ]),
                       ),
                     ]),
