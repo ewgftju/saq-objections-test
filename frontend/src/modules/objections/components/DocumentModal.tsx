@@ -661,6 +661,7 @@ export function DocumentContent({
   }
 
   if (kind === "final-response" || kind === "decision-project") {
+    const isDecisionProject = kind === "decision-project";
     const outcome = overall(snapshot);
     const decision = outcome
       ? OUTCOMES[outcome].toLocaleLowerCase("ru-RU")
@@ -682,11 +683,14 @@ export function DocumentContent({
           normalizeVoteChoice(vote) === winningOutcome &&
           Boolean(pointVotes?.voteReasons?.[memberId]?.trim()),
       )?.[0];
-      const reason =
-        (winningReasonMemberId &&
-          pointVotes?.voteReasons?.[winningReasonMemberId]) ||
-        snapshot.result?.reason ||
-        "—";
+      const reason = isDecisionProject
+        ? snapshot.certificate?.davgaArgumentsByPoint
+          ? snapshot.certificate.davgaArgumentsByPoint[point.id]?.trim() || "—"
+          : snapshot.certificate?.davgaArguments?.trim() || "—"
+        : (winningReasonMemberId &&
+            pointVotes?.voteReasons?.[winningReasonMemberId]) ||
+          snapshot.result?.reason ||
+          "—";
       const pointDecision = winningOutcome
         ? OUTCOMES[winningOutcome].toLocaleLowerCase("ru-RU")
         : decision;
@@ -705,7 +709,6 @@ export function DocumentContent({
       };
     });
     const appendixPages = appendixPageCount(appendixPoints);
-    const isDecisionProject = kind === "decision-project";
     return (
       <div className="final-response-document">
         <article className="print-document final-response-template">
@@ -777,7 +780,7 @@ export function DocumentContent({
                 <p className="final-response-point-title">
                   - по п. {point.number}:
                 </p>
-                <p className="final-response-point-reason">{point.reason}.</p>
+                <p className="final-response-point-reason" style={isDecisionProject ? { whiteSpace: "pre-wrap" } : undefined}>{point.reason}{isDecisionProject && (point.reason === "—" || /[.!?…]$/.test(point.reason)) ? "" : "."}</p>
                 <p className="final-response-point-decision">
                   На основании вышеизложенного, Апелляционной комиссией принято
                   решение {point.decision} {appealObjectLabel(snapshot, point.outcome)} по
