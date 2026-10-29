@@ -901,7 +901,8 @@ export function applyAction(
         pendingChange.status = "withdrawn";
         pendingChange.withdrawnAt = new Date().toISOString();
         pendingChange.withdrawnBy = c.assignee;
-        c.history.push({ date, actor: c.assignee, title: `Предложение об изменении справки отозвано при формировании ${action === "vote" ? "протокола" : "проекта решения"}`, text: `Отозвано: ${new Date(pendingChange.withdrawnAt).toLocaleString("ru-RU")}. Справка не изменена.` });
+        const stageLabel = pendingChange.stage === "protocol" ? "Формирование протокола" : pendingChange.stage === "decision-project" ? "Формирование проекта решения" : "Не указан";
+        c.history.push({ date, actor: c.assignee, title: `Предложение об изменении справки отозвано при формировании ${action === "vote" ? "протокола" : "проекта решения"}`, text: `Этап: ${stageLabel}\nОтозвано: ${new Date(pendingChange.withdrawnAt).toLocaleString("ru-RU")}. Справка не изменена.` });
         for (const notification of next.notifications) {
           if (notification.caseId === c.id && notification.recipientRole === "director" && notification.text.includes("предложены изменения справки")) notification.read = true;
         }
@@ -923,9 +924,11 @@ export function applyAction(
       c.certificateChangeRequests ||= [];
       const proposedAt = new Date().toISOString();
       const reason = String(form.get("changeReason") || "").trim();
-      c.certificateChangeRequests.push({ proposedAt, proposedBy: c.assignee, reason, status: "pending", changes });
+      const stage = c.status === "decision_project" ? "decision-project" : "protocol";
+      const stageLabel = stage === "decision-project" ? "Формирование проекта решения" : "Формирование протокола";
+      c.certificateChangeRequests.push({ stage, proposedAt, proposedBy: c.assignee, reason, status: "pending", changes });
       title = "Предложены изменения справки";
-      note = `Предложил: ${c.assignee} · ${new Date(proposedAt).toLocaleString("ru-RU")}${reason ? `\nПричина: ${reason}` : ""}\n\n` + changes.map((change) => `Пункт № ${change.pointNumber}: было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n");
+      note = `Этап: ${stageLabel}\nПредложил: ${c.assignee} · ${new Date(proposedAt).toLocaleString("ru-RU")}${reason ? `\nПричина: ${reason}` : ""}\n\n` + changes.map((change) => `Пункт № ${change.pointNumber}: было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n");
       next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: ROLES.director, recipientRole: "director", date, read: false, text: `По обращению №${c.appealNumber || c.id} предложены изменения справки.` });
       break;
     }
@@ -950,7 +953,8 @@ export function applyAction(
         doc(`Справка: результаты голосования членов АК. Версия ${version}`, "certificate", "Изменения доводов приняты директором ДАВГА. Повторное подписание не требуется.");
       }
       title = "Директор рассмотрел изменения справки";
-      note = `Рассмотрено: ${new Date(request.reviewedAt).toLocaleString("ru-RU")}\n\n` + request.changes.map((change) => `Пункт № ${change.pointNumber}: ${change.decision === "accepted" ? "принято" : "отклонено"}. Было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n") + (request.reviewComment ? `\nКомментарий: ${request.reviewComment}` : "");
+      const stageLabel = request.stage === "protocol" ? "Формирование протокола" : request.stage === "decision-project" ? "Формирование проекта решения" : "Не указан";
+      note = `Этап: ${stageLabel}\nРассмотрено: ${new Date(request.reviewedAt).toLocaleString("ru-RU")}\n\n` + request.changes.map((change) => `Пункт № ${change.pointNumber}: ${change.decision === "accepted" ? "принято" : "отклонено"}. Было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n") + (request.reviewComment ? `\nКомментарий: ${request.reviewComment}` : "");
       next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: ROLES.work, recipientRole: "work", date, read: false, text: `Директор рассмотрел изменения справки по обращению №${c.appealNumber || c.id}.` });
       break;
     }

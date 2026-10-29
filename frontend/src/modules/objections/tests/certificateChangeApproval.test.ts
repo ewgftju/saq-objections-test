@@ -30,6 +30,7 @@ test("директор принимает и отклоняет изменени
   let saved = state.cases.find((item) => item.id === c.id)!;
   assert.equal(saved.certificate?.davgaArgumentsByPoint?.[first.id], "Исходные доводы 1");
   assert.equal(nextAction(saved)?.action, "review-certificate-change");
+  assert.match(saved.history.find((event) => event.title === "Предложены изменения справки")?.text || "", /Этап: Формирование протокола/);
   assert.equal(nextAction(saved, "work")?.action, "vote");
   assert.throws(() => applyAction(state, c.id, "vote", "work", new FormData()), /подтвердите отзыв/);
   assert.throws(() => applyAction(state, c.id, "review-certificate-change", "work", new FormData()));
@@ -51,6 +52,7 @@ test("директор принимает и отклоняет изменени
   assert.equal(saved.documents.find((document) => document.name === "Исходная справка")?.snapshot?.certificate?.davgaArgumentsByPoint?.[first.id], "Исходные доводы 1");
   assert.equal(saved.certificateChangeRequests?.at(-1)?.changes[1].decision, "rejected");
   assert.equal(saved.certificateChangeRequests?.at(-1)?.reviewComment, "Проверено");
+  assert.match(saved.history.find((event) => event.title === "Директор рассмотрел изменения справки")?.text || "", /Этап: Формирование протокола/);
   assert.equal(currentProtocolRows(saved), undefined);
   assert.equal(nextAction(saved)?.action, "vote");
   const staleForm = new FormData(); staleForm.set("certificateRevisionAtOpen", "0");
@@ -105,6 +107,7 @@ test("формирование протокола с подтверждение�
   assert.equal(saved.certificate?.davgaArguments, "Исходные доводы");
   assert.match(saved.meeting!.protocolVersions!.at(-1)!.rows[0].original, /Исходные доводы/);
   assert.ok(saved.history.some((event) => event.title.includes("отозвано при формировании протокола")));
+  assert.match(saved.history.find((event) => event.title.includes("отозвано при формировании протокола"))?.text || "", /Этап: Формирование протокола/);
   assert.ok(state.notifications.some((notification) => notification.recipientRole === "director" && notification.text.includes("отозвано")));
   assert.notEqual(nextAction(saved, "director")?.action, "review-certificate-change");
   assert.throws(() => applyAction(state, c.id, "review-certificate-change", "director", new FormData()));

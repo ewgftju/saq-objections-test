@@ -35,6 +35,15 @@ test("на этапе проекта директор принимает или 
   const review = new FormData(); review.set(`decision_${first.id}`, "accepted"); review.set(`decision_${second.id}`, "rejected");
   state = applyAction(state, c.id, "review-certificate-change", "director", review);
   saved = state.cases.find((item) => item.id === c.id)!;
+  const proposedEvent = saved.history.find((event) => event.title === "Предложены изменения справки");
+  const reviewEvent = saved.history.find((event) => event.title === "Директор рассмотрел изменения справки");
+  assert.match(proposedEvent?.text || "", /Первоначальные доводы 1/);
+  assert.match(proposedEvent?.text || "", /Этап: Формирование проекта решения/);
+  assert.match(reviewEvent?.text || "", /Этап: Формирование проекта решения/);
+  assert.match(proposedEvent?.text || "", /Предложено: Принятые доводы 1/);
+  assert.match(reviewEvent?.text || "", /принято/);
+  assert.match(reviewEvent?.text || "", /отклонено/);
+  assert.ok(saved.certificateChangeRequests?.at(-1)?.reviewedAt);
   assert.equal(saved.status, "decision_project");
   assert.equal(saved.documents.find((doc) => doc.kind === "protocol")?.snapshot?.certificate?.davgaArgumentsByPoint?.[first.id], "Первоначальные доводы 1");
   const stale = new FormData(); stale.set("certificateRevisionAtOpen", "0");
@@ -64,5 +73,7 @@ test("проект решения можно сформировать с отз�
   assert.equal(saved.certificateChangeRequests!.at(-1)!.status, "withdrawn");
   assert.equal(saved.certificate?.davgaArgumentsByPoint?.[first.id], "Первоначальные доводы 1");
   assert.ok(saved.history.some((event) => event.title.includes("отозвано при формировании проекта решения")));
+  assert.match(saved.history.find((event) => event.title.includes("отозвано при формировании проекта решения"))?.text || "", /Этап: Формирование проекта решения/);
+  assert.ok(saved.certificateChangeRequests?.at(-1)?.withdrawnAt);
   assert.notEqual(nextAction(saved, "director")?.action, "review-certificate-change");
 });
