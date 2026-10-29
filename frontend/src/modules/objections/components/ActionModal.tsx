@@ -306,7 +306,7 @@ function ProtocolVotesFields({
   return (
     <>
       <h3 className="form-section">Участники заседания и результаты голосования</h3>
-      <div className="table-scroll">
+      <div className="table-scroll protocol-vote-entry-scroll">
         <table className="data-table protocol-vote-entry-table">
           <thead>
             <tr>

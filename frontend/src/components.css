@@ -321,6 +321,22 @@
   width: 17px;
   height: 17px;
 }
+.table-scroll.protocol-vote-entry-scroll {
+  overflow-x: auto;
+}
+.protocol-vote-entry-table {
+  table-layout: fixed;
+  min-width: 800px;
+}
+.protocol-vote-entry-table th,
+.protocol-vote-entry-table td {
+  overflow-wrap: anywhere;
+}
+.protocol-vote-entry-table th:nth-child(1) { width: 4%; }
+.protocol-vote-entry-table th:nth-child(2) { width: 27%; }
+.protocol-vote-entry-table th:nth-child(3) { width: 22%; }
+.protocol-vote-entry-table th:nth-child(4) { width: 14%; }
+.protocol-vote-entry-table th:nth-child(5) { width: 33%; }
 .process-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
