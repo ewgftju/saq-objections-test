@@ -9,6 +9,7 @@ import type {
 } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import { caseStatusLabelForRole } from "../services/statusPresentation";
+import { requestNumber, responseNumber, responseDate } from "../services/requestNumbering";
 import {
   additionalActions,
   nextAction,
@@ -171,10 +172,6 @@ function requestKind(request: ObjectionCase["requests"][number]) {
   return "Запрос через другую систему";
 }
 
-function responseDate(request: ObjectionCase["requests"][number]) {
-  return request.responded || request.responseSigned;
-}
-
 function RequestResponsesPanel({
   c,
   role,
@@ -224,6 +221,8 @@ function RequestResponsesPanel({
               </span>
               <span className="request-response-recipient">
                 <strong>{requestKind(request)}</strong>
+                {requestNumber(c, request) ? <small>Номер запроса: {requestNumber(c, request)}</small> : null}
+                {request.registrationNumber && <small>Номер письма запроса: {request.registrationNumber}</small>}
                 <small>Кому: {request.recipient}</small>
                 <small>Маршрут: {requestRouteLabelForRequest(request)}</small>
               </span>
@@ -233,10 +232,9 @@ function RequestResponsesPanel({
                 </small>
                 <small>
                   Дата ответа: {answerDate ? formatDate(answerDate) : "—"}
-                  {request.responseRegistrationNumber
-                    ? `, №${request.responseRegistrationNumber}`
-                    : ""}
                 </small>
+                {responseNumber(c, request) ? <small>Номер ответа: {responseNumber(c, request)}</small> : null}
+                {request.responseRegistrationNumber && <small>Номер внешнего письма: {request.responseRegistrationNumber}</small>}
               </span>
               <span className="request-response-status-actions">
                 <span

@@ -29,6 +29,7 @@ import {
   subjectRoleForCase,
 } from "../services/saqCabinets";
 import { nextAction } from "../services/workflow";
+import { requestNumber, responseNumber, responseDate as signedResponseDate } from "../services/requestNumbering";
 import {
   authorityRequestStatusLabel,
   authorityStatusRequest,
@@ -1573,7 +1574,7 @@ export default function CaseWorkspace({
                                       className="request-document-row"
                                       key={`response-${document.requestId}-${document.name}`}
                                     >
-                                      <span>{document.name}</span>
+                                      <span>{document.name}{(() => { const request = c.requests.find((item) => item.id === document.requestId); const number = request && responseNumber(c, request); const date = request && signedResponseDate(request); return number && date ? ` · № ${number} от ${formatDate(date)}` : ""; })()}</span>
                                       {document.dataUrl ? (
                                         <a
                                           className="button"
@@ -1671,7 +1672,7 @@ export default function CaseWorkspace({
                                               className="request-document-row"
                                               key={`${request.id}-${document.name}`}
                                             >
-                                              <span>{document.name}</span>
+                                              <span>{document.name}{document.kind === "authority-response" ? (responseNumber(c, request) && signedResponseDate(request) ? ` · № ${responseNumber(c, request)} от ${formatDate(signedResponseDate(request)!)}` : "") : (requestNumber(c, request) && request.sent ? ` · № ${requestNumber(c, request)} от ${formatDate(request.sent)}` : "")}</span>
                                               {document.dataUrl ? (
                                                 <a
                                                   className="button"

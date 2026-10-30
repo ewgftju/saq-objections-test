@@ -324,7 +324,7 @@ export function actionForm(
         input("recipient", "Кому направлен запрос", values.recipient || ""),
         input(
           "registrationNumber",
-          "Номер регистрации запроса",
+          "Номер письма запроса",
           values.registrationNumber || "",
         ),
         select(

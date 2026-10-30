@@ -1,6 +1,7 @@
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
+import { nextRequestNumber, requestNumber, responseNumber } from "./requestNumbering";
 import { certificateBasisForPoint, decisionProjectDavga, motivatedResponseDavga, protocolDavgaFromReason, replaceProtocolDavga, signedProtocolDavga } from "./protocolReason";
 import type {
   Action,
@@ -1134,9 +1135,7 @@ export function applyAction(
       const recipient = text("recipient", "Кому направлен запрос");
       const sent = String(form.get("date") || date);
       dateObject(sent);
-      const registrationNumber = String(
-        form.get("registrationNumber") || "",
-      ).trim();
+      const registrationNumber = text("registrationNumber", "Номер письма запроса");
       const deliveryPath = String(form.get("deliveryPath") || "").trim();
       const requestId = `request-${c.requests.length + 1}`;
       const firstSentRequest = !c.requests.some(
@@ -1145,6 +1144,7 @@ export function applyAction(
       note = `Направление запроса в ${recipient} зафиксировано: №${registrationNumber} от ${formatDate(sent)}, ${deliveryPath}. Ответ ожидается.`;
       c.requests.push({
         id: requestId,
+        requestNumber: nextRequestNumber(c),
         recipient,
         date: sent,
         text: note,
@@ -1257,6 +1257,7 @@ export function applyAction(
       if (request.sent) throw new Error("Этот запрос уже подписан");
       if (!request.approved) throw new Error("Сначала согласуйте этот запрос");
       const firstSignedRequest = c.requests.every((item) => !item.sent);
+      request.requestNumber = nextRequestNumber(c);
       request.sent = date;
       request.lifecycleStatus = "waiting_response";
       if (isDvgaOrKvgaRequest(request.recipient))
@@ -1600,6 +1601,8 @@ export function applyAction(
       );
       if (!request) throw new Error("Нет согласованного ответа для подписания");
       request.responseSigned = date;
+      request.requestNumber ||= requestNumber(c, request);
+      request.responseNumber ||= responseNumber(c, request);
       request.lifecycleStatus = "response_received";
       const pausedDays = advanceAfterResponses(c, date);
       if (pausedDays === null)
@@ -1675,10 +1678,10 @@ export function applyAction(
         throw new Error(
           "Выберите подписанный запрос другого органа, ожидающий ответа",
         );
+      request.requestNumber ||= requestNumber(c, request);
       request.responded = date;
-      request.responseRegistrationNumber = String(
-        form.get("responseRegistrationNumber") || "",
-      ).trim();
+      request.responseNumber ||= responseNumber(c, request);
+      request.responseRegistrationNumber = text("responseRegistrationNumber", "Номер письма ответа");
       request.lifecycleStatus = "response_received";
       const pausedDays = advanceAfterResponses(c, date);
       title = `Ответ ${request.recipient} зафиксирован`;
@@ -1705,7 +1708,9 @@ export function applyAction(
           !item.responded,
       );
       if (!request) throw new Error("Нет запроса, ожидающего ответа Объекта");
+      request.requestNumber ||= requestNumber(c, request);
       request.responded = date;
+      request.responseNumber ||= responseNumber(c, request);
       request.lifecycleStatus = "response_received";
       const pausedDays = advanceAfterResponses(c, date);
       title = "Ответ направлен рабочему органу";

@@ -18,6 +18,7 @@ import {
 } from "../../../utils/auditAuthority";
 import { downloadFile } from "../../../utils/download";
 import { DEMO_USER } from "../../../config";
+import { requestNumber, responseNumber, responseDate as signedResponseDate } from "../services/requestNumbering";
 import { requiresMotivatedResponse } from "../formDefinitions";
 import { decisionProjectDavga, motivatedResponseDavga, signedProtocolDavga } from "../services/protocolReason";
 import {
@@ -265,6 +266,8 @@ export function DocumentContent({
     | "template"
     | "author"
     | "authorityResponses"
+    | "responseNumber"
+    | "requestNumber"
   >;
   appendixRecipient?: string;
   appendixFindingPreview?: Record<string, string>;
@@ -288,6 +291,10 @@ export function DocumentContent({
     (document?.requestId
       ? c.requests.find((item) => item.id === document.requestId)
       : undefined);
+  const savedRequest = document?.requestId ? c.requests.find((item) => item.id === document.requestId) : undefined;
+  const visibleRequestNumber = savedRequest ? requestNumber(c, savedRequest) : "";
+  const visibleResponseNumber = savedRequest ? responseNumber(c, savedRequest) : "";
+  const visibleResponseDate = savedRequest ? signedResponseDate(savedRequest) : undefined;
   const certificate =
     certificatePreview ||
     (document?.snapshot?.certificate ?? c.certificate) ||
@@ -364,6 +371,7 @@ export function DocumentContent({
           </span>
         </div>
         <div className="other-request-template-line" />
+        {visibleRequestNumber && savedRequest?.sent ? <p>№ {visibleRequestNumber} от {formatDate(savedRequest.sent)}</p> : null}
         <p className="other-request-template-recipient">
           <b>
             {auditAuthorityFullName(request.recipient) ||
@@ -408,6 +416,7 @@ export function DocumentContent({
           </div>
         </div>
         <div className="request-template-line" />
+        {visibleRequestNumber && savedRequest?.sent ? <p>№ {visibleRequestNumber} от {formatDate(savedRequest.sent)}</p> : null}
         <p className="request-template-recipient">
           <b>
             {auditAuthorityFullName(request.recipient) ||
@@ -449,6 +458,7 @@ export function DocumentContent({
 
     return (
       <article className="print-document appendix-template">
+        {isResponseAppendix && visibleResponseNumber && visibleResponseDate ? <p>№ {visibleResponseNumber} от {formatDate(visibleResponseDate)}</p> : null}
         <p className="appendix-template-number">Таблица №1</p>
         <div className="appendix-template-table-wrap">
           <table>
@@ -1430,6 +1440,7 @@ export function DocumentContent({
         "request-appendix",
       ].includes(kind) && (
         <>
+          {kind === "authority-response" && visibleResponseNumber && visibleResponseDate ? <p>№ {visibleResponseNumber} от {formatDate(visibleResponseDate)}</p> : null}
           <p>{document?.text}</p>
           {["analysis", "position"].includes(kind) &&
             snapshot.issues
