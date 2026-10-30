@@ -21,3 +21,13 @@ test("история версий доступна у протокола раб�
   }
   assert.doesNotMatch(render("dvga"), /История изменений/);
 });
+
+test('у подписанного протокола показаны номер и дата из его снимка', () => {
+  const c = initialState().cases[0];
+  c.status = 'decision_project';
+  c.meeting = { date: '2026-10-29', number: 'ПЗ-10/2026-7', audio: '', signed: '2026-10-30' };
+  addDocument(c, 'work', '2026-10-30', 'Подписанный протокол заседания', 'protocol', '');
+  c.meeting = { date: '2026-11-02', number: '', audio: '' };
+  const html = renderToStaticMarkup(createElement(CaseWorkspace, { c, tab: 'review', role: 'work', onBack() {}, onTab() {}, onAction() {}, onDocument() {}, onUpload() {} }));
+  assert.match(html, /Подписанный протокол заседания · № ПЗ-10\/2026-7 от 29\.10\.2026/);
+});

@@ -1440,12 +1440,13 @@ export default function CaseWorkspace({
                         const protocol = c.documents
                           .filter((document) => document.kind === "protocol")
                           .at(-1);
+                        const protocolMeeting = protocol?.snapshot?.meeting ?? c.meeting;
                         return protocol ? (
                           <section className="request-documents-section">
                             <h4>Протокол заседания</h4>
                             <div className="request-documents-list">
                               <div className="request-document-row">
-                                <span>{protocol.name}</span>
+                                <span>{protocol.name}{protocolMeeting?.number ? ` · № ${protocolMeeting.number}` : ""}{protocolMeeting?.number && protocolMeeting.date ? ` от ${formatDate(protocolMeeting.date)}` : ""}</span>
                                 <div className="request-document-actions">
                                   <Button
                                     onClick={() =>
