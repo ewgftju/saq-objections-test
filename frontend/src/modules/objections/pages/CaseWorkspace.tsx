@@ -49,6 +49,10 @@ function responseDocumentLabel(c: ObjectionCase) {
     : "Окончательный ответ";
 }
 
+function documentNumberLabel(document: CaseDocument) {
+  return document.signedDocumentNumber && document.signedDocumentDate ? ` · № ${document.signedDocumentNumber} от ${formatDate(document.signedDocumentDate)}` : "";
+}
+
 function ResponseDocumentSection({
   c,
   onDocument,
@@ -66,7 +70,7 @@ function ResponseDocumentSection({
       <h4>{responseDocumentLabel(c)}</h4>
       <div className="request-documents-list">
         <div className="request-document-row">
-          <span>{finalResponse.name}</span>
+          <span>{finalResponse.name}{documentNumberLabel(finalResponse)}</span>
           <div className="request-document-actions">
             <Button
               onClick={() => onDocument(finalResponse.kind, finalResponse)}
@@ -385,7 +389,7 @@ function AuthorityRequestMaterials({
           <h4>{responseDocumentLabel(c)}</h4>
           <div className="request-documents-list">
             <div className="request-document-row">
-              <span>{finalResponse.name}</span>
+              <span>{finalResponse.name}{documentNumberLabel(finalResponse)}</span>
               <Button
                 onClick={() => onDocument(finalResponse.kind, finalResponse)}
               >
@@ -443,7 +447,7 @@ function SubjectRequestMaterials({
       className="request-document-row"
       key={`${document.kind}-${document.name}`}
     >
-      <span>{document.name}</span>
+      <span>{document.name}{documentNumberLabel(document)}</span>
       {document.dataUrl ? (
         <a
           className="button"
@@ -1401,7 +1405,7 @@ export default function CaseWorkspace({
                                 <h4>Проект решения</h4>
                                 <div className="request-documents-list">
                                   <div className="request-document-row">
-                                    <span>{decisionProject.name}</span>
+                                    <span>{decisionProject.name}{documentNumberLabel(decisionProject)}</span>
                                     <div className="request-document-actions">
                                       <Button
                                         onClick={() =>
@@ -1441,12 +1445,13 @@ export default function CaseWorkspace({
                           .filter((document) => document.kind === "protocol")
                           .at(-1);
                         const protocolMeeting = protocol?.snapshot?.meeting ?? c.meeting;
+                        const protocolRegistrationDate = protocolMeeting?.signed || (protocol?.name === "Подписанный протокол заседания" ? protocol.date : undefined);
                         return protocol ? (
                           <section className="request-documents-section">
                             <h4>Протокол заседания</h4>
                             <div className="request-documents-list">
                               <div className="request-document-row">
-                                <span>{protocol.name}{protocolMeeting?.number ? ` · № ${protocolMeeting.number}` : ""}{protocolMeeting?.number && protocolMeeting.date ? ` от ${formatDate(protocolMeeting.date)}` : ""}</span>
+                                <span>{protocol.name}{protocolMeeting?.number ? ` · № ${protocolMeeting.number}` : ""}{protocolMeeting?.number && protocolRegistrationDate ? ` от ${formatDate(protocolRegistrationDate)}` : ""}</span>
                                 <div className="request-document-actions">
                                   <Button
                                     onClick={() =>

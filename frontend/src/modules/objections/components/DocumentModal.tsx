@@ -747,6 +747,7 @@ export function DocumentContent({
     return (
       <div className="final-response-document">
         <article className="print-document final-response-template">
+          {document?.signedDocumentNumber && document.signedDocumentDate ? <p>№ {document.signedDocumentNumber} от {formatDate(document.signedDocumentDate)}</p> : null}
           <div className="final-response-recipient">
             <p>
               <strong>{snapshot.org}</strong>

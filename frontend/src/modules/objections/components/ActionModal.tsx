@@ -1291,7 +1291,7 @@ export default function ActionModal({
                 c={c}
                 kind="protocol"
                 protocolPreview={{
-                  date: values.protocolDate || date,
+                  date: values.protocolDate || c.attendanceMeetingDate || c.agendaMeetingDate || date,
                   // Номер появляется только после подписания протокола.
                   number: "",
                   audio: "",

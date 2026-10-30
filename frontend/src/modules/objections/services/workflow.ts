@@ -857,6 +857,8 @@ export function addDocument(
     text,
     date,
     author: ROLES[role],
+    signedDocumentNumber: kind === "decision-project" && name === "Подписанный проект решения" ? c.decisionProject?.number : kind === "final-response" && name === "Подписанный окончательный ответ" ? c.delivery?.number : undefined,
+    signedDocumentDate: kind === "decision-project" && name === "Подписанный проект решения" || kind === "final-response" && name === "Подписанный окончательный ответ" ? date : undefined,
     certificateNumber: kind === "certificate" && name.startsWith("Справка: результаты голосования членов АК")
       ? [...c.documents].reverse().find((item) => item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения")?.certificateNumber
       : undefined,
@@ -2049,7 +2051,7 @@ export function applyAction(
         point.proposal = outcome;
         point.final = outcome;
       }
-      const protocolDate = String(form.get("protocolDate") || date);
+      const protocolDate = String(form.get("protocolDate") || c.attendanceMeetingDate || c.agendaMeetingDate || date);
       const meetingFormat =
         String(form.get("meetingFormat") || "онлайн, Qosyl") === "офлайн"
           ? "офлайн"
@@ -2144,9 +2146,7 @@ export function applyAction(
           : requestedSubjectChannel;
       c.decisionProject = {
         date,
-        // Для проекта решения исходящий номер не оформляется: его укажут
-        // при направлении окончательного ответа.
-        number: String(form.get("number") || ""),
+        number: "",
         receipt: String(form.get("receipt") || ""),
         channel: String(form.get("channel") || ""),
         appealCourt: String(form.get("appealCourt") || ""),
@@ -2182,6 +2182,16 @@ export function applyAction(
     case "sign-decision-project":
       if (!c.decisionProject)
         throw new Error("Проект решения ещё не сформирован");
+      {
+        const last = next.cases.flatMap((item) => item.documents).reduce((max, document) => {
+          const match = document.signedDocumentNumber?.match(/^ПР-\d{2}\/\d{4}-(\d+)$/u);
+          return match ? Math.max(max, Number(match[1])) : max;
+        }, next.decisionProjectLastNumber || 0);
+        next.decisionProjectLastNumber = last + 1;
+        const [year, month] = date.split("-");
+        c.decisionProject.number = `ПР-${month}/${year}-${last + 1}`;
+        c.decisionProject.date = date;
+      }
       c.motivatedResponseDavgaOverrides = undefined;
       const recipients: DecisionProjectRecipient[] = decisionProjectRecipients(c)
         .filter((recipient) => recipient.purpose === "comments")
@@ -2544,9 +2554,7 @@ export function applyAction(
       const isMotivatedResponse = requiresMotivatedResponse(c);
       c.delivery = {
         date,
-        number: isMotivatedResponse
-          ? String(form.get("number") || "")
-          : text("number", "Исходящий номер"),
+        number: "",
         // The receipt is no longer collected with the final response.
         // Preserve it only when replaying legacy form data.
         receipt: String(form.get("receipt") || "").trim(),
@@ -2697,6 +2705,13 @@ export function applyAction(
           });
         });
       } else {
+        const last = next.cases.flatMap((item) => item.documents).reduce((max, document) => {
+          const match = document.signedDocumentNumber?.match(/^Р-\d{2}\/\d{4}-(\d+)$/u);
+          return match ? Math.max(max, Number(match[1])) : max;
+        }, next.finalResponseLastNumber || 0);
+        next.finalResponseLastNumber = last + 1;
+        const [year, month] = date.split("-");
+        c.delivery.number = `Р-${month}/${year}-${last + 1}`;
         // Для возражения на уведомление сохраняется прежнее направление
         // подписанного окончательного ответа одновременно обоим адресатам.
         c.delivery.recipientRoles = [
