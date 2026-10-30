@@ -1,5 +1,5 @@
 import type { ObjectionCase } from "../../../types";
-import { disputed } from "./decisions";
+import { disputed, normalizeVoteChoice, pointOutcomeFromVotes } from "./decisions";
 
 const DAVGA_LABEL = "Доводы рабочего органа (ДАВГА МФ РК): ";
 
@@ -11,6 +11,23 @@ export function currentProtocolRows(c: ObjectionCase) {
 export function protocolDavgaFromReason(reason: string) {
   const index = reason.lastIndexOf(DAVGA_LABEL);
   return index < 0 ? "" : reason.slice(index + DAVGA_LABEL.length);
+}
+
+export function signedProtocolDavga(c: ObjectionCase, pointId: string) {
+  const version = [...(c.meeting?.protocolVersions || [])].reverse().find((item) => item.signedAt);
+  const point = c.issues.find((item) => item.id === pointId);
+  const votes = c.votes?.[pointId];
+  const outcome = pointOutcomeFromVotes(votes?.votes || {}, votes?.chair) || point?.final || point?.proposal;
+  const row = version?.rows.find((item) => item.pointId === pointId && normalizeVoteChoice(item.vote) === outcome);
+  return { text: protocolDavgaFromReason(row?.edited || "").trim(), signedAt: version?.signedAt || "" };
+}
+
+export function decisionProjectDavga(c: ObjectionCase, pointId: string) {
+  const protocol = signedProtocolDavga(c, pointId);
+  const overrides = c.decisionProjectDavgaOverrides;
+  return protocol.signedAt && overrides?.protocolSignedAt === protocol.signedAt
+    ? overrides.byPoint[pointId] ?? protocol.text
+    : protocol.text;
 }
 
 export function replaceProtocolDavga(reason: string, davga: string) {

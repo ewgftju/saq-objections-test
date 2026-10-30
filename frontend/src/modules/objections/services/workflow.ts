@@ -1,7 +1,7 @@
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
-import { certificateBasisForPoint, protocolDavgaFromReason, replaceProtocolDavga } from "./protocolReason";
+import { certificateBasisForPoint, decisionProjectDavga, protocolDavgaFromReason, replaceProtocolDavga, signedProtocolDavga } from "./protocolReason";
 import type {
   Action,
   ActionOption,
@@ -417,7 +417,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
         : c.status === "decision_project"
           ? { action: "create-decision-project", label: "Сформировать проект решения", role: "work" }
           : { action: "deliver", label: "Сформировать мотивированный ответ", role: "work" }
-      : { action: "review-certificate-change", label: "Рассмотреть изменения справки", role: "director" };
+      : { action: "review-certificate-change", label: c.status === "decision_project" ? "Рассмотреть изменения доводов ДАВГА" : "Рассмотреть изменения справки", role: "director" };
   const authorityInProgress = [
     "request_approved",
     "response_approval",
@@ -741,7 +741,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
     !["protocol", "decided", "delivered", "court"].includes(c.status);
   if (active) {
     if (c.status === "decision_project" && c.certificate && c.certificateChangeRequests?.at(-1)?.status !== "pending")
-      options.push({ action: "propose-certificate-change", label: "Предложить изменение справки", role: "work" });
+      options.push({ action: "propose-certificate-change", label: "Предложить изменение доводов ДАВГА", role: "work" });
     if (c.status === "decision_project" && c.certificateChangeRequests?.at(-1)?.status === "pending")
       options.push({ action: "create-decision-project", label: "Сформировать проект решения", role: "work" });
     if (pendingOtherRequest(c))
@@ -866,6 +866,7 @@ export function addDocument(
       hearing: c.hearing || null,
       delivery: c.delivery || null,
       certificate: c.certificate || null,
+      decisionProjectDavgaOverrides: c.decisionProjectDavgaOverrides,
       requests: c.requests,
       hearingSupplements: c.hearingSupplements || [],
     }),
@@ -932,7 +933,7 @@ export function applyAction(
       const changes = disputed(c).map((point) => ({
         pointId: point.id,
         pointNumber: point.number,
-        before: protocolDavgaFromReason(certificateBasisForPoint(c, point)),
+        before: c.status === "decision_project" ? decisionProjectDavga(c, point.id) : protocolDavgaFromReason(certificateBasisForPoint(c, point)),
         proposed: String(form.get(`proposedDavga_${point.id}`) ?? "").trim(),
       })).filter((change) => change.before !== change.proposed);
       if (!changes.length) throw new Error("Измените доводы хотя бы по одному пункту");
@@ -962,6 +963,13 @@ export function applyAction(
       request.reviewComment = String(form.get("reviewComment") || "").trim();
       const accepted = request.changes.filter((change) => change.decision === "accepted");
       if (accepted.length) {
+        if (request.stage === "decision-project") {
+          const signedAt = signedProtocolDavga(c, accepted[0].pointId).signedAt;
+          if (!signedAt) throw new Error("Подписанный протокол не найден");
+          if (c.decisionProjectDavgaOverrides?.protocolSignedAt !== signedAt)
+            c.decisionProjectDavgaOverrides = { protocolSignedAt: signedAt, byPoint: {} };
+          for (const change of accepted) c.decisionProjectDavgaOverrides!.byPoint[change.pointId] = change.proposed;
+        }
         c.certificate.davgaArgumentsByPoint = { ...c.certificate.davgaArgumentsByPoint };
         for (const change of accepted) c.certificate.davgaArgumentsByPoint[change.pointId] = change.proposed;
         c.certificateRevision = (c.certificateRevision || 0) + 1;

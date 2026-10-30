@@ -326,6 +326,7 @@ export interface CaseDocument {
     hearing: Hearing | null;
     delivery: Delivery | null;
     certificate: CaseCertificate | null;
+    decisionProjectDavgaOverrides?: { protocolSignedAt: string; byPoint: Record<string, string> };
     /** Адресаты и их ответы на момент формирования версии документа. */
     requests?: CaseRequest[];
     /** Версии дополнительных доводов, представленных на заслушивании. */
@@ -641,6 +642,7 @@ export interface ObjectionCase {
   transferredFromMeetingIds?: string[];
   certificate?: CaseCertificate | null;
   certificateChangeRequests?: CertificateChangeRequest[];
+  decisionProjectDavgaOverrides?: { protocolSignedAt: string; byPoint: Record<string, string> };
   certificateRevision?: number;
   hearing?: Hearing | null;
   meeting?: Meeting | null;

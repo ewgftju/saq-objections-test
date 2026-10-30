@@ -38,7 +38,7 @@ test("на этапе проекта директор принимает или 
   saved = state.cases.find((item) => item.id === c.id)!;
   const proposedEvent = saved.history.find((event) => event.title === "Предложены изменения справки");
   const reviewEvent = saved.history.find((event) => event.title === "Директор рассмотрел изменения справки");
-  assert.match(proposedEvent?.text || "", /Первоначальные доводы 1/);
+  assert.match(proposedEvent?.text || "", /Доводы протокола 1/);
   assert.match(proposedEvent?.text || "", /Этап: Формирование проекта решения/);
   assert.match(reviewEvent?.text || "", /Этап: Формирование проекта решения/);
   assert.match(proposedEvent?.text || "", /Предложено: Принятые доводы 1/);
@@ -54,9 +54,8 @@ test("на этапе проекта директор принимает или 
   saved = state.cases.find((item) => item.id === c.id)!;
   const project = saved.documents.filter((doc) => doc.kind === "decision-project").at(-1)!;
   const html = renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "decision-project", document: project }));
-  assert.match(html, /Доводы протокола 1/);
+  assert.match(html, /Принятые доводы 1/);
   assert.match(html, /Доводы протокола 2/);
-  assert.doesNotMatch(html, /Принятые доводы 1/);
   assert.doesNotMatch(html, /Отклонённые доводы 2/);
 });
 
@@ -77,5 +76,31 @@ test("проект решения можно сформировать с отз�
   assert.ok(saved.history.some((event) => event.title.includes("отозвано при формировании проекта решения")));
   assert.match(saved.history.find((event) => event.title.includes("отозвано при формировании проекта решения"))?.text || "", /Этап: Формирование проекта решения/);
   assert.ok(saved.certificateChangeRequests?.at(-1)?.withdrawnAt);
+  assert.notEqual(nextAction(saved, "director")?.action, "review-certificate-change");
+});
+
+test("повторное предложение сравнивается с принятыми доводами и отзыв их сохраняет", () => {
+  const fixture = setup(); let { state } = fixture; const { c, first, second } = fixture;
+  const proposal = new FormData(); proposal.set(`proposedDavga_${first.id}`, "Принятый текст"); proposal.set(`proposedDavga_${second.id}`, "Доводы протокола 2");
+  state = applyAction(state, c.id, "propose-certificate-change", "work", proposal);
+  const review = new FormData(); review.set(`decision_${first.id}`, "accepted");
+  state = applyAction(state, c.id, "review-certificate-change", "director", review);
+  let saved = state.cases.find((item) => item.id === c.id)!;
+  assert.equal(saved.certificate?.davgaArgumentsByPoint?.[first.id], "Принятый текст");
+  assert.equal(saved.certificate?.davgaArgumentsByPoint?.[second.id], "Первоначальные доводы 2");
+  assert.equal(saved.documents.filter((doc) => doc.kind === "certificate").length, 2);
+  const proposal2 = new FormData(); proposal2.set(`proposedDavga_${first.id}`, "Ещё изменение"); proposal2.set(`proposedDavga_${second.id}`, "Доводы протокола 2");
+  state = applyAction(state, c.id, "propose-certificate-change", "work", proposal2);
+  saved = state.cases.find((item) => item.id === c.id)!;
+  assert.equal(saved.certificateChangeRequests?.at(-1)?.changes[0].before, "Принятый текст");
+  const form = new FormData(); form.set("certificateRevisionAtOpen", "1"); form.set("withdrawCertificateProposal", saved.certificateChangeRequests!.at(-1)!.proposedAt);
+  state = applyAction(state, c.id, "create-decision-project", "work", form);
+  saved = state.cases.find((item) => item.id === c.id)!;
+  const project = saved.documents.filter((doc) => doc.kind === "decision-project").at(-1)!;
+  const html = renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "decision-project", document: project }));
+  assert.match(html, /Принятый текст/);
+  assert.match(html, /Доводы протокола 2/);
+  assert.doesNotMatch(html, /Ещё изменение/);
+  assert.equal(saved.certificateChangeRequests!.at(-1)!.status, "withdrawn");
   assert.notEqual(nextAction(saved, "director")?.action, "review-certificate-change");
 });

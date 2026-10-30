@@ -19,7 +19,7 @@ import {
 import { downloadFile } from "../../../utils/download";
 import { DEMO_USER } from "../../../config";
 import { requiresMotivatedResponse } from "../formDefinitions";
-import { protocolDavgaFromReason } from "../services/protocolReason";
+import { decisionProjectDavga, protocolDavgaFromReason } from "../services/protocolReason";
 import {
   normalizeVoteChoice,
   overall,
@@ -692,7 +692,7 @@ export function DocumentContent({
         row.pointId === point.id && normalizeVoteChoice(row.vote) === winningOutcome,
       );
       const reason = useDavgaArguments
-        ? protocolDavgaFromReason(winningProtocolRow?.edited || "").trim() || "—"
+        ? (isDecisionProject ? decisionProjectDavga({ ...snapshot, decisionProjectDavgaOverrides: document?.snapshot ? document.snapshot.decisionProjectDavgaOverrides : c.decisionProjectDavgaOverrides }, point.id) : protocolDavgaFromReason(winningProtocolRow?.edited || "").trim()) || "—"
         : (winningReasonMemberId &&
             pointVotes?.voteReasons?.[winningReasonMemberId]) ||
           snapshot.result?.reason ||
