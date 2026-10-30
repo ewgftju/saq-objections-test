@@ -1,6 +1,7 @@
 import { Fragment, useState, type ReactNode } from "react";
 import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import { ProtocolVersions } from "../components/ProtocolVersions";
+import { CertificateDocuments } from "../components/CertificateDocuments";
 import { CLOSED, OUTCOMES, TYPES } from "../../../data/constants";
 import type {
   Action,
@@ -1483,56 +1484,7 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
-                      {(() => {
-                        // Every certificate keeps an immutable snapshot.  The newest
-                        // version is listed first so it is the one the user sees first.
-                        const certificates = c.documents
-                          .filter((document) => document.kind === "certificate")
-                          .slice()
-                          .reverse();
-                        return certificates.length ? (
-                          <section className="request-documents-section">
-                            <h4>Справка</h4>
-                            <div className="request-documents-list">
-                              {certificates.map((certificate, index) => (
-                                <div
-                                  className="request-document-row"
-                                  key={`${certificate.name}-${certificate.date}-${index}`}
-                                >
-                                  <span>{certificate.name}</span>
-                                  <div className="request-document-actions">
-                                    <Button
-                                      onClick={() =>
-                                        onDocument(
-                                          certificate.kind,
-                                          certificate,
-                                        )
-                                      }
-                                    >
-                                      Просмотр
-                                    </Button>
-                                    <Button
-                                      onClick={() =>
-                                        downloadFile(
-                                          `${c.id}-${certificate.name}.doc`,
-                                          wordDocumentHtml({
-                                            c,
-                                            kind: certificate.kind,
-                                            document: certificate,
-                                          }),
-                                          "application/msword",
-                                        )
-                                      }
-                                    >
-                                      Скачать Word
-                                    </Button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </section>
-                        ) : null;
-                      })()}
+                      <CertificateDocuments c={c} role={role} onDocument={onDocument} />
                       {[
                         "demo-superuser",
                         "work",

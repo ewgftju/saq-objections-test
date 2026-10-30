@@ -51,6 +51,7 @@ test("на этапе мотивированного ответа директо
   assert.match(reviewEvent?.text || "", /отклонено/);
   assert.ok(saved.certificateChangeRequests?.at(-1)?.reviewedAt);
   assert.equal(saved.status, "decided");
+  assert.equal(saved.documents.filter((doc) => doc.kind === "certificate").at(-1)?.certificateVersion?.stage, "motivated-response");
   assert.equal(saved.certificateChangeRequests?.at(-1)?.stage, "motivated-response");
   assert.equal(saved.documents.find((doc) => doc.kind === "protocol")?.snapshot?.certificate?.davgaArgumentsByPoint?.[first.id], "Первоначальные доводы 1");
   const stale = new FormData(); stale.set("certificateRevisionAtOpen", "0");

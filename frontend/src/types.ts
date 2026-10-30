@@ -312,6 +312,12 @@ export interface CaseDocument {
   text: string;
   date: string;
   author: string;
+  certificateVersion?: {
+    stage: "protocol" | "decision-project" | "motivated-response";
+    createdAt: string;
+    proposedBy: string;
+    approvedBy: string;
+  };
   dataUrl?: string;
   filename?: string;
   requestId?: string;

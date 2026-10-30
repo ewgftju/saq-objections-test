@@ -46,6 +46,10 @@ test("на этапе проекта директор принимает или 
   assert.match(reviewEvent?.text || "", /отклонено/);
   assert.ok(saved.certificateChangeRequests?.at(-1)?.reviewedAt);
   assert.equal(saved.status, "decision_project");
+  const certificateVersion = saved.documents.filter((doc) => doc.kind === "certificate").at(-1)!;
+  assert.equal(certificateVersion.certificateVersion?.stage, "decision-project");
+  assert.equal(certificateVersion.certificateVersion?.createdAt, saved.certificateChangeRequests?.at(-1)?.reviewedAt);
+  assert.ok(certificateVersion.certificateVersion?.approvedBy);
   assert.equal(saved.documents.find((doc) => doc.kind === "protocol")?.snapshot?.certificate?.davgaArgumentsByPoint?.[first.id], "Первоначальные доводы 1");
   const stale = new FormData(); stale.set("certificateRevisionAtOpen", "0");
   assert.throws(() => applyAction(state, c.id, "create-decision-project", "work", stale), /Справка изменилась/);

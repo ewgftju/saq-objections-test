@@ -982,6 +982,7 @@ export function applyAction(
         c.certificateRevision = (c.certificateRevision || 0) + 1;
         const version = c.documents.filter((document) => document.kind === "certificate").length + 1;
         doc(`Справка: результаты голосования членов АК. Версия ${version}`, "certificate", "Изменения доводов приняты директором ДАВГА. Повторное подписание не требуется.");
+        if (request.stage) c.documents.at(-1)!.certificateVersion = { stage: request.stage, createdAt: request.reviewedAt, proposedBy: request.proposedBy, approvedBy: request.reviewedBy };
       }
       title = "Директор рассмотрел изменения справки";
       const stageLabel = certificateChangeStageLabel(request.stage);
