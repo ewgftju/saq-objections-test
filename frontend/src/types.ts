@@ -610,9 +610,6 @@ export interface ObjectionCase {
   assignee: string;
   extensionDays: number;
   pauseDays: number;
-  newArgumentsReceivedAt?: string;
-  newArgumentsPauseDaysAtReceipt?: number;
-  objectionHearingCompletedAt?: string;
   documents: CaseDocument[];
   requests: CaseRequest[];
   /** Последний выбранный маршрут этапа «Запрос». */

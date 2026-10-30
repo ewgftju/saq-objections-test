@@ -6,7 +6,6 @@ import { Button, Modal, Notice } from "../../../components/ui";
 import { actionForm, requiresConclusion, requiresMotivatedResponse } from "../formDefinitions";
 import type { FormField, FormValues } from "../formDefinitions";
 import { disputed, normalizeVoteChoice } from "../services/decisions";
-import { hearingExtensionApplies } from "../services/deadlines";
 import { certificateBasisForPoint, currentProtocolRows, protocolDavgaFromReason, replaceProtocolDavga } from "../services/protocolReason";
 import { DocumentContent } from "./DocumentModal";
 import { DEMO_USER } from "../../../config";
@@ -563,14 +562,13 @@ export default function ActionModal({
   const isComplaintOrStatementHearingAction =
     action === "hearing-after-decision-project" &&
     ((c.appealType || "").trim().startsWith("Жалоба") ||
-      (c.appealType || "").trim() === "Заявление" || hearingExtensionApplies(c));
+      (c.appealType || "").trim() === "Заявление");
   const hearingDateField = definition.fields.find(
     (field) => field.name === "date",
   );
   const hearingArgumentsPresenceField = definition.fields.find(
     (field) => field.name === "hearingArgumentsPresence",
   );
-  const newArgumentsReceivedField = definition.fields.find((field) => field.name === "newArgumentsReceivedAt");
   const hearingOutcomeField = definition.fields.find(
     (field) => field.name === "hearingOutcome",
   );
@@ -1458,7 +1456,6 @@ export default function ActionModal({
                     {hearingArgumentsPresenceField && (
                       <Field field={hearingArgumentsPresenceField} />
                     )}
-                    {newArgumentsReceivedField && <Field field={newArgumentsReceivedField} />}
                   </div>
                 </HearingSection>
 
