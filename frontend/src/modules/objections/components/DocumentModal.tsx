@@ -38,6 +38,17 @@ function requestDeadlineDate(deadline: string) {
   return formatDate(deadline.slice(0, 10));
 }
 
+function protocolMemberRank(member: CommissionMember) {
+  const name = member.name.toLocaleLowerCase("ru-RU");
+  if (member.id === "kurenbek-shb" || /директор\s+давга/.test(name)) return 0;
+  if (/заместител\S*\s+председател/.test(name)) return 1;
+  if (/заместител\S*\s+директор/.test(name)) return 3;
+  if (/директор/.test(name)) return 2;
+  if (/руководител\S*\s+управлен/.test(name)) return 4;
+  if (/представител/.test(name)) return 5;
+  return 6;
+}
+
 function hasSeparateAuditObject(c: ObjectionCase) {
   return [
     "Жалоба на уведомление",
@@ -615,11 +626,19 @@ export function DocumentContent({
               );
               if (!positions.length) return null;
               const members = snapshot.members.length
-                ? snapshot.members
+                ? [...snapshot.members]
                 : positions.map((position) => ({
                     id: position.id,
                     name: position.name,
+                    present: true,
+                    recused: false,
+                    reason: "",
                   }));
+              const chairId = presidingChairId(members);
+              members.sort((a, b) =>
+                (a.id === chairId ? -1 : protocolMemberRank(a)) -
+                (b.id === chairId ? -1 : protocolMemberRank(b)),
+              );
               return (
                 <table className="certificate-members-table certificate-point-votes-table">
                   <thead>
@@ -822,7 +841,7 @@ export function DocumentContent({
       );
     const commissionMembers = presentMembers.filter(
       (member) => member.id !== presidingMember?.id,
-    );
+    ).sort((a, b) => protocolMemberRank(a) - protocolMemberRank(b));
     const presidingLabel = viceMinister
       ? "Председатель АК"
       : davgaDirector
@@ -918,7 +937,7 @@ export function DocumentContent({
             <div className="protocol-template-attendance-row">
               <b>Члены Апелляционной комиссии:</b>
               <span className="protocol-template-attendance-members">
-                {presentMembers.map((member) => (
+                {commissionMembers.map((member) => (
                   <span key={member.id}>{member.name}</span>
                 ))}
               </span>
