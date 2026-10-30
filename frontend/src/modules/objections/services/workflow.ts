@@ -857,6 +857,9 @@ export function addDocument(
     text,
     date,
     author: ROLES[role],
+    certificateNumber: kind === "certificate" && name.startsWith("Справка: результаты голосования членов АК")
+      ? [...c.documents].reverse().find((item) => item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения")?.certificateNumber
+      : undefined,
     requestId,
     snapshot: structuredClone({
       issues: c.issues,
@@ -1325,10 +1328,17 @@ export function applyAction(
     }
     case "sign-certificate": {
       if (!c.certificate) throw new Error("Справка по доводам не сформирована");
+      const certificateDocument = [...c.documents].reverse().find((item) => item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения");
+      if (!certificateDocument) throw new Error("Документ справки не найден");
+      if (!certificateDocument.certificateNumber) {
+        const highest = next.cases.reduce((max, item) => item.documents.reduce((value, document) => Math.max(value, document.certificateNumber || 0), max), next.certificateLastNumber || 0);
+        certificateDocument.certificateNumber = highest + 1;
+        next.certificateLastNumber = highest + 1;
+      }
       c.status = "certificate_approved";
       title = "Справка подписана";
       note =
-        "Справка подписана. Опрос о присутствии направляется автоматически при создании заседания.";
+        `Справка № ${certificateDocument.certificateNumber} подписана. Опрос о присутствии направляется автоматически при создании заседания.`;
       if (c.repeatHearingStatus === "required") {
         c.repeatHearingStatus = "ready";
         c.repeatHearingReadyAt = date;

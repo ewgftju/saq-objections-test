@@ -549,7 +549,7 @@ export function DocumentContent({
     };
     return (
       <article className="print-document certificate-template">
-        <h1>Справка</h1>
+        <h1>Справка{document?.certificateNumber ? ` № ${document.certificateNumber}` : ""}</h1>
         <h2>по результатам изучения и анализа возражения</h2>
         <p className="certificate-template-intro">
           {certificateIntro(snapshot)}

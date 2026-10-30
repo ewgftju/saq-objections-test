@@ -312,6 +312,8 @@ export interface CaseDocument {
   text: string;
   date: string;
   author: string;
+  /** Сквозной номер подписанной справки. */
+  certificateNumber?: number;
   certificateVersion?: {
     stage: "protocol" | "decision-project" | "motivated-response";
     createdAt: string;
@@ -714,6 +716,7 @@ export type NewCaseInput = Pick<
 export interface DemoState {
   version: number;
   date: string;
+  certificateLastNumber?: number;
   cases: ObjectionCase[];
   agendas: AgendaRegistryEntry[];
   meetings?: CommissionMeeting[];

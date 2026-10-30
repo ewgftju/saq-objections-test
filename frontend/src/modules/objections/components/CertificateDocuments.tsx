@@ -31,7 +31,7 @@ export function CertificateDocuments({ c, role, onDocument }: { c: ObjectionCase
     <h4>Справка</h4>
     <div className="request-documents-list">
       {latest && <div className="request-document-row">
-        <span>Справка с учётом изменений доводов ДАВГА</span>
+        <span>Справка с учётом изменений доводов ДАВГА{latest.certificateNumber ? ` · № ${latest.certificateNumber}` : ""}</span>
         <div className="request-document-actions">
           <Button onClick={() => onDocument(latest.kind, latest)}>Просмотр</Button>
           <Button onClick={() => downloadFile(`${c.id}-${latest.name}.doc`, wordDocumentHtml({ c, kind: latest.kind, document: latest }), "application/msword")}>Скачать Word</Button>
@@ -39,7 +39,7 @@ export function CertificateDocuments({ c, role, onDocument }: { c: ObjectionCase
         </div>
       </div>}
       {[...originals].reverse().map((document, index) => <div className="request-document-row" key={`${document.name}-${document.date}-${index}`}>
-        <span>{document.name}</span>{actions(document)}
+        <span>{document.name}{document.certificateNumber ? ` · № ${document.certificateNumber}` : ""}</span>{actions(document)}
       </div>)}
     </div>
     {historyOpen && showHistory && <Modal title="История версий справки" wide onClose={() => setHistoryOpen(false)}>
