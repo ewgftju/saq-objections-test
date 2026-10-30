@@ -417,7 +417,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
         : c.status === "decision_project"
           ? { action: "create-decision-project", label: "Сформировать проект решения", role: "work" }
           : { action: "deliver", label: "Сформировать мотивированный ответ", role: "work" }
-      : { action: "review-certificate-change", label: c.status === "decision_project" ? "Рассмотреть изменения доводов ДАВГА" : "Рассмотреть изменения справки", role: "director" };
+      : { action: "review-certificate-change", label: c.status === "decision_project" || isMotivatedResponseStage(c) ? "Рассмотреть изменения доводов ДАВГА" : "Рассмотреть изменения справки", role: "director" };
   const authorityInProgress = [
     "request_approved",
     "response_approval",
@@ -643,7 +643,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
   ];
   if (isMotivatedResponseStage(c) && c.certificate) {
     if (c.certificateChangeRequests?.at(-1)?.status !== "pending")
-      options.push({ action: "propose-certificate-change", label: "Предложить изменение справки", role: "work" });
+      options.push({ action: "propose-certificate-change", label: "Предложить изменение доводов ДАВГА", role: "work" });
     else options.push({ action: "deliver", label: "Сформировать мотивированный ответ", role: "work" });
   }
   if (c.status === "protocol") options.push({ action: "return-protocol", label: "Вернуть протокол на доработку", role: "director" });

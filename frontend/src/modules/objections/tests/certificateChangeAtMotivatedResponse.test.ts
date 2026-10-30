@@ -27,11 +27,15 @@ function setup() {
 
 test("на этапе мотивированного ответа директор принимает или отклоняет доводы по пунктам", () => {
   const fixture = setup(); let { state } = fixture; const { c, first, second } = fixture;
-  assert.ok(additionalActions(c).some((option) => option.action === "propose-certificate-change" && option.role === "work"));
+  assert.ok(additionalActions(c).some((option) => option.action === "propose-certificate-change" && option.role === "work" && option.label === "Предложить изменение доводов ДАВГА"));
+  const proposalHtml = renderToStaticMarkup(createElement(ActionModal, { c, action: "propose-certificate-change", date: state.date, role: "work", onSubmit() {}, onClose() {} }));
+  assert.match(proposalHtml, /Предложить изменение доводов ДАВГА/);
+  assert.match(proposalHtml, /войдут в мотивированный ответ и новую версию справки/);
   const proposal = new FormData(); proposal.set(`proposedDavga_${first.id}`, "Принятые доводы 1"); proposal.set(`proposedDavga_${second.id}`, "Отклонённые доводы 2");
   state = applyAction(state, c.id, "propose-certificate-change", "work", proposal);
   let saved = state.cases.find((item) => item.id === c.id)!;
   assert.equal(nextAction(saved, "director")?.action, "review-certificate-change");
+  assert.equal(nextAction(saved, "director")?.label, "Рассмотреть изменения доводов ДАВГА");
   assert.equal(nextAction(saved, "work")?.action, "deliver");
   assert.equal(saved.certificate?.davgaArgumentsByPoint?.[first.id], "Первоначальные доводы 1");
   const review = new FormData(); review.set(`decision_${first.id}`, "accepted"); review.set(`decision_${second.id}`, "rejected");

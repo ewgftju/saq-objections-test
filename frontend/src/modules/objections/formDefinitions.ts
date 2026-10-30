@@ -184,18 +184,18 @@ export function actionForm(
   let note = "";
   switch (action) {
     case "propose-certificate-change":
-      title = c.status === "decision_project" ? "Предложить изменение доводов ДАВГА" : "Предложить изменение справки";
-      note = c.status === "decision_project" ? "Измените доводы по нужным пунктам. Принятые директором доводы войдут в проект решения и новую версию справки." : "Измените доводы по нужным пунктам. До решения директора действующая справка не изменится.";
+      title = c.status === "decision_project" || (c.status === "decided" && requiresMotivatedResponse(c)) ? "Предложить изменение доводов ДАВГА" : "Предложить изменение справки";
+      note = c.status === "decision_project" ? "Измените доводы по нужным пунктам. Принятые директором доводы войдут в проект решения и новую версию справки." : c.status === "decided" && requiresMotivatedResponse(c) ? "Измените доводы по нужным пунктам. Принятые директором доводы войдут в мотивированный ответ и новую версию справки." : "Измените доводы по нужным пунктам. До решения директора действующая справка не изменится.";
       fields.push(...disputed(c).map((point) => area(`proposedDavga_${point.id}`, `Доводы ДАВГА по пункту № ${point.number}`, c.status === "decision_project" ? decisionProjectDavga(c, point.id) : c.status === "decided" && requiresMotivatedResponse(c) ? motivatedResponseDavga(c, point.id) : protocolDavgaFromReason(certificateBasisForPoint(c, point)))));
       fields.push({ ...area("changeReason", "Причина изменения"), required: false });
       break;
     case "review-certificate-change": {
       const request = c.certificateChangeRequests?.at(-1);
-      title = request?.stage === "decision-project" ? "Рассмотреть изменения доводов ДАВГА" : "Рассмотреть изменения справки";
+      title = request?.stage === "decision-project" || request?.stage === "motivated-response" ? "Рассмотреть изменения доводов ДАВГА" : "Рассмотреть изменения справки";
       if (request?.reason) fields.push({ ...area("proposalReason", "Причина предложения", request.reason), readOnly: true, required: false });
       for (const change of request?.changes || []) {
         fields.push(heading(`changeHeading_${change.pointId}`, `Пункт № ${change.pointNumber}`));
-        fields.push({ ...area(`before_${change.pointId}`, request?.stage === "decision-project" ? "Текущие доводы для проекта решения" : "Доводы в справке", change.before), readOnly: true, required: false });
+        fields.push({ ...area(`before_${change.pointId}`, request?.stage === "decision-project" ? "Текущие доводы для проекта решения" : request?.stage === "motivated-response" ? "Текущие доводы для мотивированного ответа" : "Доводы в справке", change.before), readOnly: true, required: false });
         fields.push({ ...area(`proposed_${change.pointId}`, "Предлагаемые доводы", change.proposed), readOnly: true, required: false });
         fields.push(select(`decision_${change.pointId}`, "Решение директора", [["", "Выберите решение"], ["accepted", "Принять"], ["rejected", "Отклонить"]]));
       }
