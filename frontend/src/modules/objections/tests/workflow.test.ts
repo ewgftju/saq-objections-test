@@ -4330,6 +4330,7 @@ test("проект решения по жалобе направляется в 
   h.run("submit-decision-project-comment", "subject", {
     projectComment: "Не согласны с проектом решения.",
   });
+  h.run("sign-decision-project-comment", "subject", { signedComment: "on" });
   assert.equal(h.c.status, "decision_project_hearing");
   assert.equal(h.c.decisionProjectRouting?.commentChannel, "Кабинет SAQ");
   assert.ok(

@@ -681,8 +681,8 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
     c.decisionProjectRouting.channel === "saq"
   )
     options.push({
-      action: "submit-decision-project-comment",
-      label: "Направить замечание к проекту решения",
+      action: c.decisionProjectRouting.commentDraft ? "sign-decision-project-comment" : "submit-decision-project-comment",
+      label: c.decisionProjectRouting.commentDraft ? "Подписать замечание" : "Подготовить замечание к проекту решения",
       role: subjectRoleForCase(c),
     });
   if (
@@ -761,7 +761,7 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
         label: "Сформировать протокол заседания",
         role: "work",
       });
-      if (c.certificate && c.certificateChangeRequests?.at(-1)?.status !== "pending")
+      if (c.status === "meeting" && c.certificate && c.certificateChangeRequests?.at(-1)?.status !== "pending")
         options.push({
           action: c.status === "meeting" ? "propose-certificate-change" : "edit-certificate",
           label: c.status === "meeting" ? "Предложить изменение справки" : "Редактировать справку",
@@ -2255,11 +2255,25 @@ export function applyAction(
           "Срок для направления замечаний к проекту решения истёк",
         );
       const commentText = text("projectComment", "Замечание к проекту решения");
+      c.decisionProjectRouting.commentDraft = { text: commentText, attachments: [] };
+      title = "Замечание подготовлено к подписанию";
+      note = "Замечание ожидает подписания заявителем.";
+      break;
+    }
+    case "sign-decision-project-comment": {
+      if (c.decisionProjectRouting?.channel !== "saq" || !c.decisionProjectRouting.commentDraft)
+        throw new Error("Замечание для подписания не найдено");
+      if (c.decisionProjectRouting.commentsDeadline && date > c.decisionProjectRouting.commentsDeadline)
+        throw new Error("Срок для направления замечаний к проекту решения истёк");
+      checked(form, "signedComment");
+      const draft = c.decisionProjectRouting.commentDraft;
+      const commentText = draft.text;
       c.decisionProjectRouting.commentReceivedAt = date;
+      c.decisionProjectRouting.commentSignedAt = new Date().toISOString();
       c.decisionProjectRouting.commentChannel = "Кабинет SAQ";
       c.decisionProjectRouting.commentText = commentText;
       c.status = "decision_project_hearing";
-      title = "Замечание к проекту решения направлено";
+      title = "Замечание к проекту решения подписано и направлено";
       note =
         "Замечание поступило рабочему органу. Доступна фиксация результатов заслушивания.";
       doc(
@@ -2267,6 +2281,8 @@ export function applyAction(
         "decision-project-comment",
         commentText,
       );
+      for (const attachment of draft.attachments) c.documents.push({ name: attachment.name, filename: attachment.name, kind: "decision-project-comment-attachment", text: "Вложение к подписанному замечанию на проект решения", author: ROLES[role], date, dataUrl: attachment.dataUrl });
+      delete c.decisionProjectRouting.commentDraft;
       next.notifications.push({
         id: `decision-project-comment-${c.id}-${next.notifications.length + 1}`,
         caseId: c.id,

@@ -302,6 +302,8 @@ export interface DecisionProjectRouting {
   commentChannel?: string;
   commentRegistrationNumber?: string;
   commentText?: string;
+  commentDraft?: { text: string; attachments: Array<{ name: string; dataUrl: string }> };
+  commentSignedAt?: string;
 }
 
 export interface CaseDocument {
@@ -758,6 +760,7 @@ export type Action =
   | "sign-decision-project"
   | "record-decision-project-delivery"
   | "submit-decision-project-comment"
+  | "sign-decision-project-comment"
   | "record-external-decision-project-comment"
   | "proceed-to-final-response"
   | "hearing-after-decision-project"

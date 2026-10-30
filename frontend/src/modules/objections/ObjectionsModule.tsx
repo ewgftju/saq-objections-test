@@ -1295,7 +1295,10 @@ export default function ObjectionsModule() {
       action === "send-recommendations"
         ? next.recommendations.at(-1)?.activity?.at(-1)?.id
         : undefined;
-    if (attached.length) {
+    if (action === "submit-decision-project-comment" && updated.decisionProjectRouting?.commentDraft) {
+      updated.decisionProjectRouting.commentDraft.attachments = attached.map(({ file, dataUrl }) => ({ name: file.name, dataUrl }));
+    }
+    if (attached.length && action !== "submit-decision-project-comment") {
       updated.documents.push(
         ...attached.map(({ file, dataUrl }) => ({
           name: file.name,
@@ -2163,6 +2166,7 @@ export default function ObjectionsModule() {
                   action === "record-decision-project-delivery" ||
                   action === "record-final-response-delivery" ||
                   action === "submit-decision-project-comment" ||
+                  action === "sign-decision-project-comment" ||
                   action === "record-external-decision-project-comment" ||
                   action === "proceed-to-final-response" ||
                   action === "hearing-after-decision-project"

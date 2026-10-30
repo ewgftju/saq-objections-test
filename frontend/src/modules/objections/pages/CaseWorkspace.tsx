@@ -777,9 +777,9 @@ export default function CaseWorkspace({
             )
               .filter(
                 ([value]) =>
-                  !recipientLimited ||
+                  (role !== "commission" || value !== "history") && (!recipientLimited ||
                   value === "review" ||
-                  (value === "overview" && canViewOverview),
+                  (value === "overview" && canViewOverview)),
               )
               .map(([value, label]) => (
                 <button
@@ -1105,12 +1105,12 @@ export default function CaseWorkspace({
                             </span>
                             <h4>
                               {subjectCanCommentOnDecisionProject
-                                ? "Направить замечание к проекту решения"
+                                ? subjectProjectRouting?.commentDraft ? "Подписать замечание к проекту решения" : "Подготовить замечание к проекту решения"
                                 : "Направить ответ на запрос"}
                             </h4>
                             <p>
                               {subjectCanCommentOnDecisionProject
-                                ? "Замечание будет направлено рабочему органу для назначения заслушивания."
+                                ? subjectProjectRouting?.commentDraft ? "Подпишите замечание, чтобы направить его рабочему органу." : "После подготовки подпишите замечание для направления рабочему органу."
                                 : "Вложите ответ и направьте его в кабинет рабочего органа."}
                             </p>
                           </div>
@@ -1125,14 +1125,14 @@ export default function CaseWorkspace({
                               onClick={() =>
                                 onAction(
                                   subjectCanCommentOnDecisionProject
-                                    ? "submit-decision-project-comment"
+                                    ? subjectProjectRouting?.commentDraft ? "sign-decision-project-comment" : "submit-decision-project-comment"
                                     : "subject-response",
                                   role,
                                 )
                               }
                             >
                               {subjectCanCommentOnDecisionProject
-                                ? "Направить замечание"
+                                ? subjectProjectRouting?.commentDraft ? "Подписать замечание" : "Подготовить замечание"
                                 : subjectRequest
                                   ? "Направить ответ"
                                   : "Ответ направлен"}
@@ -1860,7 +1860,7 @@ export default function CaseWorkspace({
                   ))}
               </>
             )}
-            {tab === "history" && !recipientLimited && (
+            {tab === "history" && !recipientLimited && role !== "commission" && (
               <div className="event-list">
                 {[...visibleHistory].reverse().map((event, index) => (
                   <article className="history-event" key={index}>

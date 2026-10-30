@@ -847,10 +847,17 @@ export function actionForm(
         "Укажите реквизиты внешнего направления заявителю. Срок для замечаний рассчитывается от даты направления.";
       break;
     case "submit-decision-project-comment":
-      title = "Направить замечание к проекту решения";
+      title = "Подготовить замечание к проекту решения";
       fields.push(area("projectComment", "Замечание к проекту решения"));
       note =
-        "Замечание будет направлено рабочему органу и станет основанием для назначения заслушивания.";
+        "После подготовки подпишите замечание, чтобы направить его рабочему органу.";
+      break;
+    case "sign-decision-project-comment":
+      title = "Подписать замечание к проекту решения";
+      fields.push({ ...area("commentForSigning", "Замечание", c.decisionProjectRouting?.commentDraft?.text || ""), readOnly: true, required: false });
+      if (c.decisionProjectRouting?.commentDraft?.attachments.length)
+        fields.push({ ...area("commentAttachmentsForSigning", "Вложения", c.decisionProjectRouting.commentDraft.attachments.map((attachment) => attachment.name).join("\n")), readOnly: true, required: false });
+      fields.push(check("signedComment", "Подписать замечание и направить рабочему органу"));
       break;
     case "record-external-decision-project-comment":
       title = "Зафиксировать замечание к проекту решения";
@@ -1096,7 +1103,11 @@ export function actionForm(
     fields,
     note,
     submit:
-      action === "propose-certificate-change"
+      action === "sign-decision-project-comment"
+        ? "Подписать и направить"
+        : action === "submit-decision-project-comment"
+          ? "Подготовить замечание"
+        : action === "propose-certificate-change"
         ? "Направить директору"
         : action === "review-certificate-change"
           ? "Сохранить решение"
