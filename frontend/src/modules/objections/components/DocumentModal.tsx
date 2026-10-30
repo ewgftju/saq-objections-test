@@ -19,7 +19,7 @@ import {
 import { downloadFile } from "../../../utils/download";
 import { DEMO_USER } from "../../../config";
 import { requiresMotivatedResponse } from "../formDefinitions";
-import { decisionProjectDavga, protocolDavgaFromReason } from "../services/protocolReason";
+import { decisionProjectDavga, motivatedResponseDavga, signedProtocolDavga } from "../services/protocolReason";
 import {
   normalizeVoteChoice,
   overall,
@@ -687,12 +687,12 @@ export function DocumentContent({
           normalizeVoteChoice(vote) === winningOutcome &&
           Boolean(pointVotes?.voteReasons?.[memberId]?.trim()),
       )?.[0];
-      const protocolVersion = [...(snapshot.meeting?.protocolVersions || [])].reverse().find((version) => version.signedAt);
-      const winningProtocolRow = protocolVersion?.rows.find((row) =>
-        row.pointId === point.id && normalizeVoteChoice(row.vote) === winningOutcome,
-      );
       const reason = useDavgaArguments
-        ? (isDecisionProject ? decisionProjectDavga({ ...snapshot, decisionProjectDavgaOverrides: document?.snapshot ? document.snapshot.decisionProjectDavgaOverrides : c.decisionProjectDavgaOverrides }, point.id) : protocolDavgaFromReason(winningProtocolRow?.edited || "").trim()) || "—"
+        ? (isDecisionProject
+          ? decisionProjectDavga({ ...snapshot, decisionProjectDavgaOverrides: document?.snapshot ? document.snapshot.decisionProjectDavgaOverrides : c.decisionProjectDavgaOverrides }, point.id)
+          : document?.snapshot
+            ? document.snapshot.motivatedResponseDavgaByPoint?.[point.id] ?? signedProtocolDavga(snapshot, point.id).text
+            : motivatedResponseDavga(c, point.id)) || "—"
         : (winningReasonMemberId &&
             pointVotes?.voteReasons?.[winningReasonMemberId]) ||
           snapshot.result?.reason ||

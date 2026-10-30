@@ -4,7 +4,7 @@ import { DEMO_USER } from "../../config";
 import { OUTCOMES } from "../../data/constants";
 import { addWorkdays, filingDeadline } from "./services/deadlines";
 import { disputed } from "./services/decisions";
-import { certificateBasisForPoint, decisionProjectDavga, protocolDavgaFromReason } from "./services/protocolReason";
+import { certificateBasisForPoint, decisionProjectDavga, motivatedResponseDavga, protocolDavgaFromReason } from "./services/protocolReason";
 import { controlDecisions } from "./services/workflow";
 import { hasSubjectSaqCabinet, subjectSaqCabinetLabel } from "./services/saqCabinets";
 
@@ -186,7 +186,7 @@ export function actionForm(
     case "propose-certificate-change":
       title = c.status === "decision_project" ? "Предложить изменение доводов ДАВГА" : "Предложить изменение справки";
       note = c.status === "decision_project" ? "Измените доводы по нужным пунктам. Принятые директором доводы войдут в проект решения и новую версию справки." : "Измените доводы по нужным пунктам. До решения директора действующая справка не изменится.";
-      fields.push(...disputed(c).map((point) => area(`proposedDavga_${point.id}`, `Доводы ДАВГА по пункту № ${point.number}`, c.status === "decision_project" ? decisionProjectDavga(c, point.id) : protocolDavgaFromReason(certificateBasisForPoint(c, point)))));
+      fields.push(...disputed(c).map((point) => area(`proposedDavga_${point.id}`, `Доводы ДАВГА по пункту № ${point.number}`, c.status === "decision_project" ? decisionProjectDavga(c, point.id) : c.status === "decided" && requiresMotivatedResponse(c) ? motivatedResponseDavga(c, point.id) : protocolDavgaFromReason(certificateBasisForPoint(c, point)))));
       fields.push({ ...area("changeReason", "Причина изменения"), required: false });
       break;
     case "review-certificate-change": {

@@ -30,6 +30,14 @@ export function decisionProjectDavga(c: ObjectionCase, pointId: string) {
     : protocol.text;
 }
 
+export function motivatedResponseDavga(c: ObjectionCase, pointId: string) {
+  const approved = c.motivatedResponseDavgaOverrides?.[pointId];
+  if (approved !== undefined) return approved;
+  const project = [...c.documents].reverse().find((doc) => doc.kind === "decision-project" && doc.name === "Подписанный проект решения" && doc.snapshot);
+  if (project?.snapshot) return decisionProjectDavga({ ...c, ...project.snapshot, decisionProjectDavgaOverrides: project.snapshot.decisionProjectDavgaOverrides }, pointId);
+  return signedProtocolDavga(c, pointId).text;
+}
+
 export function replaceProtocolDavga(reason: string, davga: string) {
   const index = reason.lastIndexOf(DAVGA_LABEL);
   return `${index < 0 ? `${reason}\n\n` : reason.slice(0, index)}${DAVGA_LABEL}${davga}`;

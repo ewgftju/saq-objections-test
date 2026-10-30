@@ -39,7 +39,7 @@ test("на этапе мотивированного ответа директо
   saved = state.cases.find((item) => item.id === c.id)!;
   const proposedEvent = saved.history.find((event) => event.title === "Предложены изменения справки");
   const reviewEvent = saved.history.find((event) => event.title === "Директор рассмотрел изменения справки");
-  assert.match(proposedEvent?.text || "", /Первоначальные доводы 1/);
+  assert.match(proposedEvent?.text || "", /Доводы протокола 1/);
   assert.match(proposedEvent?.text || "", /Этап: Формирование мотивированного ответа/);
   assert.match(reviewEvent?.text || "", /Этап: Формирование мотивированного ответа/);
   assert.match(proposedEvent?.text || "", /Предложено: Принятые доводы 1/);
@@ -57,9 +57,8 @@ test("на этапе мотивированного ответа директо
   assert.equal(saved.documents.find((doc) => doc.kind === "decision-project")?.snapshot?.certificate?.davgaArgumentsByPoint?.[first.id], "Первоначальные доводы 1");
   const project = saved.documents.filter((doc) => doc.kind === "final-response").at(-1)!;
   const html = renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "final-response", document: project }));
-  assert.match(html, /Доводы протокола 1/);
+  assert.match(html, /Принятые доводы 1/);
   assert.match(html, /Доводы протокола 2/);
-  assert.doesNotMatch(html, /Принятые доводы 1/);
   assert.doesNotMatch(html, /Отклонённые доводы 2/);
 });
 
@@ -81,4 +80,28 @@ test("мотивированный ответ можно сформироват�
   assert.match(saved.history.find((event) => event.title.includes("отозвано при формировании мотивированного ответа"))?.text || "", /Этап: Формирование мотивированного ответа/);
   assert.ok(saved.certificateChangeRequests?.at(-1)?.withdrawnAt);
   assert.notEqual(nextAction(saved, "director")?.action, "review-certificate-change");
+});
+
+test("мотивированный ответ сохраняет доводы подписанного проекта, а без проекта — доводы протокола", () => {
+  const { state, c, first, second } = setup();
+  c.decisionProjectDavgaOverrides = { protocolSignedAt: state.date, byPoint: { [first.id]: "Довод из подписанного проекта" } };
+  addDocument(c, "director", state.date, "Подписанный проект решения", "decision-project", "");
+  c.certificate!.davgaArgumentsByPoint![first.id] = "Более поздняя справка";
+  let html = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "final-response" }));
+  assert.match(html, /Довод из подписанного проекта/);
+  assert.match(html, /Доводы протокола 2/);
+  assert.doesNotMatch(html, /Более поздняя справка/);
+  addDocument(c, "work", state.date, "Проект мотивированного ответа", "final-response", "");
+  const saved = c.documents.at(-1)!;
+  c.motivatedResponseDavgaOverrides = { [first.id]: "Более позднее изменение" };
+  html = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "final-response", document: saved }));
+  assert.match(html, /Довод из подписанного проекта/);
+  assert.doesNotMatch(html, /Более позднее изменение/);
+  c.documents = c.documents.filter((doc) => doc.kind !== "decision-project");
+  c.motivatedResponseDavgaOverrides = undefined;
+  html = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "final-response" }));
+  assert.match(html, /Доводы протокола 1/);
+  assert.match(html, /Доводы протокола 2/);
+  assert.doesNotMatch(html, /Более поздняя справка/);
+  assert.ok(second);
 });
