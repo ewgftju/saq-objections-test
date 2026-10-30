@@ -1127,7 +1127,7 @@ export default function ObjectionsModule() {
         "submit-decision-project-comment",
         "record-external-decision-project-comment",
         "hearing-after-decision-project",
-      ].includes(action)
+      ].includes(action) && !(action === "hearing-held" && form.get("hearingArgumentsPresence") === "yes")
     ) {
       if (action === "review-commission-documents") {
         const next = applyAction(model.state, c.id, action, model.role, form);
@@ -1249,9 +1249,10 @@ export default function ObjectionsModule() {
     const next = applyAction(model.state, c.id, action, model.role, form);
     const updated = next.cases.find((item) => item.id === c.id)!;
     if (
-      action === "hearing-after-decision-project" &&
+      (action === "hearing-after-decision-project" || action === "hearing-held") &&
       ((updated.appealType || "").trim().startsWith("Жалоба") ||
-        (updated.appealType || "").trim() === "Заявление")
+        (updated.appealType || "").trim() === "Заявление" ||
+        (Boolean(updated.newArgumentsReceivedAt) && form.get("hearingArgumentsPresence") === "yes"))
     ) {
       const hearingOutcome = String(form.get("hearingOutcome") || "");
       if (
@@ -1268,7 +1269,7 @@ export default function ObjectionsModule() {
               hearingOutcome === "additional-request"
                 ? "additionalRequestReason"
                 : "noRequestReason",
-            ) || "Новые доводы представлены на заслушивании",
+            ) || form.get("hearingReturnReason") || "Новые доводы представлены на заслушивании",
           ),
           hearingOutcome === "additional-request"
             ? "направлением дополнительного запроса после заслушивания"

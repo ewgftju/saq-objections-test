@@ -89,6 +89,11 @@ export function reviewDuration(c: ObjectionCase) {
   return 30;
 }
 
+export function hearingExtensionApplies(c: ObjectionCase) {
+  const kind = (c.appealType || "").trim();
+  return ["Возражение на уведомление", "Возражение на уведомления", "Возражение на аудиторский отчет", "Возражение на аудиторский отчёт"].includes(kind) || (!kind && (c.type === "notice" || c.type === "audit"));
+}
+
 export function reviewPauseDays(c: ObjectionCase) {
   return c.appealType?.trim().startsWith("Жалоба") ? 0 : c.pauseDays;
 }
@@ -108,6 +113,7 @@ function authorityResponseDeadline(c: ObjectionCase, role?: Role) {
       (request) =>
         Boolean(request.sent) &&
         /ДВГА|КВГА/i.test(request.recipient) &&
+        (!c.newArgumentsReceivedAt || (request.sent! >= c.newArgumentsReceivedAt && !request.confirmed)) &&
         (!authority || request.recipient.toUpperCase().includes(authority)),
     )
     .map((request) => addWorkdays(request.sent!, 2))
@@ -121,6 +127,7 @@ function authorityResponseDeadline(c: ObjectionCase, role?: Role) {
  * хранится в pauseDays и добавляется к исходному сроку.
  */
 function certificateDeadline(c: ObjectionCase) {
+  if (c.newArgumentsReceivedAt) return addWorkdays(c.newArgumentsReceivedAt, 5 + Math.max(0, reviewPauseDays(c) - (c.newArgumentsPauseDaysAtReceipt || 0)));
   return addWorkdays(c.document.received, 5 + reviewPauseDays(c));
 }
 
@@ -149,7 +156,7 @@ export function executionDeadline(
       c.status,
     )
   )
-    return addWorkdays(c.document.received, 2);
+    return addWorkdays(c.newArgumentsReceivedAt || c.document.received, 2);
   if (
     [
       "request_approved",
@@ -158,7 +165,7 @@ export function executionDeadline(
       "response_ready",
     ].includes(c.status)
   ) {
-    return authorityResponseDeadline(c) ?? addWorkdays(c.document.received, 2);
+    return authorityResponseDeadline(c) ?? addWorkdays(c.newArgumentsReceivedAt || c.document.received, 2);
   }
   if (
     ["materials", "certificate_approval", "certificate_signed"].includes(

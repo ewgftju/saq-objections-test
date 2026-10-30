@@ -2,7 +2,7 @@ import { preparedActionValues } from "./demoForm";
 import type { Action, ObjectionCase, Role } from "../../types";
 import { DEMO_USER } from "../../config";
 import { OUTCOMES } from "../../data/constants";
-import { addWorkdays, filingDeadline } from "./services/deadlines";
+import { addWorkdays, filingDeadline, hearingExtensionApplies } from "./services/deadlines";
 import { disputed } from "./services/decisions";
 import { certificateBasisForPoint, decisionProjectDavga, motivatedResponseDavga, protocolDavgaFromReason } from "./services/protocolReason";
 import { controlDecisions } from "./services/workflow";
@@ -547,6 +547,19 @@ export function actionForm(
           "Протокол и возможность ознакомления зарегистрированы",
         ),
       );
+      if (hearingExtensionApplies(c)) {
+        fields.push(select("hearingArgumentsPresence", "Наличие новых доводов заявителя", [["", "Выберите вариант"], ["yes", "Новые доводы имеются"], ["no", "Новые доводы отсутствуют"]], values.hearingArgumentsPresence || ""));
+        if (values.hearingArgumentsPresence === "yes") {
+          fields.push(input("newArgumentsReceivedAt", "Дата получения новых доводов", values.newArgumentsReceivedAt || date, "date"));
+          fields.push(select("hearingOutcome", "Дальнейшее действие", [["", "Выберите действие"], ["additional-request", "Вернуть на этап «Запрос»"], ["without-request", "Вернуть на этап «Анализ»"]], values.hearingOutcome || ""));
+          for (const point of disputed(c)) {
+            const selected = `additionalArgumentPoint_${point.id}`;
+            fields.push({ name: selected, label: `Пункт № ${point.number} — ${point.title}`, type: "checkbox", value: values[selected] || "", required: false });
+            if (values[selected] === "on") fields.push(area(`additionalArgument_${point.id}`, `Новые доводы по пункту № ${point.number}`, values[`additionalArgument_${point.id}`] || ""));
+          }
+          if (["additional-request", "without-request"].includes(values.hearingOutcome || "")) fields.push(area("hearingReturnReason", "Причина возврата", values.hearingReturnReason || ""));
+        }
+      }
       note =
         "Если после заслушивания изменились выводы или проект результата, верните материалы на анализ до принятия решения.";
       break;
@@ -743,7 +756,7 @@ export function actionForm(
       title = "Заслушивание проведено";
       if (
         (c.appealType || "").trim().startsWith("Жалоба") ||
-        (c.appealType || "").trim() === "Заявление"
+        (c.appealType || "").trim() === "Заявление" || hearingExtensionApplies(c)
       ) {
         fields.push(
           select(
@@ -769,6 +782,7 @@ export function actionForm(
           ),
         );
         if (values.hearingArgumentsPresence === "yes") {
+          if (hearingExtensionApplies(c)) fields.push(input("newArgumentsReceivedAt", "Дата получения новых доводов", values.newArgumentsReceivedAt || date, "date"));
           fields.push(
             heading(
               "additionalArgumentsPoints",

@@ -18,6 +18,7 @@ import {
   addWorkdays,
   dateObject,
   filingDeadline,
+  hearingExtensionApplies,
   reviewDeadline,
   workdaysBetween,
 } from "./deadlines";
@@ -909,6 +910,19 @@ export function applyAction(
   ) => addDocument(c, role, date, name, kind, content, requestId);
   let title: string = available.label;
   let note = "";
+
+  const extendForHearingArguments = () => {
+    if (c.newArgumentsReceivedAt) throw new Error("Срок по новым доводам этого заслушивания уже продлён");
+    const receivedAt = text("newArgumentsReceivedAt", "Дата получения новых доводов");
+    dateObject(receivedAt);
+    if (receivedAt > date) throw new Error("Дата получения новых доводов не может быть позже даты фиксации заслушивания");
+    c.extensionDays = (c.extensionDays || 0) + 15;
+    c.newArgumentsReceivedAt = receivedAt;
+    c.newArgumentsPauseDaysAtReceipt = c.pauseDays || 0;
+    const deadline = reviewDeadline(c);
+    c.history.push({ date, actor: ROLES[role], title: "Срок продлён в связи с новыми доводами", text: `Новые доводы получены: ${formatDate(receivedAt)}. Срок продлён на 15 рабочих дней до ${formatDate(deadline)}.` });
+    return receivedAt;
+  };
 
   if (action === "vote" || action === "create-decision-project" || (action === "deliver" && isMotivatedResponseStage(c))) {
       if (form.has("certificateRevisionAtOpen") && String(form.get("certificateRevisionAtOpen")) !== String(c.certificateRevision ?? 0))
@@ -1877,10 +1891,11 @@ export function applyAction(
       }
       c.memberPosition = text("position", "Позиции членов комиссии");
       checked(form, "shared");
-      c.status = "hearing";
+      c.status = hearingExtensionApplies(c) && (c.objectionHearingCompletedAt || c.hearing?.held) ? "meeting" : "hearing";
       doc("Позиции членов комиссии", "members", c.memberPosition);
       break;
     case "hearing": {
+      if (hearingExtensionApplies(c) && (c.objectionHearingCompletedAt || c.hearing?.held)) throw new Error("Заслушивание по этому возражению уже проведено");
       const mode = text("mode", "Порядок заслушивания");
       if (mode !== "hold") {
         if (mode === "favorable" && overall(c) !== "accept")
@@ -1924,6 +1939,7 @@ export function applyAction(
       break;
     }
     case "hearing-held":
+      if (hearingExtensionApplies(c) && (c.objectionHearingCompletedAt || c.hearing?.held)) throw new Error("Заслушивание по этому возражению уже проведено");
       if (!c.hearing?.date || date < c.hearing.date)
         throw new Error(
           "Дата проведения не может быть раньше назначенного заслушивания",
@@ -1939,9 +1955,36 @@ export function applyAction(
         "Результат заслушивания и рассмотрения доводов",
       );
       c.hearing.held = date;
+      if (hearingExtensionApplies(c)) c.objectionHearingCompletedAt = date;
       checked(form, "recorded");
       c.status = "meeting";
       doc("Протокол заслушивания", "hearing", c.hearing.note);
+      if (hearingExtensionApplies(c)) {
+        const presence = String(form.get("hearingArgumentsPresence") || "");
+        if (!["yes", "no"].includes(presence)) throw new Error("Укажите наличие новых доводов заявителя");
+        if (presence === "yes") {
+          const outcome = String(form.get("hearingOutcome") || "");
+          if (!["additional-request", "without-request"].includes(outcome)) throw new Error("Выберите возврат на этап «Запрос» или «Анализ»");
+          const selected = disputed(c).filter((point) => form.has(`additionalArgumentPoint_${point.id}`));
+          if (!selected.length) throw new Error("Выберите пункт, по которому представлены новые доводы");
+          const reason = text("hearingReturnReason", "Причина возврата");
+          const byPoint: Record<string, string> = {};
+          for (const point of selected) {
+            const value = text(`additionalArgument_${point.id}`, `Новые доводы по пункту ${point.number}`);
+            byPoint[point.id] = value;
+            point.additionalArguments = [...(point.additionalArguments || []), value];
+          }
+          const receivedAt = extendForHearingArguments();
+          const round = (c.repeatHearingRound || 0) + 1;
+          c.hearingSupplements = [...(c.hearingSupplements || []), { round, date: receivedAt, reason, byPoint, requiresRequest: outcome === "additional-request", hasNewArguments: true }];
+          c.repeatHearingStatus = "required"; c.repeatHearingRound = round; c.repeatHearingReason = reason; c.repeatHearingRequestedAt = receivedAt; c.repeatHearingReadyAt = undefined; c.repeatHearingMeetingId = undefined;
+          doc("Дополнительные доводы объекта гос. аудита (заявителя)", "hearing-additional-arguments", reason);
+          if (outcome === "additional-request") { c.requestRoute = "additional-hearing"; c.requestRouteStartedAt = receivedAt; c.requestRouteCompletedAt = undefined; c.status = "accepted"; }
+          else c.status = "materials";
+          title = "Новые доводы зафиксированы";
+          note = `Срок продлён на 15 рабочих дней. Обращение возвращено на этап «${outcome === "additional-request" ? "Запрос" : "Анализ"}». ${reason}`;
+        }
+      }
       break;
     case "vote": {
       const previousVersions = c.meeting?.protocolVersions || [];
@@ -2336,13 +2379,15 @@ export function applyAction(
       break;
     }
     case "hearing-after-decision-project":
-      if (!c.decisionProject)
+      if (hearingExtensionApplies(c) && (c.objectionHearingCompletedAt || c.hearing?.held)) throw new Error("Заслушивание по этому возражению уже проведено");
+      if (!c.decisionProject && !hearingExtensionApplies(c))
         throw new Error("Проект решения ещё не сформирован");
       if (!form.has("hearingProtocolAttached"))
         throw new Error("Вложите протокол заслушивания");
       c.hearing = { ...(c.hearing || {}), skip: false, held: date };
+      if (hearingExtensionApplies(c)) c.objectionHearingCompletedAt = date;
 
-      if (isComplaintOrStatement(c)) {
+      if (isComplaintOrStatement(c) || hearingExtensionApplies(c)) {
         const hearingArgumentsPresence = String(
           form.get("hearingArgumentsPresence") || "",
         ).trim();
@@ -2397,6 +2442,8 @@ export function applyAction(
             ];
           });
 
+          if (hasNewArguments && hearingExtensionApplies(c)) extendForHearingArguments();
+
           const round = (c.repeatHearingRound || 0) + 1;
           c.hearingSupplements = [
             ...(c.hearingSupplements || []),
@@ -2424,7 +2471,7 @@ export function applyAction(
 
           if (hearingOutcome === "additional-request") {
             c.requestRoute = "additional-hearing";
-            c.requestRouteStartedAt = date;
+            c.requestRouteStartedAt = c.newArgumentsReceivedAt || date;
             c.requestRouteCompletedAt = undefined;
             c.status = "accepted";
             title = "Дополнительный запрос после заслушивания сформирован";
