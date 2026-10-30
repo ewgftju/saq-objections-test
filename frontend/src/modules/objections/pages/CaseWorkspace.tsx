@@ -1,7 +1,7 @@
 import { Fragment, useState, type ReactNode } from "react";
 import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import { ProtocolVersions } from "../components/ProtocolVersions";
-import { CertificateDocuments } from "../components/CertificateDocuments";
+import { CertificateDocuments, commissionCanViewCertificate } from "../components/CertificateDocuments";
 import { CLOSED, OUTCOMES, TYPES } from "../../../data/constants";
 import type {
   Action,
@@ -718,7 +718,7 @@ export default function CaseWorkspace({
   const authorityAnswerSent =
     isAuthorityRole(role) && visibleStatus === "Ответ направлен";
   const visibleDocuments = isCommission
-    ? c.documents.filter((document) => document.kind !== "conclusion")
+    ? c.documents.filter((document) => document.kind !== "conclusion" && commissionCanViewCertificate(document))
     : c.documents;
   const visibleHistory = isCommission
     ? c.history.filter(

@@ -11,9 +11,13 @@ const stageLabels = {
   "motivated-response": "Формирование мотивированного ответа",
 };
 
+export function commissionCanViewCertificate(document: CaseDocument) {
+  return document.kind !== "certificate" || document.name === "Справка по результатам изучения и анализа возражения";
+}
+
 export function CertificateDocuments({ c, role, onDocument }: { c: ObjectionCase; role: Role; onDocument: (kind: string, document?: CaseDocument) => void }) {
   const [historyOpen, setHistoryOpen] = useState(false);
-  const certificates = c.documents.filter((document) => document.kind === "certificate");
+  const certificates = c.documents.filter((document) => document.kind === "certificate" && (role !== "commission" || commissionCanViewCertificate(document)));
   const changed = certificates.filter((document) => document.certificateVersion || /\. Версия \d+$/u.test(document.name));
   const originals = certificates.filter((document) => !changed.includes(document));
   const latest = changed.at(-1);
