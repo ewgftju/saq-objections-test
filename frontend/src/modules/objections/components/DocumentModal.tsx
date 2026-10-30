@@ -842,6 +842,9 @@ export function DocumentContent({
     const commissionMembers = presentMembers.filter(
       (member) => member.id !== presidingMember?.id,
     ).sort((a, b) => protocolMemberRank(a) - protocolMemberRank(b));
+    const orderedMembers = presidingMember
+      ? [presidingMember, ...commissionMembers]
+      : commissionMembers;
     const presidingLabel = viceMinister
       ? "Председатель АК"
       : davgaDirector
@@ -983,7 +986,7 @@ export function DocumentContent({
                   <td>{point.number}</td>
                   <td colSpan={3}>{point.title}</td>
                 </tr>,
-                ...presentMembers.map((member) => (
+                ...orderedMembers.map((member) => (
                   <tr key={`${point.id}-${member.id}`}>
                     <td />
                     <td>{member.name}</td>

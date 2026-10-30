@@ -46,3 +46,27 @@ test("справка показывает председательствующе
   const headers = noChair.split('<table class="certificate-members-table certificate-point-votes-table">')[1].split('</thead>')[0];
   assert.ok(headers.indexOf("Директор ДАВГА Күреңбек") < headers.indexOf("Заместитель Председателя КВГА Ахметов"));
 });
+
+test("в таблице голосования протокола председательствующий первый, остальные по должности", () => {
+  const c = initialState().cases[0];
+  const point = c.issues.find((item) => item.disputed)!;
+  c.issues = [point];
+  c.members = COMMISSION_ATTENDANCE_MEMBERS.map((member) => ({ ...member, present: true, recused: false, reason: `причина-${member.id}` })).reverse();
+  c.meeting = { date: "2026-10-30", number: "1", audio: "", signed: "2026-10-30" };
+  const html = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "protocol" }));
+  const table = html.split('<table class="protocol-votes-table">')[1].split('</table>')[0];
+  const rows = [...table.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map((match) => match[1]);
+  const names = ["Вице-министр Кеңбеил", "Директор ДАВГА Күреңбек", "Заместитель Председателя КВГА Ахметов", "Директор ДМБУА Алиева", "Заместитель директора ДЮС Абетова", "Руководитель управления ДМБУА Урхумбаева", "Представитель НПО"];
+  const ids = ["kenbeil-dm", "kurenbek-shb", "akhmetov-rk", "alieva-at", "abetova-ku", "urkhumbayeva-tzh", "umertayev-bk"];
+  const rowIndexes = names.map((name) => rows.findIndex((row) => row.includes(name)));
+  for (let i = 0; i < names.length; i++) {
+    assert.ok(rowIndexes[i] >= 0, names[i]);
+    assert.match(rows[rowIndexes[i]], new RegExp(`причина-${ids[i]}`));
+    if (i > 0) assert.ok(rowIndexes[i - 1] < rowIndexes[i]);
+  }
+  c.members.find((member) => member.id === "kenbeil-dm")!.present = false;
+  const secondHtml = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "protocol" }));
+  const secondTable = secondHtml.split('<table class="protocol-votes-table">')[1].split('</table>')[0];
+  assert.ok(secondTable.indexOf("Директор ДАВГА Күреңбек") < secondTable.indexOf("Заместитель Председателя КВГА Ахметов"));
+  assert.doesNotMatch(secondTable, /Вице-министр Кеңбеил/);
+});
