@@ -26,9 +26,6 @@ export function CertificateDocuments({ c, role, onDocument }: { c: ObjectionCase
   return <section className="request-documents-section">
     <h4>Справка</h4>
     <div className="request-documents-list">
-      {originals.map((document, index) => <div className="request-document-row" key={`${document.name}-${document.date}-${index}`}>
-        <span>{document.name}</span>{actions(document)}
-      </div>)}
       {latest && <div className="request-document-row">
         <span>Справка с учётом изменений доводов ДАВГА</span>
         <div className="request-document-actions">
@@ -37,6 +34,9 @@ export function CertificateDocuments({ c, role, onDocument }: { c: ObjectionCase
           {showHistory && <Button onClick={() => setHistoryOpen(true)}>История версий</Button>}
         </div>
       </div>}
+      {[...originals].reverse().map((document, index) => <div className="request-document-row" key={`${document.name}-${document.date}-${index}`}>
+        <span>{document.name}</span>{actions(document)}
+      </div>)}
     </div>
     {historyOpen && showHistory && <Modal title="История версий справки" wide onClose={() => setHistoryOpen(false)}>
       <div style={{ overflowX: "auto" }}><table className="data-table" style={{ minWidth: 620 }}>

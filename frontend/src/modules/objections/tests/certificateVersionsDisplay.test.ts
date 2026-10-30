@@ -19,6 +19,8 @@ test("исходные справки остаются отдельно, изм�
   assert.match(html, /Справка: результаты голосования членов АК/);
   assert.equal((html.match(/Справка с учётом изменений доводов ДАВГА/g) || []).length, 1);
   assert.match(html, /История версий/);
+  assert.ok(html.indexOf("Справка с учётом изменений доводов ДАВГА") < html.indexOf("Справка: результаты голосования членов АК"));
+  assert.ok(html.indexOf("Справка: результаты голосования членов АК") < html.indexOf("Справка по результатам изучения и анализа возражения"));
   assert.doesNotMatch(html, /Версия 3|Версия 4/);
   assert.doesNotMatch(render("commission"), /История версий/);
   c.documents = c.documents.filter((document) => !document.name.includes("Версия"));
