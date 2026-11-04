@@ -14,6 +14,25 @@ import type { Action, DocumentLanguage, Role } from "../../../types";
 import { actionForm } from "../formDefinitions";
 import { localizedCase, pointText } from "../services/documentLanguage";
 
+test("в электронной форме протокола нет языковых полей описания и доводов заявителя", () => {
+  const h = fixture("ru");
+  h.c.status = "meeting";
+  h.c.certificate = { languages: ["ru", "kk"], davgaArguments: "", memberPositions: [] };
+  h.c.issues[0].translations = { ru: { title: "Пункт RU" }, kk: { title: "Тармақ KZ" } };
+  h.c.members = [{ id: "chair", name: "Председатель комиссии", present: true, recused: false, reason: "" }];
+  const fields = actionForm("vote", h.c, h.state.date, { documentLanguageMode: "both" }).fields;
+  assert.ok(fields.some(field => field.name === "documentLanguageMode"));
+  assert.ok(fields.some(field => field.name === "recommendations"));
+  assert.ok(fields.some(field => field.name === "recommendationsKk"));
+  assert.ok(fields.every(field => !/^(pointTitle|pointArgument|pointAdditional)_/.test(field.name)));
+  const html = renderToStaticMarkup(createElement(ActionModal, { c: h.c, action: "vote", role: "work", date: h.state.date, onClose() {}, onSubmit() {} }));
+  assert.doesNotMatch(html, /name="point(?:Title|Argument|Additional)_/);
+  for (const language of ["ru", "kk"] as const) {
+    const preview = renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "protocol", languages: ["ru", "kk"], language }));
+    assert.match(preview, language === "ru" ? /Пункт RU/ : /Тармақ KZ/);
+  }
+});
+
 test("справка по уведомлению перечисляет оспариваемые пункты на языке документа", () => {
   const h = fixture("ru");
   h.c.type = "notice";

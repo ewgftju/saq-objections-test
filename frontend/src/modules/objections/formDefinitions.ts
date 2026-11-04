@@ -565,7 +565,7 @@ export function actionForm(
       break;
     case "vote":
       title = "Сформировать протокол заседания";
-      fields.push(languageModeField(c, values), ...pointTranslationFields(c, values));
+      fields.push(languageModeField(c, values));
       fields.push(
         input("protocolDate", "Дата заседания", values.protocolDate || c.attendanceMeetingDate || c.agendaMeetingDate || date, "date"),
         select("meetingFormat", "Формат проведения заседания", [
