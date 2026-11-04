@@ -2063,6 +2063,16 @@ export default function ObjectionsModule() {
     model.commit(next, "Проект запроса сохранён");
   }
 
+  function saveResponseDraft(caseId: string, form: FormData) {
+    const next = structuredClone(model.state);
+    const target = next.cases.find(item => item.id === caseId);
+    if (!target) throw new Error("Обращение не найдено");
+    const request = target.requests.find(item => !item.responded && item.sent && /ДВГА|КВГА/.test(item.recipient) && (model.role === "demo-superuser" || (model.role === "dvga" || model.role === "kvga") && item.recipient.includes(model.role === "kvga" ? "КВГА" : "ДВГА")));
+    if (!request) throw new Error("Нет доступного запроса для сохранения черновика");
+    request.responseDraft = { values: Object.fromEntries([...form.entries()].filter(([name, value]) => typeof value === "string" && /^authority(Finding|Response)/u.test(name)).map(([name,value]) => [name,String(value)])), savedAt: next.date };
+    model.commit(next, "Черновик ответа сохранён");
+  }
+
   function saveAnalysisDraft(caseId: string, form: FormData) {
     const values: Record<string, string> = {};
     form.forEach((value, name) => {
@@ -2439,7 +2449,7 @@ export default function ObjectionsModule() {
                   )
               : dialog.action === "analysis"
                 ? (form) => saveAnalysisDraft(c.id, form)
-                : undefined
+                : dialog.action === "fill-request-response" ? (form) => saveResponseDraft(c.id, form) : undefined
           }
         />
       )}

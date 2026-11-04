@@ -3983,6 +3983,8 @@ test("заявление после заслушивания запускает 
         .flatMap((item) => [
           [`authorityFinding_${item.id}`, "Новое нарушение, проверенное ДВГА"],
           [`authorityResponse_${item.id}`, "Дополнительный ответ ДВГА"],
+          [`authorityFindingKk_${item.id}`, "ІМАД тексерген жаңа бұзушылық"],
+          [`authorityResponseKk_${item.id}`, "ІМАД қосымша жауабы"],
         ]),
     ),
   );

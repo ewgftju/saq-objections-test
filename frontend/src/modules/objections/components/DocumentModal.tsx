@@ -1,3 +1,6 @@
+import { LocalizedDocument } from "./LocalizedDocument";
+import { appealLanguage, languagesForDocument, LANGUAGE_LABELS } from "../services/documentLanguage";
+import type { DocumentLanguage } from "../../../types";
 import { renderToStaticMarkup } from "react-dom/server";
 import { useState } from "react";
 import { Button, Modal } from "../../../components/ui";
@@ -243,7 +246,7 @@ function certificateIntro(c: ObjectionCase) {
 const REQUEST_REGULATORY_NOTICE =
   "Также сообщаем, что в соответствии с пунктом 14 Положения об апелляционной комиссии по рассмотрению возражений к аудиторскому отчету или аудиторскому отчету по финансовой отчетности, уведомлению об устранении нарушений, выявленных по результатам камерального контроля уполномоченного органа по внутреннему государственному аудиту и обжалованию решений, действий (бездействия) уполномоченного органа по внутреннему государственному аудиту и (или) его должностных лиц, утвержденного приказом Первого заместителя Премьер-Министра Республики Казахстан — Министра финансов Республики Казахстан от 20 марта 2020 года № 302, ведомство уполномоченного органа, территориальное подразделение ведомства уполномоченного органа представляют ответ на запрос в Рабочий орган в срок не позднее 2 (двух) рабочих дней с даты получения такого запроса.";
 
-export function DocumentContent({
+function LegacyDocumentContent({
   c,
   kind,
   document,
@@ -280,9 +283,11 @@ export function DocumentContent({
     audio: string;
     format?: "онлайн, Qosyl" | "офлайн";
     recommendations?: string;
+    recommendationsKk?: string;
     members: CommissionMember[];
     votes: Record<string, Record<string, string>>;
     voteReasons?: Record<string, Record<string, string>>;
+    voteReasonsKk?: Record<string, Record<string, string>>;
   };
 }) {
   const snapshot = document?.snapshot ? { ...c, ...document.snapshot } : c;
@@ -1486,6 +1491,16 @@ export function DocumentContent({
   );
 }
 
+export type DocumentContentProps = Parameters<typeof LegacyDocumentContent>[0] & { language?: DocumentLanguage; languages?: DocumentLanguage[] };
+export function DocumentContent(props: DocumentContentProps) {
+  const supported = ["certificate", "protocol", "decision-project", "final-response", "authority-response-appendix"].includes(props.kind);
+  if (!supported || (!(props.document?.snapshot ? props.document.snapshot.appealLanguage : props.c.appealLanguage) && !props.languages && (props.document?.languages?.length || 1) < 2)) return <LegacyDocumentContent {...props} />;
+  const source = props.document?.snapshot ? { ...props.c, ...props.document.snapshot } : props.c;
+  const allowed = props.languages || languagesForDocument(source, props.kind, props.document);
+  const languages = props.language ? allowed.filter(language => language === props.language) : allowed;
+  return <>{languages.map((language, index) => <section className="document-language-version" lang={language} key={language} style={index ? { breakBefore: "page", pageBreakBefore: "always" } : undefined}><LocalizedDocument {...props} language={language} /></section>)}</>;
+}
+
 export function wordDocumentHtml({
   c,
   kind,
@@ -1505,6 +1520,8 @@ export default function DocumentModal(props: {
   onClose: () => void;
 }) {
   const [error, setError] = useState("");
+  const languages = languagesForDocument(props.c, props.kind, props.document);
+  const [viewLanguage, setViewLanguage] = useState<DocumentLanguage>(props.document?.viewLanguage && languages.includes(props.document.viewLanguage) ? props.document.viewLanguage : languages[0]);
   const attachment = props.document?.dataUrl ? props.document : undefined;
 
   // Вложения не являются шаблонными документами SAQ. Их нужно открывать как
@@ -1574,7 +1591,7 @@ export default function DocumentModal(props: {
             popup.print();
           }}
         >
-          Печать / PDF
+          {languages.length > 1 ? "Печать / PDF (комплект)" : "Печать / PDF"}
         </Button>
       </div>
       {error && (
@@ -1583,7 +1600,8 @@ export default function DocumentModal(props: {
         </p>
       )}
       <style>{finalResponseCss + certificatePointVotesCss}</style>
-      <DocumentContent {...props} />
+      {languages.length > 1 && <div className="request-modal-tabs" role="tablist" aria-label="Язык документа">{languages.map(language => <button type="button" role="tab" aria-selected={viewLanguage === language} className={viewLanguage === language ? "active" : ""} key={language} onClick={() => setViewLanguage(language)}>{LANGUAGE_LABELS[language]}</button>)}</div>}
+      <DocumentContent {...props} language={viewLanguage} />
     </Modal>
   );
 }

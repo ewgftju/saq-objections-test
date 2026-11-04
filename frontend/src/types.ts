@@ -1,5 +1,7 @@
 export type CaseType = "notice" | "audit" | "control";
 export type ApplicantIdentifierType = "ИИН" | "БИН";
+export type DocumentLanguage = "ru" | "kk";
+export type DocumentLanguageMode = DocumentLanguage | "both";
 export type Role =
   | "work"
   | "deputy"
@@ -71,6 +73,7 @@ export interface ViolationPoint {
   title: string;
   finding: string;
   argument: string;
+  translations?: Partial<Record<DocumentLanguage, { title?: string; argument?: string; additionalArguments?: string[] }>>;
   /** Дополнительные доводы заявителя, представленные на последующих заслушиваниях. */
   additionalArguments?: string[];
   amount: number;
@@ -106,6 +109,7 @@ export interface VoteResult {
   eligible: number;
   votes?: Record<string, string>;
   voteReasons?: Record<string, string>;
+  voteReasonLanguages?: Record<string, DocumentLanguage>;
 }
 
 export interface CaseResult {
@@ -131,6 +135,7 @@ export interface Hearing {
 }
 
 export interface Meeting {
+  languages?: DocumentLanguage[];
   date: string;
   number: string;
   audio: string;
@@ -139,6 +144,7 @@ export interface Meeting {
   /** Дата направления проекта протокола членам АК для подписания. */
   projectReceived?: string;
   recommendations?: string;
+  recommendationsKk?: string;
   signed?: string;
   commissionSigned?: string;
   protocolVersions?: ProtocolVersion[];
@@ -146,10 +152,11 @@ export interface Meeting {
 }
 
 export interface ProtocolVersion {
+  languages?: DocumentLanguage[];
   certificateRevision?: number;
   createdAt: string;
   author: string;
-  rows: Array<{ pointId: string; pointNumber: string | number; memberId: string; memberName: string; vote: string; original: string; edited: string; changedAt?: string; changedBy?: string }>;
+  rows: Array<{ pointId: string; pointNumber: string | number; memberId: string; memberName: string; vote: string; original: string; edited: string; originalKk?: string; editedKk?: string; changedAt?: string; changedBy?: string }>;
   returnedAt?: string;
   returnedBy?: string;
   returnComment?: string;
@@ -307,11 +314,14 @@ export interface DecisionProjectRouting {
 }
 
 export interface CaseDocument {
+  /** Только выбранная вкладка просмотра; не меняет языки документа. */
+  viewLanguage?: DocumentLanguage;
   name: string;
   kind: string;
   text: string;
   date: string;
   author: string;
+  languages?: DocumentLanguage[];
   /** Сквозной номер подписанной справки. */
   certificateNumber?: number;
   signedDocumentNumber?: string;
@@ -330,6 +340,7 @@ export interface CaseDocument {
   /** Событие рекомендации, к которому относится файл. */
   recommendationActivityId?: string;
   snapshot?: {
+    appealLanguage?: DocumentLanguage;
     issues: ViolationPoint[];
     result: CaseResult | null;
     members: CommissionMember[];
@@ -338,7 +349,7 @@ export interface CaseDocument {
     hearing: Hearing | null;
     delivery: Delivery | null;
     certificate: CaseCertificate | null;
-    decisionProjectDavgaOverrides?: { protocolSignedAt: string; byPoint: Record<string, string> };
+    decisionProjectDavgaOverrides?: { protocolSignedAt: string; byPoint: Record<string, string>; byPointKk?: Record<string, string> };
     motivatedResponseDavgaByPoint?: Record<string, string>;
     /** Адресаты и их ответы на момент формирования версии документа. */
     requests?: CaseRequest[];
@@ -359,6 +370,7 @@ export interface HearingSupplement {
 }
 
 export interface CaseRequest {
+  responseDraft?: { values: Record<string, string>; savedAt: string };
   id: string;
   /** Системный номер запроса в рамках обращения. */
   requestNumber?: string;
@@ -390,6 +402,7 @@ export interface CaseRequest {
   responded?: string;
   /** Ответ органа хранится в запросе и недоступен другому адресату. */
   authorityResponses?: Record<string, { finding: string; response: string }>;
+  authorityResponsesKk?: Record<string, { finding: string; response: string }>;
   responseApproved?: string;
   responseSigned?: string;
   confirmed?: string;
@@ -422,6 +435,7 @@ export type RequestRoute =
   | "additional-hearing";
 
 export interface CertificateMemberPosition {
+  commentKk?: string;
   id: string;
   name: string;
   /** Оспариваемый пункт, к которому относится голос. */
@@ -434,10 +448,12 @@ export interface CertificateMemberPosition {
 }
 
 export interface CaseCertificate {
+  languages?: DocumentLanguage[];
   /** Общее значение из ранее сформированных справок. */
   davgaArguments: string;
   /** Доводы рабочего органа по каждому оспариваемому пункту. */
   davgaArgumentsByPoint?: Record<string, string>;
+  davgaArgumentsByPointKk?: Record<string, string>;
   memberPositions: CertificateMemberPosition[];
 }
 
@@ -452,7 +468,7 @@ export interface CertificateChangeRequest {
   reviewedAt?: string;
   reviewedBy?: string;
   reviewComment?: string;
-  changes: Array<{ pointId: string; pointNumber: string; before: string; proposed: string; decision?: "accepted" | "rejected" }>;
+  changes: Array<{ pointId: string; pointNumber: string; language?: DocumentLanguage; before: string; proposed: string; decision?: "accepted" | "rejected" }>;
 }
 
 /** Обращение, снятое директором ДАВГА с конкретной повестки. */
@@ -586,6 +602,7 @@ export interface HistoryEvent {
 }
 
 export interface ObjectionCase {
+  appealLanguage?: DocumentLanguage;
   id: string;
   type: CaseType;
   appealType?: string;
@@ -659,8 +676,9 @@ export interface ObjectionCase {
   transferredFromMeetingIds?: string[];
   certificate?: CaseCertificate | null;
   certificateChangeRequests?: CertificateChangeRequest[];
-  decisionProjectDavgaOverrides?: { protocolSignedAt: string; byPoint: Record<string, string> };
+  decisionProjectDavgaOverrides?: { protocolSignedAt: string; byPoint: Record<string, string>; byPointKk?: Record<string, string> };
   motivatedResponseDavgaOverrides?: Record<string, string>;
+  motivatedResponseDavgaOverridesKk?: Record<string, string>;
   certificateRevision?: number;
   hearing?: Hearing | null;
   meeting?: Meeting | null;
@@ -693,6 +711,7 @@ export interface ObjectionCase {
 export type NewCaseInput = Pick<
   ObjectionCase,
   | "id"
+  | "appealLanguage"
   | "type"
   | "appealType"
   | "appealNumber"

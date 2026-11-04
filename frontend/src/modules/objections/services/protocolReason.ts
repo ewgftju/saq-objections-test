@@ -1,4 +1,5 @@
-import type { ObjectionCase } from "../../../types";
+import { localizedCase } from "./documentLanguage";
+import type { DocumentLanguage, ObjectionCase } from "../../../types";
 import { disputed, normalizeVoteChoice, pointOutcomeFromVotes } from "./decisions";
 
 const DAVGA_LABEL = "Доводы рабочего органа (ДАВГА МФ РК): ";
@@ -9,11 +10,13 @@ export function currentProtocolRows(c: ObjectionCase) {
 }
 
 export function protocolDavgaFromReason(reason: string) {
-  const index = reason.lastIndexOf(DAVGA_LABEL);
-  return index < 0 ? "" : reason.slice(index + DAVGA_LABEL.length);
+  const label = reason.includes(DAVGA_LABEL) ? DAVGA_LABEL : "Жұмыс органының (ҚР ҚМ ДАВГА) дәлелдері: ";
+  const index = reason.lastIndexOf(label);
+  return index < 0 ? "" : reason.slice(index + label.length);
 }
 
-export function signedProtocolDavga(c: ObjectionCase, pointId: string) {
+export function signedProtocolDavga(c: ObjectionCase, pointId: string, language: DocumentLanguage = "ru") {
+  if (language === "kk") return signedProtocolDavga(localizedCase(c, language), pointId);
   const version = [...(c.meeting?.protocolVersions || [])].reverse().find((item) => item.signedAt);
   const point = c.issues.find((item) => item.id === pointId);
   const votes = c.votes?.[pointId];
@@ -22,7 +25,8 @@ export function signedProtocolDavga(c: ObjectionCase, pointId: string) {
   return { text: protocolDavgaFromReason(row?.edited || "").trim(), signedAt: version?.signedAt || "" };
 }
 
-export function decisionProjectDavga(c: ObjectionCase, pointId: string) {
+export function decisionProjectDavga(c: ObjectionCase, pointId: string, language: DocumentLanguage = "ru") {
+  if (language === "kk") return decisionProjectDavga(localizedCase(c, language), pointId);
   const protocol = signedProtocolDavga(c, pointId);
   const overrides = c.decisionProjectDavgaOverrides;
   return protocol.signedAt && overrides?.protocolSignedAt === protocol.signedAt
@@ -30,7 +34,8 @@ export function decisionProjectDavga(c: ObjectionCase, pointId: string) {
     : protocol.text;
 }
 
-export function motivatedResponseDavga(c: ObjectionCase, pointId: string) {
+export function motivatedResponseDavga(c: ObjectionCase, pointId: string, language: DocumentLanguage = "ru") {
+  if (language === "kk") return motivatedResponseDavga(localizedCase(c, language), pointId);
   const approved = c.motivatedResponseDavgaOverrides?.[pointId];
   if (approved !== undefined) return approved;
   const project = [...c.documents].reverse().find((doc) => doc.kind === "decision-project" && doc.name === "Подписанный проект решения" && doc.snapshot);
@@ -39,14 +44,18 @@ export function motivatedResponseDavga(c: ObjectionCase, pointId: string) {
 }
 
 export function replaceProtocolDavga(reason: string, davga: string) {
-  const index = reason.lastIndexOf(DAVGA_LABEL);
-  return `${index < 0 ? `${reason}\n\n` : reason.slice(0, index)}${DAVGA_LABEL}${davga}`;
+  const label = reason.includes("Жұмыс органының (ҚР ҚМ ДАВГА) дәлелдері: ") ? "Жұмыс органының (ҚР ҚМ ДАВГА) дәлелдері: " : DAVGA_LABEL;
+  const index = reason.lastIndexOf(label);
+  return `${index < 0 ? `${reason}\n\n` : reason.slice(0, index)}${label}${davga}`;
 }
 
 export function certificateBasisForPoint(
   c: ObjectionCase,
   point: ReturnType<typeof disputed>[number],
+  language: DocumentLanguage = "ru",
 ) {
+  if (language === "kk") { c = localizedCase(c, language); point = c.issues.find(item => item.id === point.id)!; }
+  const kk = language === "kk";
   const latestCertificate = [...c.documents]
     .reverse()
     .find(
@@ -54,7 +63,8 @@ export function certificateBasisForPoint(
         document.kind === "certificate" && Boolean(document.snapshot?.certificate),
     );
   const source = latestCertificate?.snapshot;
-  const sourcePoint = source?.issues.find((item) => item.id === point.id) || point;
+  const savedPoint = source?.issues.find((item) => item.id === point.id);
+  const sourcePoint = savedPoint ? { ...savedPoint, argument: savedPoint.argument || point.argument, additionalArguments: savedPoint.additionalArguments?.length ? savedPoint.additionalArguments : point.additionalArguments } : point;
   const sourceRequests = source?.requests || c.requests;
   const responses = sourceRequests
     .map((request) => ({
@@ -75,7 +85,7 @@ export function certificateBasisForPoint(
     responses
       .map(({ authority, response, route }) =>
         response.finding
-          ? `${route && route !== "initial" ? "Дополнительные доводы" : "Доводы"} ${authority}: ${response.finding}`
+          ? `${kk ? (route && route !== "initial" ? "Қосымша дәлелдер" : "Дәлелдер") : (route && route !== "initial" ? "Дополнительные доводы" : "Доводы")} ${kk ? (authority === "КВГА" ? "ІМАК" : "ІМАД") : authority}: ${response.finding}`
           : "",
       )
       .filter(Boolean)
@@ -86,7 +96,7 @@ export function certificateBasisForPoint(
     responses
       .map(({ authority, response, route }) =>
         response.response
-          ? `${route && route !== "initial" ? "Дополнительный мотивированный ответ" : "Мотивированный ответ"} ${authority}: ${response.response}`
+          ? `${kk ? (route && route !== "initial" ? "Қосымша уәжді жауап" : "Уәжді жауап") : (route && route !== "initial" ? "Дополнительный мотивированный ответ" : "Мотивированный ответ")} ${kk ? (authority === "КВГА" ? "ІМАК" : "ІМАД") : authority}: ${response.response}`
           : "",
       )
       .filter(Boolean)
@@ -102,19 +112,19 @@ export function certificateBasisForPoint(
   const additionalApplicantArguments = (sourcePoint.additionalArguments || [])
     .map(
       (argument, index) =>
-        `Дополнительные доводы объекта гос. аудита (заявителя)${
+        `${kk ? "Мемлекеттік аудит объектісінің (өтініш берушінің) қосымша дәлелдері" : "Дополнительные доводы объекта гос. аудита (заявителя)"}${
           index ? ` №${index + 1}` : ""
         }: ${argument}`,
     )
     .join("\n\n");
   return [
-    responses.length ? authorityArguments : `Доводы ДВГА/КВГА: ${authorityArguments}`,
-    `Доводы объекта государственного аудита (заявителя): ${sourcePoint.argument || "—"}`,
+    responses.length ? authorityArguments : `${kk ? "ІМАД/ІМАК дәлелдері" : "Доводы ДВГА/КВГА"}: ${authorityArguments}`,
+    `${kk ? "Мемлекеттік аудит объектісінің (өтініш берушінің) дәлелдері" : "Доводы объекта государственного аудита (заявителя)"}: ${sourcePoint.argument || "—"}`,
     additionalApplicantArguments,
     responses.length
       ? authorityReply
-      : `Мотивированный ответ ДВГА/КВГА: ${authorityReply}`,
-    `Доводы рабочего органа (ДАВГА МФ РК): ${davgaArguments}`,
+      : `${kk ? "ІМАД/ІМАК уәжді жауабы" : "Мотивированный ответ ДВГА/КВГА"}: ${authorityReply}`,
+    `${kk ? "Жұмыс органының (ҚР ҚМ ДАВГА) дәлелдері" : "Доводы рабочего органа (ДАВГА МФ РК)"}: ${davgaArguments}`,
   ].filter(Boolean).join("\n\n");
 }
 

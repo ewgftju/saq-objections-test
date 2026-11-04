@@ -1,3 +1,4 @@
+import { appealLanguage, selectedLanguages, pointText, LANGUAGE_LABELS, localizedCase } from "./documentLanguage";
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
@@ -857,6 +858,7 @@ export function addDocument(
     text,
     date,
     author: ROLES[role],
+    languages: kind === "certificate" ? c.certificate?.languages || [appealLanguage(c)] : kind === "protocol" ? c.meeting?.languages || [appealLanguage(c)] : kind === "authority-response" || kind === "authority-response-appendix" ? ["ru", "kk"] : kind === "decision-project" || kind === "final-response" ? [appealLanguage(c)] : undefined,
     signedDocumentNumber: kind === "decision-project" && name === "Подписанный проект решения" ? c.decisionProject?.number : kind === "final-response" && name === "Подписанный окончательный ответ" ? c.delivery?.number : undefined,
     signedDocumentDate: kind === "decision-project" && name === "Подписанный проект решения" || kind === "final-response" && name === "Подписанный окончательный ответ" ? date : undefined,
     certificateNumber: kind === "certificate" && name.startsWith("Справка: результаты голосования членов АК")
@@ -864,6 +866,7 @@ export function addDocument(
       : undefined,
     requestId,
     snapshot: structuredClone({
+      appealLanguage: c.appealLanguage,
       issues: c.issues,
       result: c.result || null,
       members: c.members,
@@ -874,7 +877,7 @@ export function addDocument(
       certificate: c.certificate || null,
       decisionProjectDavgaOverrides: c.decisionProjectDavgaOverrides,
       motivatedResponseDavgaByPoint: kind === "final-response" && /мотивированн/i.test(name)
-        ? Object.fromEntries(disputed(c).map((point) => [point.id, motivatedResponseDavga(c, point.id)]))
+        ? Object.fromEntries(disputed(c).map((point) => [point.id, motivatedResponseDavga(c, point.id, appealLanguage(c))]))
         : undefined,
       requests: c.requests,
       hearingSupplements: c.hearingSupplements || [],
@@ -936,15 +939,28 @@ export function applyAction(
       }
   }
 
+  const savePointTranslations = (languages: Array<"ru" | "kk">) => {
+    for (const point of disputed(c)) {
+      point.translations ||= {};
+      for (const language of languages) {
+        const title = language === appealLanguage(c) ? point.title : String(form.get(`pointTitle_${language}_${point.id}`) ?? pointText(c, point, "title", language)).trim();
+        const argument = language === appealLanguage(c) ? point.argument : String(form.get(`pointArgument_${language}_${point.id}`) ?? pointText(c, point, "argument", language)).trim();
+        if (!title || !argument) throw new Error(`Заполните описание и доводы заявителя по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`);
+        const additionalArguments = language === appealLanguage(c) ? point.additionalArguments : (point.additionalArguments || []).map((_, index) => String(form.get(`pointAdditional_${language}_${point.id}_${index}`) ?? point.translations?.[language]?.additionalArguments?.[index] ?? "").trim());
+        if (additionalArguments?.some(value => !value)) throw new Error(`Заполните перевод всех дополнительных доводов по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`);
+        point.translations[language] = { title, argument, additionalArguments };
+      }
+    }
+  };
+
   switch (action) {
     case "propose-certificate-change": {
       if (!c.certificate) throw new Error("Справка ещё не сформирована");
-      const changes = disputed(c).map((point) => ({
-        pointId: point.id,
-        pointNumber: point.number,
-        before: c.status === "decision_project" ? decisionProjectDavga(c, point.id) : isMotivatedResponseStage(c) ? motivatedResponseDavga(c, point.id) : protocolDavgaFromReason(certificateBasisForPoint(c, point)),
-        proposed: String(form.get(`proposedDavga_${point.id}`) ?? "").trim(),
-      })).filter((change) => change.before !== change.proposed);
+      const changes = disputed(c).flatMap(point => [...new Set([...(c.certificate?.languages || [appealLanguage(c)]), ...(c.meeting?.languages || [])])].map(language => ({
+        pointId: point.id, pointNumber: point.number, language,
+        before: c.status === "decision_project" ? decisionProjectDavga(c, point.id, language) : isMotivatedResponseStage(c) ? motivatedResponseDavga(c, point.id, language) : protocolDavgaFromReason(certificateBasisForPoint(c, point, language)),
+        proposed: String(form.get(`${language === "kk" ? "proposedDavgaKk" : "proposedDavga"}_${point.id}`) ?? "").trim(),
+      }))).filter(change => change.before !== change.proposed);
       if (!changes.length) throw new Error("Измените доводы хотя бы по одному пункту");
       if (changes.some((change) => !change.proposed)) throw new Error("Заполните предлагаемые доводы по изменённым пунктам");
       c.certificateChangeRequests ||= [];
@@ -954,7 +970,7 @@ export function applyAction(
       const stageLabel = certificateChangeStageLabel(stage);
       c.certificateChangeRequests.push({ stage, proposedAt, proposedBy: c.assignee, reason, status: "pending", changes });
       title = "Предложены изменения справки";
-      note = `Этап: ${stageLabel}\nПредложил: ${c.assignee} · ${new Date(proposedAt).toLocaleString("ru-RU")}${reason ? `\nПричина: ${reason}` : ""}\n\n` + changes.map((change) => `Пункт № ${change.pointNumber}: было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n");
+      note = `Этап: ${stageLabel}\nПредложил: ${c.assignee} · ${new Date(proposedAt).toLocaleString("ru-RU")}${reason ? `\nПричина: ${reason}` : ""}\n\n` + changes.map((change) => `Пункт № ${change.pointNumber} — ${LANGUAGE_LABELS[change.language || "ru"]}: было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n");
       next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: ROLES.director, recipientRole: "director", date, read: false, text: `По обращению №${c.appealNumber || c.id} предложены изменения справки.` });
       break;
     }
@@ -962,7 +978,7 @@ export function applyAction(
       const request = c.certificateChangeRequests?.at(-1);
       if (!request || request.status !== "pending" || !c.certificate) throw new Error("Нет изменений справки, ожидающих рассмотрения");
       for (const change of request.changes) {
-        const decision = String(form.get(`decision_${change.pointId}`) || "");
+        const decision = String(form.get(`decision_${change.pointId}${change.language === "kk" ? "_kk" : ""}`) || "");
         if (decision !== "accepted" && decision !== "rejected") throw new Error(`Выберите решение по пункту № ${change.pointNumber}`);
         change.decision = decision;
       }
@@ -977,14 +993,14 @@ export function applyAction(
           if (!signedAt) throw new Error("Подписанный протокол не найден");
           if (c.decisionProjectDavgaOverrides?.protocolSignedAt !== signedAt)
             c.decisionProjectDavgaOverrides = { protocolSignedAt: signedAt, byPoint: {} };
-          for (const change of accepted) c.decisionProjectDavgaOverrides!.byPoint[change.pointId] = change.proposed;
+          for (const change of accepted) { if (change.language === "kk") { c.decisionProjectDavgaOverrides!.byPointKk ||= {}; c.decisionProjectDavgaOverrides!.byPointKk[change.pointId] = change.proposed; } else c.decisionProjectDavgaOverrides!.byPoint[change.pointId] = change.proposed; }
         }
         if (request.stage === "motivated-response") {
           c.motivatedResponseDavgaOverrides = { ...c.motivatedResponseDavgaOverrides };
-          for (const change of accepted) c.motivatedResponseDavgaOverrides[change.pointId] = change.proposed;
+          for (const change of accepted) { if (change.language === "kk") { c.motivatedResponseDavgaOverridesKk ||= {}; c.motivatedResponseDavgaOverridesKk[change.pointId] = change.proposed; } else c.motivatedResponseDavgaOverrides[change.pointId] = change.proposed; }
         }
         c.certificate.davgaArgumentsByPoint = { ...c.certificate.davgaArgumentsByPoint };
-        for (const change of accepted) c.certificate.davgaArgumentsByPoint[change.pointId] = change.proposed;
+        for (const change of accepted) { if (change.language === "kk") { c.certificate.davgaArgumentsByPointKk ||= {}; c.certificate.davgaArgumentsByPointKk[change.pointId] = change.proposed; } else c.certificate.davgaArgumentsByPoint[change.pointId] = change.proposed; }
         c.certificateRevision = (c.certificateRevision || 0) + 1;
         const version = c.documents.filter((document) => document.kind === "certificate").length + 1;
         doc(`Справка: результаты голосования членов АК. Версия ${version}`, "certificate", "Изменения доводов приняты директором ДАВГА. Повторное подписание не требуется.");
@@ -992,7 +1008,7 @@ export function applyAction(
       }
       title = "Директор рассмотрел изменения справки";
       const stageLabel = certificateChangeStageLabel(request.stage);
-      note = `Этап: ${stageLabel}\nРассмотрено: ${new Date(request.reviewedAt).toLocaleString("ru-RU")}\n\n` + request.changes.map((change) => `Пункт № ${change.pointNumber}: ${change.decision === "accepted" ? "принято" : "отклонено"}. Было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n") + (request.reviewComment ? `\nКомментарий: ${request.reviewComment}` : "");
+      note = `Этап: ${stageLabel}\nРассмотрено: ${new Date(request.reviewedAt).toLocaleString("ru-RU")}\n\n` + request.changes.map((change) => `Пункт № ${change.pointNumber} — ${LANGUAGE_LABELS[change.language || "ru"]}: ${change.decision === "accepted" ? "принято" : "отклонено"}. Было: ${change.before}\nПредложено: ${change.proposed}`).join("\n\n") + (request.reviewComment ? `\nКомментарий: ${request.reviewComment}` : "");
       next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: ROLES.work, recipientRole: "work", date, read: false, text: `Директор рассмотрел изменения справки по обращению №${c.appealNumber || c.id}.` });
       break;
     }
@@ -1400,6 +1416,8 @@ export function applyAction(
         result.votes ||= {};
         result.voteReasons ||= {};
         result.votes[voter.id] = vote;
+        result.voteReasonLanguages ||= {};
+        result.voteReasonLanguages[voter.id] = form.get("commentLanguage") === "kk" ? "kk" : form.get("commentLanguage") === "ru" ? "ru" : appealLanguage(c);
         result.voteReasons[voter.id] = String(
           form.get(`commissionReason_${point.id}`) || "",
         ).trim();
@@ -1461,7 +1479,7 @@ export function applyAction(
             ),
           );
           const comment = String(
-            form.get(`meetingCertificateComment_${point.id}_${member.id}`) ||
+            form.get(`${appealLanguage(c) === "kk" ? "meetingCertificateCommentKk" : "meetingCertificateComment"}_${point.id}_${member.id}`) ||
               form.get(`meetingCertificateComment_${member.id}`) ||
               "",
           ).trim();
@@ -1480,6 +1498,8 @@ export function applyAction(
           result.voteReasons ||= {};
           result.votes[member.id] = manualResult;
           result.voteReasons[member.id] = comment;
+          result.voteReasonLanguages ||= {};
+          result.voteReasonLanguages[member.id] = appealLanguage(c);
           const recordedVotes = c.members.map((item) =>
             normalizeVoteChoice(result.votes![item.id]),
           );
@@ -1513,17 +1533,12 @@ export function applyAction(
           pointId: point.id,
           pointNumber: point.number,
           result: normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id]),
-          comment: String(
-            form.get(`meetingCertificateComment_${point.id}_${member.id}`) ??
-              form.get(`meetingCertificateComment_${member.id}`) ??
-              savedPositions.get(`${point.id}_${member.id}`)?.comment ??
-              savedPositions.get(`legacy_${member.id}`)?.comment ??
-              c.votes?.[point.id]?.voteReasons?.[member.id] ??
-              "",
-          ).trim(),
+          comment: String(form.get(`meetingCertificateComment_${point.id}_${member.id}`) ?? form.get(`meetingCertificateComment_${member.id}`) ?? savedPositions.get(`${point.id}_${member.id}`)?.comment ?? ((c.votes?.[point.id]?.voteReasonLanguages?.[member.id] || appealLanguage(c)) === "ru" ? c.votes?.[point.id]?.voteReasons?.[member.id] : "") ?? "").trim(),
+          commentKk: String(form.get(`meetingCertificateCommentKk_${point.id}_${member.id}`) ?? savedPositions.get(`${point.id}_${member.id}`)?.commentKk ?? ((c.votes?.[point.id]?.voteReasonLanguages?.[member.id] || appealLanguage(c)) === "kk" ? c.votes?.[point.id]?.voteReasons?.[member.id] : "") ?? "").trim(),
         })),
       );
 
+      if (c.certificate.languages?.length === 2) for (const position of c.certificate.memberPositions) if ((position.comment || position.commentKk) && (!position.comment || !position.commentKk)) throw new Error(`Заполните перевод комментария: ${position.name}, пункт № ${position.pointNumber}`);
       const allVotesRecorded = disputed(c).every((point) =>
         c.members.every((member) =>
           Boolean(normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id])),
@@ -1561,6 +1576,7 @@ export function applyAction(
       if (!request)
         throw new Error("Это действие доступно только для запроса в ДВГА/КВГА");
       request.authorityResponses ||= {};
+      request.authorityResponsesKk ||= {};
       for (const point of disputed(c)) {
         const finding = text(
           `authorityFinding_${point.id}`,
@@ -1571,9 +1587,14 @@ export function applyAction(
           `Мотивированный ответ по пункту ${point.number}`,
         );
         request.authorityResponses[point.id] = { finding, response };
+        request.authorityResponsesKk[point.id] = {
+          finding: text(`authorityFindingKk_${point.id}`, `Нарушение по пункту ${point.number} — Қазақша`),
+          response: text(`authorityResponseKk_${point.id}`, `Мотивированный ответ по пункту ${point.number} — Қазақша`),
+        };
         point.authorityFinding = finding;
         point.position = response;
       }
+      delete request.responseDraft;
       request.responded = date;
       doc(
         `Заполненное приложение к запросу в ${request.recipient}`,
@@ -1612,6 +1633,9 @@ export function applyAction(
         (item) => !!item.responseApproved && !item.responseSigned,
       );
       if (!request) throw new Error("Нет согласованного ответа для подписания");
+      if (c.appealLanguage) for (const point of disputed(c)) {
+        if (!request.authorityResponses?.[point.id]?.finding || !request.authorityResponses?.[point.id]?.response || !request.authorityResponsesKk?.[point.id]?.finding || !request.authorityResponsesKk?.[point.id]?.response) throw new Error(`Заполните ответ по пункту № ${point.number} на русском и казахском языках`);
+      }
       request.responseSigned = date;
       request.requestNumber ||= requestNumber(c, request);
       request.responseNumber ||= responseNumber(c, request);
@@ -1746,20 +1770,14 @@ export function applyAction(
     }
     case "analysis": {
       const points = disputed(c);
-      const argumentNames = points.map((point) => `davgaArguments_${point.id}`);
-      if (argumentNames.some((name) => form.has(name))) {
+      const argumentNames = points.flatMap((point) => [`davgaArguments_${point.id}`, `davgaArgumentsKk_${point.id}`]);
+      if (c.appealLanguage || form.has("documentLanguageMode") || argumentNames.some((name) => form.has(name))) {
+        const languages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : "")));
+        savePointTranslations(languages);
         c.certificate = {
-          davgaArguments: "",
-          davgaArgumentsByPoint: Object.fromEntries(
-            points.map((point) => [
-              point.id,
-              text(
-                `davgaArguments_${point.id}`,
-                `Доводы ДАВГА по пункту ${point.number}`,
-              ),
-            ]),
-          ),
-          memberPositions: [],
+          languages, davgaArguments: "", memberPositions: [],
+          davgaArgumentsByPoint: Object.fromEntries(points.map(point => [point.id, languages.includes("ru") ? text(`davgaArguments_${point.id}`, `Доводы ДАВГА № ${point.number} — Русский`) : c.certificate?.davgaArgumentsByPoint?.[point.id] || ""])),
+          davgaArgumentsByPointKk: Object.fromEntries(points.map(point => [point.id, languages.includes("kk") ? text(`davgaArgumentsKk_${point.id}`, `Доводы ДАВГА № ${point.number} — Қазақша`) : c.certificate?.davgaArgumentsByPointKk?.[point.id] || ""])),
         };
         c.status = "certificate_approval";
         c.result = null;
@@ -1816,23 +1834,11 @@ export function applyAction(
     case "edit-certificate": {
       if (!c.certificate) throw new Error("Справка ещё не сформирована");
       const points = disputed(c);
-      const davgaArgumentsByPoint = Object.fromEntries(
-        points.map((point) => [
-          point.id,
-          text(
-            `certificateDavga_${point.id}`,
-            `Доводы ДАВГА по пункту ${point.number}`,
-          ),
-        ]),
-      );
-      c.certificate = {
-        ...c.certificate,
-        davgaArguments:
-          points
-            .map((point) => davgaArgumentsByPoint[point.id])
-            .find(Boolean) || c.certificate.davgaArguments,
-        davgaArgumentsByPoint,
-      };
+      for (const language of c.certificate.languages || [appealLanguage(c)]) {
+        const values = Object.fromEntries(points.map(point => [point.id, text(`${language === "kk" ? "certificateDavgaKk" : "certificateDavga"}_${point.id}`, `Доводы ДАВГА № ${point.number} — ${LANGUAGE_LABELS[language]}`)]));
+        if (language === "kk") c.certificate.davgaArgumentsByPointKk = values;
+        else c.certificate.davgaArgumentsByPoint = values;
+      }
       const resultCertificateName = "Справка: результаты голосования членов АК";
       const version = Math.max(
         2,
@@ -1961,6 +1967,8 @@ export function applyAction(
       doc("Протокол заслушивания", "hearing", c.hearing.note);
       break;
     case "vote": {
+      const protocolLanguages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : "")));
+      if (form.has("documentLanguageMode") || c.appealLanguage) savePointTranslations(protocolLanguages);
       const previousVersions = c.meeting?.protocolVersions || [];
       const previousOriginalVotes = c.meeting?.originalVotes ?? structuredClone(c.votes || null);
       const currentVersions = previousVersions.filter((version) => (version.certificateRevision ?? 0) === (c.certificateRevision ?? 0));
@@ -2030,8 +2038,11 @@ export function applyAction(
           const edited = form.has(davgaName)
             ? replaceProtocolDavga(previous?.edited ?? original, String(form.get(davgaName) ?? "").trim())
             : String(form.get(`protocolReason_${point.id}_${member.id}`) || "").trim();
-          const changed = edited !== (previous?.edited ?? original);
-          protocolRows.push({ pointId: point.id, pointNumber: point.number, memberId: member.id, memberName: member.name, vote: memberVotes[member.id], original, edited, changedBy: changed ? c.assignee : previous?.changedBy, changedAt: changed ? changedAt : previous?.changedAt });
+          const originalKk = originalRows.find(row => row.pointId === point.id && row.memberId === member.id)?.originalKk ?? certificateBasisForPoint(c, point, "kk");
+          const editedKk = protocolLanguages.includes("kk") ? replaceProtocolDavga(previous?.editedKk || originalKk, text(`protocolDavgaKk_${point.id}_${member.id}`, `Доводы ДАВГА: ${member.name}, пункт ${point.number} — Қазақша`)) : previous?.editedKk;
+          if ((form.has("documentLanguageMode") || c.appealLanguage) && protocolLanguages.includes("ru") && !protocolDavgaFromReason(edited).trim()) throw new Error(`Заполните доводы ДАВГА по пункту № ${point.number} — Русский`);
+          const changed = edited !== (previous?.edited ?? original) || editedKk !== (previous?.editedKk ?? originalKk);
+          protocolRows.push({ pointId: point.id, pointNumber: point.number, memberId: member.id, memberName: member.name, vote: memberVotes[member.id], original, edited, originalKk, editedKk, changedBy: changed ? c.assignee : previous?.changedBy, changedAt: changed ? changedAt : previous?.changedAt });
         }
         c.votes[point.id] = {
           yes,
@@ -2041,6 +2052,7 @@ export function applyAction(
           present: c.members.length,
           eligible: c.members.length,
           votes: memberVotes,
+          voteReasonLanguages: previousOriginalVotes?.[point.id]?.voteReasonLanguages,
           voteReasons: Object.fromEntries(
             c.members.map((member) => [
               member.id,
@@ -2059,8 +2071,10 @@ export function applyAction(
       const recommendationText = String(
         form.get("recommendations") || "",
       ).trim();
+      if (protocolLanguages.length === 2 && Boolean(recommendationText) !== Boolean(String(form.get("recommendationsKk") || "").trim())) throw new Error("Заполните рекомендации на обоих языках либо оставьте обе версии пустыми");
       dateObject(protocolDate);
       c.meeting = {
+        languages: protocolLanguages,
         date: protocolDate,
         // Номер присваивается только после подписания протокола.
         number: "",
@@ -2068,8 +2082,9 @@ export function applyAction(
         format: meetingFormat,
         projectReceived: date,
         recommendations: recommendationText || undefined,
+        recommendationsKk: String(form.get("recommendationsKk") || "").trim() || undefined,
         originalVotes: previousOriginalVotes,
-        protocolVersions: [...previousVersions, { createdAt: changedAt, author: c.assignee, certificateRevision: c.certificateRevision ?? 0, rows: protocolRows }],
+        protocolVersions: [...previousVersions, { createdAt: changedAt, author: c.assignee, languages: protocolLanguages, certificateRevision: c.certificateRevision ?? 0, rows: protocolRows }],
       };
       const changes = protocolRows.filter((row) => row.edited !== (previousRows.find((previous) => previous.pointId === row.pointId && previous.memberId === row.memberId)?.edited ?? row.original));
       if (changes.length) c.history.push({ date, actor: c.assignee, title: "Изменены обоснования протокола", text: changes.map((row) => `Пункт № ${row.pointNumber}, ${row.memberName}: было: ${previousRows.find((previous) => previous.pointId === row.pointId && previous.memberId === row.memberId)?.edited ?? row.original}\nСтало: ${row.edited}`).join("\n\n") });
@@ -2133,6 +2148,7 @@ export function applyAction(
       break;
     }
     case "create-decision-project": {
+      if (c.appealLanguage) for (const point of disputed(c)) if (!decisionProjectDavga(c, point.id, appealLanguage(c)).trim()) throw new Error(`В подписанном протоколе отсутствуют доводы ДАВГА № ${point.number} — ${LANGUAGE_LABELS[appealLanguage(c)]}`);
       const defaultChannel = hasSubjectSaqCabinet(c) ? "saq" : "external";
       const requestedSubjectChannel =
         String(form.get("projectSubjectChannel") || "") === "external"
@@ -2193,6 +2209,7 @@ export function applyAction(
         c.decisionProject.date = date;
       }
       c.motivatedResponseDavgaOverrides = undefined;
+      c.motivatedResponseDavgaOverridesKk = undefined;
       const recipients: DecisionProjectRecipient[] = decisionProjectRecipients(c)
         .filter((recipient) => recipient.purpose === "comments")
         .map((recipient) => ({
@@ -2552,6 +2569,7 @@ export function applyAction(
         break;
       }
       const isMotivatedResponse = requiresMotivatedResponse(c);
+      if (isMotivatedResponse && c.appealLanguage) for (const point of disputed(c)) if (!motivatedResponseDavga(c, point.id, appealLanguage(c)).trim()) throw new Error(`Отсутствуют доводы ДАВГА № ${point.number} — ${LANGUAGE_LABELS[appealLanguage(c)]}`);
       c.delivery = {
         date,
         number: "",

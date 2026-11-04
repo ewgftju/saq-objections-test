@@ -308,6 +308,7 @@ export default function NewCaseModal({
               id,
               type,
               appealType: selectedAppealType.label,
+              appealLanguage: get("appealLanguage", "Язык обращения") as "ru" | "kk",
               appealNumber: get(
                 "appealNumber",
                 "Номер возражения, жалобы, заявления",
@@ -517,6 +518,7 @@ export default function NewCaseModal({
             ))}
           </select>
         </label>
+        <label className="field"><span>Язык обращения <span className="required">*</span></span><select name="appealLanguage" required defaultValue=""><option value="" disabled>Выберите язык</option><option value="ru">Русский</option><option value="kk">Қазақша</option></select></label>
         <div className="form-grid">
           <label className="field">
             <span>{applicantNameLabel}<span className="required"> *</span></span>

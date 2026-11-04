@@ -22,6 +22,8 @@ test('ответы получают номера соответствующих 
   for (const point of saved.issues.filter(item => item.disputed)) {
     form.set(`authorityFinding_${point.id}`, 'Нарушение');
     form.set(`authorityResponse_${point.id}`, 'Ответ');
+    form.set(`authorityFindingKk_${point.id}`, 'Бұзушылық');
+    form.set(`authorityResponseKk_${point.id}`, 'Жауап');
   }
   state = applyAction(state, c.id, 'fill-request-response', 'dvga', form);
   saved = state.cases.find(item => item.id === c.id)!;

@@ -1,3 +1,4 @@
+import { languagesForDocument, LANGUAGE_LABELS } from "../services/documentLanguage";
 import { useState } from "react";
 import { Button, Modal } from "../../../components/ui";
 import type { CaseDocument, ObjectionCase, Role } from "../../../types";
@@ -23,8 +24,8 @@ export function CertificateDocuments({ c, role, onDocument }: { c: ObjectionCase
   const latest = changed.at(-1);
   const showHistory = role === "work" || role === "director" || role === "demo-superuser";
   const actions = (document: CaseDocument) => <div className="request-document-actions">
-    <Button onClick={() => onDocument(document.kind, document)}>Просмотр</Button>
-    <Button onClick={() => downloadFile(`${c.id}-${document.name}.doc`, wordDocumentHtml({ c, kind: document.kind, document }), "application/msword")}>Скачать Word</Button>
+    {languagesForDocument(c, document.kind, document).map(language => <Button key={language} onClick={() => onDocument(document.kind, { ...document, viewLanguage: language })}>{languagesForDocument(c, document.kind, document).length > 1 ? `Просмотр ${language === "kk" ? "KZ" : "RU"}` : "Просмотр"}</Button>)}
+    <Button onClick={() => downloadFile(`${c.id}-${document.name}.doc`, wordDocumentHtml({ c, kind: document.kind, document }), "application/msword")}>{document.languages?.length === 2 ? "Скачать комплект" : "Скачать Word"}</Button>
   </div>;
   if (!certificates.length) return null;
   return <section className="request-documents-section">
@@ -33,8 +34,8 @@ export function CertificateDocuments({ c, role, onDocument }: { c: ObjectionCase
       {latest && <div className="request-document-row">
         <span>Справка с учётом изменений доводов ДАВГА{latest.certificateNumber ? ` · № ${latest.certificateNumber}` : ""}</span>
         <div className="request-document-actions">
-          <Button onClick={() => onDocument(latest.kind, latest)}>Просмотр</Button>
-          <Button onClick={() => downloadFile(`${c.id}-${latest.name}.doc`, wordDocumentHtml({ c, kind: latest.kind, document: latest }), "application/msword")}>Скачать Word</Button>
+          {languagesForDocument(c, latest.kind, latest).map(language => <Button key={language} onClick={() => onDocument(latest.kind, { ...latest, viewLanguage: language })}>{latest.languages?.length === 2 ? `Просмотр ${language === "kk" ? "KZ" : "RU"}` : "Просмотр"}</Button>)}
+          <Button onClick={() => downloadFile(`${c.id}-${latest.name}.doc`, wordDocumentHtml({ c, kind: latest.kind, document: latest }), "application/msword")}>{latest.languages?.length === 2 ? "Скачать комплект" : "Скачать Word"}</Button>
           {showHistory && <Button onClick={() => setHistoryOpen(true)}>История версий</Button>}
         </div>
       </div>}

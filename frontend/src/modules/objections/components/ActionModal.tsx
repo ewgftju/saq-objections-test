@@ -1,3 +1,5 @@
+import { appealLanguage, selectedLanguages, pointText, LANGUAGE_LABELS } from "../services/documentLanguage";
+import type { DocumentLanguage } from "../../../types";
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -144,6 +146,17 @@ export function Field({
   );
 }
 
+function LanguageFields({ fields, primary, values }: { fields: FormField[]; primary: DocumentLanguage; values: FormValues }) {
+  const languages = [...new Set(fields.flatMap(field => field.language ? [field.language] : []))];
+  const [selected, setSelected] = useState<DocumentLanguage>(primary);
+  const active = languages.includes(selected) ? selected : languages[0];
+  return <>
+    {fields.filter(field => !field.language).map(field => <Field key={field.name} field={{ ...field, value: values[field.name] ?? field.value }} />)}
+    {languages.length > 0 && <div className="request-modal-tabs" role="tablist" aria-label="Язык заполнения">{languages.map(language => <button key={language} type="button" role="tab" aria-selected={active === language} className={active === language ? "active" : ""} onClick={() => setSelected(language)}>{LANGUAGE_LABELS[language]} · {fields.filter(field => field.language === language && field.required).every(field => (values[field.name] ?? field.value ?? "").trim()) ? "Заполнено" : "Не заполнено"}</button>)}</div>}
+    {languages.map(language => <div key={language} hidden={active !== language}>{fields.filter(field => field.language === language).map(field => <Field key={field.name} field={{ ...field, value: values[field.name] ?? field.value }} />)}</div>)}
+  </>;
+}
+
 function HearingSection({
   step,
   title,
@@ -266,15 +279,14 @@ function ProtocolVotesFields({
                         : <span className="muted">Нет голоса</span>}
                     </td>
                     <td>
-                      <input type="hidden" name={`protocolReason_${point.id}_${member.id}`} value={fullReason} />
-                      <textarea
-                        name={reasonName}
-                        value={reason}
-                        rows={8}
-                        required
-                        aria-label={`Доводы ДАВГА: ${member.name}, пункт ${point.number}`}
-                        onChange={(event) => onReasonChange(reasonName, event.currentTarget.value)}
-                      />
+                      {selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).map(language => {
+                        const name = `${language === "kk" ? "protocolDavgaKk" : "protocolDavga"}_${point.id}_${member.id}`;
+                        const basis = language === "kk" ? certificateBasisForPoint(c, point, "kk") : certificateBasis;
+                        const old = currentProtocolRows(c)?.find(row => row.pointId === point.id && row.memberId === member.id);
+                        const prior = language === "kk" ? old?.editedKk ?? basis : old?.edited ?? basis;
+                        const value = values[name] ?? protocolDavgaFromReason(prior);
+                        return <label className="field" key={language}><span>{LANGUAGE_LABELS[language]}</span><input type="hidden" name={`${language === "kk" ? "protocolReasonKk" : "protocolReason"}_${point.id}_${member.id}`} value={replaceProtocolDavga(prior,value)} /><textarea name={name} value={value} rows={6} required aria-label={`Доводы ДАВГА: ${member.name}, пункт ${point.number} — ${LANGUAGE_LABELS[language]}`} onChange={event => onReasonChange(name,event.currentTarget.value)} /></label>;
+                      })}
                       {fullReason !== certificateBasis && <small>Изменено</small>}
                     </td>
                   </tr>
@@ -335,6 +347,7 @@ function MeetingCertificateFields({
               const resultName = `meetingCertificateResult_${point.id}_${member.id}`;
               const commentName = `meetingCertificateComment_${point.id}_${member.id}`;
               const votedComment = c.votes?.[point.id]?.voteReasons?.[member.id] || "";
+              const originalLanguage = c.votes?.[point.id]?.voteReasonLanguages?.[member.id] || appealLanguage(c);
               return (
                 <tr key={`${point.id}-${member.id}`}>
                   <td>{index === 0 ? point.number : ""}</td>
@@ -342,7 +355,7 @@ function MeetingCertificateFields({
                   <td>{member.name}</td>
                   <td>{electronic ? OUTCOMES[electronic] : <span className="muted">Нет голоса</span>}</td>
                   <td><select name={resultName} defaultValue={values[resultName] || ""}><option value="">Не изменять</option>{Object.entries(OUTCOMES).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></td>
-                  <td><textarea name={commentName} defaultValue={values[commentName] ?? saved?.comment ?? votedComment} rows={2} aria-label={`Комментарий ${member.name} по пункту ${point.number}`} /></td>
+                  <td>{(c.certificate?.languages || [appealLanguage(c)]).map(language => { const name = language === "ru" ? commentName : `meetingCertificateCommentKk_${point.id}_${member.id}`; const existing = language === "ru" ? saved?.comment : saved?.commentKk; return <label className="field" key={language}><span>{LANGUAGE_LABELS[language]}</span><textarea name={name} defaultValue={values[name] ?? existing ?? (language === originalLanguage ? votedComment : "")} rows={3} aria-label={`Комментарий ${member.name} по пункту ${point.number} — ${LANGUAGE_LABELS[language]}`} /></label>; })}</td>
                 </tr>
               );
             }))}
@@ -384,24 +397,9 @@ export default function ActionModal({
   const [values, setValues] = useState<FormValues>(() => {
     if (action === "request" || action === "request-saq")
       return { ...(c.requestDrafts?.[action]?.values || {}) };
+    if (action === "fill-request-response") return { ...(c.requests.find(request => !request.responded && request.sent && /ДВГА|КВГА/.test(request.recipient) && (role !== "dvga" && role !== "kvga" || request.recipient.includes(role === "kvga" ? "КВГА" : "ДВГА")))?.responseDraft?.values || {}) };
     if (action === "analysis") return { ...(c.analysisDraft?.values || {}) };
-    if (action === "fill-meeting-certificate") {
-      const savedPositions = new Map(
-        (c.certificate?.memberPositions || []).map((position) => [
-          `${position.pointId || "legacy"}_${position.id}`,
-          position,
-        ]),
-      );
-      return Object.fromEntries(
-        disputed(c).flatMap((point) => c.members.map((member) => [
-          `meetingCertificateComment_${point.id}_${member.id}`,
-          savedPositions.get(`${point.id}_${member.id}`)?.comment ??
-            savedPositions.get(`legacy_${member.id}`)?.comment ??
-            c.votes?.[point.id]?.voteReasons?.[member.id] ??
-            "",
-        ])),
-      );
-    }
+    if (action === "fill-meeting-certificate") return {};
     if (action === "edit-certificate")
       return Object.fromEntries(
         disputed(c).map((point) => [
@@ -423,6 +421,7 @@ export default function ActionModal({
             `protocolVote_${point.id}_${member.id}`,
             normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id]),
           ],
+          [`protocolDavgaKk_${point.id}_${member.id}`, protocolDavgaFromReason(currentProtocolRows(c)?.find(row => row.pointId === point.id && row.memberId === member.id)?.editedKk ?? certificateBasisForPoint(c, point, "kk"))],
           [
             `protocolDavga_${point.id}_${member.id}`,
             protocolDavgaFromReason(currentProtocolRows(c)?.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point)),
@@ -431,6 +430,11 @@ export default function ActionModal({
       ),
     ]);
   });
+  const documentLanguages = action === "fill-request-response" ? ["ru", "kk"] as DocumentLanguage[] : ["analysis", "vote", "fill-meeting-certificate", "edit-certificate"].includes(action) ? selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)) : [appealLanguage(c)];
+  const [previewLanguage, setPreviewLanguage] = useState<DocumentLanguage>(appealLanguage(c));
+  const activePreviewLanguage = documentLanguages.includes(previewLanguage) ? previewLanguage : documentLanguages[0];
+  const previewLanguageTabs = <div className="request-modal-tabs" role="tablist" aria-label="Язык печатной формы">{documentLanguages.map(language => <button key={language} type="button" role="tab" aria-selected={activePreviewLanguage === language} className={activePreviewLanguage === language ? "active" : ""} onClick={() => setPreviewLanguage(language)}>{LANGUAGE_LABELS[language]}</button>)}</div>;
+  const previewCase = { ...c, issues: c.issues.map(point => ({ ...point, translations: { ...point.translations, ...Object.fromEntries(documentLanguages.map(language => [language, { ...point.translations?.[language], title: values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language), argument: values[`pointArgument_${language}_${point.id}`] ?? pointText(c, point, "argument", language) }])) } })) };
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
@@ -613,6 +617,7 @@ export default function ActionModal({
     >
       <form
         ref={formRef}
+        noValidate={definition.fields.some(field => field.language) || action === "vote"}
         onChange={(event) => {
           const form = event.currentTarget;
           const next = Object.fromEntries(
@@ -626,7 +631,7 @@ export default function ActionModal({
             .forEach((input) => {
               next[input.name] = input.checked ? "on" : "";
             });
-          setValues(next);
+          setValues(current => ({ ...current, ...next }));
         }}
         onSubmit={async (event) => {
           event.preventDefault();
@@ -731,8 +736,11 @@ export default function ActionModal({
               </label>
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
+              {previewLanguageTabs}
               <DocumentContent
-                c={c}
+                c={previewCase}
+                languages={documentLanguages}
+                language={activePreviewLanguage}
                 kind="request"
                 requestPreview={{
                   recipient: requestRecipient,
@@ -748,9 +756,7 @@ export default function ActionModal({
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
             <div className="form-grid">
-              {definition.fields.map((field) => (
-                <Field key={field.name} field={field} />
-              ))}
+              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
             </div>
             <label className="field request-attachments-field">
               <span>Вложить документ</span>
@@ -791,7 +797,7 @@ export default function ActionModal({
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
             <div className="form-grid">
-              {definition.fields.map((field) => <Field key={field.name} field={field} />)}
+              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
             </div>
             <label className="field request-attachments-field">
               <span>Документ заключения <span className="required">*</span></span>
@@ -922,9 +928,7 @@ export default function ActionModal({
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
             <div className="form-grid">
-              {definition.fields.map((field) => (
-                <Field key={field.name} field={field} />
-              ))}
+              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
             </div>
             <label className="field request-attachments-field">
               <span>
@@ -947,6 +951,7 @@ export default function ActionModal({
               <input type="hidden" name="withdrawCertificateProposal" value={pendingCertificateRequestAtOpen} />
               <Notice>Предложение ещё не рассмотрено директором ДАВГА. При формировании {action === "deliver" ? "мотивированного ответа" : "проекта решения"} предложение будет отозвано, а в приложение подтянутся текущие доводы для документа.</Notice>
             </>}
+            <p>Язык документа: <b>{LANGUAGE_LABELS[appealLanguage(c)]}</b></p>
             <div className="request-modal-details">
               <div><span>Автор</span><b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b></div>
               <div><span>Печатная форма</span><b>{action === "create-decision-project" ? "Проект решения и приложение" : (c.appealType || "").trim().startsWith("Жалоба") || c.appealType === "Заявление" || c.appealType === "Возражение на аудиторский отчет" || c.appealType === "Возражение на аудиторский отчёт" ? "Мотивированный ответ и приложение" : "Окончательный ответ и приложение"}</b></div>
@@ -957,7 +962,7 @@ export default function ActionModal({
               <button type="button" className={requestTab === "print" ? "active" : ""} onClick={() => setRequestTab("print")}>Печатная форма</button>
             </div>
             <div hidden={requestTab !== "form"} className="form-grid">
-              {definition.fields.map((field) => <Field key={field.name} field={field} />)}
+              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
               {action === "deliver" && !requiresMotivatedResponse(c) && disputed(c).length > 0 && (
                 <div className="field wide">
                   <span>
@@ -992,8 +997,11 @@ export default function ActionModal({
                   </Button>
                 </div>
               )}
+              {previewLanguageTabs}
               <DocumentContent
-                c={c}
+                c={previewCase}
+                languages={documentLanguages}
+                language={activePreviewLanguage}
                 kind={
                   action === "create-decision-project"
                     ? "decision-project"
@@ -1036,9 +1044,7 @@ export default function ActionModal({
               </button>
             </div>
             <div hidden={requestTab !== "form"}>
-              {definition.fields.map((field) => (
-                <Field key={field.name} field={field} />
-              ))}
+              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
               <label className="field">
                 <span>Подтверждающие документы</span>
                 <input
@@ -1051,25 +1057,26 @@ export default function ActionModal({
               </label>
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
+              {previewLanguageTabs}
               <DocumentContent
-                c={c}
+                c={previewCase}
+                languages={documentLanguages}
+                language={activePreviewLanguage}
                 kind="authority-response-appendix"
                 appendixRecipient={authorityRequestForResponse?.recipient}
                 appendixFindingPreview={Object.fromEntries(
                   disputed(c).map((point) => [
                     point.id,
-                    values[`authorityFinding_${point.id}`] ||
-                      authorityRequestForResponse?.authorityResponses?.[point.id]
-                        ?.finding ||
+                    values[`${activePreviewLanguage === "kk" ? "authorityFindingKk" : "authorityFinding"}_${point.id}`] ||
+                      (activePreviewLanguage === "kk" ? authorityRequestForResponse?.authorityResponsesKk : authorityRequestForResponse?.authorityResponses)?.[point.id]?.finding ||
                       "",
                   ]),
                 )}
                 appendixPreview={Object.fromEntries(
                   disputed(c).map((point) => [
                     point.id,
-                    values[`authorityResponse_${point.id}`] ||
-                      authorityRequestForResponse?.authorityResponses?.[point.id]
-                        ?.response ||
+                    values[`${activePreviewLanguage === "kk" ? "authorityResponseKk" : "authorityResponse"}_${point.id}`] ||
+                      (activePreviewLanguage === "kk" ? authorityRequestForResponse?.authorityResponsesKk : authorityRequestForResponse?.authorityResponses)?.[point.id]?.response ||
                       "",
                   ]),
                 )}
@@ -1102,22 +1109,25 @@ export default function ActionModal({
               </button>
             </div>
             <div hidden={requestTab !== "form"}>
-              {definition.fields.map((field) => (
-                <Field key={field.name} field={field} />
-              ))}
+              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
+              {previewLanguageTabs}
               <DocumentContent
-                c={c}
+                c={previewCase}
+                languages={documentLanguages}
+                language={activePreviewLanguage}
                 kind="certificate"
                 certificatePreview={{
                   davgaArguments: "",
                   davgaArgumentsByPoint: Object.fromEntries(
                     disputed(c).map((point) => [
                       point.id,
-                      values[`davgaArguments_${point.id}`] || "",
+                      values[`davgaArguments_${point.id}`] ?? c.certificate?.davgaArgumentsByPoint?.[point.id] ?? "",
                     ]),
                   ),
+                  davgaArgumentsByPointKk: Object.fromEntries(disputed(c).map(point => [point.id, values[`davgaArgumentsKk_${point.id}`] ?? c.certificate?.davgaArgumentsByPointKk?.[point.id] ?? ""])),
+                  languages: documentLanguages,
                   memberPositions: [],
                 }}
               />
@@ -1153,21 +1163,14 @@ export default function ActionModal({
               </button>
             </div>
             <div hidden={requestTab !== "form"}>
-              {disputed(c).map((point) => (
-                <label className="field" key={point.id}>
-                  <span>Доводы ДАВГА по пункту {point.number}<span className="required"> *</span></span>
-                  <textarea
-                    name={`certificateDavga_${point.id}`}
-                    defaultValue={values[`certificateDavga_${point.id}`] || ""}
-                    rows={5}
-                    required
-                  />
-                </label>
-              ))}
+              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
+              {previewLanguageTabs}
               <DocumentContent
-                c={c}
+                c={previewCase}
+                languages={documentLanguages}
+                language={activePreviewLanguage}
                 kind="certificate"
                 certificatePreview={{
                   davgaArguments:
@@ -1182,6 +1185,7 @@ export default function ActionModal({
                       values[`certificateDavga_${point.id}`] || "",
                     ]),
                   ),
+                  davgaArgumentsByPointKk: Object.fromEntries(disputed(c).map(point => [point.id, values[`certificateDavgaKk_${point.id}`] ?? c.certificate?.davgaArgumentsByPointKk?.[point.id] ?? ""])),
                   memberPositions: c.certificate?.memberPositions || [],
                 }}
               />
@@ -1220,8 +1224,11 @@ export default function ActionModal({
               <MeetingCertificateFields c={c} values={values} />
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
+              {previewLanguageTabs}
               <DocumentContent
-                c={c}
+                c={previewCase}
+                languages={documentLanguages}
+                language={activePreviewLanguage}
                 kind="certificate"
                 certificatePreview={{
                   davgaArguments: c.certificate?.davgaArguments || "",
@@ -1235,7 +1242,8 @@ export default function ActionModal({
                         pointId: point.id,
                         pointNumber: point.number,
                         result: manualResult || normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id]),
-                        comment: values[`meetingCertificateComment_${point.id}_${member.id}`] || "",
+                        comment: values[`meetingCertificateComment_${point.id}_${member.id}`] ?? c.certificate?.memberPositions.find(v => v.pointId === point.id && v.id === member.id)?.comment ?? ((c.votes?.[point.id]?.voteReasonLanguages?.[member.id] || appealLanguage(c)) === "ru" ? c.votes?.[point.id]?.voteReasons?.[member.id] || "" : ""),
+                        commentKk: values[`meetingCertificateCommentKk_${point.id}_${member.id}`] ?? c.certificate?.memberPositions.find(v => v.pointId === point.id && v.id === member.id)?.commentKk ?? ((c.votes?.[point.id]?.voteReasonLanguages?.[member.id] || appealLanguage(c)) === "kk" ? c.votes?.[point.id]?.voteReasons?.[member.id] || "" : ""),
                       };
                     });
                   }).flat(),
@@ -1274,9 +1282,7 @@ export default function ActionModal({
               </button>
             </div>
             <div hidden={requestTab !== "form"}>
-              {definition.fields.map((field) => (
-                <Field key={field.name} field={field} />
-              ))}
+              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
               <ProtocolVotesFields
                 c={c}
                 members={protocolMembers}
@@ -1287,8 +1293,11 @@ export default function ActionModal({
               />
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
+              {previewLanguageTabs}
               <DocumentContent
-                c={c}
+                c={previewCase}
+                languages={documentLanguages}
+                language={activePreviewLanguage}
                 kind="protocol"
                 protocolPreview={{
                   date: values.protocolDate || c.attendanceMeetingDate || c.agendaMeetingDate || date,
@@ -1300,6 +1309,7 @@ export default function ActionModal({
                       ? "офлайн"
                       : "онлайн, Qosyl",
                   recommendations: values.recommendations || undefined,
+                  recommendationsKk: values.recommendationsKk || undefined,
                   members: protocolMembers,
                   votes: Object.fromEntries(
                     disputed(c).map((point) => [
@@ -1312,6 +1322,7 @@ export default function ActionModal({
                       ),
                     ]),
                   ),
+                  voteReasonsKk: Object.fromEntries(disputed(c).map(point => [point.id, Object.fromEntries(protocolMembers.map(member => [member.id, replaceProtocolDavga(currentProtocolRows(c)?.find(row => row.pointId === point.id && row.memberId === member.id)?.editedKk ?? certificateBasisForPoint(c, point, "kk"), values[`protocolDavgaKk_${point.id}_${member.id}`] ?? "")]))])),
                   voteReasons: Object.fromEntries(
                     disputed(c).map((point) => [
                       point.id,
@@ -1540,9 +1551,7 @@ export default function ActionModal({
               <>
                 {definition.fields.length > 0 && (
                   <div className="form-grid">
-                    {definition.fields.map((field) => (
-                      <Field key={field.name} field={field} />
-                    ))}
+                    <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
                   </div>
                 )}
                 <label className="field request-attachments-field">
@@ -1569,9 +1578,7 @@ export default function ActionModal({
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
             <div className="form-grid">
-              {definition.fields.map((field) => (
-                <Field key={field.name} field={field} />
-              ))}
+              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
             </div>
             <label className="field request-attachments-field">
               <span>
@@ -1725,9 +1732,7 @@ export default function ActionModal({
         ) : (
           <>
             {definition.note && <Notice>{definition.note}</Notice>}
-            {definition.fields.map((field) => (
-              <Field key={field.name} field={field} />
-            ))}
+            <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
           </>
         )}
         {error && (
@@ -1740,7 +1745,7 @@ export default function ActionModal({
           <Button onClick={onClose} disabled={saving}>
             {isRequest || isAnalysis ? "Свернуть" : "Отмена"}
           </Button>
-          {(isRequest || isAnalysis) && onSaveDraft && (
+          {(isRequest || isAnalysis || action === "fill-request-response") && onSaveDraft && (
             <Button
               type="button"
               disabled={saving}
@@ -1752,7 +1757,8 @@ export default function ActionModal({
                   setError("");
                   await onSaveDraft(new FormData(form));
                   setSavedMessage(
-                    isAnalysis
+                    action === "fill-request-response" ? "Черновик ответа сохранён."
+                    : isAnalysis
                       ? "Черновик справки сохранён."
                       : "Проект запроса сохранён.",
                   );
@@ -1769,7 +1775,7 @@ export default function ActionModal({
                 }
               }}
             >
-              {isAnalysis ? "Сохранить" : "Сохранить проект"}
+              {action === "fill-request-response" ? "Сохранить черновик" : isAnalysis ? "Сохранить" : "Сохранить проект"}
             </Button>
           )}
           <Button type="submit" primary disabled={saving}>

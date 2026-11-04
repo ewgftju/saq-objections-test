@@ -6,7 +6,7 @@ import { normalizeVoteChoice } from "../services/decisions";
 type DiffPart = { text: string; kind: "same" | "removed" | "added" };
 
 function davgaText(reason: string) {
-  const label = /(?:Доводы рабочего органа\s*\(ДАВГА МФ РК\)|Доводы ДАВГА)\s*:\s*/gi;
+  const label = /(?:Доводы рабочего органа\s*\(ДАВГА МФ РК\)|Доводы ДАВГА|Жұмыс органының\s*\(ҚР ҚМ ДАВГА\) дәлелдері)\s*:\s*/gi;
   let match: RegExpExecArray | null;
   let start = -1;
   while ((match = label.exec(reason))) start = match.index + match[0].length;
@@ -15,8 +15,10 @@ function davgaText(reason: string) {
 }
 
 export function davgaChanges(version: ProtocolVersion) {
-  return version.rows.map((row) => ({ ...row, original: davgaText(row.original), edited: davgaText(row.edited) }))
-    .filter((row) => row.original !== row.edited);
+  return version.rows.flatMap(row => [
+    ...(!version.languages || version.languages.includes("ru") ? [{ ...row, language: "ru", original: davgaText(row.original), edited: davgaText(row.edited) }] : []),
+    ...(row.editedKk !== undefined && (!version.languages || version.languages.includes("kk")) ? [{ ...row, language: "kk", original: davgaText(row.originalKk || ""), edited: davgaText(row.editedKk) }] : []),
+  ]).filter(row => row.original !== row.edited);
 }
 
 function compareText(original: string, edited: string): DiffPart[] {
@@ -64,7 +66,7 @@ export function ProtocolChanges({ version, expanded = false }: { version: Protoc
   if (!changes.length) return <p>Доводы ДАВГА соответствуют справке.</p>;
   const groups = new Map<string, typeof changes>();
   for (const row of changes) {
-    const key = JSON.stringify([row.pointId, row.original, row.edited]);
+    const key = JSON.stringify([row.pointId, row.language, row.original, row.edited]);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(row);
   }
@@ -74,7 +76,7 @@ export function ProtocolChanges({ version, expanded = false }: { version: Protoc
     {[...groups.entries()].map(([key, rows]) => {
       const first = rows[0];
       return <section key={key} style={{ border: "1px solid #dce5ed", borderRadius: 8, padding: 16, margin: "12px 0" }}>
-        <strong>Пункт № {first.pointNumber}</strong>
+        <strong>Пункт № {first.pointNumber} · {first.language === "kk" ? "Қазақша" : "Русский"}</strong>
         {rows.map((row) => {
           const vote = normalizeVoteChoice(row.vote);
           return <div key={`${row.pointId}-${row.memberId}`} style={{ marginTop: 8 }}>

@@ -1,3 +1,4 @@
+import { appealLanguage, selectedLanguages, pointText, LANGUAGE_LABELS } from "./services/documentLanguage";
 import { preparedActionValues } from "./demoForm";
 import type { Action, ObjectionCase, Role } from "../../types";
 import { DEMO_USER } from "../../config";
@@ -9,6 +10,7 @@ import { controlDecisions } from "./services/workflow";
 import { hasSubjectSaqCabinet, subjectSaqCabinetLabel } from "./services/saqCabinets";
 
 export interface FormField {
+  language?: "ru" | "kk";
   name: string;
   label: string;
   type:
@@ -156,6 +158,19 @@ function defaultDecisionProjectChannel(c: ObjectionCase) {
   return hasSubjectSaqCabinet(c) ? "saq" : "external";
 }
 
+function languageModeField(c: ObjectionCase, values: FormValues): FormField {
+  const primary = appealLanguage(c);
+  const saved = c.certificate?.languages?.length === 2 ? "both" : primary;
+  return select("documentLanguageMode", "Язык документа", [[primary, LANGUAGE_LABELS[primary]], ["both", "Русский и қазақша"]], values.documentLanguageMode || saved);
+}
+function pointTranslationFields(c: ObjectionCase, values: FormValues): FormField[] {
+  return disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).flatMap(language => [
+    { ...area(`pointTitle_${language}_${point.id}`, `Описание пункта № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language)), language, readOnly: language === appealLanguage(c) },
+    { ...area(`pointArgument_${language}_${point.id}`, `Доводы заявителя по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointArgument_${language}_${point.id}`] ?? pointText(c, point, "argument", language)), language, readOnly: language === appealLanguage(c) },
+    ...(point.additionalArguments || []).map((argument,index) => ({ ...area(`pointAdditional_${language}_${point.id}_${index}`, `Дополнительный довод № ${index + 1}, пункт № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointAdditional_${language}_${point.id}_${index}`] ?? (language === appealLanguage(c) ? argument : point.translations?.[language]?.additionalArguments?.[index] || "")), language, readOnly: language === appealLanguage(c) })),
+  ]));
+}
+
 export function actionForm(
   action: Action,
   c: ObjectionCase,
@@ -185,8 +200,8 @@ export function actionForm(
   switch (action) {
     case "propose-certificate-change":
       title = c.status === "decision_project" || (c.status === "decided" && requiresMotivatedResponse(c)) ? "Предложить изменение доводов ДАВГА" : "Предложить изменение справки";
-      note = c.status === "decision_project" ? "Измените доводы по нужным пунктам. Принятые директором доводы войдут в проект решения и новую версию справки." : c.status === "decided" && requiresMotivatedResponse(c) ? "Измените доводы по нужным пунктам. Принятые директором доводы войдут в мотивированный ответ и новую версию справки." : "Измените доводы по нужным пунктам. До решения директора действующая справка не изменится.";
-      fields.push(...disputed(c).map((point) => area(`proposedDavga_${point.id}`, `Доводы ДАВГА по пункту № ${point.number}`, c.status === "decision_project" ? decisionProjectDavga(c, point.id) : c.status === "decided" && requiresMotivatedResponse(c) ? motivatedResponseDavga(c, point.id) : protocolDavgaFromReason(certificateBasisForPoint(c, point)))));
+      note = c.status === "decision_project" ? "Измените доводы по нужным пунктам и проверьте соответствие языковых версий. Принятые директором доводы войдут в проект решения и новую версию справки." : c.status === "decided" && requiresMotivatedResponse(c) ? "Измените доводы по нужным пунктам и проверьте соответствие языковых версий. Принятые директором доводы войдут в мотивированный ответ и новую версию справки." : "Измените доводы по нужным пунктам. До решения директора действующая справка не изменится.";
+      fields.push(...disputed(c).flatMap(point => [...new Set([...(c.certificate?.languages || [appealLanguage(c)]), ...(c.meeting?.languages || [])])].map(language => ({ ...area(`${language === "kk" ? "proposedDavgaKk" : "proposedDavga"}_${point.id}`, `Доводы ДАВГА № ${point.number} — ${LANGUAGE_LABELS[language]}`, c.status === "decision_project" ? decisionProjectDavga(c, point.id, language) : c.status === "decided" && requiresMotivatedResponse(c) ? motivatedResponseDavga(c, point.id, language) : protocolDavgaFromReason(certificateBasisForPoint(c, point, language))), language }))));
       fields.push({ ...area("changeReason", "Причина изменения"), required: false });
       break;
     case "review-certificate-change": {
@@ -194,10 +209,11 @@ export function actionForm(
       title = request?.stage === "decision-project" || request?.stage === "motivated-response" ? "Рассмотреть изменения доводов ДАВГА" : "Рассмотреть изменения справки";
       if (request?.reason) fields.push({ ...area("proposalReason", "Причина предложения", request.reason), readOnly: true, required: false });
       for (const change of request?.changes || []) {
-        fields.push(heading(`changeHeading_${change.pointId}`, `Пункт № ${change.pointNumber}`));
-        fields.push({ ...area(`before_${change.pointId}`, request?.stage === "decision-project" ? "Текущие доводы для проекта решения" : request?.stage === "motivated-response" ? "Текущие доводы для мотивированного ответа" : "Доводы в справке", change.before), readOnly: true, required: false });
-        fields.push({ ...area(`proposed_${change.pointId}`, "Предлагаемые доводы", change.proposed), readOnly: true, required: false });
-        fields.push(select(`decision_${change.pointId}`, "Решение директора", [["", "Выберите решение"], ["accepted", "Принять"], ["rejected", "Отклонить"]]));
+        const changeKey = `${change.pointId}${change.language === "kk" ? "_kk" : ""}`;
+        fields.push(heading(`changeHeading_${changeKey}`, `Пункт № ${change.pointNumber} — ${LANGUAGE_LABELS[change.language || "ru"]}`));
+        fields.push({ ...area(`before_${changeKey}`, request?.stage === "decision-project" ? "Текущие доводы для проекта решения" : request?.stage === "motivated-response" ? "Текущие доводы для мотивированного ответа" : "Доводы в справке", change.before), readOnly: true, required: false });
+        fields.push({ ...area(`proposed_${changeKey}`, "Предлагаемые доводы", change.proposed), readOnly: true, required: false });
+        fields.push(select(`decision_${changeKey}`, "Решение директора", [["", "Выберите решение"], ["accepted", "Принять"], ["rejected", "Отклонить"]]));
       }
       fields.push({ ...area("reviewComment", "Комментарий директора"), required: false });
       break;
@@ -371,16 +387,18 @@ export function actionForm(
       for (const point of disputed(c))
         fields.push(
           heading(point.id, `Пункт ${point.number} — ${point.title}`),
-          area(
+          { ...area(
             `authorityFinding_${point.id}`,
-            "Нарушение, по которым поступило возражение",
+            `Нарушение № ${point.number} — Русский`,
             authorityRequest?.authorityResponses?.[point.id]?.finding,
-          ),
-          area(
+          ), language: "ru" },
+          { ...area(
             `authorityResponse_${point.id}`,
-            "Мотивированный ответ ДВГА/КВГА по доводу возражения",
+            `Мотивированный ответ № ${point.number} — Русский`,
             authorityRequest?.authorityResponses?.[point.id]?.response,
-          ),
+          ), language: "ru" },
+          { ...area(`authorityFindingKk_${point.id}`, `Бұзушылық № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.finding), language: "kk" },
+          { ...area(`authorityResponseKk_${point.id}`, `Уәжді жауап № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.response), language: "kk" },
         );
       break;
     case "position":
@@ -416,24 +434,19 @@ export function actionForm(
       note =
         "Вложите ответ на запрос. После отправки он поступит в кабинет рабочего органа.";
       break;
-    case "analysis":
+    case "analysis": {
       title = "Сформировать справку";
-      for (const point of disputed(c)) {
-        fields.push(
-          heading(
-            `davgaArgumentsHeading_${point.id}`,
-            `Оспариваемый пункт ${point.number}`,
-          ),
-          area(
-            `davgaArguments_${point.id}`,
-            "Доводы ДАВГА",
-            c.certificate?.davgaArgumentsByPoint?.[point.id] || "",
-          ),
-        );
+      fields.push(languageModeField(c, values), ...pointTranslationFields(c, values));
+      const langs = selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined));
+      for (const point of disputed(c)) for (const language of langs) {
+        const key = language === "ru" ? `davgaArguments_${point.id}` : `davgaArgumentsKk_${point.id}`;
+        fields.push({ ...area(key, `Доводы ДАВГА по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[key] ?? (language === "ru" ? c.certificate?.davgaArgumentsByPoint?.[point.id] : c.certificate?.davgaArgumentsByPointKk?.[point.id]) ?? ""), language });
       }
       break;
+    }
     case "edit-certificate":
       title = "Редактировать справку";
+      fields.push(...disputed(c).flatMap(point => (c.certificate?.languages || [appealLanguage(c)]).map(language => ({ ...area(`${language === "kk" ? "certificateDavgaKk" : "certificateDavga"}_${point.id}`, `Доводы ДАВГА № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`${language === "kk" ? "certificateDavgaKk" : "certificateDavga"}_${point.id}`] ?? (language === "kk" ? c.certificate?.davgaArgumentsByPointKk?.[point.id] : c.certificate?.davgaArgumentsByPoint?.[point.id]) ?? ""), language }))));
       note =
         "Изменяются только доводы ДАВГА. После сохранения будет создана новая версия справки, предыдущие версии сохранятся без изменений.";
       break;
@@ -552,6 +565,7 @@ export function actionForm(
       break;
     case "vote":
       title = "Сформировать протокол заседания";
+      fields.push(languageModeField(c, values), ...pointTranslationFields(c, values));
       fields.push(
         input("protocolDate", "Дата заседания", values.protocolDate || c.attendanceMeetingDate || c.agendaMeetingDate || date, "date"),
         select("meetingFormat", "Формат проведения заседания", [
@@ -566,10 +580,12 @@ export function actionForm(
           ),
           readOnly: true,
         },
-        { ...area("recommendations", "Рекомендации"), required: false },
+        ...(selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).includes("ru") ? [{ ...area("recommendations", "Рекомендации — Русский", c.meeting?.recommendations || ""), required: false, language: "ru" as const }] : []),
+        ...(selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).includes("kk") ? [{ ...area("recommendationsKk", "Ұсынымдар — Қазақша", c.meeting?.recommendationsKk || ""), required: false, language: "kk" as const }] : []),
       );
       break;
     case "commission-vote":
+      fields.push(select("commentLanguage", "Язык комментария", [["ru", "Русский"], ["kk", "Қазақша"]], values.commentLanguage || appealLanguage(c)));
       title = "Проголосовать";
       note = "Выберите результат голосования по каждому оспариваемому пункту.";
       break;

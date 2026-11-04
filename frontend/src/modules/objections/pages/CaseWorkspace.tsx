@@ -1,3 +1,4 @@
+import { languagesForDocument } from "../services/documentLanguage";
 import { Fragment, useState, type ReactNode } from "react";
 import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import { ProtocolVersions } from "../components/ProtocolVersions";
@@ -824,6 +825,7 @@ export default function CaseWorkspace({
                     value={c.appealType ?? TYPES[c.type]}
                   />
                   <Fact label="Номер обращения в системе" value={c.id} />
+                  <Fact label="Язык обращения" value={c.appealLanguage === "kk" ? "Қазақша" : "Русский"} />
                   <Fact
                     label={
                       hasSeparateAuditObject
@@ -1453,13 +1455,7 @@ export default function CaseWorkspace({
                               <div className="request-document-row">
                                 <span>{protocol.name}{protocolMeeting?.number ? ` · № ${protocolMeeting.number}` : ""}{protocolMeeting?.number && protocolRegistrationDate ? ` от ${formatDate(protocolRegistrationDate)}` : ""}</span>
                                 <div className="request-document-actions">
-                                  <Button
-                                    onClick={() =>
-                                      onDocument(protocol.kind, protocol)
-                                    }
-                                  >
-                                    Просмотр
-                                  </Button>
+                                  {languagesForDocument(c, protocol.kind, protocol).map(language => <Button key={language} onClick={() => onDocument(protocol.kind, { ...protocol, viewLanguage: language })}>{protocol.languages?.length === 2 ? `Просмотр ${language === "kk" ? "KZ" : "RU"}` : "Просмотр"}</Button>)}
                                   <Button
                                     onClick={() =>
                                       downloadFile(
@@ -1473,7 +1469,7 @@ export default function CaseWorkspace({
                                       )
                                     }
                                   >
-                                    Скачать Word
+                                    {protocol.languages?.length === 2 ? "Скачать комплект" : "Скачать Word"}
                                   </Button>
                                   {(role === "work" || role === "director" || role === "demo-superuser") && Boolean(c.meeting?.protocolVersions?.length) && (
                                     <Button onClick={() => setProtocolHistoryOpen(true)}>
