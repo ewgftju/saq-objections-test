@@ -1599,6 +1599,10 @@
 }
 .response-received { color: #177846; background: #e8f6ec; }
 .response-pending { color: #8f5d00; background: #fff4d8; }
+.response-pending.proposal-status-rejected { color: #a12c2c; background: #fceaea; }
+.response-pending.proposal-status-withdrawn { color: #586777; background: #eef1f4; }
+.proposal-status-details { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 10px 0 0; font-size: 12px; }
+.proposal-status-comment { margin: 10px 0 0; font-size: 13px; white-space: pre-wrap; }
 .request-response-status-actions {
   display: inline-flex;
   align-items: center;

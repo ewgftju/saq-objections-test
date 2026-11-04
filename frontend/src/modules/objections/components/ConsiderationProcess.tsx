@@ -23,6 +23,146 @@ type ProcessStage = {
   statuses: CaseStatus[];
 };
 
+function CertificateChangeStatusPanel({
+  c,
+  role,
+  onAction,
+}: {
+  c: ObjectionCase;
+  role: Role;
+  onAction: (action: Action, role: Role) => void;
+}) {
+  if (!["work", "director", "deputy", "demo-superuser"].includes(role))
+    return null;
+  const request = c.certificateChangeRequests?.at(-1);
+  if (!request) return null;
+  const accepted = request.changes.filter(
+    (change) => change.decision === "accepted",
+  ).length;
+  const rejected = request.changes.filter(
+    (change) => change.decision === "rejected",
+  ).length;
+  const status =
+    request.status === "pending"
+      ? "Ожидает решения директора"
+      : request.status === "withdrawn"
+        ? "Отозвано"
+        : accepted && rejected
+          ? "Частично принято"
+          : accepted && accepted === request.changes.length
+            ? "Принято"
+            : rejected && rejected === request.changes.length
+              ? "Отклонено"
+              : "Рассмотрено";
+  const stage =
+    request.stage === "protocol"
+      ? "Формирование протокола"
+      : request.stage === "decision-project"
+        ? "Формирование проекта решения"
+        : request.stage === "motivated-response"
+          ? "Формирование мотивированного ответа"
+          : "Не указан";
+  const dateTime = (value?: string) =>
+    value && !Number.isNaN(Date.parse(value))
+      ? new Date(value).toLocaleString("ru-RU", { timeZone: "Asia/Oral" })
+      : "—";
+  const canReview =
+    request.status === "pending" &&
+    (role === "director" || role === "demo-superuser") &&
+    nextAction(c, role)?.action === "review-certificate-change";
+  return (
+    <div className="request-responses-panel">
+      <Notice tone="amber">
+        <div className="request-response-heading">
+          <div>
+            <span className="request-response-eyebrow">
+              Информационный блок
+            </span>
+            <strong>Изменение доводов ДАВГА</strong>
+          </div>
+        </div>
+        <ul className="request-response-status-list">
+          <li className={status === "Принято" ? "is-received" : "is-pending"}>
+            <span className="request-response-marker" aria-hidden="true">
+              {status === "Принято" ? "✓" : "…"}
+            </span>
+            <span className="request-response-recipient">
+              <strong>Последнее предложение</strong>
+              <small>Этап: {stage}</small>
+              <small>Предложил: {request.proposedBy}</small>
+              <small>Кому: Директор ДАВГА</small>
+            </span>
+            <span className="request-response-dates">
+              <small>Направлено: {dateTime(request.proposedAt)}</small>
+              {request.status === "reviewed" && (
+                <small>Рассмотрено: {dateTime(request.reviewedAt)}</small>
+              )}
+              {request.status === "withdrawn" && (
+                <small>Отозвано: {dateTime(request.withdrawnAt)}</small>
+              )}
+            </span>
+            <span className="request-response-status-actions">
+              <span
+                className={
+                  status === "Принято"
+                    ? "response-received"
+                    : status === "Отклонено"
+                      ? "response-pending proposal-status-rejected"
+                      : status === "Отозвано"
+                        ? "response-pending proposal-status-withdrawn"
+                        : "response-pending"
+                }
+              >
+                <span className="response-status-dot" aria-hidden="true" />
+                {status}
+              </span>
+              {canReview && (
+                <Button
+                  className="request-response-action"
+                  primary
+                  onClick={() =>
+                    onAction("review-certificate-change", "director")
+                  }
+                >
+                  Рассмотреть
+                </Button>
+              )}
+            </span>
+          </li>
+        </ul>
+        {request.status === "reviewed" && (
+          <p className="proposal-status-details">
+            {request.changes.map((change, index) => (
+              <span
+                key={`${change.pointId}-${change.language || "ru"}-${index}`}
+              >
+                Пункт № {change.pointNumber} ·{" "}
+                {change.language === "kk" ? "Қазақша" : "Русский"}:{" "}
+                {change.decision === "accepted"
+                  ? "принято"
+                  : change.decision === "rejected"
+                    ? "отклонено"
+                    : "решение не указано"}
+              </span>
+            ))}
+          </p>
+        )}
+        {request.reviewComment && request.status === "reviewed" && (
+          <p className="proposal-status-comment">
+            Комментарий директора: {request.reviewComment}
+          </p>
+        )}
+        {request.status === "withdrawn" && (
+          <p className="proposal-status-comment">
+            Предложение отозвано при формировании документа. Справка не
+            изменена.
+          </p>
+        )}
+      </Notice>
+    </div>
+  );
+}
+
 const OBJECTION_STAGES: ProcessStage[] = [
   {
     label: "Приём",
@@ -974,6 +1114,7 @@ export default function ConsiderationProcess({
           <FinalResponseApprovalPanel c={c} />
         </>
       )}
+      <CertificateChangeStatusPanel c={c} role={role} onAction={onAction} />
       {(role === "demo-superuser" || role === "work") && (
         <DecisionProjectApprovalPanel c={c} />
       )}
