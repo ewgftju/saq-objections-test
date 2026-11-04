@@ -943,7 +943,7 @@ export function applyAction(
     for (const point of disputed(c)) {
       point.translations ||= {};
       for (const language of languages) {
-        const title = language === appealLanguage(c) ? point.title : String(form.get(`pointTitle_${language}_${point.id}`) ?? pointText(c, point, "title", language)).trim();
+        const title = action !== "analysis" && language === appealLanguage(c) ? pointText(c, point, "title", language) : String(form.get(`pointTitle_${language}_${point.id}`) ?? pointText(c, point, "title", language)).trim();
         if (!title) throw new Error(`Заполните описание по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`);
         if (!point.argument) throw new Error(`Заполните исходные доводы заявителя по пункту № ${point.number}`);
         point.translations[language] = { ...point.translations[language], title };

@@ -151,9 +151,9 @@ function LanguageFields({ fields, primary, values }: { fields: FormField[]; prim
   const [selected, setSelected] = useState<DocumentLanguage>(primary);
   const active = languages.includes(selected) ? selected : languages[0];
   return <>
-    {fields.filter(field => !field.language).map(field => <Field key={field.name} field={{ ...field, value: values[field.name] ?? field.value }} />)}
+    {fields.filter(field => !field.language).map(field => <Field key={field.name} field={{ ...field, value: field.readOnly ? field.value : values[field.name] ?? field.value }} />)}
     {languages.length > 0 && <div className="request-modal-tabs" role="tablist" aria-label="Язык заполнения">{languages.map(language => <button key={language} type="button" role="tab" aria-selected={active === language} className={active === language ? "active" : ""} onClick={() => setSelected(language)}>{LANGUAGE_LABELS[language]} · {fields.filter(field => field.language === language && field.required).every(field => (values[field.name] ?? field.value ?? "").trim()) ? "Заполнено" : "Не заполнено"}</button>)}</div>}
-    {languages.map(language => <div key={language} hidden={active !== language}>{fields.filter(field => field.language === language).map(field => <Field key={field.name} field={{ ...field, value: values[field.name] ?? field.value }} />)}</div>)}
+    {languages.map(language => <div key={language} hidden={active !== language}>{fields.filter(field => field.language === language).map(field => <Field key={field.name} field={{ ...field, value: field.readOnly ? field.value : values[field.name] ?? field.value }} />)}</div>)}
   </>;
 }
 

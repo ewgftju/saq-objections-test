@@ -6,7 +6,10 @@ import { initialState } from "../../../api/objectionsRepository";
 import { applyAction } from "../services/workflow";
 import { DocumentContent, wordDocumentHtml } from "../components/DocumentModal";
 import ActionModal from "../components/ActionModal";
-import { decisionProjectDavga } from "../services/protocolReason";
+import {
+  certificateBasisForPoint,
+  decisionProjectDavga,
+} from "../services/protocolReason";
 import type { Action, DocumentLanguage, Role } from "../../../types";
 import { actionForm } from "../formDefinitions";
 import { localizedCase, pointText } from "../services/documentLanguage";
@@ -61,6 +64,124 @@ function fixture(language: DocumentLanguage) {
 }
 
 for (const primary of ["ru", "kk"] as const) {
+  test(`${primary}: описание редактируется и сохраняется, доводы заявителя остаются без изменений`, () => {
+    const h = fixture(primary);
+    h.c.status = "materials";
+    const originalTitle = h.c.issues[0].title;
+    const originalArgument = h.c.issues[0].argument;
+    const values = {
+      documentLanguageMode: "both",
+      pointTitle_ru_p1: "Исправленное описание RU",
+      pointTitle_kk_p1: "Түзетілген сипаттама KZ",
+      pointArgument_ru_p1: "Подмена довода",
+      pointArgument_kk_p1: "Подмена довода",
+      certificateApplicantArgument_p1: "Подмена довода",
+      davgaArguments_p1: "Доводы ДАВГА RU",
+      davgaArgumentsKk_p1: "ДАВГА дәлелдері KZ",
+    };
+    h.c.analysisDraft = { values, savedAt: h.state.date };
+    const fields = actionForm("analysis", h.c, h.state.date, values).fields;
+    assert.ok(
+      fields
+        .filter((field) => field.name.startsWith("pointTitle_"))
+        .every((field) => !field.readOnly),
+    );
+    const applicantFields = fields.filter((field) =>
+      field.name.startsWith("pointArgument_"),
+    );
+    assert.equal(applicantFields.length, 2);
+    assert.ok(
+      applicantFields.every(
+        (field) => field.readOnly && field.value === originalArgument,
+      ),
+    );
+    const modal = renderToStaticMarkup(
+      createElement(ActionModal, {
+        c: h.c,
+        action: "analysis",
+        role: "work",
+        date: h.state.date,
+        onClose() {},
+        onSubmit() {},
+        onSaveDraft() {},
+      }),
+    );
+    const inputs = [
+      ...modal.matchAll(
+        /<textarea([^>]*)name="pointArgument_(ru|kk)_p1"([^>]*)>([^<]*)<\/textarea>/g,
+      ),
+    ];
+    assert.equal(inputs.length, 2);
+    for (const input of inputs) {
+      assert.match(input[0], /readonly/i);
+      assert.equal(input[4], originalArgument);
+    }
+    const preview = modal.match(
+      /<article class="print-document certificate-template">([\s\S]*?)<\/article>/,
+    )![1];
+    assert.ok(preview.includes(values[`pointTitle_${primary}_p1`]));
+    assert.ok(preview.includes(originalArgument));
+    assert.doesNotMatch(preview, /Подмена довода/);
+    h.run("analysis", "work", values);
+    assert.equal(h.c.issues[0].title, originalTitle);
+    assert.equal(h.c.issues[0].argument, originalArgument);
+    const document = structuredClone(h.c.documents.at(-1)!);
+    for (const language of ["ru", "kk"] as const) {
+      const effective = localizedCase(h.c, language).issues[0];
+      assert.equal(effective.title, values[`pointTitle_${language}_p1`]);
+      assert.equal(effective.argument, originalArgument);
+      assert.ok(
+        certificateBasisForPoint(h.c, h.c.issues[0], language).includes(
+          originalArgument,
+        ),
+      );
+      const html = renderToStaticMarkup(
+        createElement(DocumentContent, {
+          c: h.c,
+          kind: "certificate",
+          document,
+          language,
+        }),
+      );
+      assert.ok(html.includes(values[`pointTitle_${language}_p1`]));
+      assert.ok(html.includes(originalArgument));
+      assert.doesNotMatch(html, /Подмена довода/);
+    }
+    h.c.status = "meeting";
+    h.c.members = [
+      {
+        id: "chair",
+        name: "Председатель комиссии",
+        present: true,
+        recused: false,
+        reason: "",
+      },
+    ];
+    h.run("vote", "work", {
+      documentLanguageMode: "both",
+      protocolVote_p1_chair: "accept",
+      protocolDavga_p1_chair: "Протокол RU",
+      protocolDavgaKk_p1_chair: "Хаттама KZ",
+    });
+    const row = h.c.meeting!.protocolVersions!.at(-1)!.rows[0];
+    assert.ok(row.edited.includes(originalArgument));
+    assert.ok(row.editedKk?.includes(originalArgument));
+    h.c.issues[0].translations!.ru!.title = "Поздняя правка описания";
+    for (const language of ["ru", "kk"] as const) {
+      const html = renderToStaticMarkup(
+        createElement(DocumentContent, {
+          c: h.c,
+          kind: "certificate",
+          document,
+          language,
+        }),
+      );
+      assert.ok(html.includes(values[`pointTitle_${language}_p1`]));
+      assert.ok(html.includes(originalArgument));
+      assert.doesNotMatch(html, /Поздняя правка|Подмена довода/);
+    }
+  });
+
   test(`${primary}: доводы заявителя и дополнения одинаковы в обеих версиях приложения, включая сохранённый документ`, () => {
     const h = fixture(primary);
     const point = h.c.issues[0];
@@ -183,6 +304,24 @@ for (const primary of ["ru", "kk"] as const) {
     }
   });
 }
+
+test("пустое описание не сохраняется при формировании справки", () => {
+  const h = fixture("kk");
+  h.c.status = "materials";
+  assert.throws(
+    () =>
+      h.run("analysis", "work", {
+        documentLanguageMode: "both",
+        pointTitle_ru_p1: "Описание RU",
+        pointTitle_kk_p1: " ",
+        davgaArguments_p1: "Доводы RU",
+        davgaArgumentsKk_p1: "Дәлелдер KZ",
+      }),
+    /Заполните описание/,
+  );
+  assert.equal(h.c.status, "materials");
+  assert.equal(h.c.certificate, undefined);
+});
 for (const language of ["ru", "kk"] as const)
   test(`${language}: двуязычный ответ → справка → протокол → проект → мотивированный ответ`, () => {
     const h = fixture(language);

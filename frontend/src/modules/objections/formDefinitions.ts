@@ -163,9 +163,9 @@ function languageModeField(c: ObjectionCase, values: FormValues): FormField {
   const saved = c.certificate?.languages?.length === 2 ? "both" : primary;
   return select("documentLanguageMode", "Язык документа", [[primary, LANGUAGE_LABELS[primary]], ["both", "Русский и қазақша"]], values.documentLanguageMode || saved);
 }
-function pointTranslationFields(c: ObjectionCase, values: FormValues): FormField[] {
+function pointTranslationFields(c: ObjectionCase, values: FormValues, editableSource = false): FormField[] {
   return disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).flatMap(language => [
-    { ...area(`pointTitle_${language}_${point.id}`, `Описание пункта № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language)), language, readOnly: language === appealLanguage(c) },
+    { ...area(`pointTitle_${language}_${point.id}`, `Описание пункта № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language)), language, readOnly: !editableSource && language === appealLanguage(c) },
     { ...area(`pointArgument_${language}_${point.id}`, `Доводы заявителя по пункту № ${point.number} (без перевода)`, point.argument), language, readOnly: true },
     ...(point.additionalArguments || []).map((argument,index) => ({ ...area(`pointAdditional_${language}_${point.id}_${index}`, `Дополнительный довод № ${index + 1}, пункт № ${point.number} (без перевода)`, argument), language, readOnly: true })),
   ]));
@@ -436,7 +436,7 @@ export function actionForm(
       break;
     case "analysis": {
       title = "Сформировать справку";
-      fields.push(languageModeField(c, values), ...pointTranslationFields(c, values));
+      fields.push(languageModeField(c, values), ...pointTranslationFields(c, values, true));
       const langs = selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined));
       for (const point of disputed(c)) for (const language of langs) {
         const key = language === "ru" ? `davgaArguments_${point.id}` : `davgaArgumentsKk_${point.id}`;
