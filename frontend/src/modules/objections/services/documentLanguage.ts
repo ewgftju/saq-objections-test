@@ -48,6 +48,8 @@ export function pointText(
   field: "title" | "argument",
   language: DocumentLanguage,
 ): string {
+  // Applicant arguments are quoted in their original language in every version.
+  if (field === "argument") return point.argument;
   return (
     point.translations?.[language]?.[field] ??
     (language === appealLanguage(c) ? point[field] : "")
@@ -65,9 +67,7 @@ export function localizedCase(
     ...point,
     title: pointText(c, point, "title", language),
     argument: pointText(c, point, "argument", language),
-    additionalArguments:
-      point.translations?.[language]?.additionalArguments ??
-      (language === appealLanguage(c) ? point.additionalArguments : []),
+    additionalArguments: point.additionalArguments,
     authorityFinding: kk ? "" : point.authorityFinding,
     position: kk ? "" : point.position,
   }));

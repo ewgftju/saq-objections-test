@@ -944,11 +944,9 @@ export function applyAction(
       point.translations ||= {};
       for (const language of languages) {
         const title = language === appealLanguage(c) ? point.title : String(form.get(`pointTitle_${language}_${point.id}`) ?? pointText(c, point, "title", language)).trim();
-        const argument = language === appealLanguage(c) ? point.argument : String(form.get(`pointArgument_${language}_${point.id}`) ?? pointText(c, point, "argument", language)).trim();
-        if (!title || !argument) throw new Error(`Заполните описание и доводы заявителя по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`);
-        const additionalArguments = language === appealLanguage(c) ? point.additionalArguments : (point.additionalArguments || []).map((_, index) => String(form.get(`pointAdditional_${language}_${point.id}_${index}`) ?? point.translations?.[language]?.additionalArguments?.[index] ?? "").trim());
-        if (additionalArguments?.some(value => !value)) throw new Error(`Заполните перевод всех дополнительных доводов по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`);
-        point.translations[language] = { title, argument, additionalArguments };
+        if (!title) throw new Error(`Заполните описание по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`);
+        if (!point.argument) throw new Error(`Заполните исходные доводы заявителя по пункту № ${point.number}`);
+        point.translations[language] = { ...point.translations[language], title };
       }
     }
   };

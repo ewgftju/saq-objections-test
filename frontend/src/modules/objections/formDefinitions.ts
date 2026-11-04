@@ -166,8 +166,8 @@ function languageModeField(c: ObjectionCase, values: FormValues): FormField {
 function pointTranslationFields(c: ObjectionCase, values: FormValues): FormField[] {
   return disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).flatMap(language => [
     { ...area(`pointTitle_${language}_${point.id}`, `Описание пункта № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language)), language, readOnly: language === appealLanguage(c) },
-    { ...area(`pointArgument_${language}_${point.id}`, `Доводы заявителя по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointArgument_${language}_${point.id}`] ?? pointText(c, point, "argument", language)), language, readOnly: language === appealLanguage(c) },
-    ...(point.additionalArguments || []).map((argument,index) => ({ ...area(`pointAdditional_${language}_${point.id}_${index}`, `Дополнительный довод № ${index + 1}, пункт № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointAdditional_${language}_${point.id}_${index}`] ?? (language === appealLanguage(c) ? argument : point.translations?.[language]?.additionalArguments?.[index] || "")), language, readOnly: language === appealLanguage(c) })),
+    { ...area(`pointArgument_${language}_${point.id}`, `Доводы заявителя по пункту № ${point.number} (без перевода)`, point.argument), language, readOnly: true },
+    ...(point.additionalArguments || []).map((argument,index) => ({ ...area(`pointAdditional_${language}_${point.id}_${index}`, `Дополнительный довод № ${index + 1}, пункт № ${point.number} (без перевода)`, argument), language, readOnly: true })),
   ]));
 }
 

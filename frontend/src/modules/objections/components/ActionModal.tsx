@@ -434,7 +434,7 @@ export default function ActionModal({
   const [previewLanguage, setPreviewLanguage] = useState<DocumentLanguage>(appealLanguage(c));
   const activePreviewLanguage = documentLanguages.includes(previewLanguage) ? previewLanguage : documentLanguages[0];
   const previewLanguageTabs = <div className="request-modal-tabs" role="tablist" aria-label="Язык печатной формы">{documentLanguages.map(language => <button key={language} type="button" role="tab" aria-selected={activePreviewLanguage === language} className={activePreviewLanguage === language ? "active" : ""} onClick={() => setPreviewLanguage(language)}>{LANGUAGE_LABELS[language]}</button>)}</div>;
-  const previewCase = { ...c, issues: c.issues.map(point => ({ ...point, translations: { ...point.translations, ...Object.fromEntries(documentLanguages.map(language => [language, { ...point.translations?.[language], title: values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language), argument: values[`pointArgument_${language}_${point.id}`] ?? pointText(c, point, "argument", language) }])) } })) };
+  const previewCase = { ...c, issues: c.issues.map(point => ({ ...point, translations: { ...point.translations, ...Object.fromEntries(documentLanguages.map(language => [language, { ...point.translations?.[language], title: values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language) }])) } })) };
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");

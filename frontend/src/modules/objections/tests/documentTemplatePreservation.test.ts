@@ -195,7 +195,7 @@ test("перевод сохраняет содержание и все разд�
   assert.match(certificate, /certificate-template-explanation/);
   assert.match(certificate, /certificate-template-point-list/);
   assert.match(certificate, /certificate-point-votes-table/);
-  assert.match(certificate, /Қосымша дәлел/);
+  assert.match(certificate, /Дополнительный довод/);
   const protocol = render("protocol", "kk");
   assert.match(protocol, /ХАТТАМА № ПЗ-10\/2026-1/);
   assert.match(protocol, /protocol-template-attendance/);

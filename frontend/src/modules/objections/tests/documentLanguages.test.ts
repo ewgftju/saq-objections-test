@@ -9,6 +9,7 @@ import ActionModal from "../components/ActionModal";
 import { decisionProjectDavga } from "../services/protocolReason";
 import type { Action, DocumentLanguage, Role } from "../../../types";
 import { actionForm } from "../formDefinitions";
+import { localizedCase, pointText } from "../services/documentLanguage";
 
 function fixture(language: DocumentLanguage) {
   let state = initialState();
@@ -57,6 +58,130 @@ function fixture(language: DocumentLanguage) {
     },
     run,
   };
+}
+
+for (const primary of ["ru", "kk"] as const) {
+  test(`${primary}: доводы заявителя и дополнения одинаковы в обеих версиях приложения, включая сохранённый документ`, () => {
+    const h = fixture(primary);
+    const point = h.c.issues[0];
+    const original = point.argument;
+    point.additionalArguments = ["Исходный дополнительный довод"];
+    point.translations = {
+      ru: {
+        argument: "Старый перевод RU",
+        additionalArguments: ["Перевод дополнения RU"],
+      },
+      kk: {
+        argument: "Старый перевод KZ",
+        additionalArguments: ["Перевод дополнения KZ"],
+      },
+    };
+    const saved = structuredClone(h.c);
+    for (const language of ["ru", "kk"] as const) {
+      assert.equal(pointText(h.c, point, "argument", language), original);
+      const localized = localizedCase(h.c, language);
+      assert.equal(localized.issues[0].argument, original);
+      assert.deepEqual(
+        localized.issues[0].additionalArguments,
+        point.additionalArguments,
+      );
+    }
+    for (const savedDocument of [false, true]) {
+      if (savedDocument) point.argument = "Поздняя правка исходного довода";
+      for (const language of ["ru", "kk"] as const) {
+        const html = renderToStaticMarkup(
+          createElement(DocumentContent, {
+            c: h.c,
+            kind: "authority-response-appendix",
+            language,
+            languages: ["ru", "kk"],
+            document: savedDocument
+              ? {
+                  name: "Ответ ДВГА",
+                  kind: "authority-response-appendix",
+                  date: h.state.date,
+                  text: "",
+                  author: "Исполнитель",
+                  requestId: "request-1",
+                  languages: ["ru", "kk"],
+                  snapshot: saved,
+                }
+              : undefined,
+          }),
+        );
+        assert.ok(html.includes(`<div>${original}</div>`));
+        assert.match(html, /Исходный дополнительный довод/);
+        assert.doesNotMatch(
+          html,
+          /Старый перевод|Перевод дополнения|Поздняя правка/,
+        );
+      }
+    }
+    assert.equal(
+      saved.issues[0].translations?.kk?.argument,
+      "Старый перевод KZ",
+    );
+  });
+
+  test(`${primary}: справка и протокол формируются без перевода доводов заявителя`, () => {
+    const h = fixture(primary);
+    const original = h.c.issues[0].argument;
+    h.c.issues[0].additionalArguments = ["Исходное дополнение"];
+    h.c.status = "materials";
+    const other = primary === "ru" ? "kk" : "ru";
+    const fields = actionForm("analysis", h.c, h.state.date, {
+      documentLanguageMode: "both",
+      [`pointArgument_${other}_p1`]: "Подмена из старого черновика",
+    }).fields;
+    for (const field of fields.filter(
+      (field) =>
+        field.name.startsWith("pointArgument_") ||
+        field.name.startsWith("pointAdditional_"),
+    )) {
+      assert.equal(field.readOnly, true);
+      assert.equal(
+        field.value,
+        field.name.startsWith("pointArgument_")
+          ? original
+          : "Исходное дополнение",
+      );
+    }
+    h.run("analysis", "work", {
+      documentLanguageMode: "both",
+      [`pointTitle_${other}_p1`]: "Описание на втором языке",
+      davgaArguments_p1: "Доводы ДАВГА RU",
+      davgaArgumentsKk_p1: "ДАВГА дәлелдері KZ",
+      [`pointArgument_${other}_p1`]: "Подмена",
+      [`pointAdditional_${other}_p1_0`]: "Подмена дополнения",
+    });
+    assert.equal(h.c.issues[0].argument, original);
+    assert.deepEqual(h.c.issues[0].additionalArguments, [
+      "Исходное дополнение",
+    ]);
+    assert.equal(h.c.issues[0].translations?.[other]?.argument, undefined);
+    h.c.status = "meeting";
+    h.c.members = [
+      {
+        id: "chair",
+        name: "Председатель комиссии",
+        present: true,
+        recused: false,
+        reason: "",
+      },
+    ];
+    h.run("vote", "work", {
+      documentLanguageMode: "both",
+      protocolVote_p1_chair: "accept",
+      protocolDavga_p1_chair: "Протокол RU",
+      protocolDavgaKk_p1_chair: "Хаттама KZ",
+    });
+    const row = h.c.meeting!.protocolVersions!.at(-1)!.rows[0];
+    for (const reason of [row.edited, row.editedKk]) {
+      assert.ok(reason?.includes(original));
+      assert.ok(reason?.includes("Исходное дополнение"));
+      assert.doesNotMatch(reason!, /Подмена/);
+    }
+  });
 }
 for (const language of ["ru", "kk"] as const)
   test(`${language}: двуязычный ответ → справка → протокол → проект → мотивированный ответ`, () => {
