@@ -659,11 +659,7 @@ function LegacyDocumentContent({
           )}
         </p>
         <ol className="certificate-template-point-list">
-          {snapshot.type === "notice" ? (
-            <li>{snapshot.request || "—"}</li>
-          ) : (
-            points.map((point) => <li key={point.id}>{point.title}</li>)
-          )}
+          {points.map((point) => <li key={point.id}>{point.title}</li>)}
         </ol>
         <p className="certificate-template-explanation">
           {t("(перечень обжалуемых вопросов)")}

@@ -14,6 +14,22 @@ import type { Action, DocumentLanguage, Role } from "../../../types";
 import { actionForm } from "../formDefinitions";
 import { localizedCase, pointText } from "../services/documentLanguage";
 
+test("справка по уведомлению перечисляет оспариваемые пункты на языке документа", () => {
+  const h = fixture("ru");
+  h.c.type = "notice";
+  h.c.request = "Краткое описание обращения";
+  h.c.issues[0].translations = { ru: { title: "Оспариваемый вопрос RU" }, kk: { title: "Даулы мәселе KZ" } };
+  h.c.issues.push({ ...h.c.issues[0], id: "p2", number: "2", title: "Второй вопрос", translations: { ru: { title: "Второй вопрос RU" }, kk: { title: "Екінші мәселе KZ" } } });
+  h.c.issues.push({ ...h.c.issues[0], id: "p3", number: "3", disputed: false, title: "Не оспаривается" });
+  for (const language of ["ru", "kk"] as const) {
+    const html = renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "certificate", languages: ["ru", "kk"], language }));
+    const list = html.match(/<ol class="certificate-template-point-list">([\s\S]*?)<\/ol>/)![1];
+    assert.match(list, language === "ru" ? /Оспариваемый вопрос RU/ : /Даулы мәселе KZ/);
+    assert.match(list, language === "ru" ? /Второй вопрос RU/ : /Екінші мәселе KZ/);
+    assert.doesNotMatch(list, /Краткое описание обращения|Не оспаривается/);
+  }
+});
+
 function fixture(language: DocumentLanguage) {
   let state = initialState();
   const id = state.cases[0].id;
