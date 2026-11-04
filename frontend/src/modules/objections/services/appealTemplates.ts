@@ -123,9 +123,11 @@ export function auditAuthorityTemplateName(
   const appealType = c.appealType || "";
   const grammaticalCase: AuditAuthorityCase =
     isNoticeObjection(c) ||
-    ["Возражение на аудиторский отчет", "Жалоба на уведомление", "Жалоба на решение КВГА/ДВГА"].includes(
-      appealType,
-    )
+    [
+      "Возражение на аудиторский отчет",
+      "Жалоба на уведомление",
+      "Жалоба на решение КВГА/ДВГА",
+    ].includes(appealType)
       ? "instrumental"
       : appealType === "Жалоба на действие/бездействие"
         ? "genitive"
@@ -193,4 +195,57 @@ export function certificateTemplateIntro(c: ObjectionCase) {
     return `В Министерство финансов Республики Казахстан поступила жалоба от ${actionInactionReference}.`;
 
   return undefined;
+}
+
+/** Kazakh wording of the same references used by the approved certificate/protocol. */
+export function kazakhAppealReference(
+  c: ObjectionCase,
+  authorityName: (issuer?: string) => string,
+) {
+  const type = c.appealType || "";
+  const applicant = `${value(c.org)}, ${c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН"} ${value(c.bin)}, ${formatDate(c.appealDate || c.filed)} жылғы № ${value(c.appealNumber)}`;
+  const source = `${formatDate(c.document.date)} жылғы № ${value(c.document.number)}`;
+  const authority = authorityName(c.issuer);
+  if (type === "Заявление")
+    return `${applicant} өтініші ${inlineValue(c.request)}`;
+  if (type === "Жалоба на действие/бездействие") {
+    const appeals = c.agendaDetails?.actionAppealAuthorities || [
+      {
+        issuer: c.issuer,
+        documentNumber: c.document.number,
+        documentDate: c.document.date,
+      },
+    ];
+    const actions = appeals
+      .map(
+        (item) =>
+          `${authorityName(item.issuer)} ${formatDate(item.documentDate)} жылғы № ${value(item.documentNumber)} өтінішті қарау кезіндегі әрекеттеріне (әрекетсіздігіне)`,
+      )
+      .join("; ");
+    const procurement = c.agendaDetails?.procurementNumber
+      ? `, № ${c.agendaDetails.procurementNumber} мемлекеттік сатып алу бойынша${c.agendaDetails.lotNumber ? `, лот № ${c.agendaDetails.lotNumber}` : ""}${c.agendaDetails.procurementSubject ? `, нысанасы: ${c.agendaDetails.procurementSubject}` : ""}`
+      : "";
+    return `${applicant} шағымы: ${actions}${procurement}`;
+  }
+  if (type === "Жалоба на решение КВГА/ДВГА") {
+    const names: Record<string, string> = {
+      "prescription-preventive":
+        "профилактикалық бақылау нәтижелері туралы акт бойынша нұсқамасына",
+      "preventive-control-act":
+        "профилактикалық бақылау нәтижелері туралы актісіне",
+      "quality-control": "сапаны бақылау нәтижелері бойынша шешіміне",
+      "administrative-act": "әкімшілік актісіне",
+    };
+    const details = c.agendaDetails;
+    const related =
+      details?.relatedDocumentNumber || details?.relatedDocumentDate
+        ? `, ${formatDate(details.relatedDocumentDate)} жылғы № ${value(details.relatedDocumentNumber)} ${details?.decisionKind === "prescription-preventive" ? "профилактикалық бақылау" : "аудиторлық есеп"} бойынша`
+        : "";
+    return `${applicant} шағымы, ${authority} ${source} ${names[details?.decisionKind || ""] || "нұсқамасына"}${related}`;
+  }
+  if (type.includes("аудиторский отчет") || type.includes("аудиторский отчёт"))
+    return `${applicant} қарсылығы, ${authority} жүргізген ${source} аудиторлық есепке`;
+  if (type.includes("профилактического контроля"))
+    return `${applicant} шағымы, ${authority} ${source} профилактикалық бақылау нәтижелері туралы актісіне`;
+  return `${applicant} ${type.startsWith("Жалоба") ? "шағымы" : "қарсылығы"}, ${authority} камеральдық бақылау нәтижелері бойынша жолдаған ${source} бұзушылықтарды жою туралы хабарламасына`;
 }

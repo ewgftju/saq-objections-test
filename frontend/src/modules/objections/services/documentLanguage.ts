@@ -87,6 +87,8 @@ export function localizedCase(
         comment: kk ? p.commentKk || "" : p.comment,
       })),
     };
+  if (result.meeting && kk)
+    result.meeting.recommendations = result.meeting.recommendationsKk;
   if (result.meeting?.protocolVersions)
     result.meeting.protocolVersions = result.meeting.protocolVersions.map(
       (v) => ({

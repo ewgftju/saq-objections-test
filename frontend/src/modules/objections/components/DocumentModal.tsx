@@ -1,5 +1,9 @@
-import { LocalizedDocument } from "./LocalizedDocument";
-import { appealLanguage, languagesForDocument, LANGUAGE_LABELS } from "../services/documentLanguage";
+import { documentLabel } from "../services/documentLabels";
+import {
+  localizedCase,
+  languagesForDocument,
+  LANGUAGE_LABELS,
+} from "../services/documentLanguage";
 import type { DocumentLanguage } from "../../../types";
 import { renderToStaticMarkup } from "react-dom/server";
 import { useState } from "react";
@@ -21,9 +25,17 @@ import {
 } from "../../../utils/auditAuthority";
 import { downloadFile } from "../../../utils/download";
 import { DEMO_USER } from "../../../config";
-import { requestNumber, responseNumber, responseDate as signedResponseDate } from "../services/requestNumbering";
+import {
+  requestNumber,
+  responseNumber,
+  responseDate as signedResponseDate,
+} from "../services/requestNumbering";
 import { requiresMotivatedResponse } from "../formDefinitions";
-import { decisionProjectDavga, motivatedResponseDavga, signedProtocolDavga } from "../services/protocolReason";
+import {
+  decisionProjectDavga,
+  motivatedResponseDavga,
+  signedProtocolDavga,
+} from "../services/protocolReason";
 import {
   normalizeVoteChoice,
   overall,
@@ -31,6 +43,7 @@ import {
   presidingChairId,
 } from "../services/decisions";
 import {
+  kazakhAppealReference,
   applicantIdentifierType,
   agendaOrProtocolIntro,
   auditAuthorityTemplateName,
@@ -78,6 +91,37 @@ function appealObjectLabel(
   if (c.appealType?.startsWith("Жалоба")) return denied ? "жалобы" : "жалобу";
   if (c.appealType === "Заявление") return denied ? "заявления" : "заявление";
   return denied ? "возражения" : "возражение";
+}
+
+function russianDecisionIntro(c: ObjectionCase) {
+  const reference = `от ${formatDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"}`;
+  const object = c.appealType?.startsWith("Жалоба")
+    ? "жалобу"
+    : c.appealType === "Заявление"
+      ? "заявление"
+      : "возражение";
+  if (c.appealType === "Возражение на аудиторский отчет")
+    return `Апелляционная комиссия Министерства финансов Республики Казахстан, рассмотрев ${object} ${reference}, сообщает следующее.`;
+  if (c.appealType?.startsWith("Жалоба") || c.appealType === "Заявление")
+    return `Апелляционная комиссия Министерства финансов Республики Казахстан (далее – Министерство), рассмотрев ${object} ${reference}, сообщает следующее.`;
+  return "Апелляционная комиссия Министерства финансов Республики Казахстан (далее – Министерство), рассмотрев поступившее из Комитета внутреннего государственного аудита возражение по нарушениям, указанным в проведённом аудиторском отчёте, сообщает следующее.";
+}
+function kazakhAppealObject(c: Pick<ObjectionCase, "appealType">) {
+  return c.appealType?.startsWith("Жалоба")
+    ? "шағымды"
+    : c.appealType === "Заявление"
+      ? "өтінішті"
+      : "қарсылықты";
+}
+function memberDisplayName(name: string, language?: DocumentLanguage) {
+  if (language !== "kk") return name;
+  return name
+    .replace(/^Заместитель [Пп]редседателя/, "Төрағаның орынбасары")
+    .replace(/^Заместитель директора/, "Директордың орынбасары")
+    .replace(/^Руководитель управления/, "Басқарма басшысы")
+    .replace(/^Председатель комиссии/, "Комиссия төрағасы")
+    .replace(/^Член комиссии/, "Комиссия мүшесі")
+    .replace(/^Представитель/, "Өкіл");
 }
 
 const KAZAKH_DIRECTOR_TITLE =
@@ -257,9 +301,11 @@ function LegacyDocumentContent({
   certificatePreview,
   protocolPreview,
   finalResponseMajorityByPoint,
+  language,
 }: {
   c: ObjectionCase;
   kind: string;
+  language?: DocumentLanguage;
   document?: CaseDocument;
   requestPreview?: Pick<
     CaseRequest,
@@ -290,16 +336,27 @@ function LegacyDocumentContent({
     voteReasonsKk?: Record<string, Record<string, string>>;
   };
 }) {
+  const t = (text: string) => documentLabel(text, language);
+  const authorityDisplay =
+    language === "kk" ? auditAuthorityKazakhName : auditAuthorityFullName;
   const snapshot = document?.snapshot ? { ...c, ...document.snapshot } : c;
   const request =
     requestPreview ||
     (document?.requestId
       ? c.requests.find((item) => item.id === document.requestId)
       : undefined);
-  const savedRequest = document?.requestId ? c.requests.find((item) => item.id === document.requestId) : undefined;
-  const visibleRequestNumber = savedRequest ? requestNumber(c, savedRequest) : "";
-  const visibleResponseNumber = savedRequest ? responseNumber(c, savedRequest) : "";
-  const visibleResponseDate = savedRequest ? signedResponseDate(savedRequest) : undefined;
+  const savedRequest = document?.requestId
+    ? c.requests.find((item) => item.id === document.requestId)
+    : undefined;
+  const visibleRequestNumber = savedRequest
+    ? requestNumber(c, savedRequest)
+    : "";
+  const visibleResponseNumber = savedRequest
+    ? responseNumber(c, savedRequest)
+    : "";
+  const visibleResponseDate = savedRequest
+    ? signedResponseDate(savedRequest)
+    : undefined;
   const certificate =
     certificatePreview ||
     (document?.snapshot?.certificate ?? c.certificate) ||
@@ -376,7 +433,11 @@ function LegacyDocumentContent({
           </span>
         </div>
         <div className="other-request-template-line" />
-        {visibleRequestNumber && savedRequest?.sent ? <p>№ {visibleRequestNumber} от {formatDate(savedRequest.sent)}</p> : null}
+        {visibleRequestNumber && savedRequest?.sent ? (
+          <p>
+            № {visibleRequestNumber} от {formatDate(savedRequest.sent)}
+          </p>
+        ) : null}
         <p className="other-request-template-recipient">
           <b>
             {auditAuthorityFullName(request.recipient) ||
@@ -421,7 +482,11 @@ function LegacyDocumentContent({
           </div>
         </div>
         <div className="request-template-line" />
-        {visibleRequestNumber && savedRequest?.sent ? <p>№ {visibleRequestNumber} от {formatDate(savedRequest.sent)}</p> : null}
+        {visibleRequestNumber && savedRequest?.sent ? (
+          <p>
+            № {visibleRequestNumber} от {formatDate(savedRequest.sent)}
+          </p>
+        ) : null}
         <p className="request-template-recipient">
           <b>
             {auditAuthorityFullName(request.recipient) ||
@@ -463,19 +528,29 @@ function LegacyDocumentContent({
 
     return (
       <article className="print-document appendix-template">
-        {isResponseAppendix && visibleResponseNumber && visibleResponseDate ? <p>№ {visibleResponseNumber} от {formatDate(visibleResponseDate)}</p> : null}
-        <p className="appendix-template-number">Таблица №1</p>
+        {isResponseAppendix && visibleResponseNumber && visibleResponseDate ? (
+          <p>
+            № {visibleResponseNumber} от {formatDate(visibleResponseDate)}
+          </p>
+        ) : null}
+        <p className="appendix-template-number">{t("Таблица №1")}</p>
         <div className="appendix-template-table-wrap">
           <table>
             <thead>
               <tr>
                 <th>№ п-п</th>
-                <th>Нарушение, по которым поступило возражение</th>
-                <th>Возражение объекта аудита</th>
+                <th>{t("Нарушение, по которым поступило возражение")}</th>
+                <th>{t("Возражение объекта аудита")}</th>
                 <th>
-                  Мотивированный ответ {appendixAuthority} по доводам возражения
-                  объекта аудита с приложением подтверждающих документов по
-                  фактам нарушений
+                  {language === "kk" ? (
+                    `${t(appendixAuthority)} аудит объектісінің қарсылық дәлелдеріне бұзушылықтар фактілері бойынша растайтын құжаттарды қоса берген уәжді жауабы`
+                  ) : (
+                    <>
+                      Мотивированный ответ {appendixAuthority} по доводам
+                      возражения объекта аудита с приложением подтверждающих
+                      документов по фактам нарушений
+                    </>
+                  )}
                 </th>
               </tr>
             </thead>
@@ -497,14 +572,18 @@ function LegacyDocumentContent({
                     </td>
                     <td>
                       <div>{point.argument || "—"}</div>
-                      {(point.additionalArguments || []).map((argument, index) => (
-                        <p key={`${point.id}-additional-argument-${index}`}>
-                          <b>
-                            Дополнительные доводы объекта гос. аудита (заявителя):
-                          </b>{" "}
-                          {argument}
-                        </p>
-                      ))}
+                      {(point.additionalArguments || []).map(
+                        (argument, index) => (
+                          <p key={`${point.id}-additional-argument-${index}`}>
+                            <b>
+                              {t(
+                                "Дополнительные доводы объекта гос. аудита (заявителя):",
+                              )}
+                            </b>{" "}
+                            {argument}
+                          </p>
+                        ),
+                      )}
                     </td>
                     <td
                       aria-label={`Мотивированный ответ ${appendixAuthority}`}
@@ -554,20 +633,30 @@ function LegacyDocumentContent({
     };
     return (
       <article className="print-document certificate-template">
-        <h1>Справка{document?.certificateNumber ? ` № ${document.certificateNumber}` : ""}</h1>
-        <h2>по результатам изучения и анализа возражения</h2>
+        <h1>
+          {t("Справка")}
+          {document?.certificateNumber
+            ? ` № ${document.certificateNumber}`
+            : ""}
+        </h1>
+        <h2>{t("по результатам изучения и анализа возражения")}</h2>
         <p className="certificate-template-intro">
-          {certificateIntro(snapshot)}
+          {language === "kk"
+            ? `Қазақстан Республикасы Қаржы министрлігіне ${kazakhAppealReference(snapshot, auditAuthorityKazakhName)} келіп түсті.`
+            : certificateIntro(snapshot)}
         </p>
         <p className="certificate-template-explanation">
-          (наименование, БИН/ИИН лица, подавшего возражение, жалобу)
+          {t("(наименование, БИН/ИИН лица, подавшего возражение, жалобу)")}
         </p>
         <p className="certificate-template-authority">
-          {auditAuthorityFullName(snapshot.issuer)} (далее –{" "}
-          {snapshot.issuer === "КВГА" ? "КВГА" : "ДВГА"}).
+          {authorityDisplay(snapshot.issuer)} (
+          {language === "kk" ? "бұдан әрі –" : "далее –"}{" "}
+          {t(snapshot.issuer === "КВГА" ? "КВГА" : "ДВГА")}).
         </p>
         <p className="certificate-template-explanation">
-          (наименование органа, чьи акты, действия (бездействие) обжалуются)
+          {t(
+            "(наименование органа, чьи акты, действия (бездействие) обжалуются)",
+          )}
         </p>
         <ol className="certificate-template-point-list">
           {snapshot.type === "notice" ? (
@@ -577,30 +666,33 @@ function LegacyDocumentContent({
           )}
         </ol>
         <p className="certificate-template-explanation">
-          (перечень обжалуемых вопросов)
+          {t("(перечень обжалуемых вопросов)")}
         </p>
         <p className="certificate-template-lead">
-          По результатам проведенного анализа рабочий орган (ДАВГА) сообщает
-          следующее:
+          {t(
+            "По результатам проведенного анализа рабочий орган (ДАВГА) сообщает следующее:",
+          )}
         </p>
         {points.map((point) => (
           <section className="certificate-template-point" key={point.id}>
-            <h3>Пункт {point.number}</h3>
+            <h3>
+              {t("Пункт")} {point.number}
+            </h3>
             <div className="certificate-template-line">
               {authorityText(point.id, "finding").map((item, index) => (
                 <p
                   key={`${item.authority}-${item.additional ? "additional" : "initial"}-${index}`}
                 >
                   <b>
-                    {item.additional ? "Дополнительные доводы" : "Доводы"}{" "}
-                    {item.authority}:
+                    {t(item.additional ? "Дополнительные доводы" : "Доводы")}{" "}
+                    {t(item.authority)}:
                   </b>{" "}
                   {item.value}
                 </p>
               ))}
             </div>
             <div className="certificate-template-line">
-              <b>Доводы объекта гос. аудита (заявителя):</b>{" "}
+              <b>{t("Доводы объекта гос. аудита (заявителя):")}</b>{" "}
               {point.argument || "—"}
             </div>
             {(point.additionalArguments || []).map((argument, index) => (
@@ -609,7 +701,7 @@ function LegacyDocumentContent({
                 key={`${point.id}-additional-argument-${index}`}
               >
                 <b>
-                  Дополнительные доводы объекта гос. аудита (заявителя):
+                  {t("Дополнительные доводы объекта гос. аудита (заявителя):")}
                 </b>{" "}
                 {argument}
               </div>
@@ -620,17 +712,19 @@ function LegacyDocumentContent({
                   key={`${item.authority}-${item.additional ? "additional" : "initial"}-${index}`}
                 >
                   <b>
-                    {item.additional
-                      ? "Дополнительный мотивированный ответ"
-                      : "Мотивированный ответ"}{" "}
-                    {item.authority}:
+                    {t(
+                      item.additional
+                        ? "Дополнительный мотивированный ответ"
+                        : "Мотивированный ответ",
+                    )}{" "}
+                    {t(item.authority)}:
                   </b>{" "}
                   {item.value}
                 </p>
               ))}
             </div>
             <div className="certificate-template-line">
-              <b>Доводы рабочего органа (ДАВГА МФ РК):</b>{" "}
+              <b>{t("Доводы рабочего органа (ДАВГА МФ РК):")}</b>{" "}
               {certificate?.davgaArgumentsByPoint?.[point.id] ||
                 certificate?.davgaArguments ||
                 "—"}
@@ -650,19 +744,22 @@ function LegacyDocumentContent({
                     reason: "",
                   }));
               const chairId = presidingChairId(members);
-              members.sort((a, b) =>
-                (a.id === chairId ? -1 : protocolMemberRank(a)) -
-                (b.id === chairId ? -1 : protocolMemberRank(b)),
+              members.sort(
+                (a, b) =>
+                  (a.id === chairId ? -1 : protocolMemberRank(a)) -
+                  (b.id === chairId ? -1 : protocolMemberRank(b)),
               );
               return (
                 <table className="certificate-members-table certificate-point-votes-table">
                   <thead>
                     <tr>
                       {members.map((member) => (
-                        <th key={member.id}>{member.name}</th>
+                        <th key={member.id}>
+                          {memberDisplayName(member.name, language)}
+                        </th>
                       ))}
                       {!members.length && (
-                        <th>Участники заседания не определены</th>
+                        <th>{t("Участники заседания не определены")}</th>
                       )}
                     </tr>
                   </thead>
@@ -676,8 +773,8 @@ function LegacyDocumentContent({
                           <td key={member.id}>
                             <b>
                               {position?.result
-                                ? OUTCOMES[position.result]
-                                : "Нет голоса"}
+                                ? t(OUTCOMES[position.result])
+                                : t("Нет голоса")}
                             </b>
                             <br />
                             {position?.comment || "—"}
@@ -698,11 +795,17 @@ function LegacyDocumentContent({
 
   if (kind === "final-response" || kind === "decision-project") {
     const isDecisionProject = kind === "decision-project";
-    const isMotivatedResponse = kind === "final-response" && (document ? /мотивированн/i.test(document.name) : requiresMotivatedResponse(snapshot));
+    const isMotivatedResponse =
+      kind === "final-response" &&
+      (document
+        ? /мотивированн/i.test(document.name)
+        : requiresMotivatedResponse(snapshot));
     const useDavgaArguments = isDecisionProject || isMotivatedResponse;
     const outcome = overall(snapshot);
     const decision = outcome
-      ? OUTCOMES[outcome].toLocaleLowerCase("ru-RU")
+      ? t(OUTCOMES[outcome]).toLocaleLowerCase(
+          language === "kk" ? "kk-KZ" : "ru-RU",
+        )
       : snapshot.result?.label?.toLocaleLowerCase("ru-RU") || "—";
     const kazakhDecision = outcome
       ? KAZAKH_OUTCOMES[outcome]
@@ -723,16 +826,27 @@ function LegacyDocumentContent({
       )?.[0];
       const reason = useDavgaArguments
         ? (isDecisionProject
-          ? decisionProjectDavga({ ...snapshot, decisionProjectDavgaOverrides: document?.snapshot ? document.snapshot.decisionProjectDavgaOverrides : c.decisionProjectDavgaOverrides }, point.id)
-          : document?.snapshot
-            ? document.snapshot.motivatedResponseDavgaByPoint?.[point.id] ?? signedProtocolDavga(snapshot, point.id).text
-            : motivatedResponseDavga(c, point.id)) || "—"
+            ? decisionProjectDavga(
+                {
+                  ...snapshot,
+                  decisionProjectDavgaOverrides: document?.snapshot
+                    ? document.snapshot.decisionProjectDavgaOverrides
+                    : c.decisionProjectDavgaOverrides,
+                },
+                point.id,
+              )
+            : document?.snapshot
+              ? (document.snapshot.motivatedResponseDavgaByPoint?.[point.id] ??
+                signedProtocolDavga(snapshot, point.id).text)
+              : motivatedResponseDavga(c, point.id)) || "—"
         : (winningReasonMemberId &&
             pointVotes?.voteReasons?.[winningReasonMemberId]) ||
           snapshot.result?.reason ||
           "—";
       const pointDecision = winningOutcome
-        ? OUTCOMES[winningOutcome].toLocaleLowerCase("ru-RU")
+        ? t(OUTCOMES[winningOutcome]).toLocaleLowerCase(
+            language === "kk" ? "kk-KZ" : "ru-RU",
+          )
         : decision;
       const decidedByMajority =
         finalResponseMajorityByPoint?.[point.id] ??
@@ -752,49 +866,79 @@ function LegacyDocumentContent({
     return (
       <div className="final-response-document">
         <article className="print-document final-response-template">
-          {document?.signedDocumentNumber && document.signedDocumentDate ? <p>№ {document.signedDocumentNumber} от {formatDate(document.signedDocumentDate)}</p> : null}
+          {document?.signedDocumentNumber && document.signedDocumentDate ? (
+            <p>
+              № {document.signedDocumentNumber} от{" "}
+              {formatDate(document.signedDocumentDate)}
+            </p>
+          ) : null}
           <div className="final-response-recipient">
             <p>
               <strong>{snapshot.org}</strong>
             </p>
             {!isDecisionProject && (
               <p>
-                <strong>{auditAuthorityKazakhName(snapshot.issuer)}</strong>
+                <strong>
+                  {language === "ru"
+                    ? auditAuthorityFullName(snapshot.issuer)
+                    : auditAuthorityKazakhName(snapshot.issuer)}
+                </strong>
               </p>
             )}
           </div>
           <div className="final-response-body">
-            <p>{kazakhDecisionIntro(snapshot)}</p>
             <p>
-              Заңның 58-4-бабының 2-тармағына сәйкес, қарсылық мемлекеттік аудит
-              объектісі даулайтын мәселелер шегінде қаралады.
+              {language === "ru"
+                ? russianDecisionIntro(snapshot)
+                : kazakhDecisionIntro(snapshot)}
             </p>
             <p>
-              Апелляциялық комиссия отырысында дауыс беру қорытындысы бойынша
-              қарсылықты {kazakhDecision} туралы шешім қабылдады.
+              {language === "ru"
+                ? "В соответствии с пунктом 2 статьи 58-4 Закона возражение рассматривается в пределах вопросов, оспариваемых объектом государственного аудита."
+                : "Заңның 58-4-бабының 2-тармағына сәйкес, қарсылық мемлекеттік аудит объектісі даулайтын мәселелер шегінде қаралады."}
+            </p>
+            <p>
+              {language === "ru" ? (
+                <>
+                  По итогам голосования на заседании Апелляционной комиссии
+                  принято решение {decision}{" "}
+                  {appealObjectLabel(snapshot, outcome || undefined)}.
+                </>
+              ) : (
+                <>
+                  Апелляциялық комиссия отырысында дауыс беру қорытындысы
+                  бойынша қарсылықты {kazakhDecision} туралы шешім қабылдады.
+                </>
+              )}
             </p>
             {isDecisionProject ? (
               <p>
-                Сіз Қазақстан Республикасы Әкімшілік рәсімдік – процестік
-                кодексінің 73-бабына сәйкес алдын ала шешімге өз ұстанымыңызды
-                білдіруге құқылысыз.
+                {language === "ru"
+                  ? "В соответствии со статьёй 73 Административного процедурно-процессуального кодекса Республики Казахстан Вы вправе выразить свою позицию по предварительному решению."
+                  : "Сіз Қазақстан Республикасы Әкімшілік рәсімдік – процестік кодексінің 73-бабына сәйкес алдын ала шешімге өз ұстанымыңызды білдіруге құқылысыз."}
               </p>
             ) : (
               <p>
-                Жауаппен келіспеген жағдайда, Сіз Қазақстан Республикасы
-                Әкімшілік рәсімдік-процестік кодексінің 91-бабының 6-тармағына
-                сәйкес шешімге шағым жасауға құқылысыз. Екінші мекенжайға
-                мәлімет және жұмыс үшін жолданады.
+                {language === "ru"
+                  ? "В случае несогласия с ответом Вы вправе обжаловать решение в соответствии с пунктом 6 статьи 91 Административного процедурно-процессуального кодекса Республики Казахстан. Второму адресату направляется для сведения и работы."
+                  : "Жауаппен келіспеген жағдайда, Сіз Қазақстан Республикасы Әкімшілік рәсімдік-процестік кодексінің 91-бабының 6-тармағына сәйкес шешімге шағым жасауға құқылысыз. Екінші мекенжайға мәлімет және жұмыс үшін жолданады."}
               </p>
             )}
             <p className="final-response-attachment-note">
-              Қосымша: {appendixPages} парақта.
+              {language === "ru" ? "Приложение:" : "Қосымша:"} {appendixPages}{" "}
+              {language === "ru" ? "л." : "парақта."}
             </p>
           </div>
           <div className="final-response-signature">
             <span>
               {isDecisionProject ? (
-                <strong>{KAZAKH_DIRECTOR_TITLE}</strong>
+                <strong>
+                  {language === "ru"
+                    ? "Директор Департамента апелляции по внутреннему государственному аудиту"
+                    : KAZAKH_DIRECTOR_TITLE}
+                </strong>
+              ) : language === "ru" ? (
+                "Директор Департамента апелляции по внутреннему государственному аудиту"
               ) : (
                 KAZAKH_DIRECTOR_TITLE
               )}
@@ -802,7 +946,7 @@ function LegacyDocumentContent({
             <b>Ш. Күреңбек тегі</b>
           </div>
           <p className="final-response-executor">
-            Орын.:{" "}
+            {language === "ru" ? "Исполнитель:" : "Орын.:"}{" "}
             {snapshot.assignee === "Не назначен"
               ? DEMO_USER.fullName
               : snapshot.assignee}
@@ -811,7 +955,9 @@ function LegacyDocumentContent({
           </p>
         </article>
         <article className="print-document final-response-template final-response-appendix">
-          <h2 className="final-response-appendix-title">Қосымша</h2>
+          <h2 className="final-response-appendix-title">
+            {language === "ru" ? "Приложение" : "Қосымша"}
+          </h2>
           {appendixPoints.map((point) => {
             return (
               <section
@@ -819,14 +965,37 @@ function LegacyDocumentContent({
                 key={`${point.number}-${point.title}`}
               >
                 <p className="final-response-point-title">
-                  - по п. {point.number}:
+                  - {t("по п.")} {point.number}:
                 </p>
-                <p className="final-response-point-reason" style={useDavgaArguments ? { whiteSpace: "pre-wrap" } : undefined}>{point.reason}{useDavgaArguments && (point.reason === "—" || /[.!?…]$/.test(point.reason)) ? "" : "."}</p>
+                <p
+                  className="final-response-point-reason"
+                  style={
+                    useDavgaArguments ? { whiteSpace: "pre-wrap" } : undefined
+                  }
+                >
+                  {point.reason}
+                  {useDavgaArguments &&
+                  (point.reason === "—" || /[.!?…]$/.test(point.reason))
+                    ? ""
+                    : "."}
+                </p>
                 <p className="final-response-point-decision">
-                  На основании вышеизложенного, Апелляционной комиссией принято
-                  решение {point.decision} {appealObjectLabel(snapshot, point.outcome)} по
-                  данному вопросу
-                  {point.decidedByMajority ? " большинством голосов" : ""}.
+                  {language === "kk" ? (
+                    <>
+                      Жоғарыда айтылғандардың негізінде Апелляциялық комиссия
+                      осы мәселе бойынша {kazakhAppealObject(snapshot)}{" "}
+                      {point.decision} туралы шешім қабылдады
+                      {point.decidedByMajority ? " көпшілік дауыспен" : ""}.
+                    </>
+                  ) : (
+                    <>
+                      На основании вышеизложенного, Апелляционной комиссией
+                      принято решение {point.decision}{" "}
+                      {appealObjectLabel(snapshot, point.outcome)} по данному
+                      вопросу
+                      {point.decidedByMajority ? " большинством голосов" : ""}.
+                    </>
+                  )}
                 </p>
               </section>
             );
@@ -855,9 +1024,9 @@ function LegacyDocumentContent({
       presentMembers.find(
         (member) => member.id === presidingChairId(presentMembers),
       );
-    const commissionMembers = presentMembers.filter(
-      (member) => member.id !== presidingMember?.id,
-    ).sort((a, b) => protocolMemberRank(a) - protocolMemberRank(b));
+    const commissionMembers = presentMembers
+      .filter((member) => member.id !== presidingMember?.id)
+      .sort((a, b) => protocolMemberRank(a) - protocolMemberRank(b));
     const orderedMembers = presidingMember
       ? [presidingMember, ...commissionMembers]
       : commissionMembers;
@@ -907,7 +1076,9 @@ function LegacyDocumentContent({
         })()
       : overall(snapshot);
     const decision = overallResult
-      ? OUTCOMES[overallResult].toLocaleLowerCase("ru-RU")
+      ? t(OUTCOMES[overallResult]).toLocaleLowerCase(
+          language === "kk" ? "kk-KZ" : "ru-RU",
+        )
       : "—";
     const appealTypeLabel = snapshot.appealType
       ? snapshot.appealType.charAt(0).toLocaleLowerCase("ru-RU") +
@@ -923,30 +1094,35 @@ function LegacyDocumentContent({
     return (
       <article className="print-document protocol-template">
         <h1>
-          ПРОТОКОЛ{protocolNumber ? ` № ${protocolNumber}` : ""}
+          {t("ПРОТОКОЛ")}
+          {protocolNumber ? ` № ${protocolNumber}` : ""}
           <br />
-          заседания Апелляционной комиссии
+          {t("заседания Апелляционной комиссии")}
         </h1>
         <div className="protocol-template-place-date">
-          <span>город Астана</span>
+          <span>{t("город Астана")}</span>
           <span>{formatDate(meeting?.date)}</span>
         </div>
         <div className="protocol-template-attendance">
           <p className="protocol-template-attendance-title">
-            <b>ПРИСУТСТВОВАЛИ ({meeting?.format || "онлайн, Qosyl"}):</b>
+            <b>
+              {t("ПРИСУТСТВОВАЛИ")} ({meeting?.format || "онлайн, Qosyl"}):
+            </b>
           </p>
           {presidingMember ? (
             <>
               <div className="protocol-template-attendance-row">
-                <b>{presidingLabel}:</b>
-                <span>{presidingMember.name}</span>
+                <b>{t(presidingLabel)}:</b>
+                <span>{memberDisplayName(presidingMember.name, language)}</span>
               </div>
               {commissionMembers.length ? (
                 <div className="protocol-template-attendance-row">
-                  <b>Члены Апелляционной комиссии:</b>
+                  <b>{t("Члены Апелляционной комиссии:")}</b>
                   <span className="protocol-template-attendance-members">
                     {commissionMembers.map((member) => (
-                      <span key={member.id}>{member.name}</span>
+                      <span key={member.id}>
+                        {memberDisplayName(member.name, language)}
+                      </span>
                     ))}
                   </span>
                 </div>
@@ -954,10 +1130,12 @@ function LegacyDocumentContent({
             </>
           ) : presentMembers.length ? (
             <div className="protocol-template-attendance-row">
-              <b>Члены Апелляционной комиссии:</b>
+              <b>{t("Члены Апелляционной комиссии:")}</b>
               <span className="protocol-template-attendance-members">
                 {commissionMembers.map((member) => (
-                  <span key={member.id}>{member.name}</span>
+                  <span key={member.id}>
+                    {memberDisplayName(member.name, language)}
+                  </span>
                 ))}
               </span>
             </div>
@@ -965,33 +1143,37 @@ function LegacyDocumentContent({
             "—"
           )}
           <div className="protocol-template-attendance-row">
-            <b>Секретарь Апелляционной комиссии:</b>
+            <b>{t("Секретарь Апелляционной комиссии:")}</b>
             <span>{secretaryName}</span>
           </div>
         </div>
-        <p className="protocol-template-intro">{protocolIntro}</p>
+        <p className="protocol-template-intro">
+          {language === "kk"
+            ? `${kazakhAppealReference(snapshot, auditAuthorityKazakhName)}.`
+            : protocolIntro}
+        </p>
         <p>
           <span style={{ display: "block", textAlign: "left" }}>
-            Наименование органа, вынесшего обжалуемое решение:{" "}
-            {auditAuthorityFullName(snapshot.issuer)}.
+            {t("Наименование органа, вынесшего обжалуемое решение:")}{" "}
+            {authorityDisplay(snapshot.issuer)}.
           </span>
           <br />
           <span style={{ display: "block", textAlign: "left" }}>
-            Количество присутствовавших членов Апелляционной комиссии:{" "}
+            {t("Количество присутствовавших членов Апелляционной комиссии:")}{" "}
             {presentMembers.length}.
           </span>
           <br />
           <span style={{ display: "block", textAlign: "left" }}>
-            <b>Результаты голосования членов Апелляционной комиссии:</b>
+            <b>{t("Результаты голосования членов Апелляционной комиссии:")}</b>
           </span>
         </p>
         <table className="protocol-votes-table">
           <thead>
             <tr>
               <th>№</th>
-              <th>Суть вопроса / член Апелляционной комиссии</th>
-              <th>Голос</th>
-              <th>Обоснование</th>
+              <th>{t("Суть вопроса / член Апелляционной комиссии")}</th>
+              <th>{t("Голос")}</th>
+              <th>{t("Обоснование")}</th>
             </tr>
           </thead>
           <tbody>
@@ -1005,10 +1187,10 @@ function LegacyDocumentContent({
                 ...orderedMembers.map((member) => (
                   <tr key={`${point.id}-${member.id}`}>
                     <td />
-                    <td>{member.name}</td>
+                    <td>{memberDisplayName(member.name, language)}</td>
                     <td>
                       {member.recused
-                        ? "Не голосует"
+                        ? t("Не голосует")
                         : (() => {
                             const vote = normalizeVoteChoice(
                               protocolPreview?.votes?.[point.id]?.[member.id] ||
@@ -1018,12 +1200,18 @@ function LegacyDocumentContent({
                                     | undefined
                                 )?.votes?.[member.id],
                             );
-                            return vote ? OUTCOMES[vote] : "—";
+                            return vote ? t(OUTCOMES[vote]) : "—";
                           })()}
                     </td>
                     <td style={{ whiteSpace: "pre-wrap" }}>
                       {protocolPreview?.voteReasons?.[point.id]?.[member.id] ||
-                        snapshot.meeting?.protocolVersions?.at(-1)?.rows.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ||
+                        snapshot.meeting?.protocolVersions
+                          ?.at(-1)
+                          ?.rows.find(
+                            (row) =>
+                              row.pointId === point.id &&
+                              row.memberId === member.id,
+                          )?.edited ||
                         (
                           votes?.[point.id] as
                             | { voteReasons?: Record<string, string> }
@@ -1038,9 +1226,18 @@ function LegacyDocumentContent({
           </tbody>
         </table>
         <p className="protocol-template-result">
-          На основании результатов голосования членов Апелляционной комиссии
-          принято РЕШЕНИЕ {decision}{" "}
-          {snapshot.appealType?.startsWith("Жалоба") ? (
+          {t(
+            "На основании результатов голосования членов Апелляционной комиссии принято РЕШЕНИЕ",
+          )}{" "}
+          {decision}{" "}
+          {language === "kk" ? (
+            <>
+              {snapshot.org},{" "}
+              {formatDate(snapshot.appealDate || snapshot.filed)} жылғы №{" "}
+              {snapshot.appealNumber || snapshot.document.number}{" "}
+              {kazakhAppealObject(snapshot)}.
+            </>
+          ) : snapshot.appealType?.startsWith("Жалоба") ? (
             <>
               жалобу {snapshot.org} от{" "}
               {formatDate(snapshot.appealDate || snapshot.filed)} года №{" "}
@@ -1056,22 +1253,25 @@ function LegacyDocumentContent({
         </p>
         {recommendations && recommendations !== "—" && (
           <p className="protocol-template-recommendations">
-            Рекомендации: {recommendations}
+            {t("Рекомендации:")} {recommendations}
           </p>
         )}
         <div className="protocol-template-signatures">
           {presidingMember ? (
             <p>
-              {presidingLabel}: __________________ {presidingMember.name}
+              {t(presidingLabel)}: __________________{" "}
+              {memberDisplayName(presidingMember.name, language)}
             </p>
           ) : null}
           {commissionMembers.map((member) => (
             <p key={member.id}>
-              Член Апелляционной комиссии: __________________ {member.name}
+              {t("Член Апелляционной комиссии:")} __________________{" "}
+              {memberDisplayName(member.name, language)}
             </p>
           ))}
           <p>
-            Секретарь Апелляционной комиссии: __________________ {secretaryName}
+            {t("Секретарь Апелляционной комиссии:")} __________________{" "}
+            {secretaryName}
           </p>
         </div>
       </article>
@@ -1140,9 +1340,7 @@ function LegacyDocumentContent({
             <br />
             <b>Дата получения документа:</b> {formatDate(c.document.received)}
             <br />
-            <b>
-              Портал/цифровая система, по которой поступило обращение:
-            </b>{" "}
+            <b>Портал/цифровая система, по которой поступило обращение:</b>{" "}
             {c.channel}
           </p>
           {agendaDetails?.actionAppealAuthorities?.length ? (
@@ -1153,7 +1351,9 @@ function LegacyDocumentContent({
                   <br />
                   <b>Орган аудита (КВГА/ДВГА) {index + 1}:</b> {item.issuer}
                   <br />
-                  <b>Номер первичного обращения в ДВГА/КВГА {index + 1}:</b>{" "}
+                  <b>
+                    Номер первичного обращения в ДВГА/КВГА {index + 1}:
+                  </b>{" "}
                   {item.documentNumber}
                   <br />
                   <b>Дата первичного обращения в ДВГА/КВГА {index + 1}:</b>{" "}
@@ -1446,7 +1646,13 @@ function LegacyDocumentContent({
         "request-appendix",
       ].includes(kind) && (
         <>
-          {kind === "authority-response" && visibleResponseNumber && visibleResponseDate ? <p>№ {visibleResponseNumber} от {formatDate(visibleResponseDate)}</p> : null}
+          {kind === "authority-response" &&
+          visibleResponseNumber &&
+          visibleResponseDate ? (
+            <p>
+              № {visibleResponseNumber} от {formatDate(visibleResponseDate)}
+            </p>
+          ) : null}
           <p>{document?.text}</p>
           {["analysis", "position"].includes(kind) &&
             snapshot.issues
@@ -1491,14 +1697,116 @@ function LegacyDocumentContent({
   );
 }
 
-export type DocumentContentProps = Parameters<typeof LegacyDocumentContent>[0] & { language?: DocumentLanguage; languages?: DocumentLanguage[] };
+export type DocumentContentProps = Parameters<
+  typeof LegacyDocumentContent
+>[0] & { language?: DocumentLanguage; languages?: DocumentLanguage[] };
 export function DocumentContent(props: DocumentContentProps) {
-  const supported = ["certificate", "protocol", "decision-project", "final-response", "authority-response-appendix"].includes(props.kind);
-  if (!supported || (!(props.document?.snapshot ? props.document.snapshot.appealLanguage : props.c.appealLanguage) && !props.languages && (props.document?.languages?.length || 1) < 2)) return <LegacyDocumentContent {...props} />;
-  const source = props.document?.snapshot ? { ...props.c, ...props.document.snapshot } : props.c;
-  const allowed = props.languages || languagesForDocument(source, props.kind, props.document);
-  const languages = props.language ? allowed.filter(language => language === props.language) : allowed;
-  return <>{languages.map((language, index) => <section className="document-language-version" lang={language} key={language} style={index ? { breakBefore: "page", pageBreakBefore: "always" } : undefined}><LocalizedDocument {...props} language={language} /></section>)}</>;
+  const supported = [
+    "certificate",
+    "protocol",
+    "decision-project",
+    "final-response",
+    "authority-response-appendix",
+  ].includes(props.kind);
+  if (
+    !supported ||
+    (!(props.document?.snapshot
+      ? props.document.snapshot.appealLanguage
+      : props.c.appealLanguage) &&
+      !props.languages &&
+      (props.document?.languages?.length || 1) < 2)
+  )
+    return <LegacyDocumentContent {...props} language={undefined} />;
+  const source = props.document?.snapshot
+    ? { ...props.c, ...props.document.snapshot }
+    : props.c;
+  const allowed =
+    props.languages || languagesForDocument(source, props.kind, props.document);
+  const languages = props.language
+    ? allowed.filter((language) => language === props.language)
+    : allowed;
+  return (
+    <>
+      {languages.map((language, index) => (
+        <section
+          className="document-language-version"
+          lang={language}
+          key={language}
+          style={
+            index
+              ? { breakBefore: "page", pageBreakBefore: "always" }
+              : undefined
+          }
+        >
+          <LegacyDocumentContent
+            {...props}
+            language={language}
+            c={localizedCase(props.c, language)}
+            document={
+              props.document?.snapshot
+                ? {
+                    ...props.document,
+                    snapshot: {
+                      ...props.document.snapshot,
+                      ...localizedCase(
+                        {
+                          ...props.c,
+                          ...props.document.snapshot,
+                          decisionProjectDavgaOverrides:
+                            props.document.snapshot
+                              .decisionProjectDavgaOverrides,
+                        },
+                        language,
+                      ),
+                    },
+                  }
+                : props.document
+            }
+            certificatePreview={
+              props.certificatePreview
+                ? {
+                    ...props.certificatePreview,
+                    davgaArguments:
+                      language === "kk"
+                        ? ""
+                        : props.certificatePreview.davgaArguments,
+                    davgaArgumentsByPoint:
+                      language === "kk"
+                        ? props.certificatePreview.davgaArgumentsByPointKk
+                        : props.certificatePreview.davgaArgumentsByPoint,
+                    memberPositions:
+                      props.certificatePreview.memberPositions.map(
+                        (position) => ({
+                          ...position,
+                          comment:
+                            language === "kk"
+                              ? position.commentKk || ""
+                              : position.comment,
+                        }),
+                      ),
+                  }
+                : undefined
+            }
+            protocolPreview={
+              props.protocolPreview
+                ? {
+                    ...props.protocolPreview,
+                    voteReasons:
+                      language === "kk"
+                        ? props.protocolPreview.voteReasonsKk
+                        : props.protocolPreview.voteReasons,
+                    recommendations:
+                      language === "kk"
+                        ? props.protocolPreview.recommendationsKk
+                        : props.protocolPreview.recommendations,
+                  }
+                : undefined
+            }
+          />
+        </section>
+      ))}
+    </>
+  );
 }
 
 export function wordDocumentHtml({
@@ -1521,7 +1829,12 @@ export default function DocumentModal(props: {
 }) {
   const [error, setError] = useState("");
   const languages = languagesForDocument(props.c, props.kind, props.document);
-  const [viewLanguage, setViewLanguage] = useState<DocumentLanguage>(props.document?.viewLanguage && languages.includes(props.document.viewLanguage) ? props.document.viewLanguage : languages[0]);
+  const [viewLanguage, setViewLanguage] = useState<DocumentLanguage>(
+    props.document?.viewLanguage &&
+      languages.includes(props.document.viewLanguage)
+      ? props.document.viewLanguage
+      : languages[0],
+  );
   const attachment = props.document?.dataUrl ? props.document : undefined;
 
   // Вложения не являются шаблонными документами SAQ. Их нужно открывать как
@@ -1600,7 +1913,26 @@ export default function DocumentModal(props: {
         </p>
       )}
       <style>{finalResponseCss + certificatePointVotesCss}</style>
-      {languages.length > 1 && <div className="request-modal-tabs" role="tablist" aria-label="Язык документа">{languages.map(language => <button type="button" role="tab" aria-selected={viewLanguage === language} className={viewLanguage === language ? "active" : ""} key={language} onClick={() => setViewLanguage(language)}>{LANGUAGE_LABELS[language]}</button>)}</div>}
+      {languages.length > 1 && (
+        <div
+          className="request-modal-tabs"
+          role="tablist"
+          aria-label="Язык документа"
+        >
+          {languages.map((language) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewLanguage === language}
+              className={viewLanguage === language ? "active" : ""}
+              key={language}
+              onClick={() => setViewLanguage(language)}
+            >
+              {LANGUAGE_LABELS[language]}
+            </button>
+          ))}
+        </div>
+      )}
       <DocumentContent {...props} language={viewLanguage} />
     </Modal>
   );
