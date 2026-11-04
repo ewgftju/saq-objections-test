@@ -859,13 +859,14 @@ function LegacyDocumentContent({
       };
     });
     const appendixPages = appendixPageCount(appendixPoints);
+    const mainLanguage = useDavgaArguments ? "kk" : language;
     return (
       <div className="final-response-document">
         <article className="print-document final-response-template">
           {document?.signedDocumentNumber && document.signedDocumentDate ? (
             <p>
-              № {document.signedDocumentNumber} от{" "}
-              {formatDate(document.signedDocumentDate)}
+              № {document.signedDocumentNumber} {useDavgaArguments ? "" : "от "}
+              {formatDate(document.signedDocumentDate)}{useDavgaArguments ? " ж." : ""}
             </p>
           ) : null}
           <div className="final-response-recipient">
@@ -875,7 +876,7 @@ function LegacyDocumentContent({
             {!isDecisionProject && (
               <p>
                 <strong>
-                  {language === "ru"
+                  {mainLanguage === "ru"
                     ? auditAuthorityFullName(snapshot.issuer)
                     : auditAuthorityKazakhName(snapshot.issuer)}
                 </strong>
@@ -884,17 +885,17 @@ function LegacyDocumentContent({
           </div>
           <div className="final-response-body">
             <p>
-              {language === "ru"
+              {mainLanguage === "ru"
                 ? russianDecisionIntro(snapshot)
                 : kazakhDecisionIntro(snapshot)}
             </p>
             <p>
-              {language === "ru"
+              {mainLanguage === "ru"
                 ? "В соответствии с пунктом 2 статьи 58-4 Закона возражение рассматривается в пределах вопросов, оспариваемых объектом государственного аудита."
                 : "Заңның 58-4-бабының 2-тармағына сәйкес, қарсылық мемлекеттік аудит объектісі даулайтын мәселелер шегінде қаралады."}
             </p>
             <p>
-              {language === "ru" ? (
+              {mainLanguage === "ru" ? (
                 <>
                   По итогам голосования на заседании Апелляционной комиссии
                   принято решение {decision}{" "}
@@ -909,31 +910,31 @@ function LegacyDocumentContent({
             </p>
             {isDecisionProject ? (
               <p>
-                {language === "ru"
+                {mainLanguage === "ru"
                   ? "В соответствии со статьёй 73 Административного процедурно-процессуального кодекса Республики Казахстан Вы вправе выразить свою позицию по предварительному решению."
                   : "Сіз Қазақстан Республикасы Әкімшілік рәсімдік – процестік кодексінің 73-бабына сәйкес алдын ала шешімге өз ұстанымыңызды білдіруге құқылысыз."}
               </p>
             ) : (
               <p>
-                {language === "ru"
+                {mainLanguage === "ru"
                   ? "В случае несогласия с ответом Вы вправе обжаловать решение в соответствии с пунктом 6 статьи 91 Административного процедурно-процессуального кодекса Республики Казахстан. Второму адресату направляется для сведения и работы."
                   : "Жауаппен келіспеген жағдайда, Сіз Қазақстан Республикасы Әкімшілік рәсімдік-процестік кодексінің 91-бабының 6-тармағына сәйкес шешімге шағым жасауға құқылысыз. Екінші мекенжайға мәлімет және жұмыс үшін жолданады."}
               </p>
             )}
             <p className="final-response-attachment-note">
-              {language === "ru" ? "Приложение:" : "Қосымша:"} {appendixPages}{" "}
-              {language === "ru" ? "л." : "парақта."}
+              {mainLanguage === "ru" ? "Приложение:" : "Қосымша:"} {appendixPages}{" "}
+              {mainLanguage === "ru" ? "л." : "парақта."}
             </p>
           </div>
           <div className="final-response-signature">
             <span>
               {isDecisionProject ? (
                 <strong>
-                  {language === "ru"
+                  {mainLanguage === "ru"
                     ? "Директор Департамента апелляции по внутреннему государственному аудиту"
                     : KAZAKH_DIRECTOR_TITLE}
                 </strong>
-              ) : language === "ru" ? (
+              ) : mainLanguage === "ru" ? (
                 "Директор Департамента апелляции по внутреннему государственному аудиту"
               ) : (
                 KAZAKH_DIRECTOR_TITLE
@@ -942,7 +943,7 @@ function LegacyDocumentContent({
             <b>Ш. Күреңбек тегі</b>
           </div>
           <p className="final-response-executor">
-            {language === "ru" ? "Исполнитель:" : "Орын.:"}{" "}
+            {mainLanguage === "ru" ? "Исполнитель:" : "Орын.:"}{" "}
             {snapshot.assignee === "Не назначен"
               ? DEMO_USER.fullName
               : snapshot.assignee}

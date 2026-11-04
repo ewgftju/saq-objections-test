@@ -212,6 +212,23 @@ test("перевод сохраняет содержание и все разд�
   }
 });
 
+test("основная часть проекта и мотивированного ответа всегда на казахском, приложение — на языке обращения", () => {
+  for (const kind of ["decision-project", "final-response"]) {
+    for (const language of ["ru", "kk"] as const) {
+      const html = render(kind, language);
+      const main = html.match(/<article class="print-document final-response-template">([\s\S]*?)<\/article>/)![1];
+      const appendix = html.match(/<article class="print-document final-response-template final-response-appendix">([\s\S]*?)<\/article>/)![1];
+      assert.match(main, /Қазақстан Республикасы Қаржы министрлігінің/);
+      assert.match(main, /Заңның 58-4-бабының/);
+      assert.match(main, /Қосымша: 1 парақта/);
+      assert.match(main, /Ішкі мемлекеттік аудит бойынша апелляция департаментінің директоры/);
+      assert.doesNotMatch(main, /В соответствии с пунктом|Приложение:|Директор Департамента/);
+      assert.match(appendix, language === "ru" ? /Приложение/ : /Қосымша/);
+      assert.match(appendix, language === "ru" ? /На основании вышеизложенного/ : /Жоғарыда айтылғандардың негізінде/);
+    }
+  }
+});
+
 test("выбор языка просмотра не переоформляет документы, сохранённые до добавления языков", () => {
   for (const kind of [
     "certificate",
