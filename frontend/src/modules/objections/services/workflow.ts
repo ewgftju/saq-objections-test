@@ -1728,7 +1728,6 @@ export function applyAction(
           : "Получены ответы по всем направленным запросам. Обращение автоматически переведено на этап «Материалы».";
       if (pausedDays && pausedDays > 0)
         note += ` Срок рассмотрения продлён на ${pausedDays} раб. дн.`;
-      doc(`Ответ ${request.recipient}`, "position", note, request.id);
       break;
     }
     case "subject-response": {

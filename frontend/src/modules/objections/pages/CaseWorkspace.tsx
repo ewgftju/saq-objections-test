@@ -7,6 +7,7 @@ import { CLOSED, OUTCOMES, TYPES } from "../../../data/constants";
 import type {
   Action,
   CaseDocument,
+  CaseRequest,
   CaseRecommendation,
   CaseTab,
   ObjectionCase,
@@ -40,6 +41,10 @@ import {
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
+
+function isSyntheticExternalResponse(document: CaseDocument, request: CaseRequest) {
+  return request.template === "other" && !request.saqRecipient && document.kind === "position" && !document.dataUrl && document.name === `Ответ ${request.recipient}`;
+}
 
 function responseDocumentLabel(c: ObjectionCase) {
   return (c.appealType || "").trim().startsWith("Жалоба") ||
@@ -1541,6 +1546,7 @@ export default function CaseWorkspace({
                               return c.documents.filter(
                                 (document) =>
                                   document.requestId === request.id &&
+                                  !isSyntheticExternalResponse(document, request) &&
                                   (isAuthorityRequest
                                     ? [
                                         "authority-response",
@@ -1659,6 +1665,7 @@ export default function CaseWorkspace({
                                             (document) =>
                                               document.requestId ===
                                                 request.id &&
+                                              !isSyntheticExternalResponse(document, request) &&
                                               !(
                                                 request.template !== "other" &&
                                                 !!request.responded &&
