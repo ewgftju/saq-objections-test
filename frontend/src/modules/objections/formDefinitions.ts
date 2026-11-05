@@ -448,6 +448,12 @@ export function actionForm(
       title = "Сформировать справку";
       fields.push(languageModeField(c, values), ...pointTranslationFields(c, values, true));
       const langs = selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0]));
+      if (c.appealType === "Заявление" && c.request) {
+        for (const language of langs.filter(item => item !== appealLanguage(c))) {
+          const key = `statementTranslation_${language}`;
+          fields.push({ ...area(key, `Перевод поля «О чем заявление» — ${LANGUAGE_LABELS[language]}`, values[key] ?? c.statementTranslations?.[language] ?? ""), language, required: false });
+        }
+      }
       if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject) {
         for (const language of langs) {
           const key = `procurementSubject_${language}`;

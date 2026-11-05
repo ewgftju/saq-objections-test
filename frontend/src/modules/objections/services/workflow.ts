@@ -867,7 +867,7 @@ export function addDocument(
     requestId,
     snapshot: structuredClone({
       appealLanguage: c.appealLanguage,
-      ...(kind === "certificate" ? { agendaDetails: c.agendaDetails } : {}),
+      ...(kind === "certificate" ? { agendaDetails: c.agendaDetails, request: c.request, statementTranslations: c.statementTranslations } : {}),
       issues: c.issues,
       result: c.result || null,
       members: c.members,
@@ -1778,6 +1778,12 @@ export function applyAction(
       if (c.appealLanguage || form.has("documentLanguageMode") || argumentNames.some((name) => form.has(name))) {
         const languages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0] || "")));
         savePointTranslations(languages);
+        if (c.appealType === "Заявление") {
+          for (const language of languages.filter(item => item !== appealLanguage(c))) {
+            const key = `statementTranslation_${language}`;
+            if (form.has(key)) c.statementTranslations = { ...c.statementTranslations, [language]: String(form.get(key) || "").trim() };
+          }
+        }
         if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject) {
           for (const language of languages) {
             const key = `procurementSubject_${language}`;

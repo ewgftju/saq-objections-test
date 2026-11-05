@@ -345,6 +345,8 @@ export interface CaseDocument {
   snapshot?: {
     appealLanguage?: DocumentLanguage;
     agendaDetails?: AgendaDetails;
+    request?: string;
+    statementTranslations?: Partial<Record<DocumentLanguage, string>>;
     issues: ViolationPoint[];
     result: CaseResult | null;
     members: CommissionMember[];
@@ -634,6 +636,7 @@ export interface ObjectionCase {
   procurement?: string;
   amount: number;
   request: string;
+  statementTranslations?: Partial<Record<DocumentLanguage, string>>;
   affectedParties?: string;
   issues: ViolationPoint[];
   status: CaseStatus;
