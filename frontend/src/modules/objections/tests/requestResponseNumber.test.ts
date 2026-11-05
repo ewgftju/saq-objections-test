@@ -28,6 +28,8 @@ test('ответы получают номера соответствующих 
   state = applyAction(state, c.id, 'fill-request-response', 'dvga', form);
   saved = state.cases.find(item => item.id === c.id)!;
   assert.equal(saved.requests[0].responseNumber, undefined);
+  assert.ok(saved.documents.some(doc => doc.requestId === 'request-1' && doc.kind === 'authority-response-appendix'));
+  assert.ok(!saved.documents.some(doc => doc.requestId === 'request-1' && doc.kind === 'authority-response'));
   state = applyAction(state, c.id, 'approve-response', 'dvga', new FormData());
   state = applyAction(state, c.id, 'sign-response', 'dvga', new FormData());
   saved = state.cases.find(item => item.id === c.id)!;

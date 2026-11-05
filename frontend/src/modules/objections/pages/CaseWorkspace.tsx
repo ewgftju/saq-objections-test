@@ -46,6 +46,13 @@ function isSyntheticExternalResponse(document: CaseDocument, request: CaseReques
   return request.template === "other" && !request.saqRecipient && document.kind === "position" && !document.dataUrl && document.name === `Ответ ${request.recipient}`;
 }
 
+function isSyntheticAuthorityResponse(document: CaseDocument) {
+  return document.kind === "authority-response" && !document.dataUrl && [
+    "Мотивированный ответ ДВГА/КВГА",
+    "Дополнительный мотивированный ответ ДВГА/КВГА по дополнительному запросу",
+  ].includes(document.name);
+}
+
 function responseDocumentLabel(c: ObjectionCase) {
   return (c.appealType || "").trim().startsWith("Жалоба") ||
     c.appealType === "Заявление" ||
@@ -1547,6 +1554,7 @@ export default function CaseWorkspace({
                                 (document) =>
                                   document.requestId === request.id &&
                                   !isSyntheticExternalResponse(document, request) &&
+                                  !isSyntheticAuthorityResponse(document) &&
                                   (isAuthorityRequest
                                     ? [
                                         "authority-response",
@@ -1666,6 +1674,7 @@ export default function CaseWorkspace({
                                               document.requestId ===
                                                 request.id &&
                                               !isSyntheticExternalResponse(document, request) &&
+                                              !isSyntheticAuthorityResponse(document) &&
                                               !(
                                                 request.template !== "other" &&
                                                 !!request.responded &&

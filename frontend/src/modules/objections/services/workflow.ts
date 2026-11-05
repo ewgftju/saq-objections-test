@@ -1607,14 +1607,6 @@ export function applyAction(
         "Мотивированные ответы ДВГА/КВГА заполнены по всем оспариваемым пунктам.";
       c.status =
         requestRoutingStatus(c) || authorityStatus(c) || "response_approval";
-      doc(
-        request.route === "additional-hearing"
-          ? "Дополнительный мотивированный ответ ДВГА/КВГА по дополнительному запросу"
-          : "Мотивированный ответ ДВГА/КВГА",
-        "authority-response",
-        note,
-        request.id,
-      );
       break;
     }
     case "approve-response": {
