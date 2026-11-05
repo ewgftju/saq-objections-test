@@ -16,8 +16,8 @@ export function selectedLanguages(
 ): DocumentLanguage[] {
   const primary = appealLanguage(c);
   if (mode === "both") return [primary, primary === "ru" ? "kk" : "ru"];
-  if (mode && mode !== primary)
-    throw new Error("Документ должен включать язык обращения");
+  if (mode === "ru" || mode === "kk") return [mode];
+  if (mode) throw new Error("Выберите допустимый язык документа");
   return [primary];
 }
 export function languagesForDocument(
@@ -153,5 +153,5 @@ export function documentMode(
   c: ObjectionCase,
   value?: string,
 ): DocumentLanguageMode {
-  return value === "both" ? "both" : appealLanguage(c);
+  return value === "both" || value === "ru" || value === "kk" ? value : appealLanguage(c);
 }

@@ -1765,7 +1765,7 @@ export function applyAction(
       const points = disputed(c);
       const argumentNames = points.flatMap((point) => [`davgaArguments_${point.id}`, `davgaArgumentsKk_${point.id}`]);
       if (c.appealLanguage || form.has("documentLanguageMode") || argumentNames.some((name) => form.has(name))) {
-        const languages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : "")));
+        const languages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0] || "")));
         savePointTranslations(languages);
         if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject) {
           for (const language of languages) {
@@ -1969,7 +1969,7 @@ export function applyAction(
       doc("Протокол заслушивания", "hearing", c.hearing.note);
       break;
     case "vote": {
-      const protocolLanguages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : "")));
+      const protocolLanguages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0] || "")));
       const pointTitles: Record<string, Partial<Record<"ru" | "kk", string>>> = {};
       if (form.has("documentLanguageMode") || c.appealLanguage) {
         for (const point of disputed(c)) {

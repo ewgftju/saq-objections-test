@@ -493,17 +493,9 @@ for (const language of ["ru", "kk"] as const)
     );
   });
 
-test("справка включает язык обращения; отсутствующий перевод не подменяется оригиналом", () => {
+test("при отсутствии перевода он не подменяется оригиналом", () => {
   const h = fixture("kk");
   h.c.status = "materials";
-  assert.throws(
-    () =>
-      h.run("analysis", "work", {
-        documentLanguageMode: "ru",
-        davgaArguments_p1: "RU",
-      }),
-    /язык обращения/,
-  );
   assert.throws(
     () =>
       h.run("analysis", "work", {
@@ -539,7 +531,7 @@ test("двуязычные поля и выбор языка доступны в
     fields
       .find((f) => f.name === "documentLanguageMode")
       ?.options?.map((v) => v[0]),
-    ["kk", "both"],
+    ["ru", "kk", "both"],
   );
 });
 
@@ -869,3 +861,25 @@ test("казахское обращение: отсутствующий русс
   const returned = actionForm("vote", h.c, h.state.date, { documentLanguageMode: "both" }).fields;
   assert.equal(returned.find(field => field.name === "pointTitle_ru_p1")?.value, "Перевод RU");
 });
+
+for (const primary of ["ru", "kk"] as const) {
+  test(`${primary}: можно сформировать справку и протокол только на другом языке`, () => {
+    const h = fixture(primary);
+    const other = primary === "ru" ? "kk" : "ru";
+    const translated = other === "ru" ? "Описание на русском" : "Қазақша сипаттама";
+    h.c.status = "materials";
+    assert.throws(() => h.run("analysis", "work", { documentLanguageMode: other, [other === "ru" ? "davgaArguments_p1" : "davgaArgumentsKk_p1"]: "Доводы" }), /описание/);
+    h.run("analysis", "work", { documentLanguageMode: other, [`pointTitle_${other}_p1`]: translated, [other === "ru" ? "davgaArguments_p1" : "davgaArgumentsKk_p1"]: "Доводы" });
+    const cert = h.c.documents.at(-1)!;
+    assert.deepEqual(cert.languages, [other]);
+    assert.equal(h.c.issues[0].argument, primary === "ru" ? "Довод заявителя RU" : "Өтініш беруші KZ");
+    assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "certificate", document: cert, language: other })).includes(translated));
+    h.c.status = "meeting";
+    h.c.members = [{ id: "chair", name: "Председатель", present: true, recused: false, reason: "" }];
+    assert.equal(actionForm("vote", h.c, h.state.date, {}).fields.find(field => field.name === "documentLanguageMode")?.value, other);
+    h.run("vote", "work", { documentLanguageMode: other, protocolVote_p1_chair: "accept", [other === "ru" ? "protocolDavga_p1_chair" : "protocolDavgaKk_p1_chair"]: "Доводы" });
+    const protocol = h.c.documents.find(item => item.name === "Проект протокола заседания")!;
+    assert.deepEqual(protocol.languages, [other]);
+    assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "protocol", document: protocol, language: other })).includes(translated));
+  });
+}

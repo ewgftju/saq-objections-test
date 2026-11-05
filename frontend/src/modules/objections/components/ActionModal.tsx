@@ -279,7 +279,7 @@ function ProtocolVotesFields({
                         : <span className="muted">Нет голоса</span>}
                     </td>
                     <td>
-                      {selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).map(language => {
+                      {selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).map(language => {
                         const name = `${language === "kk" ? "protocolDavgaKk" : "protocolDavga"}_${point.id}_${member.id}`;
                         const basis = language === "kk" ? certificateBasisForPoint(c, point, "kk") : certificateBasis;
                         const old = currentProtocolRows(c)?.find(row => row.pointId === point.id && row.memberId === member.id);
@@ -430,7 +430,7 @@ export default function ActionModal({
       ),
     ]);
   });
-  const documentLanguages = action === "fill-request-response" ? ["ru", "kk"] as DocumentLanguage[] : ["analysis", "vote", "fill-meeting-certificate", "edit-certificate"].includes(action) ? selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)) : [appealLanguage(c)];
+  const documentLanguages = action === "fill-request-response" ? ["ru", "kk"] as DocumentLanguage[] : ["analysis", "vote", "fill-meeting-certificate", "edit-certificate"].includes(action) ? selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])) : [appealLanguage(c)];
   const [previewLanguage, setPreviewLanguage] = useState<DocumentLanguage>(appealLanguage(c));
   const activePreviewLanguage = documentLanguages.includes(previewLanguage) ? previewLanguage : documentLanguages[0];
   const previewLanguageTabs = <div className="request-modal-tabs" role="tablist" aria-label="Язык печатной формы">{documentLanguages.map(language => <button key={language} type="button" role="tab" aria-selected={activePreviewLanguage === language} className={activePreviewLanguage === language ? "active" : ""} onClick={() => setPreviewLanguage(language)}>{LANGUAGE_LABELS[language]}</button>)}</div>;

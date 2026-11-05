@@ -160,11 +160,11 @@ function defaultDecisionProjectChannel(c: ObjectionCase) {
 
 function languageModeField(c: ObjectionCase, values: FormValues): FormField {
   const primary = appealLanguage(c);
-  const saved = c.certificate?.languages?.length === 2 ? "both" : primary;
-  return select("documentLanguageMode", "Язык документа", [[primary, LANGUAGE_LABELS[primary]], ["both", "Русский и қазақша"]], values.documentLanguageMode || saved);
+  const saved = c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0] || primary;
+  return select("documentLanguageMode", "Язык документа", [["ru", LANGUAGE_LABELS.ru], ["kk", LANGUAGE_LABELS.kk], ["both", "Русский и қазақша"]], values.documentLanguageMode || saved);
 }
 function pointTranslationFields(c: ObjectionCase, values: FormValues, editableSource = false): FormField[] {
-  return disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).flatMap(language => [
+  return disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).flatMap(language => [
     { ...area(`pointTitle_${language}_${point.id}`, `Описание пункта № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language)), language, readOnly: !editableSource && language === appealLanguage(c) },
     { ...area(`pointArgument_${language}_${point.id}`, `Доводы заявителя по пункту № ${point.number} (без перевода)`, point.argument), language, readOnly: true },
     ...(point.additionalArguments || []).map((argument,index) => ({ ...area(`pointAdditional_${language}_${point.id}_${index}`, `Дополнительный довод № ${index + 1}, пункт № ${point.number} (без перевода)`, argument), language, readOnly: true })),
@@ -437,7 +437,7 @@ export function actionForm(
     case "analysis": {
       title = "Сформировать справку";
       fields.push(languageModeField(c, values), ...pointTranslationFields(c, values, true));
-      const langs = selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined));
+      const langs = selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0]));
       if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject) {
         for (const language of langs) {
           const key = `procurementSubject_${language}`;
@@ -588,9 +588,9 @@ export function actionForm(
           ),
           readOnly: true,
         },
-        ...disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).filter(language => !certificatePointTitle(c, point, language)).map(language => ({ ...area(`pointTitle_${language}_${point.id}`, `Перевод описания пункта № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? protocolPointTitle(c, point, language)), language }))),
-        ...(selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).includes("ru") ? [{ ...area("recommendations", "Рекомендации — Русский", c.meeting?.recommendations || ""), required: false, language: "ru" as const }] : []),
-        ...(selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).includes("kk") ? [{ ...area("recommendationsKk", "Ұсынымдар — Қазақша", c.meeting?.recommendationsKk || ""), required: false, language: "kk" as const }] : []),
+        ...disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).filter(language => !certificatePointTitle(c, point, language)).map(language => ({ ...area(`pointTitle_${language}_${point.id}`, `Перевод описания пункта № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? protocolPointTitle(c, point, language)), language }))),
+        ...(selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).includes("ru") ? [{ ...area("recommendations", "Рекомендации — Русский", c.meeting?.recommendations || ""), required: false, language: "ru" as const }] : []),
+        ...(selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).includes("kk") ? [{ ...area("recommendationsKk", "Ұсынымдар — Қазақша", c.meeting?.recommendationsKk || ""), required: false, language: "kk" as const }] : []),
       );
       break;
     case "commission-vote":
