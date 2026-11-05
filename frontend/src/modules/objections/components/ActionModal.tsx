@@ -1282,7 +1282,7 @@ export default function ActionModal({
               </button>
             </div>
             <div hidden={requestTab !== "form"}>
-              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
+              <LanguageFields fields={definition.fields.filter(field => !field.name.startsWith("pointTitle_"))} primary={appealLanguage(c)} values={values} />
               <ProtocolVotesFields
                 c={c}
                 members={protocolMembers}
@@ -1291,6 +1291,7 @@ export default function ActionModal({
                   setValues((current) => ({ ...current, [name]: value }))
                 }
               />
+              {definition.fields.some(field => field.name.startsWith("pointTitle_")) && <LanguageFields fields={definition.fields.filter(field => field.name.startsWith("pointTitle_"))} primary={appealLanguage(c)} values={values} />}
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
               {previewLanguageTabs}
