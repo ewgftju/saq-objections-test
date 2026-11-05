@@ -438,6 +438,12 @@ export function actionForm(
       title = "Сформировать справку";
       fields.push(languageModeField(c, values), ...pointTranslationFields(c, values, true));
       const langs = selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined));
+      if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject) {
+        for (const language of langs.filter(item => item !== appealLanguage(c))) {
+          const key = `procurementSubject_${language}`;
+          fields.push({ ...area(key, `Перевод предмета государственной закупки — ${LANGUAGE_LABELS[language]}`, values[key] ?? c.agendaDetails.procurementSubjectTranslations?.[language] ?? ""), language });
+        }
+      }
       for (const point of disputed(c)) for (const language of langs) {
         const key = language === "ru" ? `davgaArguments_${point.id}` : `davgaArgumentsKk_${point.id}`;
         fields.push({ ...area(key, `Доводы ДАВГА по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[key] ?? (language === "ru" ? c.certificate?.davgaArgumentsByPoint?.[point.id] : c.certificate?.davgaArgumentsByPointKk?.[point.id]) ?? ""), language });

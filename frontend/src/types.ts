@@ -342,6 +342,7 @@ export interface CaseDocument {
   recommendationActivityId?: string;
   snapshot?: {
     appealLanguage?: DocumentLanguage;
+    agendaDetails?: AgendaDetails;
     issues: ViolationPoint[];
     result: CaseResult | null;
     members: CommissionMember[];
@@ -524,6 +525,7 @@ export interface AgendaDetails {
   procurementNumber?: string;
   lotNumber?: string;
   procurementSubject?: string;
+  procurementSubjectTranslations?: Partial<Record<DocumentLanguage, string>>;
   procurementMethod?: string;
   customerName?: string;
   customerBin?: string;

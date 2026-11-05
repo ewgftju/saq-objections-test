@@ -867,6 +867,7 @@ export function addDocument(
     requestId,
     snapshot: structuredClone({
       appealLanguage: c.appealLanguage,
+      ...(kind === "certificate" ? { agendaDetails: c.agendaDetails } : {}),
       issues: c.issues,
       result: c.result || null,
       members: c.members,
@@ -1766,6 +1767,14 @@ export function applyAction(
       if (c.appealLanguage || form.has("documentLanguageMode") || argumentNames.some((name) => form.has(name))) {
         const languages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : "")));
         savePointTranslations(languages);
+        if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject) {
+          for (const language of languages.filter(item => item !== appealLanguage(c))) {
+            const key = `procurementSubject_${language}`;
+            const value = String(form.get(key) ?? c.agendaDetails.procurementSubjectTranslations?.[language] ?? "").trim();
+            if (!value) throw new Error(`Заполните перевод предмета государственной закупки — ${LANGUAGE_LABELS[language]}`);
+            c.agendaDetails.procurementSubjectTranslations = { ...c.agendaDetails.procurementSubjectTranslations, [language]: value };
+          }
+        }
         c.certificate = {
           languages, davgaArguments: "", memberPositions: [],
           davgaArgumentsByPoint: Object.fromEntries(points.map(point => [point.id, languages.includes("ru") ? text(`davgaArguments_${point.id}`, `Доводы ДАВГА № ${point.number} — Русский`) : c.certificate?.davgaArgumentsByPoint?.[point.id] || ""])),

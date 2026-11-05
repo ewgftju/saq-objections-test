@@ -1694,6 +1694,14 @@ function LegacyDocumentContent({
   );
 }
 
+function certificateLocalizedCase(c: ObjectionCase, language: DocumentLanguage, kind: string) {
+  const localized = localizedCase(c, language);
+  if (kind === "certificate" && localized.agendaDetails && language !== (c.appealLanguage || "ru")) {
+    localized.agendaDetails.procurementSubject = c.agendaDetails?.procurementSubjectTranslations?.[language] || c.agendaDetails?.procurementSubject;
+  }
+  return localized;
+}
+
 export type DocumentContentProps = Parameters<
   typeof LegacyDocumentContent
 >[0] & { language?: DocumentLanguage; languages?: DocumentLanguage[] };
@@ -1738,14 +1746,14 @@ export function DocumentContent(props: DocumentContentProps) {
           <LegacyDocumentContent
             {...props}
             language={language}
-            c={localizedCase(props.c, language)}
+            c={certificateLocalizedCase(props.c, language, props.kind)}
             document={
               props.document?.snapshot
                 ? {
                     ...props.document,
                     snapshot: {
                       ...props.document.snapshot,
-                      ...localizedCase(
+                      ...certificateLocalizedCase(
                         {
                           ...props.c,
                           ...props.document.snapshot,
@@ -1754,6 +1762,7 @@ export function DocumentContent(props: DocumentContentProps) {
                               .decisionProjectDavgaOverrides,
                         },
                         language,
+                        props.kind,
                       ),
                     },
                   }
