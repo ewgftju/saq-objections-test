@@ -2094,32 +2094,6 @@ export function applyAction(
         "protocol",
         "Состав участников зафиксирован. Ожидаются подписи членов АК.",
       );
-      if (c.certificate) {
-        const approvedCertificate = [...c.documents].reverse().find(item => item.kind === "certificate" && item.certificateVersion?.source !== "protocol-result" && item.snapshot?.certificate)?.snapshot?.certificate || c.certificate;
-        const lastProposal = c.certificateChangeRequests?.at(-1);
-        let approved = !form.has("withdrawCertificateProposal") && (!lastProposal || (lastProposal.status === "reviewed" && lastProposal.changes.some(change => change.decision === "accepted")));
-        for (const point of disputed(c)) {
-          const outcome = c.votes?.[point.id] && pointOutcomeFromVotes(c.votes[point.id].votes || {}, c.votes[point.id].chair);
-          const winner = protocolRows.find(row => row.pointId === point.id && normalizeVoteChoice(row.vote) === outcome);
-          if (!winner) throw new Error(`Не найдено обоснование итогового голоса по пункту № ${point.number}`);
-          const davgaRu = protocolDavgaFromReason(winner.edited).trim();
-          const davgaKk = protocolDavgaFromReason(winner.editedKk || "").trim();
-          const approvedRu = (approvedCertificate.davgaArgumentsByPoint?.[point.id] || approvedCertificate.davgaArguments || "—").trim();
-          const approvedKk = (approvedCertificate.davgaArgumentsByPointKk?.[point.id] || "—").trim();
-          if (protocolLanguages.includes("ru") && (!davgaRu || davgaRu !== approvedRu)) approved = false;
-          if (protocolLanguages.includes("kk") && (!davgaKk || davgaKk !== approvedKk)) approved = false;
-        }
-        if (approved) {
-          doc("Справка по итогам протокола заседания", "certificate", "Доводы ДАВГА соответствуют согласованному обоснованию итогового голоса по каждому пункту.");
-          const certificate = c.documents.at(-1)!;
-          if (certificate.snapshot) certificate.snapshot.certificate = structuredClone(approvedCertificate);
-          certificate.languages = protocolLanguages;
-          certificate.certificateNumber = c.documents.find(item => item !== certificate && item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения" && item.certificateNumber)?.certificateNumber;
-          certificate.certificateVersion = { stage: "protocol", source: "protocol-result", createdAt: changedAt, proposedBy: c.assignee };
-        } else {
-          c.history.push({ date, actor: c.assignee, title: "Справка по итогам протокола не сформирована", text: "Доводы итогового голоса не согласованы директором либо предложение отозвано. Действующая справка не изменена." });
-        }
-      }
       break;
     }
     case "sign": {
@@ -2163,6 +2137,34 @@ export function applyAction(
         c.repeatHearingStatus = undefined;
       }
       doc("Подписанный протокол заседания", "protocol", c.result.reason);
+      if (c.certificate && version?.rows?.length) {
+        const protocolRows = version.rows;
+        const protocolLanguages = version.languages || c.meeting.languages || [appealLanguage(c)];
+        const approvedCertificate = [...c.documents].reverse().find(item => item.kind === "certificate" && item.certificateVersion?.source !== "protocol-result" && item.snapshot?.certificate)?.snapshot?.certificate || c.certificate;
+        const lastProposal = c.certificateChangeRequests?.at(-1);
+        let approved = (!lastProposal || (lastProposal.status === "reviewed" && lastProposal.changes.some(change => change.decision === "accepted")));
+        for (const point of disputed(c)) {
+          const outcome = c.votes?.[point.id] && pointOutcomeFromVotes(c.votes[point.id].votes || {}, c.votes[point.id].chair);
+          const winner = protocolRows.find(row => row.pointId === point.id && normalizeVoteChoice(row.vote) === outcome);
+          if (!winner) throw new Error(`Не найдено обоснование итогового голоса по пункту № ${point.number}`);
+          const davgaRu = protocolDavgaFromReason(winner.edited).trim();
+          const davgaKk = protocolDavgaFromReason(winner.editedKk || "").trim();
+          const approvedRu = (approvedCertificate.davgaArgumentsByPoint?.[point.id] || approvedCertificate.davgaArguments || "—").trim();
+          const approvedKk = (approvedCertificate.davgaArgumentsByPointKk?.[point.id] || "—").trim();
+          if (protocolLanguages.includes("ru") && (!davgaRu || davgaRu !== approvedRu)) approved = false;
+          if (protocolLanguages.includes("kk") && (!davgaKk || davgaKk !== approvedKk)) approved = false;
+        }
+        if (approved) {
+          doc("Справка по итогам протокола заседания", "certificate", "Доводы ДАВГА соответствуют согласованному обоснованию итогового голоса по каждому пункту.");
+          const certificate = c.documents.at(-1)!;
+          if (certificate.snapshot) certificate.snapshot.certificate = structuredClone(approvedCertificate);
+          certificate.languages = protocolLanguages;
+          certificate.certificateNumber = c.documents.find(item => item !== certificate && item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения" && item.certificateNumber)?.certificateNumber;
+          certificate.certificateVersion = { stage: "protocol", source: "protocol-result", createdAt: version.signedAt!, proposedBy: c.assignee };
+        } else {
+          c.history.push({ date, actor: c.assignee, title: "Справка по итогам протокола не сформирована", text: "Доводы итогового голоса не согласованы директором либо предложение отозвано. Действующая справка не изменена." });
+        }
+      }
       break;
     }
     case "return-protocol": {
