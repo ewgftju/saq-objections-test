@@ -862,7 +862,7 @@ export function addDocument(
     signedDocumentNumber: kind === "decision-project" && name === "Подписанный проект решения" ? c.decisionProject?.number : kind === "final-response" && name === "Подписанный окончательный ответ" ? c.delivery?.number : undefined,
     signedDocumentDate: kind === "decision-project" && name === "Подписанный проект решения" || kind === "final-response" && name === "Подписанный окончательный ответ" ? date : undefined,
     certificateNumber: kind === "certificate" && name.startsWith("Справка: результаты голосования членов АК")
-      ? [...c.documents].reverse().find((item) => item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения")?.certificateNumber
+      ? c.documents.find((item) => item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения" && item.certificateNumber)?.certificateNumber
       : undefined,
     requestId,
     snapshot: structuredClone({
@@ -1346,7 +1346,10 @@ export function applyAction(
       if (!c.certificate) throw new Error("Справка по доводам не сформирована");
       const certificateDocument = [...c.documents].reverse().find((item) => item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения");
       if (!certificateDocument) throw new Error("Документ справки не найден");
-      if (!certificateDocument.certificateNumber) {
+      const originalNumber = c.documents.find((item) => item !== certificateDocument && item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения" && item.certificateNumber)?.certificateNumber;
+      if (originalNumber) {
+        certificateDocument.certificateNumber = originalNumber;
+      } else if (!certificateDocument.certificateNumber) {
         const highest = next.cases.reduce((max, item) => item.documents.reduce((value, document) => Math.max(value, document.certificateNumber || 0), max), next.certificateLastNumber || 0);
         certificateDocument.certificateNumber = highest + 1;
         next.certificateLastNumber = highest + 1;
