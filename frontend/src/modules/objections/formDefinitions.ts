@@ -439,9 +439,11 @@ export function actionForm(
       fields.push(languageModeField(c, values), ...pointTranslationFields(c, values, true));
       const langs = selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined));
       if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject) {
-        for (const language of langs.filter(item => item !== appealLanguage(c))) {
+        for (const language of langs) {
           const key = `procurementSubject_${language}`;
-          fields.push({ ...area(key, `Перевод предмета государственной закупки — ${LANGUAGE_LABELS[language]}`, values[key] ?? c.agendaDetails.procurementSubjectTranslations?.[language] ?? ""), language });
+          const label = language === appealLanguage(c) ? "Предмет государственной закупки" : "Перевод предмета государственной закупки";
+          const initial = c.agendaDetails.procurementSubjectTranslations?.[language] ?? (language === appealLanguage(c) ? c.agendaDetails.procurementSubject : "");
+          fields.push({ ...area(key, `${label} — ${LANGUAGE_LABELS[language]}`, values[key] ?? initial), language });
         }
       }
       for (const point of disputed(c)) for (const language of langs) {

@@ -1696,7 +1696,7 @@ function LegacyDocumentContent({
 
 function certificateLocalizedCase(c: ObjectionCase, language: DocumentLanguage, kind: string) {
   const localized = localizedCase(c, language);
-  if (kind === "certificate" && localized.agendaDetails && language !== (c.appealLanguage || "ru")) {
+  if (kind === "certificate" && localized.agendaDetails) {
     localized.agendaDetails.procurementSubject = c.agendaDetails?.procurementSubjectTranslations?.[language] || c.agendaDetails?.procurementSubject;
   }
   return localized;

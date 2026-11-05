@@ -807,21 +807,24 @@ for (const primary of ["ru", "kk"] as const) {
     h.c.agendaDetails = { procurementNumber: "123", procurementSubject: primary === "ru" ? "Поставка оборудования" : "Жабдық жеткізу" };
     const other = primary === "ru" ? "kk" : "ru";
     const original = h.c.agendaDetails.procurementSubject;
+    const editedOriginal = primary === "ru" ? "Исправленная поставка" : "Түзетілген жеткізу";
     const translation = primary === "ru" ? "Жабдық жеткізу" : "Поставка оборудования";
-    const values = { documentLanguageMode: "both", pointTitle_ru_p1: "Вопрос RU", pointTitle_kk_p1: "Мәселе KZ", davgaArguments_p1: "Доводы RU", davgaArgumentsKk_p1: "Дәлелдер KZ", [`procurementSubject_${other}`]: translation };
+    const values = { documentLanguageMode: "both", pointTitle_ru_p1: "Вопрос RU", pointTitle_kk_p1: "Мәселе KZ", davgaArguments_p1: "Доводы RU", davgaArgumentsKk_p1: "Дәлелдер KZ", [`procurementSubject_${primary}`]: editedOriginal, [`procurementSubject_${other}`]: translation };
     const fields = actionForm("analysis", h.c, h.state.date, values).fields;
     assert.ok(fields.some(field => field.name === `procurementSubject_${other}` && field.language === other && field.required));
-    assert.ok(!actionForm("analysis", h.c, h.state.date, { documentLanguageMode: primary }).fields.some(field => field.name.startsWith("procurementSubject_")));
+    assert.ok(actionForm("analysis", h.c, h.state.date, { documentLanguageMode: primary }).fields.some(field => field.name === `procurementSubject_${primary}` && field.value === original && !field.readOnly));
+    assert.ok(!actionForm("analysis", h.c, h.state.date, { documentLanguageMode: primary }).fields.some(field => field.name === `procurementSubject_${other}`));
     const missing = { ...values, [`procurementSubject_${other}`]: "" };
     assert.throws(() => h.run("analysis", "work", missing), /перевод предмета государственной закупки/);
     h.run("analysis", "work", values);
     assert.equal(h.c.agendaDetails?.procurementSubject, original);
     const doc = h.c.documents.at(-1)!;
+    assert.equal(doc.snapshot?.agendaDetails?.procurementSubjectTranslations?.[primary], editedOriginal);
     assert.equal(doc.snapshot?.agendaDetails?.procurementSubjectTranslations?.[other], translation);
     h.c.agendaDetails!.procurementSubjectTranslations![other] = "изменённый позже перевод";
     for (const language of [primary, other]) {
       const html = renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "certificate", document: doc, language }));
-      assert.ok(html.includes(language === primary ? original : translation));
+      assert.ok(html.includes(language === primary ? editedOriginal : translation));
       assert.ok(!html.includes("изменённый позже перевод"));
     }
   });

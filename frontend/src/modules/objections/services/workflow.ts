@@ -1768,10 +1768,11 @@ export function applyAction(
         const languages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : "")));
         savePointTranslations(languages);
         if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject) {
-          for (const language of languages.filter(item => item !== appealLanguage(c))) {
+          for (const language of languages) {
             const key = `procurementSubject_${language}`;
-            const value = String(form.get(key) ?? c.agendaDetails.procurementSubjectTranslations?.[language] ?? "").trim();
-            if (!value) throw new Error(`Заполните перевод предмета государственной закупки — ${LANGUAGE_LABELS[language]}`);
+            const initial = c.agendaDetails.procurementSubjectTranslations?.[language] ?? (language === appealLanguage(c) ? c.agendaDetails.procurementSubject : "");
+            const value = String(form.get(key) ?? initial).trim();
+            if (!value) throw new Error(`Заполните ${language === appealLanguage(c) ? "предмет" : "перевод предмета"} государственной закупки — ${LANGUAGE_LABELS[language]}`);
             c.agendaDetails.procurementSubjectTranslations = { ...c.agendaDetails.procurementSubjectTranslations, [language]: value };
           }
         }
