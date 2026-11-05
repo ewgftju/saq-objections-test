@@ -566,13 +566,31 @@ test("при добавлении второго языка на этапе пр
     protocolDavga_p1_chair: "RU",
     protocolDavgaKk_p1_chair: "KZ",
   };
+  const fields = actionForm("vote", h.c, h.state.date, values).fields;
+  assert.ok(fields.some(field => field.name === "pointTitle_kk_p1" && field.required));
+  assert.ok(!fields.some(field => field.name === "pointTitle_ru_p1"));
+  const certificate = h.c.documents.find(item => item.kind === "certificate")!;
   assert.throws(() => h.run("vote", "work", values), /Қазақша/);
   h.run("vote", "work", {
     ...values,
+    pointTitle_ru_p1: "Попытка подмены",
     pointTitle_kk_p1: "Тармақ KZ",
     pointArgument_kk_p1: "Дәлел KZ",
   });
   assert.deepEqual(h.c.meeting?.languages, ["ru", "kk"]);
+  assert.equal(h.c.issues[0].translations?.kk?.title, undefined);
+  assert.equal(certificate.snapshot?.issues[0].translations?.kk?.title, undefined);
+  const draft = h.c.documents.find(item => item.name === "Проект протокола заседания")!;
+  assert.equal(draft.snapshot?.issues[0].translations?.ru?.title, "Русский пункт");
+  assert.equal(draft.snapshot?.issues[0].translations?.kk?.title, "Тармақ KZ");
+  const signed = { reason: "Итог голосования", signed_chair: "on" };
+  h.run("sign", "commission", signed);
+  const protocol = h.c.documents.find(item => item.name === "Подписанный протокол заседания")!;
+  for (const language of ["ru", "kk"] as const) {
+    const html = renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "protocol", document: protocol, language }));
+    assert.match(html, language === "ru" ? /Русский пункт/ : /Тармақ KZ/);
+    assert.doesNotMatch(html, /Попытка подмены/);
+  }
 });
 
 test("комментарий члена АК сохраняет оригинал; перевод заполняет рабочий орган", () => {
@@ -829,3 +847,21 @@ for (const primary of ["ru", "kk"] as const) {
     }
   });
 }
+
+test("казахское обращение: отсутствующий русский перевод сохраняется только в протоколе", () => {
+  const h = fixture("kk");
+  h.c.status = "materials";
+  h.run("analysis", "work", { documentLanguageMode: "kk", davgaArgumentsKk_p1: "Дәлел KZ" });
+  h.c.status = "meeting";
+  h.c.members = [{ id: "chair", name: "Председатель", present: true, recused: false, reason: "" }];
+  const values = { documentLanguageMode: "both", pointTitle_ru_p1: "Перевод RU", protocolVote_p1_chair: "accept", protocolDavga_p1_chair: "RU", protocolDavgaKk_p1_chair: "KZ" };
+  const fields = actionForm("vote", h.c, h.state.date, values).fields;
+  assert.ok(fields.some(field => field.name === "pointTitle_ru_p1"));
+  assert.ok(!fields.some(field => field.name === "pointTitle_kk_p1"));
+  h.run("vote", "work", values);
+  assert.equal(h.c.meeting?.protocolVersions?.at(-1)?.pointTitles?.p1?.ru, "Перевод RU");
+  assert.equal(h.c.issues[0].translations?.ru?.title, undefined);
+  h.run("return-protocol", "director", { returnComment: "Уточнить" });
+  const returned = actionForm("vote", h.c, h.state.date, { documentLanguageMode: "both" }).fields;
+  assert.equal(returned.find(field => field.name === "pointTitle_ru_p1")?.value, "Перевод RU");
+});

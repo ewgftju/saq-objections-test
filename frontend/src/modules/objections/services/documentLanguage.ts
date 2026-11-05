@@ -55,6 +55,27 @@ export function pointText(
     (language === appealLanguage(c) ? point[field] : "")
   );
 }
+/** Description from the current certificate in one of its actual languages. */
+export function certificatePointTitle(c: ObjectionCase, point: ViolationPoint, language: DocumentLanguage): string {
+  const doc = [...c.documents].reverse().find(item => item.kind === "certificate" && item.snapshot?.certificate);
+  const source = doc?.snapshot;
+  const languages = doc?.languages || source?.certificate?.languages || c.certificate?.languages || [appealLanguage(c)];
+  if (!languages.includes(language)) return "";
+  const sourcePoint = source?.issues.find(item => item.id === point.id) || point;
+  return pointText({ ...c, ...source, appealLanguage: source?.appealLanguage || c.appealLanguage }, sourcePoint, "title", language);
+}
+
+export function protocolPointTitle(c: ObjectionCase, point: ViolationPoint, language: DocumentLanguage): string {
+  const fromCertificate = certificatePointTitle(c, point, language);
+  if (fromCertificate) return fromCertificate;
+  const version = [...(c.meeting?.protocolVersions || [])].reverse().find(item => (item.certificateRevision ?? 0) === (c.certificateRevision ?? 0));
+  return version?.pointTitles?.[point.id]?.[language] || "";
+}
+
+export function protocolIssuesWithTitles(c: ObjectionCase, titles?: Record<string, Partial<Record<DocumentLanguage, string>>>): ViolationPoint[] {
+  return c.issues.map(point => ({ ...point, translations: { ...point.translations, ...Object.fromEntries(Object.entries(titles?.[point.id] || {}).map(([language, title]) => [language, { ...point.translations?.[language as DocumentLanguage], title }])) } }));
+}
+
 /** Copy only: render a language without modifying source data or signed snapshots. */
 export function localizedCase(
   c: ObjectionCase,

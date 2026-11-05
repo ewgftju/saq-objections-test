@@ -1,4 +1,4 @@
-import { appealLanguage, selectedLanguages, pointText, LANGUAGE_LABELS, localizedCase } from "./documentLanguage";
+import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, protocolIssuesWithTitles, LANGUAGE_LABELS, localizedCase } from "./documentLanguage";
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
@@ -1970,7 +1970,18 @@ export function applyAction(
       break;
     case "vote": {
       const protocolLanguages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : "")));
-      if (form.has("documentLanguageMode") || c.appealLanguage) savePointTranslations(protocolLanguages);
+      const pointTitles: Record<string, Partial<Record<"ru" | "kk", string>>> = {};
+      if (form.has("documentLanguageMode") || c.appealLanguage) {
+        for (const point of disputed(c)) {
+          pointTitles[point.id] = {};
+          for (const language of protocolLanguages) {
+            const fromCertificate = certificatePointTitle(c, point, language);
+            const title = fromCertificate || String(form.get(`pointTitle_${language}_${point.id}`) ?? protocolPointTitle(c, point, language)).trim();
+            if (!title) throw new Error(`Заполните перевод описания пункта № ${point.number} — ${LANGUAGE_LABELS[language]}`);
+            pointTitles[point.id][language] = title;
+          }
+        }
+      }
       const previousVersions = c.meeting?.protocolVersions || [];
       const previousOriginalVotes = c.meeting?.originalVotes ?? structuredClone(c.votes || null);
       const currentVersions = previousVersions.filter((version) => (version.certificateRevision ?? 0) === (c.certificateRevision ?? 0));
@@ -2086,7 +2097,7 @@ export function applyAction(
         recommendations: recommendationText || undefined,
         recommendationsKk: String(form.get("recommendationsKk") || "").trim() || undefined,
         originalVotes: previousOriginalVotes,
-        protocolVersions: [...previousVersions, { createdAt: changedAt, author: c.assignee, languages: protocolLanguages, certificateRevision: c.certificateRevision ?? 0, rows: protocolRows }],
+        protocolVersions: [...previousVersions, { createdAt: changedAt, author: c.assignee, languages: protocolLanguages, certificateRevision: c.certificateRevision ?? 0, pointTitles, rows: protocolRows }],
       };
       const changes = protocolRows.filter((row) => row.edited !== (previousRows.find((previous) => previous.pointId === row.pointId && previous.memberId === row.memberId)?.edited ?? row.original));
       if (changes.length) c.history.push({ date, actor: c.assignee, title: "Изменены обоснования протокола", text: changes.map((row) => `Пункт № ${row.pointNumber}, ${row.memberName}: было: ${previousRows.find((previous) => previous.pointId === row.pointId && previous.memberId === row.memberId)?.edited ?? row.original}\nСтало: ${row.edited}`).join("\n\n") });
@@ -2096,6 +2107,7 @@ export function applyAction(
         "protocol",
         "Состав участников зафиксирован. Ожидаются подписи членов АК.",
       );
+      if (c.documents.at(-1)?.snapshot) c.documents.at(-1)!.snapshot!.issues = protocolIssuesWithTitles(c, pointTitles);
       break;
     }
     case "sign": {
@@ -2139,6 +2151,7 @@ export function applyAction(
         c.repeatHearingStatus = undefined;
       }
       doc("Подписанный протокол заседания", "protocol", c.result.reason);
+      if (c.documents.at(-1)?.snapshot && version?.pointTitles) c.documents.at(-1)!.snapshot!.issues = protocolIssuesWithTitles(c, version.pointTitles);
       if (c.certificate && version?.rows?.length) {
         const protocolRows = version.rows;
         const protocolLanguages = version.languages || c.meeting.languages || [appealLanguage(c)];

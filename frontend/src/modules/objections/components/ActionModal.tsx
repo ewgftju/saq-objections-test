@@ -1,4 +1,4 @@
-import { appealLanguage, selectedLanguages, pointText, LANGUAGE_LABELS } from "../services/documentLanguage";
+import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, LANGUAGE_LABELS } from "../services/documentLanguage";
 import type { DocumentLanguage } from "../../../types";
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
@@ -434,7 +434,7 @@ export default function ActionModal({
   const [previewLanguage, setPreviewLanguage] = useState<DocumentLanguage>(appealLanguage(c));
   const activePreviewLanguage = documentLanguages.includes(previewLanguage) ? previewLanguage : documentLanguages[0];
   const previewLanguageTabs = <div className="request-modal-tabs" role="tablist" aria-label="Язык печатной формы">{documentLanguages.map(language => <button key={language} type="button" role="tab" aria-selected={activePreviewLanguage === language} className={activePreviewLanguage === language ? "active" : ""} onClick={() => setPreviewLanguage(language)}>{LANGUAGE_LABELS[language]}</button>)}</div>;
-  const previewCase = { ...c, agendaDetails: c.agendaDetails && action === "analysis" ? { ...c.agendaDetails, procurementSubjectTranslations: { ...c.agendaDetails.procurementSubjectTranslations, ...Object.fromEntries(documentLanguages.filter(language => values[`procurementSubject_${language}`] !== undefined).map(language => [language, values[`procurementSubject_${language}`]])) } } : c.agendaDetails, issues: c.issues.map(point => ({ ...point, translations: { ...point.translations, ...Object.fromEntries(documentLanguages.map(language => [language, { ...point.translations?.[language], title: values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language) }])) } })) };
+  const previewCase = { ...c, agendaDetails: c.agendaDetails && action === "analysis" ? { ...c.agendaDetails, procurementSubjectTranslations: { ...c.agendaDetails.procurementSubjectTranslations, ...Object.fromEntries(documentLanguages.filter(language => values[`procurementSubject_${language}`] !== undefined).map(language => [language, values[`procurementSubject_${language}`]])) } } : c.agendaDetails, issues: c.issues.map(point => ({ ...point, translations: { ...point.translations, ...Object.fromEntries(documentLanguages.map(language => [language, { ...point.translations?.[language], title: action === "vote" ? (certificatePointTitle(c, point, language) || values[`pointTitle_${language}_${point.id}`] || protocolPointTitle(c, point, language) || "") : values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language) }])) } })) };
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");

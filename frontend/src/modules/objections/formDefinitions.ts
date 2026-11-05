@@ -1,4 +1,4 @@
-import { appealLanguage, selectedLanguages, pointText, LANGUAGE_LABELS } from "./services/documentLanguage";
+import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, LANGUAGE_LABELS } from "./services/documentLanguage";
 import { preparedActionValues } from "./demoForm";
 import type { Action, ObjectionCase, Role } from "../../types";
 import { DEMO_USER } from "../../config";
@@ -588,6 +588,7 @@ export function actionForm(
           ),
           readOnly: true,
         },
+        ...disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).filter(language => !certificatePointTitle(c, point, language)).map(language => ({ ...area(`pointTitle_${language}_${point.id}`, `Перевод описания пункта № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? protocolPointTitle(c, point, language)), language }))),
         ...(selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).includes("ru") ? [{ ...area("recommendations", "Рекомендации — Русский", c.meeting?.recommendations || ""), required: false, language: "ru" as const }] : []),
         ...(selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : undefined)).includes("kk") ? [{ ...area("recommendationsKk", "Ұсынымдар — Қазақша", c.meeting?.recommendationsKk || ""), required: false, language: "kk" as const }] : []),
       );

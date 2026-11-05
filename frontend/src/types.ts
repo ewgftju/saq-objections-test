@@ -153,6 +153,7 @@ export interface Meeting {
 
 export interface ProtocolVersion {
   languages?: DocumentLanguage[];
+  pointTitles?: Record<string, Partial<Record<DocumentLanguage, string>>>;
   certificateRevision?: number;
   createdAt: string;
   author: string;
