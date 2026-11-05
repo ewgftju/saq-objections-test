@@ -16,3 +16,17 @@ test("язык обращения виден в шапке карточки", ()
 
   }
 });
+
+
+test("ДВГА и КВГА не видят язык обращения в карточке", () => {
+  const state = initialState();
+  const c = state.cases[0];
+  c.appealLanguage = "kk";
+  for (const role of ["dvga", "kvga"] as const) for (const tab of ["overview", "review"] as const) {
+    const html = renderToStaticMarkup(createElement(CaseWorkspace, { c, role, tab, onBack() {}, onTab() {}, onAction() {}, onDocument() {}, onUpload() {} }));
+    assert.doesNotMatch(html, /Язык обращения/);
+    assert.ok(html.includes(c.id));
+  }
+  const work = renderToStaticMarkup(createElement(CaseWorkspace, { c, role: "work", tab: "overview", onBack() {}, onTab() {}, onAction() {}, onDocument() {}, onUpload() {} }));
+  assert.match(work, /Язык обращения/);
+});

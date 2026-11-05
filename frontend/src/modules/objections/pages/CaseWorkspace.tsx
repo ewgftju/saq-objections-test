@@ -762,7 +762,7 @@ export default function CaseWorkspace({
       </div>
       <PageHeading
         title={`${c.appealType || "Обращение"} ${c.id}`}
-        subtitle={`${c.org} · Язык обращения: ${c.appealLanguage === "kk" ? "казахский" : c.appealLanguage === "ru" ? "русский" : "не указан"}`}
+        subtitle={isAuthorityRole(role) ? c.org : `${c.org} · Язык обращения: ${c.appealLanguage === "kk" ? "казахский" : c.appealLanguage === "ru" ? "русский" : "не указан"}`}
         action={
           <>
             {(!recipientLimited || isAuthorityRole(role)) && visibleStatus && (
@@ -837,7 +837,7 @@ export default function CaseWorkspace({
                     value={c.appealType ?? TYPES[c.type]}
                   />
                   <Fact label="Номер обращения в системе" value={c.id} />
-                  <Fact label="Язык обращения" value={c.appealLanguage === "kk" ? "Казахский" : c.appealLanguage === "ru" ? "Русский" : "Не указан"} />
+                  {!isAuthorityRole(role) && <Fact label="Язык обращения" value={c.appealLanguage === "kk" ? "Казахский" : c.appealLanguage === "ru" ? "Русский" : "Не указан"} />}
                   <Fact
                     label={
                       hasSeparateAuditObject
