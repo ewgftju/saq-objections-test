@@ -951,9 +951,7 @@ export default function ActionModal({
               <input type="hidden" name="withdrawCertificateProposal" value={pendingCertificateRequestAtOpen} />
               <Notice>Предложение ещё не рассмотрено директором ДАВГА. При формировании {action === "deliver" ? "мотивированного ответа" : "проекта решения"} предложение будет отозвано, а в приложение подтянутся текущие доводы для документа.</Notice>
             </>}
-            {action === "create-decision-project" || requiresMotivatedResponse(c) ? (
-              <p>Язык приложения: <b>{appealLanguage(c) === "kk" ? "казахский" : "русский"}</b>{c.appealLanguage ? " — в соответствии с языком обращения." : " — язык обращения не указан, используется русский по умолчанию."} Основная часть документа формируется на казахском языке.</p>
-            ) : <p>Язык документа: <b>{LANGUAGE_LABELS[appealLanguage(c)]}</b></p>}
+            <p>Язык документа: <b>{LANGUAGE_LABELS[appealLanguage(c)]}</b></p>
             <div className="request-modal-details">
               <div><span>Автор</span><b>{c.assignee === "Не назначен" ? DEMO_USER.fullName : c.assignee}</b></div>
               <div><span>Печатная форма</span><b>{action === "create-decision-project" ? "Проект решения и приложение" : (c.appealType || "").trim().startsWith("Жалоба") || c.appealType === "Заявление" || c.appealType === "Возражение на аудиторский отчет" || c.appealType === "Возражение на аудиторский отчёт" ? "Мотивированный ответ и приложение" : "Окончательный ответ и приложение"}</b></div>
