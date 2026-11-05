@@ -948,6 +948,9 @@ export function applyAction(
         if (!title) throw new Error(action === "vote" ? `Для протокола на языке ${LANGUAGE_LABELS[language]} необходимо сначала сформировать справку с описанием пункта № ${point.number} на этом языке.` : `Заполните описание по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`);
         if (!point.argument) throw new Error(`Заполните исходные доводы заявителя по пункту № ${point.number}`);
         point.translations[language] = { ...point.translations[language], title };
+        if (action === "analysis" && language !== appealLanguage(c) && form.has(`certificateArgumentTranslation_${language}_${point.id}`)) {
+          point.certificateArgumentTranslations = { ...point.certificateArgumentTranslations, [language]: String(form.get(`certificateArgumentTranslation_${language}_${point.id}`) || "").trim() };
+        }
       }
     }
   };

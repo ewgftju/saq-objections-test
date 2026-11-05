@@ -883,3 +883,31 @@ for (const primary of ["ru", "kk"] as const) {
     assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "protocol", document: protocol, language: other })).includes(translated));
   });
 }
+
+for (const primary of ["ru", "kk"] as const) {
+  test(`${primary}: перевод довода заявителя в справке сохраняется отдельно от оригинала`, () => {
+    const h = fixture(primary);
+    const other = primary === "ru" ? "kk" : "ru";
+    const original = h.c.issues[0].argument;
+    const translation = other === "ru" ? "Переведённый довод" : "Аударылған дәлел";
+    h.c.status = "materials";
+    const values = { documentLanguageMode: "both", [`pointTitle_${other}_p1`]: "Перевод описания", davgaArguments_p1: "Доводы RU", davgaArgumentsKk_p1: "Дәлел KZ", [`certificateArgumentTranslation_${other}_p1`]: translation };
+    const fields = actionForm("analysis", h.c, h.state.date, values).fields;
+    assert.ok(fields.some(field => field.name === `certificateArgumentTranslation_${other}_p1` && field.required === false && !field.readOnly));
+    assert.ok(!fields.some(field => field.name === `certificateArgumentTranslation_${primary}_p1`));
+    h.c.analysisDraft = { values, savedAt: h.state.date };
+    const modal = renderToStaticMarkup(createElement(ActionModal, { c: h.c, action: "analysis", role: "work", date: h.state.date, onClose() {}, onSubmit() {} }));
+    assert.ok(modal.includes(translation));
+    h.run("analysis", "work", values);
+    const document = h.c.documents.at(-1)!;
+    assert.equal(h.c.issues[0].argument, original);
+    assert.equal(document.snapshot?.issues[0].certificateArgumentTranslations?.[other], translation);
+    assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "certificate", document, language: primary })).includes(original));
+    assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "certificate", document, language: other })).includes(translation));
+    h.c.issues[0].certificateArgumentTranslations![other] = "Более позднее изменение";
+    assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "certificate", document, language: other })).includes(translation));
+    const withoutTranslation = structuredClone(document);
+    delete withoutTranslation.snapshot!.issues[0].certificateArgumentTranslations;
+    assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "certificate", document: withoutTranslation, language: other })).includes(original));
+  });
+}

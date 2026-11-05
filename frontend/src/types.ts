@@ -74,6 +74,7 @@ export interface ViolationPoint {
   finding: string;
   argument: string;
   translations?: Partial<Record<DocumentLanguage, { title?: string; argument?: string; additionalArguments?: string[] }>>;
+  certificateArgumentTranslations?: Partial<Record<DocumentLanguage, string>>;
   /** Дополнительные доводы заявителя, представленные на последующих заслушиваниях. */
   additionalArguments?: string[];
   amount: number;

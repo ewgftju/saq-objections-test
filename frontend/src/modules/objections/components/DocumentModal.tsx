@@ -1696,6 +1696,12 @@ function LegacyDocumentContent({
 
 function certificateLocalizedCase(c: ObjectionCase, language: DocumentLanguage, kind: string) {
   const localized = localizedCase(c, language);
+  if (kind === "certificate") {
+    localized.issues = localized.issues.map(point => {
+      const original = c.issues.find(item => item.id === point.id);
+      return { ...point, argument: language !== (c.appealLanguage || "ru") ? original?.certificateArgumentTranslations?.[language]?.trim() || point.argument : point.argument };
+    });
+  }
   if (kind === "certificate" && localized.agendaDetails) {
     localized.agendaDetails.procurementSubject = c.agendaDetails?.procurementSubjectTranslations?.[language] || c.agendaDetails?.procurementSubject;
   }
