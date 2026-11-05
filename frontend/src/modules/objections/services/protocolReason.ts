@@ -16,31 +16,41 @@ export function protocolDavgaFromReason(reason: string) {
 }
 
 export function signedProtocolDavga(c: ObjectionCase, pointId: string, language: DocumentLanguage = "ru") {
-  if (language === "kk") return signedProtocolDavga(localizedCase(c, language), pointId);
   const version = [...(c.meeting?.protocolVersions || [])].reverse().find((item) => item.signedAt);
+  const signedAt = version?.signedAt || "";
+  if (version?.languages?.length && !version.languages.includes(language)) return { text: "", signedAt };
   const point = c.issues.find((item) => item.id === pointId);
   const votes = c.votes?.[pointId];
   const outcome = pointOutcomeFromVotes(votes?.votes || {}, votes?.chair) || point?.final || point?.proposal;
   const row = version?.rows.find((item) => item.pointId === pointId && normalizeVoteChoice(item.vote) === outcome);
-  return { text: protocolDavgaFromReason(row?.edited || "").trim(), signedAt: version?.signedAt || "" };
+  return { text: protocolDavgaFromReason((language === "kk" ? row?.editedKk : row?.edited) || "").trim(), signedAt };
+}
+
+export function hasDavgaText(value: string) {
+  return Boolean(value.trim()) && !/^[\s—–-]+$/u.test(value);
 }
 
 export function decisionProjectDavga(c: ObjectionCase, pointId: string, language: DocumentLanguage = "ru") {
-  if (language === "kk") return decisionProjectDavga(localizedCase(c, language), pointId);
-  const protocol = signedProtocolDavga(c, pointId);
+  const protocol = signedProtocolDavga(c, pointId, language);
   const overrides = c.decisionProjectDavgaOverrides;
+  const values = language === "kk" ? overrides?.byPointKk : overrides?.byPoint;
   return protocol.signedAt && overrides?.protocolSignedAt === protocol.signedAt
-    ? overrides.byPoint[pointId] ?? protocol.text
+    ? values?.[pointId] ?? protocol.text
     : protocol.text;
 }
 
 export function motivatedResponseDavga(c: ObjectionCase, pointId: string, language: DocumentLanguage = "ru") {
-  if (language === "kk") return motivatedResponseDavga(localizedCase(c, language), pointId);
-  const approved = c.motivatedResponseDavgaOverrides?.[pointId];
+  const approved = (language === "kk" ? c.motivatedResponseDavgaOverridesKk : c.motivatedResponseDavgaOverrides)?.[pointId];
   if (approved !== undefined) return approved;
   const project = [...c.documents].reverse().find((doc) => doc.kind === "decision-project" && doc.name === "Подписанный проект решения" && doc.snapshot);
-  if (project?.snapshot) return decisionProjectDavga({ ...c, ...project.snapshot, decisionProjectDavgaOverrides: project.snapshot.decisionProjectDavgaOverrides }, pointId);
-  return signedProtocolDavga(c, pointId).text;
+  if (project?.snapshot) return decisionProjectDavga({ ...c, ...project.snapshot, decisionProjectDavgaOverrides: project.snapshot.decisionProjectDavgaOverrides }, pointId, language);
+  return signedProtocolDavga(c, pointId, language).text;
+}
+
+export function missingAppealDavga(c: ObjectionCase, stage: "decision-project" | "motivated-response") {
+  if (!c.appealLanguage) return [];
+  const language = c.appealLanguage;
+  return disputed(c).filter(point => !hasDavgaText(stage === "decision-project" ? decisionProjectDavga(c, point.id, language) : motivatedResponseDavga(c, point.id, language)));
 }
 
 export function replaceProtocolDavga(reason: string, davga: string) {

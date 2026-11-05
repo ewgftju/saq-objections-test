@@ -830,11 +830,12 @@ function LegacyDocumentContent({
                     : c.decisionProjectDavgaOverrides,
                 },
                 point.id,
+                language,
               )
             : document?.snapshot
               ? (document.snapshot.motivatedResponseDavgaByPoint?.[point.id] ??
-                signedProtocolDavga(snapshot, point.id).text)
-              : motivatedResponseDavga(c, point.id)) || "—"
+                signedProtocolDavga(snapshot, point.id, language).text)
+              : motivatedResponseDavga(c, point.id, language)) || "—"
         : (winningReasonMemberId &&
             pointVotes?.voteReasons?.[winningReasonMemberId]) ||
           snapshot.result?.reason ||

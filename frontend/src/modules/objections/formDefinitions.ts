@@ -5,7 +5,7 @@ import { DEMO_USER } from "../../config";
 import { OUTCOMES } from "../../data/constants";
 import { addWorkdays, filingDeadline } from "./services/deadlines";
 import { disputed } from "./services/decisions";
-import { certificateBasisForPoint, decisionProjectDavga, motivatedResponseDavga, protocolDavgaFromReason } from "./services/protocolReason";
+import { certificateBasisForPoint, decisionProjectDavga, motivatedResponseDavga, hasDavgaText, protocolDavgaFromReason } from "./services/protocolReason";
 import { controlDecisions } from "./services/workflow";
 import { hasSubjectSaqCabinet, subjectSaqCabinetLabel } from "./services/saqCabinets";
 
@@ -202,7 +202,16 @@ export function actionForm(
     case "propose-certificate-change":
       title = c.status === "decision_project" || (c.status === "decided" && requiresMotivatedResponse(c)) ? "Предложить изменение доводов ДАВГА" : "Предложить изменение справки";
       note = c.status === "decision_project" ? "Измените доводы по нужным пунктам и проверьте соответствие языковых версий. Принятые директором доводы войдут в проект решения и новую версию справки." : c.status === "decided" && requiresMotivatedResponse(c) ? "Измените доводы по нужным пунктам и проверьте соответствие языковых версий. Принятые директором доводы войдут в мотивированный ответ и новую версию справки." : "Измените доводы по нужным пунктам. До решения директора действующая справка не изменится.";
-      fields.push(...disputed(c).flatMap(point => [...new Set([...(c.certificate?.languages || [appealLanguage(c)]), ...(c.meeting?.languages || [])])].map(language => ({ ...area(`${language === "kk" ? "proposedDavgaKk" : "proposedDavga"}_${point.id}`, `Доводы ДАВГА № ${point.number} — ${LANGUAGE_LABELS[language]}`, c.status === "decision_project" ? decisionProjectDavga(c, point.id, language) : c.status === "decided" && requiresMotivatedResponse(c) ? motivatedResponseDavga(c, point.id, language) : protocolDavgaFromReason(certificateBasisForPoint(c, point, language))), language }))));
+      if (c.status === "decision_project" || (c.status === "decided" && requiresMotivatedResponse(c))) {
+        const target = appealLanguage(c);
+        const source = target === "ru" ? "kk" : "ru";
+        for (const point of disputed(c)) {
+          const getDavga = c.status === "decision_project" ? decisionProjectDavga : motivatedResponseDavga;
+          const original = getDavga(c, point.id, source);
+          if (!hasDavgaText(getDavga(c, point.id, target)) && hasDavgaText(original)) fields.push({ ...area(`sourceDavga_${point.id}`, `Исходные доводы ДАВГА № ${point.number} — ${LANGUAGE_LABELS[source]}`, original), readOnly: true, required: false });
+        }
+      }
+      fields.push(...disputed(c).flatMap(point => [...new Set([...(c.certificate?.languages || [appealLanguage(c)]), ...(c.meeting?.languages || []), ...((c.status === "decision_project" || (c.status === "decided" && requiresMotivatedResponse(c))) ? [appealLanguage(c)] : [])])].map(language => ({ ...area(`${language === "kk" ? "proposedDavgaKk" : "proposedDavga"}_${point.id}`, `Доводы ДАВГА № ${point.number} — ${LANGUAGE_LABELS[language]}`, c.status === "decision_project" ? decisionProjectDavga(c, point.id, language) : c.status === "decided" && requiresMotivatedResponse(c) ? motivatedResponseDavga(c, point.id, language) : protocolDavgaFromReason(certificateBasisForPoint(c, point, language))), language, required: false }))));
       fields.push({ ...area("changeReason", "Причина изменения"), required: false });
       break;
     case "review-certificate-change": {

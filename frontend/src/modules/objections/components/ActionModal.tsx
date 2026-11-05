@@ -8,7 +8,7 @@ import { Button, Modal, Notice } from "../../../components/ui";
 import { actionForm, requiresConclusion, requiresMotivatedResponse } from "../formDefinitions";
 import type { FormField, FormValues } from "../formDefinitions";
 import { disputed, normalizeVoteChoice } from "../services/decisions";
-import { certificateBasisForPoint, currentProtocolRows, protocolDavgaFromReason, replaceProtocolDavga } from "../services/protocolReason";
+import { certificateBasisForPoint, currentProtocolRows, protocolDavgaFromReason, replaceProtocolDavga, missingAppealDavga } from "../services/protocolReason";
 import { DocumentContent } from "./DocumentModal";
 import { DEMO_USER } from "../../../config";
 import { OUTCOMES } from "../../../data/constants";
@@ -394,6 +394,7 @@ export default function ActionModal({
     const request = c.certificateChangeRequests?.at(-1);
     return request?.status === "pending" ? request.proposedAt : undefined;
   });
+  const missingRequiredDavga = action === "create-decision-project" ? missingAppealDavga(c, "decision-project") : action === "deliver" && requiresMotivatedResponse(c) ? missingAppealDavga(c, "motivated-response") : [];
   const [values, setValues] = useState<FormValues>(() => {
     if (action === "request" || action === "request-saq")
       return { ...(c.requestDrafts?.[action]?.values || {}) };
@@ -947,7 +948,8 @@ export default function ActionModal({
         ) : action === "deliver" || action === "create-decision-project" ? (
           <>
             {(action === "create-decision-project" || (action === "deliver" && requiresMotivatedResponse(c))) && <input type="hidden" name="certificateRevisionAtOpen" value={certificateRevisionAtOpen} />}
-            {(action === "create-decision-project" || (action === "deliver" && requiresMotivatedResponse(c))) && pendingCertificateRequestAtOpen && <>
+            {missingRequiredDavga.length > 0 && <Notice tone="amber">Нет согласованных доводов ДАВГА на языке обращения ({LANGUAGE_LABELS[appealLanguage(c)]}) по пунктам: {missingRequiredDavga.map(point => point.number).join(", ")}. {pendingCertificateRequestAtOpen ? "Предложение ожидает решения директора ДАВГА." : "Предложите перевод директору ДАВГА и дождитесь принятия."}</Notice>}
+            {(action === "create-decision-project" || (action === "deliver" && requiresMotivatedResponse(c))) && pendingCertificateRequestAtOpen && missingRequiredDavga.length === 0 && <>
               <input type="hidden" name="withdrawCertificateProposal" value={pendingCertificateRequestAtOpen} />
               <Notice>Предложение ещё не рассмотрено директором ДАВГА. При формировании {action === "deliver" ? "мотивированного ответа" : "проекта решения"} предложение будет отозвано, а в приложение подтянутся текущие доводы для документа.</Notice>
             </>}
@@ -1779,7 +1781,7 @@ export default function ActionModal({
               {action === "fill-request-response" ? "Сохранить черновик" : isAnalysis ? "Сохранить" : "Сохранить проект"}
             </Button>
           )}
-          <Button type="submit" primary disabled={saving}>
+          <Button type="submit" primary disabled={saving || missingRequiredDavga.length > 0}>
             {saving
               ? "Сохранение..."
               : action === "position"
@@ -1790,9 +1792,9 @@ export default function ActionModal({
                   ? "Направить ответ"
                 : action === "vote" && pendingCertificateRequestAtOpen
                   ? "Сформировать протокол и отозвать предложение"
-                : action === "create-decision-project" && pendingCertificateRequestAtOpen
+                : action === "create-decision-project" && pendingCertificateRequestAtOpen && missingRequiredDavga.length === 0
                   ? "Сформировать проект решения и отозвать предложение"
-                : action === "deliver" && requiresMotivatedResponse(c) && pendingCertificateRequestAtOpen
+                : action === "deliver" && requiresMotivatedResponse(c) && pendingCertificateRequestAtOpen && missingRequiredDavga.length === 0
                   ? "Сформировать мотивированный ответ и отозвать предложение"
                 : definition.submit}
           </Button>
