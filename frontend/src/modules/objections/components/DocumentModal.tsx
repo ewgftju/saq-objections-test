@@ -639,7 +639,7 @@ function LegacyDocumentContent({
             ? ` № ${document.certificateNumber}`
             : ""}
         </h1>
-        <h2>{t("по результатам изучения и анализа возражения")}</h2>
+        <h2>{document?.certificateVersion?.source === "protocol-result" ? (language === "kk" ? "отырыс хаттамасының қорытындылары бойынша" : "по итогам протокола заседания") : t("по результатам изучения и анализа возражения")}</h2>
         <p className="certificate-template-intro">
           {language === "kk"
             ? `Қазақстан Республикасы Қаржы министрлігіне ${kazakhAppealReference(snapshot, auditAuthorityKazakhName)} келіп түсті.`

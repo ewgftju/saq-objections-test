@@ -328,9 +328,10 @@ export interface CaseDocument {
   signedDocumentDate?: string;
   certificateVersion?: {
     stage: "protocol" | "decision-project" | "motivated-response";
+    source?: "protocol-result";
     createdAt: string;
     proposedBy: string;
-    approvedBy: string;
+    approvedBy?: string;
   };
   dataUrl?: string;
   filename?: string;

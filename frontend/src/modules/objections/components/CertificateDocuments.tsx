@@ -38,7 +38,7 @@ export function CertificateDocuments({ c, role, onDocument }: { c: ObjectionCase
     <h4>Справка</h4>
     <div className="request-documents-list">
       {latest && <div className="request-document-row">
-        <span>Справка с учётом изменений доводов ДАВГА{latest.certificateNumber ? ` · № ${latest.certificateNumber}` : ""}</span>
+        <span>{latest.certificateVersion?.source === "protocol-result" ? "Справка по итогам протокола заседания" : "Справка с учётом изменений доводов ДАВГА"}{latest.certificateNumber ? ` · № ${latest.certificateNumber}` : ""}</span>
         <div className="request-document-actions">
           {languagesForDocument(c, latest.kind, latest).map(language => <Button key={language} onClick={() => onDocument(latest.kind, { ...latest, viewLanguage: language })}>{latest.languages?.length === 2 ? `Просмотр ${language === "kk" ? "KZ" : "RU"}` : "Просмотр"}</Button>)}
           <Button onClick={() => downloadFile(`${c.id}-${latest.name}.doc`, wordDocumentHtml({ c, kind: latest.kind, document: latest }), "application/msword")}>{latest.languages?.length === 2 ? "Скачать комплект" : "Скачать Word"}</Button>
@@ -63,7 +63,7 @@ export function CertificateDocuments({ c, role, onDocument }: { c: ObjectionCase
           const timestamp = info?.createdAt ? new Date(info.createdAt) : null;
           return <tr key={`${document.name}-${number}`}>
             <td>Версия {number}</td>
-            <td>{info ? stageLabels[info.stage] : "Этап не указан"}{info && <small style={{ display: "block" }}>Предложил: {info.proposedBy}<br />Принял: {info.approvedBy}</small>}</td>
+            <td>{info ? stageLabels[info.stage] : "Этап не указан"}{info && <small style={{ display: "block" }}>{info.source === "protocol-result" ? <>Сформировал: {info.proposedBy}</> : <>Предложил: {info.proposedBy}<br />Принял: {info.approvedBy}</>}</small>}</td>
             <td>{timestamp && !Number.isNaN(timestamp.getTime()) ? timestamp.toLocaleString("ru-RU") : `${formatDate(document.date)} (время не указано)`}</td>
             <td>{actions(document)}</td>
           </tr>;

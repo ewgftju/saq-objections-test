@@ -1,0 +1,98 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { initialState } from "../../../api/objectionsRepository";
+import { addDocument, applyAction } from "../services/workflow";
+import { decisionProjectDavga } from "../services/protocolReason";
+import { DocumentContent } from "../components/DocumentModal";
+import { CertificateDocuments } from "../components/CertificateDocuments";
+
+test("при формировании протокола создаётся версия справки с доводами итогового голоса по каждому пункту", () => {
+  let state = initialState();
+  const c = state.cases[0];
+  const id = c.id;
+  c.status = "meeting";
+  c.appealLanguage = "ru";
+  c.documents = [];
+  c.issues = ["1", "2"].map(number => ({ id: `p${number}`, number, title: `Вопрос ${number}`, argument: `Довод заявителя ${number}`, finding: "", amount: 0, disputed: true, translations: { ru: { title: `Вопрос ${number}` }, kk: { title: `Мәселе ${number}` } } }));
+  c.members = ["chair", "a", "b"].map(member => ({ id: member, name: member, present: true, recused: false, reason: "" }));
+  c.certificate = { languages: ["ru", "kk"], davgaArguments: "", davgaArgumentsByPoint: { p1: "Справка 1 RU", p2: "Справка 2 RU" }, davgaArgumentsByPointKk: { p1: "Анықтама 1 KZ", p2: "Анықтама 2 KZ" }, memberPositions: [] };
+  addDocument(c, "work", state.date, "Справка по результатам изучения и анализа возражения", "certificate", "");
+  c.documents.at(-1)!.certificateNumber = 7;
+  state.certificateLastNumber = 7;
+  const form = new FormData();
+  form.set("documentLanguageMode", "both");
+  form.set("protocolDate", state.date);
+  for (const point of ["p1", "p2"]) for (const member of ["chair", "a", "b"]) {
+    const vote = point === "p1" ? (member === "chair" ? "reject" : "accept") : member === "chair" ? "reject" : member === "a" ? "accept" : "partial";
+    form.set(`protocolVote_${point}_${member}`, vote);
+    form.set(`protocolDavga_${point}_${member}`, `${point}-${member}-RU`);
+    form.set(`protocolDavgaKk_${point}_${member}`, `${point}-${member}-KZ`);
+  }
+  state = applyAction(state, id, "vote", "work", form);
+  let saved = state.cases.find(item => item.id === id)!;
+  const document = saved.documents.find(item => item.name === "Справка по итогам протокола заседания")!;
+  assert.ok(document);
+  assert.equal(document.certificateNumber, 7);
+  assert.equal(state.certificateLastNumber, 7);
+  assert.equal(document.certificateVersion?.source, "protocol-result");
+  assert.equal(document.certificateVersion?.approvedBy, undefined);
+  assert.deepEqual(document.snapshot?.certificate?.davgaArgumentsByPoint, { p1: "p1-a-RU", p2: "p2-chair-RU" });
+  assert.deepEqual(document.snapshot?.certificate?.davgaArgumentsByPointKk, { p1: "p1-a-KZ", p2: "p2-chair-KZ" });
+  assert.equal(saved.documents[0].snapshot?.certificate?.davgaArgumentsByPoint?.p1, "Справка 1 RU");
+  for (const language of ["ru", "kk"] as const) {
+    const html = renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "certificate", document, language }));
+    assert.match(html, language === "ru" ? /по итогам протокола заседания/ : /отырыс хаттамасының қорытындылары бойынша/);
+    assert.ok(html.includes(`p1-a-${language === "ru" ? "RU" : "KZ"}`));
+    assert.ok(html.includes(`p2-chair-${language === "ru" ? "RU" : "KZ"}`));
+    assert.match(html, /Довод заявителя 1/);
+    assert.doesNotMatch(html, /p1-chair-RU|p1-b-RU/);
+  }
+  const work = renderToStaticMarkup(createElement(CertificateDocuments, { c: saved, role: "work", onDocument() {} }));
+  assert.match(work, /Справка по итогам протокола заседания · № 7/);
+  assert.match(work, /История версий/);
+  const commission = renderToStaticMarkup(createElement(CertificateDocuments, { c: saved, role: "commission", onDocument() {} }));
+  assert.doesNotMatch(commission, /Справка по итогам протокола заседания/);
+  saved.status = "meeting";
+  form.set("protocolDavga_p1_a", "Новая версия RU");
+  form.set("protocolDavgaKk_p1_a", "Жаңа нұсқа KZ");
+  state = applyAction(state, id, "vote", "work", form);
+  saved = state.cases.find(item => item.id === id)!;
+  const versions = saved.documents.filter(item => item.certificateVersion?.source === "protocol-result");
+  assert.equal(versions.length, 2);
+  assert.equal(versions[0].snapshot?.certificate?.davgaArgumentsByPoint?.p1, "p1-a-RU");
+  assert.equal(versions[1].snapshot?.certificate?.davgaArgumentsByPoint?.p1, "Новая версия RU");
+  assert.equal(versions[1].certificateNumber, 7);
+  const signed = new FormData();
+  signed.set("reason", "Итог голосования");
+  for (const member of ["chair", "a", "b"]) signed.set(`signed_${member}`, "on");
+  state = applyAction(state, id, "sign", "commission", signed);
+  saved = state.cases.find(item => item.id === id)!;
+  assert.equal(decisionProjectDavga(saved, "p1", "ru"), "Новая версия RU");
+  assert.equal(decisionProjectDavga(saved, "p2", "kk"), "p2-chair-KZ");
+  assert.equal(document.snapshot?.certificate?.davgaArgumentsByPoint?.p1, "p1-a-RU");
+});
+
+test("версия по одноязычному протоколу не выдаёт старые доводы за новую языковую версию", () => {
+  let state = initialState();
+  const c = state.cases[0];
+  const id = c.id;
+  c.status = "meeting";
+  c.appealLanguage = "ru";
+  c.documents = [];
+  c.issues = [{ id: "p1", number: "1", title: "Вопрос", argument: "Довод заявителя", finding: "", amount: 0, disputed: true }];
+  c.members = [{ id: "chair", name: "Председатель", present: true, recused: false, reason: "" }];
+  c.certificate = { languages: ["ru", "kk"], davgaArguments: "", davgaArgumentsByPoint: { p1: "Исходный RU" }, davgaArgumentsByPointKk: { p1: "Исходный KZ" }, memberPositions: [] };
+  const form = new FormData();
+  form.set("documentLanguageMode", "ru");
+  form.set("protocolVote_p1_chair", "accept");
+  form.set("protocolDavga_p1_chair", "Новый RU");
+  state = applyAction(state, id, "vote", "work", form);
+  const saved = state.cases.find(item => item.id === id)!;
+  const document = saved.documents.find(item => item.name === "Справка по итогам протокола заседания")!;
+  assert.deepEqual(document.languages, ["ru"]);
+  assert.equal(document.snapshot?.certificate?.davgaArgumentsByPoint?.p1, "Новый RU");
+  assert.equal(document.snapshot?.certificate?.davgaArgumentsByPointKk?.p1, "Исходный KZ");
+  assert.equal(renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "certificate", document, language: "kk" })), "");
+});

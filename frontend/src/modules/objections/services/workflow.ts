@@ -2094,6 +2094,25 @@ export function applyAction(
         "protocol",
         "Состав участников зафиксирован. Ожидаются подписи членов АК.",
       );
+      if (c.certificate) {
+        const byPoint = { ...c.certificate.davgaArgumentsByPoint };
+        const byPointKk = { ...c.certificate.davgaArgumentsByPointKk };
+        for (const point of disputed(c)) {
+          const outcome = c.votes?.[point.id] && pointOutcomeFromVotes(c.votes[point.id].votes || {}, c.votes[point.id].chair);
+          const winner = protocolRows.find(row => row.pointId === point.id && normalizeVoteChoice(row.vote) === outcome);
+          if (!winner) throw new Error(`Не найдено обоснование итогового голоса по пункту № ${point.number}`);
+          const davgaRu = protocolDavgaFromReason(winner.edited).trim();
+          const davgaKk = protocolDavgaFromReason(winner.editedKk || "").trim();
+          if (protocolLanguages.includes("ru") && davgaRu) byPoint[point.id] = davgaRu;
+          if (protocolLanguages.includes("kk") && davgaKk) byPointKk[point.id] = davgaKk;
+        }
+        c.certificate = { ...c.certificate, davgaArgumentsByPoint: byPoint, davgaArgumentsByPointKk: byPointKk };
+        doc("Справка по итогам протокола заседания", "certificate", "Доводы ДАВГА соответствуют обоснованию итогового голоса по каждому пункту.");
+        const certificate = c.documents.at(-1)!;
+        certificate.languages = protocolLanguages;
+        certificate.certificateNumber = c.documents.find(item => item !== certificate && item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения" && item.certificateNumber)?.certificateNumber;
+        certificate.certificateVersion = { stage: "protocol", source: "protocol-result", createdAt: changedAt, proposedBy: c.assignee };
+      }
       break;
     }
     case "sign": {
