@@ -70,7 +70,7 @@ test("после согласования и подписания протоко
     assert.doesNotMatch(html, /p1-chair-RU|p1-b-RU/);
   }
   const work = renderToStaticMarkup(createElement(CertificateDocuments, { c: saved, role: "work", onDocument() {} }));
-  assert.match(work, /Справка по итогам протокола заседания · № 7/);
+  assert.match(work, /Справка № 7 по итогам протокола заседания/);
   assert.match(work, /История версий/);
   const commission = renderToStaticMarkup(createElement(CertificateDocuments, { c: saved, role: "commission", onDocument() {} }));
   assert.doesNotMatch(commission, /Справка по итогам протокола заседания/);

@@ -35,8 +35,8 @@ test("новая версия справки не расходует сквоз�
   assert.equal(state.certificateLastNumber, 2);
   first = state.cases.find(item => item.id === ids[0])!;
   const work = renderToStaticMarkup(createElement(CertificateDocuments, { c: first, role: "work", onDocument() {} }));
-  assert.equal((work.match(/Справка по результатам изучения и анализа возражения/g) || []).length, 1);
-  assert.match(work, /№ 1 · Версия 2/);
+  assert.equal((work.match(/Справка № 1 по результатам изучения и анализа возражения/g) || []).length, 1);
+  assert.match(work, /Справка № 1 по результатам изучения и анализа возражения · Версия 2/);
   assert.match(work, /История версий/);
   const commission = renderToStaticMarkup(createElement(CertificateDocuments, { c: first, role: "commission", onDocument() {} }));
   assert.match(commission, /№ 1/);
@@ -60,7 +60,7 @@ test("ранее ошибочно назначенный номер версии
   c.documents.at(-1)!.certificateNumber = 4;
   state.certificateLastNumber = 4;
   const html = renderToStaticMarkup(createElement(CertificateDocuments, { c, role: "work", onDocument() {} }));
-  assert.match(html, /№ 3 · Версия 2/);
+  assert.match(html, /Справка № 3 по результатам изучения и анализа возражения · Версия 2/);
   assert.doesNotMatch(html, /№ 4/);
   addDocument(c, "work", state.date, name, "certificate", "");
   state = applyAction(state, id, "sign-certificate", "work", new FormData());

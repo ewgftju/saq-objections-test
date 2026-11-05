@@ -45,3 +45,17 @@ test("в кабинете АК доступна только исходная с
     assert.match(html, /Протокол заседания/);
   }
 });
+
+test("номер указан сразу после слова Справка для каждого вида", () => {
+  const state = initialState();
+  const c = state.cases[0];
+  c.documents = [];
+  for (const name of ["Справка по результатам изучения и анализа возражения", "Справка: результаты голосования членов АК", "Справка: результаты голосования членов АК. Версия 2"]) {
+    addDocument(c, "work", state.date, name, "certificate", "");
+    c.documents.at(-1)!.certificateNumber = 3;
+  }
+  const html = renderToStaticMarkup(createElement(CertificateDocuments, { c, role: "work", onDocument() {} }));
+  assert.match(html, /Справка № 3 с учётом изменений доводов ДАВГА/);
+  assert.match(html, /Справка № 3: результаты голосования членов АК/);
+  assert.match(html, /Справка № 3 по результатам изучения и анализа возражения/);
+});

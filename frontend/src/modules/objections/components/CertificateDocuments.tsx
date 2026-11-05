@@ -12,6 +12,10 @@ const stageLabels = {
   "motivated-response": "Формирование мотивированного ответа",
 };
 
+function certificateTitle(name: string, number?: number) {
+  return number ? name.replace(/^Справка/u, `Справка № ${number}`) : name;
+}
+
 export function commissionCanViewCertificate(document: CaseDocument) {
   return document.kind !== "certificate" || document.name === "Справка по результатам изучения и анализа возражения";
 }
@@ -38,7 +42,7 @@ export function CertificateDocuments({ c, role, onDocument }: { c: ObjectionCase
     <h4>Справка</h4>
     <div className="request-documents-list">
       {latest && <div className="request-document-row">
-        <span>{latest.certificateVersion?.source === "protocol-result" ? "Справка по итогам протокола заседания" : "Справка с учётом изменений доводов ДАВГА"}{latest.certificateNumber ? ` · № ${latest.certificateNumber}` : ""}</span>
+        <span>{certificateTitle(latest.certificateVersion?.source === "protocol-result" ? "Справка по итогам протокола заседания" : "Справка с учётом изменений доводов ДАВГА", latest.certificateNumber)}</span>
         <div className="request-document-actions">
           {languagesForDocument(c, latest.kind, latest).map(language => <Button key={language} onClick={() => onDocument(latest.kind, { ...latest, viewLanguage: language })}>{latest.languages?.length === 2 ? `Просмотр ${language === "kk" ? "KZ" : "RU"}` : "Просмотр"}</Button>)}
           <Button onClick={() => downloadFile(`${c.id}-${latest.name}.doc`, wordDocumentHtml({ c, kind: latest.kind, document: latest }), "application/msword")}>{latest.languages?.length === 2 ? "Скачать комплект" : "Скачать Word"}</Button>
@@ -46,7 +50,7 @@ export function CertificateDocuments({ c, role, onDocument }: { c: ObjectionCase
         </div>
       </div>}
       {[...originals].reverse().filter(document => document.name !== "Справка по результатам изучения и анализа возражения" || document === visibleAnalysis).map((document, index) => <div className="request-document-row" key={`${document.name}-${document.date}-${index}`}>
-        <span>{document.name}{(document === visibleAnalysis ? analysisNumber : document.certificateNumber) ? ` · № ${document === visibleAnalysis ? analysisNumber : document.certificateNumber}` : ""}{document === visibleAnalysis && analysisVersions.length > 1 && role !== "commission" ? ` · Версия ${analysisVersions.length}` : ""}</span>
+        <span>{certificateTitle(document.name, document === visibleAnalysis ? analysisNumber : document.certificateNumber)}{document === visibleAnalysis && analysisVersions.length > 1 && role !== "commission" ? ` · Версия ${analysisVersions.length}` : ""}</span>
         {document === visibleAnalysis ? actions(analysisDocument(document), showHistory && analysisVersions.length > 1) : actions(document)}
       </div>)}
     </div>
