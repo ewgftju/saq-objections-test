@@ -1425,11 +1425,12 @@ export default function CaseWorkspace({
                           [
                             "decision-project-comment",
                             "decision-project-comment-attachment",
-                          ].includes(document.kind),
+                          ].includes(document.kind) && !(c.decisionProjectRouting?.commentChannel && c.decisionProjectRouting.commentChannel !== "Кабинет SAQ" && document.kind === "decision-project-comment" && !document.dataUrl),
                         );
-                        return decisionProject || projectComments.length > 0 ? (
+                        const externalComment = Boolean(c.decisionProjectRouting?.commentReceivedAt && c.decisionProjectRouting?.commentChannel && c.decisionProjectRouting.commentChannel !== "Кабинет SAQ");
+                        return decisionProject || projectComments.length > 0 || externalComment ? (
                           <>
-                            {projectComments.length > 0 && (
+                            {(projectComments.length > 0 || externalComment) && (
                               <section className="request-documents-section">
                                 <h4>Замечание к проекту решения</h4>
                                 <div className="request-documents-list">
@@ -1438,7 +1439,7 @@ export default function CaseWorkspace({
                                       className="request-document-row"
                                       key={`${document.kind}-${document.name}-${document.date}`}
                                     >
-                                      <span>{document.name}</span>
+                                      <span>{document.name}{externalComment && document.kind === "decision-project-comment-attachment" && <>{c.decisionProjectRouting?.commentRegistrationNumber && ` · № ${c.decisionProjectRouting.commentRegistrationNumber}`}{c.decisionProjectRouting?.commentReceivedAt && ` от ${formatDate(c.decisionProjectRouting.commentReceivedAt)}`}{c.decisionProjectRouting?.commentChannel && ` · ${c.decisionProjectRouting.commentChannel}`}</>}</span>
                                       {document.dataUrl ? (
                                         <a
                                           className="button"
@@ -1460,6 +1461,7 @@ export default function CaseWorkspace({
                                       )}
                                     </div>
                                   ))}
+                                  {externalComment && projectComments.length === 0 && c.decisionProjectRouting?.commentText && <div className="request-document-row"><span style={{ whiteSpace: "pre-wrap" }}>{c.decisionProjectRouting.commentText}</span></div>}
                                 </div>
                               </section>
                             )}

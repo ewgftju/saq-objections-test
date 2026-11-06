@@ -2467,11 +2467,6 @@ export function applyAction(
       c.status = "decision_project_hearing";
       title = "Замечание к проекту решения зафиксировано";
       note = "Замечание зарегистрировано. Доступна фиксация результатов заслушивания.";
-      doc(
-        "Замечание к проекту решения",
-        "decision-project-comment",
-        commentText,
-      );
       break;
     }
     case "proceed-to-final-response": {

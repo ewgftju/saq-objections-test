@@ -71,3 +71,27 @@ test("заявитель не может подписать замечание �
   assert.equal(saved.status, "decision_project_comments");
   assert.ok(!saved.documents.some((doc) => doc.kind === "decision-project-comment"));
 });
+
+test("внешнее замечание сохраняется без созданного документа, вложение содержит реквизиты", () => {
+  let state = initialState();
+  const c = state.cases[0];
+  c.status = "decision_project_comments";
+  c.decisionProjectRouting = { channel: "external", sentAt: state.date, recipients: [] };
+  const form = new FormData();
+  form.set("projectComment", "Текст замечания");
+  form.set("projectCommentReceivedAt", "2026-09-11");
+  form.set("projectCommentChannel", "E-Otinish");
+  form.set("projectCommentRegistrationNumber", "ВХ-123");
+  state = applyAction(state, c.id, "record-external-decision-project-comment", "work", form);
+  const saved = state.cases.find(item => item.id === c.id)!;
+  assert.equal(saved.decisionProjectRouting?.commentText, "Текст замечания");
+  assert.ok(!saved.documents.some(document => document.kind === "decision-project-comment"));
+  const render = () => renderToStaticMarkup(createElement(CaseWorkspace, { c: saved, tab: "review", role: "work", onBack() {}, onTab() {}, onAction() {}, onDocument() {}, onUpload() {} }));
+  assert.match(render(), /Текст замечания/);
+  saved.documents.push({ name: "Файл замечания.pdf", filename: "Файл замечания.pdf", kind: "decision-project-comment-attachment", text: "", author: "Исполнитель", date: state.date, dataUrl: "data:application/pdf;base64,YQ==" });
+  saved.documents.push({ name: "Замечание к проекту решения", kind: "decision-project-comment", text: "Старый документ", author: "Исполнитель", date: state.date });
+  const html = render();
+  assert.match(html, /Файл замечания.pdf · № ВХ-123 от 11.09.2026 · E-Otinish/);
+  assert.doesNotMatch(html, /Старый документ/);
+  assert.doesNotMatch(html, /<span>Замечание к проекту решения<\/span>/);
+});
