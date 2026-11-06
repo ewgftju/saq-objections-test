@@ -1,4 +1,4 @@
-import { localizedCase } from "./documentLanguage";
+import { languagesForDocument, localizedCase } from "./documentLanguage";
 import type { DocumentLanguage, ObjectionCase } from "../../../types";
 import { disputed, normalizeVoteChoice, pointOutcomeFromVotes } from "./decisions";
 
@@ -28,6 +28,17 @@ export function signedProtocolDavga(c: ObjectionCase, pointId: string, language:
 
 export function hasDavgaText(value: string) {
   return Boolean(value.trim()) && !/^[\s—–-]+$/u.test(value);
+}
+
+/** Latest saved certificate text in the requested language, for manual review only. */
+export function certificateDavgaDraft(c: ObjectionCase, pointId: string, language: DocumentLanguage): string {
+  for (const document of [...c.documents].reverse()) {
+    if (document.kind !== "certificate" || !document.snapshot?.certificate || !languagesForDocument(c, document.kind, document).includes(language)) continue;
+    const certificate = document.snapshot.certificate;
+    const text = (language === "kk" ? certificate.davgaArgumentsByPointKk?.[pointId] : certificate.davgaArgumentsByPoint?.[pointId])?.trim() || (language === "ru" ? certificate.davgaArguments?.trim() : "") || "";
+    if (hasDavgaText(text)) return text;
+  }
+  return "";
 }
 
 export function decisionProjectDavga(c: ObjectionCase, pointId: string, language: DocumentLanguage = "ru") {
