@@ -48,7 +48,7 @@ for (const stage of ["decision-project", "motivated-response"] as const) for (co
     state = applyAction(state, c.id, "review-certificate-change", "director", review);
     saved = state.cases.find(item => item.id === c.id)!;
     assert.equal(saved.certificate?.davgaArgumentsByPointKk?.p1, "Қазақша 1");
-    assert.deepEqual(saved.certificate?.languages, ["ru", "kk"]);
+    assert.deepEqual(saved.certificate?.languages, ["kk"]);
     assert.equal(saved.documents.filter(item => item.kind === "certificate").at(-1)?.certificateNumber, 4);
     assert.throws(() => applyAction(state, c.id, action, "work", new FormData()), /пунктам: 2/);
     const retry = new FormData(); retry.set("proposedDavgaKk_p2", "Қазақша 2 түзетілген");

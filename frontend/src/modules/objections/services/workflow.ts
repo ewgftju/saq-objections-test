@@ -1067,7 +1067,7 @@ export function applyAction(
           c.motivatedResponseDavgaOverrides = { ...c.motivatedResponseDavgaOverrides };
           for (const change of accepted) { if (change.language === "kk") { c.motivatedResponseDavgaOverridesKk ||= {}; c.motivatedResponseDavgaOverridesKk[change.pointId] = change.proposed; } else c.motivatedResponseDavgaOverrides[change.pointId] = change.proposed; }
         }
-        c.certificate.languages = [...new Set([...(c.certificate.languages || [appealLanguage(c)]), ...accepted.map(change => change.language || "ru")])];
+        c.certificate.languages = [...new Set(accepted.map(change => change.language || "ru"))];
         c.certificate.davgaArgumentsByPoint = { ...c.certificate.davgaArgumentsByPoint };
         for (const change of accepted) { if (change.language === "kk") { c.certificate.davgaArgumentsByPointKk ||= {}; c.certificate.davgaArgumentsByPointKk[change.pointId] = change.proposed; } else c.certificate.davgaArgumentsByPoint[change.pointId] = change.proposed; }
         c.certificateRevision = (c.certificateRevision || 0) + 1;
