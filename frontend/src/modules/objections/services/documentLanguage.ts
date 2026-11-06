@@ -97,6 +97,7 @@ export function localizedCase(
 ): ObjectionCase {
   const kk = language === "kk";
   const result = structuredClone(c);
+  result.org = c.orgTranslations?.[language]?.trim() || c.org;
   result.issues = c.issues.map((point) => ({
     ...point,
     title: pointText(c, point, "title", language),

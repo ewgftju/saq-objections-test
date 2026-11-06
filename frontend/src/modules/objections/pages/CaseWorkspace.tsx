@@ -203,6 +203,7 @@ function LanguageOverview({ c }: { c: ObjectionCase }) {
   const version = c.meeting?.protocolVersions?.at(-1);
   const certificate = [...c.documents].reverse().find(document => document.kind === "certificate" && document.snapshot?.certificate)?.snapshot?.certificate || c.certificate;
   for (const language of languages) {
+    add("Наименование заявителя", language, c.orgTranslations?.[language] || (language === (c.appealLanguage || "ru") ? c.org : ""));
     add("О чем заявление (справка)", language, c.statementTranslations?.[language]);
     const protocolStatement = version?.statementTranslations?.[language];
     if (protocolStatement && protocolStatement !== c.statementTranslations?.[language]) add("О чем заявление (протокол)", language, protocolStatement);

@@ -315,6 +315,7 @@ export default function NewCaseModal({
               ),
               appealDate,
               org: get("org", applicantNameLabel),
+              orgTranslations: { [get("appealLanguage", "Язык обращения")]: get("org", applicantNameLabel) },
               bin,
               applicantIdentifierType,
               address: get("address", "Местонахождение"),

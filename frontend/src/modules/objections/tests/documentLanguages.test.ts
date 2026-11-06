@@ -576,7 +576,7 @@ test("при добавлении второго языка на этапе пр
     pointArgument_kk_p1: "Дәлел KZ",
   });
   assert.deepEqual(h.c.meeting?.languages, ["ru", "kk"]);
-  assert.equal(h.c.issues[0].translations?.kk?.title, undefined);
+  assert.equal(h.c.issues[0].translations?.kk?.title, "Тармақ KZ");
   assert.equal(certificate.snapshot?.issues[0].translations?.kk?.title, undefined);
   const draft = h.c.documents.find(item => item.name === "Проект протокола заседания")!;
   assert.equal(draft.snapshot?.issues[0].translations?.ru?.title, "Русский пункт");
@@ -846,7 +846,7 @@ for (const primary of ["ru", "kk"] as const) {
   });
 }
 
-test("казахское обращение: отсутствующий русский перевод сохраняется только в протоколе", () => {
+test("казахское обращение: перевод протокола сохраняется также в карточке", () => {
   const h = fixture("kk");
   h.c.status = "materials";
   h.run("analysis", "work", { documentLanguageMode: "kk", davgaArgumentsKk_p1: "Дәлел KZ" });
@@ -858,7 +858,7 @@ test("казахское обращение: отсутствующий русс
   assert.ok(!fields.some(field => field.name === "pointTitle_kk_p1"));
   h.run("vote", "work", values);
   assert.equal(h.c.meeting?.protocolVersions?.at(-1)?.pointTitles?.p1?.ru, "Перевод RU");
-  assert.equal(h.c.issues[0].translations?.ru?.title, undefined);
+  assert.equal(h.c.issues[0].translations?.ru?.title, "Перевод RU");
   h.run("return-protocol", "director", { returnComment: "Уточнить" });
   const returned = actionForm("vote", h.c, h.state.date, { documentLanguageMode: "both" }).fields;
   assert.equal(returned.find(field => field.name === "pointTitle_ru_p1")?.value, "Перевод RU");
@@ -973,7 +973,7 @@ for (const primary of ["ru", "kk"] as const) for (const translatedInCertificate 
       assert.equal(actionForm("vote", h.c, h.state.date, { documentLanguageMode: "both" }).fields.find(item => item.name === `statementTranslation_${other}`)?.value, translation);
       h.run("vote", "work", values);
     }
-    assert.equal(h.c.statementTranslations?.[other] || "", translatedInCertificate ? translation : "");
+    assert.equal(h.c.statementTranslations?.[other], translation);
     assert.equal(certificate.snapshot?.statementTranslations?.[other] || "", translatedInCertificate ? translation : "");
     const draft = h.c.documents.find(item => item.name === "Проект протокола заседания")!;
     assert.equal(draft.snapshot?.statementTranslations?.[other], translation);
@@ -985,3 +985,22 @@ for (const primary of ["ru", "kk"] as const) for (const translatedInCertificate 
     assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "protocol", document: signed, language: other })).includes(translation));
   });
 }
+
+test("наименование заявителя сохраняется по языкам и фиксируется в версии справки", () => {
+  const h = fixture("ru");
+  h.c.org = "Организация RU";
+  h.c.status = "materials";
+  const values = { documentLanguageMode: "both", pointTitle_kk_p1: "Даулы мәселе", davgaArguments_p1: "Доводы RU", davgaArgumentsKk_p1: "Дәлелдер KZ", applicantName_kk: "Ұйым KZ" };
+  const field = actionForm("analysis", h.c, h.state.date, values).fields.find(item => item.name === "applicantName_kk");
+  assert.ok(field?.required);
+  h.run("analysis", "work", values);
+  assert.equal(h.c.orgTranslations?.kk, "Ұйым KZ");
+  const doc = h.c.documents.at(-1)!;
+  assert.equal(doc.snapshot?.orgTranslations?.kk, "Ұйым KZ");
+  assert.equal(localizedCase(h.c, "ru").org, "Организация RU");
+  assert.equal(localizedCase(h.c, "kk").org, "Ұйым KZ");
+  h.c.orgTranslations!.kk = "Позднее название";
+  const html = renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "certificate", document: doc, language: "kk" }));
+  assert.match(html, /Ұйым KZ/);
+  assert.doesNotMatch(html, /Позднее название/);
+});

@@ -867,6 +867,8 @@ export function addDocument(
     requestId,
     snapshot: structuredClone({
       appealLanguage: c.appealLanguage,
+      org: c.org,
+      orgTranslations: c.orgTranslations,
       ...(kind === "certificate" ? { agendaDetails: c.agendaDetails, request: c.request, statementTranslations: c.statementTranslations } : {}),
       issues: c.issues,
       result: c.result || null,
@@ -1003,6 +1005,17 @@ export function applyAction(
       }
     }
   };
+
+  if (["analysis", "vote", "create-decision-project", "deliver"].includes(action)) {
+    for (const language of ["ru", "kk"] as const) {
+      const key = `applicantName_${language}`;
+      if (form.has(key)) {
+        const value = String(form.get(key) || "").trim();
+        if (!value) throw new Error(`Заполните наименование заявителя — ${LANGUAGE_LABELS[language]}`);
+        c.orgTranslations = { ...c.orgTranslations, [language]: value };
+      }
+    }
+  }
 
   switch (action) {
     case "propose-certificate-change": {
@@ -2049,6 +2062,12 @@ export function applyAction(
           if (!statementTranslations[language]?.trim()) statementTranslations[language] = String(form.get(`statementTranslation_${language}`) ?? protocolStatementTranslation(c, language)).trim();
         }
       }
+      for (const point of disputed(c)) {
+        for (const [language, title] of Object.entries(pointTitles[point.id] || {})) {
+          point.translations = { ...point.translations, [language]: { ...point.translations?.[language as "ru" | "kk"], title } };
+        }
+      }
+      c.statementTranslations = { ...c.statementTranslations, ...statementTranslations };
       const previousVersions = c.meeting?.protocolVersions || [];
       const previousOriginalVotes = c.meeting?.originalVotes ?? structuredClone(c.votes || null);
       const currentVersions = previousVersions.filter((version) => (version.certificateRevision ?? 0) === (c.certificateRevision ?? 0));

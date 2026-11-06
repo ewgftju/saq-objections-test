@@ -163,6 +163,12 @@ function languageModeField(c: ObjectionCase, values: FormValues): FormField {
   const saved = c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0] || primary;
   return select("documentLanguageMode", "Язык документа", [["ru", LANGUAGE_LABELS.ru], ["kk", LANGUAGE_LABELS.kk], ["both", "Русский и қазақша"]], values.documentLanguageMode || saved);
 }
+function applicantTranslationFields(c: ObjectionCase, values: FormValues, languages: Array<"ru" | "kk">): FormField[] {
+  return languages.filter(language => language !== appealLanguage(c) && !c.orgTranslations?.[language]?.trim()).map(language => ({
+    ...input(`applicantName_${language}`, `Наименование заявителя — ${LANGUAGE_LABELS[language]}`, values[`applicantName_${language}`] || ""),
+    language,
+  }));
+}
 function pointTranslationFields(c: ObjectionCase, values: FormValues, editableSource = false): FormField[] {
   return disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).flatMap(language => [
     { ...area(`pointTitle_${language}_${point.id}`, `Описание оспариваемого вопроса № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language)), language, readOnly: !editableSource && language === appealLanguage(c) },
@@ -448,6 +454,7 @@ export function actionForm(
       title = "Сформировать справку";
       fields.push(languageModeField(c, values), ...pointTranslationFields(c, values, true));
       const langs = selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0]));
+      fields.push(...applicantTranslationFields(c, values, langs));
       if (c.appealType === "Заявление" && c.request) {
         for (const language of langs.filter(item => item !== appealLanguage(c))) {
           const key = `statementTranslation_${language}`;
@@ -590,6 +597,7 @@ export function actionForm(
     case "vote":
       title = "Сформировать протокол заседания";
       fields.push(languageModeField(c, values));
+      fields.push(...applicantTranslationFields(c, values, selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0]))));
       fields.push(
         input("protocolDate", "Дата заседания", values.protocolDate || c.attendanceMeetingDate || c.agendaMeetingDate || date, "date"),
         select("meetingFormat", "Формат проведения заседания", [
