@@ -1,3 +1,4 @@
+import { restoreSkippedProtocolCertificate } from "../modules/objections/services/workflow";
 import {
   COMMISSION_ATTENDANCE_MEMBERS,
   seed,
@@ -98,6 +99,7 @@ export function createDemoRepository(
         });
         return result;
       }, []);
+      let restoredProtocolCertificate = false;
       const cases = persistedCases.map((c) => {
         const migrated =
           c.status === "commission_members"
@@ -218,18 +220,20 @@ export function createDemoRepository(
                 recipientRoles: [authorityRecipientRole(normalized.issuer), "subject"] as Role[],
               }
             : normalized.delivery;
-        return {
+        const result = {
           ...normalized,
           status,
           delivery,
           requests,
-          documents,
+          documents: [...documents],
           members: attendanceMembers,
           votes,
           unread:
             normalized.unread ??
             (normalized.status === "received" && normalized.channel === "SAQ"),
         };
+        if (restoreSkippedProtocolCertificate(result)) restoredProtocolCertificate = true;
+        return result;
       });
       const previousNotifications = (value.notifications || [])
         .filter((notification) => !isRemovedDemoCase(notification.caseId))
@@ -283,7 +287,7 @@ export function createDemoRepository(
           casesWithSharedCases.unshift(sharedCase);
         }
       });
-      return {
+      const restoredState = {
         ...value,
         version: CURRENT_VERSION,
         agendas: (value.agendas || [])
@@ -338,6 +342,10 @@ export function createDemoRepository(
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
         cases: casesWithSharedCases,
       };
+      if (restoredProtocolCertificate) {
+        try { storage.setItem(STORAGE_KEY, JSON.stringify(restoredState)); } catch { /* Restored data remains available in memory. */ }
+      }
+      return restoredState;
     },
     save(state) {
       storage.setItem(STORAGE_KEY, JSON.stringify(state));

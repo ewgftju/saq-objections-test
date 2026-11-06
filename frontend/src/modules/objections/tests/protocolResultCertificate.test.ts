@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { initialState } from "../../../api/objectionsRepository";
+import { createDemoRepository, initialState, STORAGE_KEY } from "../../../api/objectionsRepository";
 import { addDocument, applyAction, nextAction } from "../services/workflow";
 import { decisionProjectDavga } from "../services/protocolReason";
 import { DocumentContent } from "../components/DocumentModal";
@@ -85,7 +85,9 @@ test("после согласования и подписания протоко
   assert.equal(saved.certificate?.davgaArgumentsByPoint?.p1, "p1-a-RU");
   state = applyAction(state, id, "sign", "commission", signed);
   saved = state.cases.find(item => item.id === id)!;
-  assert.ok(saved.history.some(event => event.title === "Справка по итогам протокола не сформирована"));
+  const newest = saved.documents.filter(item => item.certificateVersion?.source === "protocol-result").at(-1)!;
+  assert.equal(newest.snapshot?.certificate?.davgaArgumentsByPoint?.p1, "Новая версия RU");
+  assert.equal(newest.snapshot?.certificate?.davgaArgumentsByPointKk?.p1, "Жаңа нұсқа KZ");
   assert.equal(decisionProjectDavga(saved, "p1", "ru"), "Новая версия RU");
   assert.equal(decisionProjectDavga(saved, "p2", "kk"), "p2-chair-KZ");
   assert.equal(document.snapshot?.certificate?.davgaArgumentsByPoint?.p1, "p1-a-RU");
@@ -118,7 +120,7 @@ test("версия по одноязычному протоколу не выд�
 });
 
 for (const decision of ["pending", "rejected"] as const) {
-  test(`${decision}: несогласованные доводы протокола не создают новую справку`, () => {
+  test(`${decision}: подписанный протокол создаёт новую справку`, () => {
     let state = initialState();
     const c = state.cases[0];
     const id = c.id;
@@ -151,12 +153,14 @@ for (const decision of ["pending", "rejected"] as const) {
     const signed = new FormData(); signed.set("reason", "Итог голосования"); signed.set("signed_chair", "on");
     state = applyAction(state, id, "sign", "commission", signed);
     const afterSigning = state.cases.find(item => item.id === id)!;
-    assert.ok(!afterSigning.documents.some(document => document.name === "Справка по итогам протокола заседания"));
-    assert.ok(afterSigning.history.some(event => event.title === "Справка по итогам протокола не сформирована"));
+    const result = afterSigning.documents.find(document => document.name === "Справка по итогам протокола заседания")!;
+    assert.equal(result.snapshot?.certificate?.davgaArgumentsByPoint?.p1, "Действующий довод");
+    assert.equal(result.certificateNumber, 3);
+    assert.equal(afterSigning.certificate?.davgaArgumentsByPoint?.p1, "Действующий довод");
   });
 }
 
-test("ранее созданная несогласованная версия не считается согласием директора", () => {
+test("после подписи протокола создаётся отдельная версия справки с его доводами", () => {
   let state = initialState();
   const c = state.cases[0];
   const id = c.id;
@@ -178,6 +182,50 @@ test("ранее созданная несогласованная версия 
   const signed = new FormData(); signed.set("reason", "Итог голосования"); signed.set("signed_chair", "on");
   state = applyAction(state, id, "sign", "commission", signed);
   const saved = state.cases.find(item => item.id === id)!;
-  assert.equal(saved.documents.filter(document => document.certificateVersion?.source === "protocol-result").length, 1);
-  assert.ok(saved.history.some(event => event.title === "Справка по итогам протокола не сформирована"));
+  const versions = saved.documents.filter(document => document.certificateVersion?.source === "protocol-result");
+  assert.equal(versions.length, 2);
+  assert.equal(versions.at(-1)?.snapshot?.certificate?.davgaArgumentsByPoint?.p1, "Несогласованный довод");
+  assert.equal(saved.documents[0].snapshot?.certificate?.davgaArgumentsByPoint?.p1, "Согласованный довод");
+});
+
+
+test("двуязычная справка восстанавливается после пропуска при подписании", () => {
+  let state = initialState();
+  const c = state.cases[0];
+  const id = c.id;
+  c.status = "meeting";
+  c.appealLanguage = "ru";
+  c.documents = [];
+  c.history = [];
+  c.issues = [{ id: "p1", number: "1", title: "Вопрос", argument: "Довод заявителя", finding: "", amount: 0, disputed: true, translations: { kk: { title: "Сұрақ KZ" } } }];
+  c.members = [{ id: "chair", name: "Председатель", present: true, recused: false, reason: "" }];
+  c.certificate = { languages: ["kk"], davgaArguments: "", davgaArgumentsByPointKk: { p1: "Исходный довод KZ" }, memberPositions: [] };
+  addDocument(c, "work", state.date, "Справка по результатам изучения и анализа возражения", "certificate", "");
+  c.documents.at(-1)!.certificateNumber = 4;
+  const form = new FormData(); form.set("documentLanguageMode", "both"); form.set("pointTitle_ru_p1", "Вопрос RU"); form.set("protocolVote_p1_chair", "accept"); form.set("protocolDavga_p1_chair", "Новый довод RU"); form.set("protocolDavgaKk_p1_chair", "Исходный довод KZ");
+  state = applyAction(state, id, "vote", "work", form);
+  let saved = state.cases.find(item => item.id === id)!;
+  assert.ok(!saved.documents.some(item => item.certificateVersion?.source === "protocol-result"));
+  const signed = new FormData(); signed.set("reason", "Итог"); signed.set("signed_chair", "on");
+  state = applyAction(state, id, "sign", "commission", signed);
+  saved = state.cases.find(item => item.id === id)!;
+  const generated = saved.documents.find(item => item.certificateVersion?.source === "protocol-result")!;
+  assert.deepEqual(generated.languages, ["ru", "kk"]);
+  assert.equal(generated.snapshot?.certificate?.davgaArgumentsByPoint?.p1, "Новый довод RU");
+  assert.equal(generated.snapshot?.certificate?.davgaArgumentsByPointKk?.p1, "Исходный довод KZ");
+  assert.equal(generated.certificateNumber, 4);
+  for (const language of ["ru", "kk"] as const) {
+    const html = renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "certificate", document: generated, language }));
+    assert.ok(html.includes(language === "ru" ? "Новый довод RU" : "Исходный довод KZ"));
+    assert.ok(html.includes(language === "ru" ? "Вопрос RU" : "Сұрақ KZ"));
+  }
+  saved.documents = saved.documents.filter(item => item !== generated);
+  saved.history.push({ date: state.date, actor: "Рабочий орган", title: "Справка по итогам протокола не сформирована", text: "Доводы итогового голоса не согласованы директором либо предложение отозвано." });
+  let stored = JSON.stringify(state);
+  const repository = createDemoRepository({ getItem(key) { return key === STORAGE_KEY ? stored : null; }, setItem(key, value) { if (key === STORAGE_KEY) stored = value; } });
+  let restored = repository.load().cases.find(item => item.id === id)!;
+  assert.equal(restored.documents.filter(item => item.certificateVersion?.source === "protocol-result").length, 1);
+  assert.equal(restored.documents.find(item => item.certificateVersion?.source === "protocol-result")?.snapshot?.certificate?.davgaArgumentsByPoint?.p1, "Новый довод RU");
+  restored = repository.load().cases.find(item => item.id === id)!;
+  assert.equal(restored.documents.filter(item => item.certificateVersion?.source === "protocol-result").length, 1);
 });

@@ -886,6 +886,49 @@ export function addDocument(
   });
 }
 
+/** Build the certificate from the signed protocol snapshot, without altering the original certificate. */
+export function createProtocolResultCertificate(c: ObjectionCase): boolean {
+  const version = [...(c.meeting?.protocolVersions || [])].reverse().find(item => item.signedAt);
+  if (!c.meeting?.signed || !version?.signedAt || !version.rows?.length) return false;
+  const signedProtocolIndex = c.documents.map(item => item.kind === "protocol" && item.name === "Подписанный протокол заседания" && Boolean(item.snapshot?.meeting?.protocolVersions?.some(v => v.signedAt === version.signedAt))).lastIndexOf(true);
+  const signedProtocol = signedProtocolIndex >= 0 ? c.documents[signedProtocolIndex] : undefined;
+  const snapshot = signedProtocol?.snapshot;
+  const basis = snapshot?.certificate || c.certificate;
+  if (!snapshot || !basis) return false;
+  if (c.documents.some(item => item.certificateVersion?.source === "protocol-result" && (item.certificateVersion.createdAt === version.signedAt || item.snapshot?.meeting?.protocolVersions?.some(v => v.signedAt === version.signedAt)))) return false;
+  const source = { ...c, ...snapshot };
+  const languages = version.languages || snapshot.meeting?.languages || [appealLanguage(source)];
+  const certificate = structuredClone(basis);
+  certificate.languages = [...languages];
+  certificate.davgaArgumentsByPoint = { ...certificate.davgaArgumentsByPoint };
+  certificate.davgaArgumentsByPointKk = { ...certificate.davgaArgumentsByPointKk };
+  for (const point of disputed(source)) {
+    const votes = source.votes?.[point.id];
+    const outcome = votes && pointOutcomeFromVotes(votes.votes || {}, votes.chair);
+    const row = version.rows.find(item => item.pointId === point.id && normalizeVoteChoice(item.vote) === outcome);
+    if (!row) return false;
+    if (languages.includes("ru")) certificate.davgaArgumentsByPoint[point.id] = protocolDavgaFromReason(row.edited).trim();
+    if (languages.includes("kk")) certificate.davgaArgumentsByPointKk[point.id] = protocolDavgaFromReason(row.editedKk || "").trim();
+  }
+  const number = c.documents.find(item => item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения" && item.certificateNumber)?.certificateNumber;
+  c.documents.splice(signedProtocolIndex + 1, 0, {
+    name: "Справка по итогам протокола заседания", kind: "certificate", text: "Доводы ДАВГА из обоснования итогового голоса в подписанном протоколе.",
+    date: snapshot.meeting?.signed || c.meeting.signed, author: ROLES.work, languages: [...languages], certificateNumber: number,
+    certificateVersion: { stage: "protocol", source: "protocol-result", createdAt: version.signedAt, proposedBy: version.author },
+    snapshot: structuredClone({ ...snapshot, certificate }),
+  });
+  return true;
+}
+
+/** Restore certificates previously skipped for a signed protocol. */
+export function restoreSkippedProtocolCertificate(c: ObjectionCase): boolean {
+  const failed = c.history.map(event => event.title).lastIndexOf("Справка по итогам протокола не сформирована");
+  const formed = c.history.map(event => event.title).lastIndexOf("Сформировать протокол заседания");
+  if (failed < 0 || failed < formed || !createProtocolResultCertificate(c)) return false;
+  c.history.push({ date: c.meeting?.signed || c.history[failed].date, actor: "Система", title: "Справка по итогам протокола восстановлена", text: "Справка сформирована по подписанному протоколу на его языках." });
+  return true;
+}
+
 /** Validate and apply one transaction. The original state remains untouched on error. */
 export function applyAction(
   state: DemoState,
@@ -2178,34 +2221,7 @@ export function applyAction(
       doc("Подписанный протокол заседания", "protocol", c.result.reason);
       if (c.documents.at(-1)?.snapshot && version?.pointTitles) c.documents.at(-1)!.snapshot!.issues = protocolIssuesWithTitles(c, version.pointTitles);
       if (c.documents.at(-1)?.snapshot && version && c.appealType === "Заявление") { c.documents.at(-1)!.snapshot!.statementTranslations = version.statementTranslations; c.documents.at(-1)!.snapshot!.request = version.statementRequest ?? c.request; }
-      if (c.certificate && version?.rows?.length) {
-        const protocolRows = version.rows;
-        const protocolLanguages = version.languages || c.meeting.languages || [appealLanguage(c)];
-        const approvedCertificate = [...c.documents].reverse().find(item => item.kind === "certificate" && item.certificateVersion?.source !== "protocol-result" && item.snapshot?.certificate)?.snapshot?.certificate || c.certificate;
-        const lastProposal = c.certificateChangeRequests?.at(-1);
-        let approved = (!lastProposal || (lastProposal.status === "reviewed" && lastProposal.changes.some(change => change.decision === "accepted")));
-        for (const point of disputed(c)) {
-          const outcome = c.votes?.[point.id] && pointOutcomeFromVotes(c.votes[point.id].votes || {}, c.votes[point.id].chair);
-          const winner = protocolRows.find(row => row.pointId === point.id && normalizeVoteChoice(row.vote) === outcome);
-          if (!winner) throw new Error(`Не найдено обоснование итогового голоса по пункту № ${point.number}`);
-          const davgaRu = protocolDavgaFromReason(winner.edited).trim();
-          const davgaKk = protocolDavgaFromReason(winner.editedKk || "").trim();
-          const approvedRu = (approvedCertificate.davgaArgumentsByPoint?.[point.id] || approvedCertificate.davgaArguments || "—").trim();
-          const approvedKk = (approvedCertificate.davgaArgumentsByPointKk?.[point.id] || "—").trim();
-          if (protocolLanguages.includes("ru") && (!davgaRu || davgaRu !== approvedRu)) approved = false;
-          if (protocolLanguages.includes("kk") && (!davgaKk || davgaKk !== approvedKk)) approved = false;
-        }
-        if (approved) {
-          doc("Справка по итогам протокола заседания", "certificate", "Доводы ДАВГА соответствуют согласованному обоснованию итогового голоса по каждому пункту.");
-          const certificate = c.documents.at(-1)!;
-          if (certificate.snapshot) certificate.snapshot.certificate = structuredClone(approvedCertificate);
-          certificate.languages = protocolLanguages;
-          certificate.certificateNumber = c.documents.find(item => item !== certificate && item.kind === "certificate" && item.name === "Справка по результатам изучения и анализа возражения" && item.certificateNumber)?.certificateNumber;
-          certificate.certificateVersion = { stage: "protocol", source: "protocol-result", createdAt: version.signedAt!, proposedBy: c.assignee };
-        } else {
-          c.history.push({ date, actor: c.assignee, title: "Справка по итогам протокола не сформирована", text: "Доводы итогового голоса не согласованы директором либо предложение отозвано. Действующая справка не изменена." });
-        }
-      }
+      createProtocolResultCertificate(c);
       break;
     }
     case "return-protocol": {
