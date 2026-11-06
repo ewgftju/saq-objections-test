@@ -1743,7 +1743,6 @@ export default function CaseWorkspace({
                         <Notice tone="green">
                           <strong>{c.result.label}</strong>
                           <p>{c.result.reason}</p>
-                          <p>{c.result.effect}</p>
                         </Notice>
                       )}
                       {c.delivery && (

@@ -123,3 +123,15 @@ test("реестр и карточка ДВГА скрывают статусы 
   assert.doesNotMatch(card, /Согласование окончательного ответа/);
   assert.doesNotMatch(card, /Ответственный: Заместитель директора ДАВГА/);
 });
+
+
+test("в блоке результата не показывается служебное описание последствий", () => {
+  const state = initialState();
+  const c = state.cases[0];
+  c.status = "decided";
+  c.result = { label: "Частично удовлетворить", reason: "Результаты голосования членов АК зафиксированы в протоколе.", effect: "Учитываются оставленные в силе пункты 1; остаточная сумма определяется по каждому пункту.", date: state.date, number: "ПЗ-1" };
+  const html = renderToStaticMarkup(createElement(CaseWorkspace, { c, role: "work", tab: "review", onBack() {}, onTab() {}, onAction() {}, onDocument() {}, onUpload() {} }));
+  assert.match(html, /Результаты голосования членов АК зафиксированы в протоколе/);
+  assert.doesNotMatch(html, /остаточная сумма определяется по каждому пункту/);
+  assert.ok(c.result.effect.includes("остаточная сумма"));
+});
