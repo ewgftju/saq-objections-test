@@ -430,7 +430,11 @@ for (const language of ["ru", "kk"] as const)
     h.run("sign", "commission", { signed_chair: "on", reason: "Итог" });
     assert.equal(decisionProjectDavga(h.c, "p1", "kk"), "Хаттама KZ");
     h.c.status = "decision_project";
-    h.run("create-decision-project", "work");
+    if (language === "ru") {
+      assert.ok(actionForm("create-decision-project", h.c, h.state.date, {}).fields.some(field => field.name === "applicantName_kk" && field.required));
+      assert.throws(() => h.run("create-decision-project", "work"), /Наименование|наименование/);
+    }
+    h.run("create-decision-project", "work", language === "ru" ? { applicantName_kk: "Қазақша ұйым" } : {});
     h.run("approve-decision-project", "deputy");
     h.run("sign-decision-project", "director");
     const project = h.c.documents.at(-1)!;
@@ -443,12 +447,18 @@ for (const language of ["ru", "kk"] as const)
       }),
     );
     assert.match(projectHtml, language === "kk" ? /Хаттама KZ/ : /Протокол RU/);
+    if (language === "ru") assert.match(projectHtml, /final-response-recipient[^>]*><p><strong>Қазақша ұйым<\/strong>/);
     assert.doesNotMatch(
       projectHtml,
       language === "kk" ? /Протокол RU/ : /Хаттама KZ/,
     );
     h.c.status = "decided";
-    h.run("deliver", "work", { motivatedResponseApplicantChannel: "saq" });
+    if (language === "ru") {
+      h.c.orgTranslations = {};
+      assert.ok(actionForm("deliver", h.c, h.state.date, {}).fields.some(field => field.name === "applicantName_kk" && field.required));
+      assert.throws(() => h.run("deliver", "work", { motivatedResponseApplicantChannel: "saq" }), /наименование/);
+    }
+    h.run("deliver", "work", { motivatedResponseApplicantChannel: "saq", ...(language === "ru" ? { applicantName_kk: "Қазақша ұйым" } : {}) });
     const response = h.c.documents
       .filter((d) => d.kind === "final-response")
       .at(-1)!;
@@ -464,6 +474,7 @@ for (const language of ["ru", "kk"] as const)
       responseHtml,
       language === "kk" ? /Хаттама KZ/ : /Протокол RU/,
     );
+    if (language === "ru") assert.match(responseHtml, /final-response-recipient[^>]*><p><strong>Қазақша ұйым<\/strong>/);
     const savedProject = JSON.parse(JSON.stringify(project));
     h.c.decisionProjectDavgaOverrides = {
       protocolSignedAt: h.c.meeting!.protocolVersions!.at(-1)!.signedAt!,

@@ -1,4 +1,4 @@
-import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, protocolIssuesWithTitles, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS, localizedCase } from "./documentLanguage";
+import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, protocolIssuesWithTitles, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS, localizedCase, kazakhApplicantName } from "./documentLanguage";
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
@@ -1015,6 +1015,9 @@ export function applyAction(
         c.orgTranslations = { ...c.orgTranslations, [language]: value };
       }
     }
+  }
+  if ((action === "create-decision-project" || (action === "deliver" && isMotivatedResponseStage(c))) && !kazakhApplicantName(c)) {
+    throw new Error("Заполните наименование объекта заявителя — Қазақша");
   }
 
   switch (action) {

@@ -872,7 +872,7 @@ function LegacyDocumentContent({
           ) : null}
           <div className="final-response-recipient">
             <p>
-              <strong>{snapshot.org}</strong>
+              <strong>{useDavgaArguments ? snapshot.orgTranslations?.kk?.trim() || (snapshot.appealLanguage === "kk" || document ? snapshot.org : "—") : snapshot.org}</strong>
             </p>
             {!isDecisionProject && (
               <p>
@@ -1767,6 +1767,7 @@ export function DocumentContent(props: DocumentContentProps) {
                         {
                           ...props.c,
                           ...props.document.snapshot,
+                          orgTranslations: props.document.snapshot.orgTranslations,
                           ...((props.kind === "certificate" || props.kind === "protocol") ? { statementTranslations: props.document.snapshot.statementTranslations } : {}),
                           decisionProjectDavgaOverrides:
                             props.document.snapshot

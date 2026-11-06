@@ -10,6 +10,9 @@ export const LANGUAGE_LABELS = { ru: "Русский", kk: "Қазақша" } as
 export function appealLanguage(c: ObjectionCase): DocumentLanguage {
   return c.appealLanguage || "ru";
 }
+export function kazakhApplicantName(c: ObjectionCase): string {
+  return c.orgTranslations?.kk?.trim() || (appealLanguage(c) === "kk" ? c.org.trim() : "");
+}
 export function selectedLanguages(
   c: ObjectionCase,
   mode?: string,

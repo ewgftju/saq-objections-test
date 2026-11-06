@@ -1,4 +1,4 @@
-import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS } from "./services/documentLanguage";
+import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS, kazakhApplicantName } from "./services/documentLanguage";
 import { preparedActionValues } from "./demoForm";
 import type { Action, ObjectionCase, Role } from "../../types";
 import { DEMO_USER } from "../../config";
@@ -707,6 +707,9 @@ export function actionForm(
           : requiresMotivatedResponse(c)
             ? "Сформировать мотивированный ответ"
             : "Сформировать окончательный ответ";
+      if ((action === "create-decision-project" || requiresMotivatedResponse(c)) && !kazakhApplicantName(c)) {
+        fields.push(input("applicantName_kk", "Наименование объекта заявителя — Қазақша", values.applicantName_kk || ""));
+      }
       if (action === "create-decision-project") {
         const defaultChannel = defaultDecisionProjectChannel(c);
         const subjectCabinetAvailable = hasSubjectSaqCabinet(c);
