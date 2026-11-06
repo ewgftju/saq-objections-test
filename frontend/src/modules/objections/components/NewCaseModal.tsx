@@ -117,7 +117,6 @@ export default function NewCaseModal({
     useState(false);
   const [isApplicantAuditObject, setIsApplicantAuditObject] = useState(false);
   const [applicantName, setApplicantName] = useState("");
-  const [selectedAppealLanguage, setSelectedAppealLanguage] = useState<"" | "ru" | "kk">("");
   const [applicantIdentifier, setApplicantIdentifier] = useState("");
   const [auditObjectName, setAuditObjectName] = useState("");
   const [auditObjectIdentifier, setAuditObjectIdentifier] = useState("");
@@ -316,7 +315,7 @@ export default function NewCaseModal({
               ),
               appealDate,
               org: get("org", applicantNameLabel),
-              orgTranslations: { [get("appealLanguage", "Язык обращения")]: get("org", applicantNameLabel), ...(selectedAppealLanguage === "kk" ? { kk: get("org", applicantNameLabel) } : optional("applicantNameKk") ? { kk: optional("applicantNameKk") } : {}) },
+              orgTranslations: { [get("appealLanguage", "Язык обращения")]: get("org", applicantNameLabel) },
               bin,
               applicantIdentifierType,
               address: get("address", "Местонахождение"),
@@ -520,13 +519,12 @@ export default function NewCaseModal({
             ))}
           </select>
         </label>
-        <label className="field"><span>Язык обращения <span className="required">*</span></span><select name="appealLanguage" required value={selectedAppealLanguage} onChange={event => setSelectedAppealLanguage(event.target.value as "ru" | "kk")}><option value="" disabled>Выберите язык</option><option value="ru">Русский</option><option value="kk">Қазақша</option></select></label>
+        <label className="field"><span>Язык обращения <span className="required">*</span></span><select name="appealLanguage" required defaultValue=""><option value="" disabled>Выберите язык</option><option value="ru">Русский</option><option value="kk">Қазақша</option></select></label>
         <div className="form-grid">
           <label className="field">
-            <span>{applicantNameLabel}{selectedAppealLanguage ? ` — ${selectedAppealLanguage === "ru" ? "Русский" : "Қазақша"}` : ""}<span className="required"> *</span></span>
+            <span>{applicantNameLabel}<span className="required"> *</span></span>
             <input name="org" type="text" required value={applicantName} onChange={(event) => setApplicantName(event.target.value)} />
           </label>
-          {selectedAppealLanguage === "ru" && <label className="field"><span>{applicantNameLabel} — Қазақша</span><input name="applicantNameKk" type="text" /></label>}
           <label className="field">
             <span>
               Тип идентификатора заявителя
