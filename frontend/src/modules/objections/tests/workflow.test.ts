@@ -58,6 +58,7 @@ import {
 
 function harness(index = 0) {
   let state = initialState();
+  state.cases[index].orgTranslations = { kk: "Тест ұйымы" };
   const id = state.cases[index].id;
   return {
     get state() {

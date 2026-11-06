@@ -10,6 +10,7 @@ import ActionModal from "../components/ActionModal";
 function setup() {
   const state = initialState();
   const c = state.cases[0];
+  c.orgTranslations = { kk: "Тест ұйымы" };
   c.status = "decided";
   c.appealType = "Жалоба на уведомление";
   const first = c.issues.find((point) => point.disputed)!;

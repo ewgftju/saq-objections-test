@@ -316,7 +316,7 @@ export default function NewCaseModal({
               ),
               appealDate,
               org: get("org", applicantNameLabel),
-              orgTranslations: { [get("appealLanguage", "Язык обращения")]: get("org", applicantNameLabel), kk: selectedAppealLanguage === "kk" ? get("org", applicantNameLabel) : get("applicantNameKk", "Наименование объекта заявителя — Қазақша") },
+              orgTranslations: { [get("appealLanguage", "Язык обращения")]: get("org", applicantNameLabel), ...(selectedAppealLanguage === "kk" ? { kk: get("org", applicantNameLabel) } : optional("applicantNameKk") ? { kk: optional("applicantNameKk") } : {}) },
               bin,
               applicantIdentifierType,
               address: get("address", "Местонахождение"),
@@ -526,7 +526,7 @@ export default function NewCaseModal({
             <span>{applicantNameLabel}{selectedAppealLanguage ? ` — ${selectedAppealLanguage === "ru" ? "Русский" : "Қазақша"}` : ""}<span className="required"> *</span></span>
             <input name="org" type="text" required value={applicantName} onChange={(event) => setApplicantName(event.target.value)} />
           </label>
-          {selectedAppealLanguage === "ru" && <label className="field"><span>{applicantNameLabel} — Қазақша <span className="required">*</span></span><input name="applicantNameKk" type="text" required /></label>}
+          {selectedAppealLanguage === "ru" && <label className="field"><span>{applicantNameLabel} — Қазақша</span><input name="applicantNameKk" type="text" /></label>}
           <label className="field">
             <span>
               Тип идентификатора заявителя

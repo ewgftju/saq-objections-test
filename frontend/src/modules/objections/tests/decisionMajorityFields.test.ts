@@ -10,6 +10,7 @@ test("проект решения и мотивированный ответ н�
   for (const action of ["create-decision-project", "deliver"] as const) {
     const state = initialState();
     const c = state.cases[0];
+  c.orgTranslations = { kk: "Тест ұйымы" };
     c.appealType = "Жалоба на уведомление";
     c.status = action === "deliver" ? "decided" : "decision_project";
     const point = c.issues.find((item) => item.disputed)!;
