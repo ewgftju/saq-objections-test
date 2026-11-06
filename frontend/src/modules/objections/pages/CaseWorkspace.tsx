@@ -41,6 +41,7 @@ import {
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
+import { protocolDavgaFromReason } from "../services/protocolReason";
 
 function isSyntheticExternalResponse(document: CaseDocument, request: CaseRequest) {
   return request.template === "other" && !request.saqRecipient && document.kind === "position" && !document.dataUrl && document.name === `Ответ ${request.recipient}`;
@@ -190,6 +191,52 @@ function Fact({
       <strong>{value ?? "—"}</strong>
     </div>
   );
+}
+
+function LanguageOverview({ c }: { c: ObjectionCase }) {
+  const records: Array<{ label: string; value: string }> = [];
+  const add = (label: string, language: "ru" | "kk", value?: string) => {
+    const text = value?.trim();
+    if (text && text !== "—") records.push({ label: `${label} — ${language === "ru" ? "Русский" : "Қазақша"}`, value: text });
+  };
+  const languages = ["ru", "kk"] as const;
+  const version = c.meeting?.protocolVersions?.at(-1);
+  const certificate = [...c.documents].reverse().find(document => document.kind === "certificate" && document.snapshot?.certificate)?.snapshot?.certificate || c.certificate;
+  for (const language of languages) {
+    add("О чем заявление (справка)", language, c.statementTranslations?.[language]);
+    const protocolStatement = version?.statementTranslations?.[language];
+    if (protocolStatement && protocolStatement !== c.statementTranslations?.[language]) add("О чем заявление (протокол)", language, protocolStatement);
+    add("Предмет государственной закупки", language, c.agendaDetails?.procurementSubjectTranslations?.[language]);
+  }
+  for (const point of c.issues.filter(item => item.disputed)) {
+    for (const language of languages) {
+      const description = point.translations?.[language]?.title;
+      add(`Описание оспариваемого вопроса № ${point.number} (справка)`, language, description);
+      const protocolDescription = version?.pointTitles?.[point.id]?.[language];
+      if (protocolDescription && protocolDescription !== description) add(`Описание оспариваемого вопроса № ${point.number} (протокол)`, language, protocolDescription);
+      add(`Перевод доводов заявителя по пункту № ${point.number}`, language, point.certificateArgumentTranslations?.[language]);
+      add(`Доводы ДАВГА по пункту № ${point.number} (справка)`, language, language === "ru" ? certificate?.davgaArgumentsByPoint?.[point.id] : certificate?.davgaArgumentsByPointKk?.[point.id]);
+    }
+    for (const request of c.requests.filter(item => item.responseSigned)) {
+      for (const language of languages) {
+        const response = (language === "ru" ? request.authorityResponses : request.authorityResponsesKk)?.[point.id];
+        add(`Нарушение по пункту № ${point.number} (${request.recipient})`, language, response?.finding);
+        add(`Мотивированный ответ по пункту № ${point.number} (${request.recipient})`, language, response?.response);
+      }
+    }
+    for (const position of certificate?.memberPositions.filter(item => item.pointId === point.id) || []) {
+      add(`Комментарий ${position.name} по пункту № ${point.number}`, "ru", position.comment);
+      add(`Комментарий ${position.name} по пункту № ${point.number}`, "kk", position.commentKk);
+    }
+    for (const row of version?.rows.filter(item => item.pointId === point.id) || []) {
+      if (!version?.languages || version.languages.includes("ru")) add(`Доводы ДАВГА по пункту № ${point.number} в протоколе (${row.memberName})`, "ru", protocolDavgaFromReason(row.edited));
+      if (!version?.languages || version.languages.includes("kk")) add(`Доводы ДАВГА по пункту № ${point.number} в протоколе (${row.memberName})`, "kk", protocolDavgaFromReason(row.editedKk || ""));
+    }
+  }
+  add("Рекомендации протокола", "ru", c.meeting?.recommendations);
+  add("Рекомендации протокола", "kk", c.meeting?.recommendationsKk);
+  if (!records.length) return null;
+  return <section className="language-overview"><h3 className="form-section">Данные на русском и казахском языках</h3><div className="facts">{records.map((item, index) => <Fact key={`${item.label}-${index}`} label={item.label} value={item.value} wide />)}</div></section>;
 }
 
 function PointCard({
@@ -1063,6 +1110,7 @@ export default function CaseWorkspace({
                     wide
                   />
                 </div>
+                {["work", "deputy", "director", "demo-superuser"].includes(role) && <LanguageOverview c={c} />}
                 {c.affectedParties && <Notice>{c.affectedParties}</Notice>}
                 <div className="issues-section-heading">
                   <h3 className="form-section">Доводы и пункты документа</h3>
