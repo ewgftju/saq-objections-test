@@ -1,4 +1,4 @@
-import { languagesForDocument } from "../services/documentLanguage";
+import { documentLanguageLabel, languagesForDocument } from "../services/documentLanguage";
 import { Fragment, useState, type ReactNode } from "react";
 import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import { ProtocolVersions } from "../components/ProtocolVersions";
@@ -1534,7 +1534,7 @@ export default function CaseWorkspace({
                             <h4>Протокол заседания</h4>
                             <div className="request-documents-list">
                               <div className="request-document-row">
-                                <span>{protocol.name}{protocolMeeting?.number ? ` · № ${protocolMeeting.number}` : ""}{protocolMeeting?.number && protocolRegistrationDate ? ` от ${formatDate(protocolRegistrationDate)}` : ""}</span>
+                                <span>{protocol.name}{protocolMeeting?.number ? ` · № ${protocolMeeting.number}` : ""}{protocolMeeting?.number && protocolRegistrationDate ? ` от ${formatDate(protocolRegistrationDate)}` : ""}<small style={{ display: "block" }}>{documentLanguageLabel(c, protocol)}</small></span>
                                 <div className="request-document-actions">
                                   {languagesForDocument(c, protocol.kind, protocol).map(language => <Button key={language} onClick={() => onDocument(protocol.kind, { ...protocol, viewLanguage: language })}>{protocol.languages?.length === 2 ? `Просмотр ${language === "kk" ? "KZ" : "RU"}` : "Просмотр"}</Button>)}
                                   <Button

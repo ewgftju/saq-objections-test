@@ -45,6 +45,11 @@ export function languagesForDocument(
         : undefined) || [appealLanguage(c)]
   );
 }
+export function documentLanguageLabel(c: ObjectionCase, document: CaseDocument): string {
+  const languages = languagesForDocument(c, document.kind, document);
+  if (languages.includes("ru") && languages.includes("kk")) return "Язык: русский и казахский";
+  return languages.includes("kk") ? "Язык: казахский" : "Язык: русский";
+}
 export function pointText(
   c: ObjectionCase,
   point: ViolationPoint,
