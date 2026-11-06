@@ -1,4 +1,4 @@
-import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, LANGUAGE_LABELS } from "./services/documentLanguage";
+import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS } from "./services/documentLanguage";
 import { preparedActionValues } from "./demoForm";
 import type { Action, ObjectionCase, Role } from "../../types";
 import { DEMO_USER } from "../../config";
@@ -604,6 +604,7 @@ export function actionForm(
           ),
           readOnly: true,
         },
+        ...(c.appealType === "Заявление" && certificateStatementSource(c).request ? selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).filter(language => language !== appealLanguage(c) && !certificateStatementSource(c).translations?.[language]?.trim()).map(language => ({ ...area(`statementTranslation_${language}`, `Перевод поля «О чем заявление» — ${LANGUAGE_LABELS[language]}`, values[`statementTranslation_${language}`] ?? protocolStatementTranslation(c, language)), language, required: false })) : []),
         ...disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).filter(language => !certificatePointTitle(c, point, language)).map(language => ({ ...area(`pointTitle_${language}_${point.id}`, `Перевод описания пункта № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? protocolPointTitle(c, point, language)), language }))),
         ...(selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).includes("ru") ? [{ ...area("recommendations", "Рекомендации — Русский", c.meeting?.recommendations || ""), required: false, language: "ru" as const }] : []),
         ...(selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).includes("kk") ? [{ ...area("recommendationsKk", "Ұсынымдар — Қазақша", c.meeting?.recommendationsKk || ""), required: false, language: "kk" as const }] : []),

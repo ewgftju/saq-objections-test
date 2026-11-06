@@ -942,3 +942,44 @@ for (const primary of ["ru", "kk"] as const) {
     assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "certificate", document: withoutTranslation, language: other })).includes(original));
   });
 }
+
+for (const primary of ["ru", "kk"] as const) for (const translatedInCertificate of [false, true]) {
+  test(`${primary}: протокол использует перевод содержания заявления ${translatedInCertificate ? "из справки" : "из формы протокола"}`, () => {
+    const h = fixture(primary);
+    const other = primary === "ru" ? "kk" : "ru";
+    const original = primary === "ru" ? "Заявление на русском" : "Қазақша өтініш";
+    const translation = other === "ru" ? "Переведённое заявление" : "Аударылған өтініш";
+    h.c.status = "materials";
+    h.c.appealType = "Заявление";
+    h.c.request = original;
+    const certValues = { documentLanguageMode: "both", [`pointTitle_${other}_p1`]: "Перевод вопроса", davgaArguments_p1: "Доводы RU", davgaArgumentsKk_p1: "Дәлел KZ", ...(translatedInCertificate ? { [`statementTranslation_${other}`]: translation } : {}) };
+    h.run("analysis", "work", certValues);
+    const certificate = h.c.documents.at(-1)!;
+    h.c.status = "meeting";
+    h.c.members = [{ id: "chair", name: "Председатель", present: true, recused: false, reason: "" }];
+    const values = { documentLanguageMode: "both", protocolVote_p1_chair: "accept", protocolDavga_p1_chair: "Доводы RU", protocolDavgaKk_p1_chair: "Дәлел KZ", ...(!translatedInCertificate ? { [`statementTranslation_${other}`]: translation } : {}) };
+    const field = actionForm("vote", h.c, h.state.date, values).fields.find(item => item.name === `statementTranslation_${other}`);
+    assert.equal(Boolean(field), !translatedInCertificate);
+    if (field) {
+      assert.equal(field.required, false);
+      const modal = renderToStaticMarkup(createElement(ActionModal, { c: h.c, action: "vote", role: "work", date: h.state.date, onClose() {}, onSubmit() {} }));
+      assert.ok(modal.indexOf("Участники заседания и результаты голосования") < modal.indexOf("Перевод поля «О чем заявление»"));
+    }
+    h.run("vote", "work", values);
+    if (!translatedInCertificate) {
+      h.run("return-protocol", "director", { returnComment: "Доработать" });
+      assert.equal(actionForm("vote", h.c, h.state.date, { documentLanguageMode: "both" }).fields.find(item => item.name === `statementTranslation_${other}`)?.value, translation);
+      h.run("vote", "work", values);
+    }
+    assert.equal(h.c.statementTranslations?.[other] || "", translatedInCertificate ? translation : "");
+    assert.equal(certificate.snapshot?.statementTranslations?.[other] || "", translatedInCertificate ? translation : "");
+    const draft = h.c.documents.find(item => item.name === "Проект протокола заседания")!;
+    assert.equal(draft.snapshot?.statementTranslations?.[other], translation);
+    assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "protocol", document: draft, language: primary })).includes(original));
+    assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "protocol", document: draft, language: other })).includes(translation));
+    h.run("sign", "commission", { reason: "Решение", signed_chair: "on" });
+    const signed = h.c.documents.find(item => item.name === "Подписанный протокол заседания")!;
+    h.c.statementTranslations = { [other]: "Изменённый перевод" };
+    assert.ok(renderToStaticMarkup(createElement(DocumentContent, { c: h.c, kind: "protocol", document: signed, language: other })).includes(translation));
+  });
+}

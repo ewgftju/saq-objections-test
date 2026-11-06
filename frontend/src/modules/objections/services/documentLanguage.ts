@@ -55,6 +55,19 @@ export function pointText(
     (language === appealLanguage(c) ? point[field] : "")
   );
 }
+/** Statement wording as captured in the latest certificate, without modifying it. */
+export function certificateStatementSource(c: ObjectionCase) {
+  const snapshot = [...c.documents].reverse().find(item => item.kind === "certificate" && item.snapshot?.certificate)?.snapshot;
+  return { request: snapshot?.request ?? c.request, translations: snapshot ? snapshot.statementTranslations : c.statementTranslations };
+}
+
+export function protocolStatementTranslation(c: ObjectionCase, language: DocumentLanguage) {
+  const fromCertificate = certificateStatementSource(c).translations?.[language]?.trim();
+  if (fromCertificate) return fromCertificate;
+  const previous = [...(c.meeting?.protocolVersions || [])].reverse().find(item => (item.certificateRevision ?? 0) === (c.certificateRevision ?? 0));
+  return previous?.statementTranslations?.[language] || "";
+}
+
 /** Description from the current certificate in one of its actual languages. */
 export function certificatePointTitle(c: ObjectionCase, point: ViolationPoint, language: DocumentLanguage): string {
   const doc = [...c.documents].reverse().find(item => item.kind === "certificate" && item.snapshot?.certificate);

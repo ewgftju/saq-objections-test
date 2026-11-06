@@ -1,4 +1,4 @@
-import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, protocolIssuesWithTitles, LANGUAGE_LABELS, localizedCase } from "./documentLanguage";
+import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, protocolIssuesWithTitles, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS, localizedCase } from "./documentLanguage";
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
@@ -1999,6 +1999,13 @@ export function applyAction(
           }
         }
       }
+      const statementSource = certificateStatementSource(c);
+      const statementTranslations = { ...statementSource.translations };
+      if (c.appealType === "Заявление") {
+        for (const language of protocolLanguages.filter(item => item !== appealLanguage(c))) {
+          if (!statementTranslations[language]?.trim()) statementTranslations[language] = String(form.get(`statementTranslation_${language}`) ?? protocolStatementTranslation(c, language)).trim();
+        }
+      }
       const previousVersions = c.meeting?.protocolVersions || [];
       const previousOriginalVotes = c.meeting?.originalVotes ?? structuredClone(c.votes || null);
       const currentVersions = previousVersions.filter((version) => (version.certificateRevision ?? 0) === (c.certificateRevision ?? 0));
@@ -2114,7 +2121,7 @@ export function applyAction(
         recommendations: recommendationText || undefined,
         recommendationsKk: String(form.get("recommendationsKk") || "").trim() || undefined,
         originalVotes: previousOriginalVotes,
-        protocolVersions: [...previousVersions, { createdAt: changedAt, author: c.assignee, languages: protocolLanguages, certificateRevision: c.certificateRevision ?? 0, pointTitles, rows: protocolRows }],
+        protocolVersions: [...previousVersions, { createdAt: changedAt, author: c.assignee, languages: protocolLanguages, certificateRevision: c.certificateRevision ?? 0, pointTitles, statementTranslations, statementRequest: statementSource.request, rows: protocolRows }],
       };
       const changes = protocolRows.filter((row) => row.edited !== (previousRows.find((previous) => previous.pointId === row.pointId && previous.memberId === row.memberId)?.edited ?? row.original));
       if (changes.length) c.history.push({ date, actor: c.assignee, title: "Изменены обоснования протокола", text: changes.map((row) => `Пункт № ${row.pointNumber}, ${row.memberName}: было: ${previousRows.find((previous) => previous.pointId === row.pointId && previous.memberId === row.memberId)?.edited ?? row.original}\nСтало: ${row.edited}`).join("\n\n") });
@@ -2125,6 +2132,7 @@ export function applyAction(
         "Состав участников зафиксирован. Ожидаются подписи членов АК.",
       );
       if (c.documents.at(-1)?.snapshot) c.documents.at(-1)!.snapshot!.issues = protocolIssuesWithTitles(c, pointTitles);
+      if (c.documents.at(-1)?.snapshot && c.appealType === "Заявление") { c.documents.at(-1)!.snapshot!.statementTranslations = statementTranslations; c.documents.at(-1)!.snapshot!.request = statementSource.request; }
       break;
     }
     case "sign": {
@@ -2169,6 +2177,7 @@ export function applyAction(
       }
       doc("Подписанный протокол заседания", "protocol", c.result.reason);
       if (c.documents.at(-1)?.snapshot && version?.pointTitles) c.documents.at(-1)!.snapshot!.issues = protocolIssuesWithTitles(c, version.pointTitles);
+      if (c.documents.at(-1)?.snapshot && version && c.appealType === "Заявление") { c.documents.at(-1)!.snapshot!.statementTranslations = version.statementTranslations; c.documents.at(-1)!.snapshot!.request = version.statementRequest ?? c.request; }
       if (c.certificate && version?.rows?.length) {
         const protocolRows = version.rows;
         const protocolLanguages = version.languages || c.meeting.languages || [appealLanguage(c)];

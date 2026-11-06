@@ -1697,7 +1697,7 @@ function LegacyDocumentContent({
 
 function certificateLocalizedCase(c: ObjectionCase, language: DocumentLanguage, kind: string) {
   const localized = localizedCase(c, language);
-  if (kind === "certificate" && c.appealType === "Заявление" && language !== (c.appealLanguage || "ru")) {
+  if ((kind === "certificate" || kind === "protocol") && c.appealType === "Заявление" && language !== (c.appealLanguage || "ru")) {
     localized.request = c.statementTranslations?.[language]?.trim() || c.request;
   }
   if (kind === "certificate") {
@@ -1767,7 +1767,7 @@ export function DocumentContent(props: DocumentContentProps) {
                         {
                           ...props.c,
                           ...props.document.snapshot,
-                          ...(props.kind === "certificate" ? { statementTranslations: props.document.snapshot.statementTranslations } : {}),
+                          ...((props.kind === "certificate" || props.kind === "protocol") ? { statementTranslations: props.document.snapshot.statementTranslations } : {}),
                           decisionProjectDavgaOverrides:
                             props.document.snapshot
                               .decisionProjectDavgaOverrides,
