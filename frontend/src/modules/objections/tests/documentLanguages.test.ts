@@ -121,6 +121,7 @@ for (const primary of ["ru", "kk"] as const) {
         .filter((field) => field.name.startsWith("pointTitle_"))
         .every((field) => !field.readOnly),
     );
+    assert.ok(fields.some(field => field.label === `Описание оспариваемого вопроса № 1 — ${primary === "ru" ? "Русский" : "Қазақша"}`));
     const applicantFields = fields.filter((field) =>
       field.name.startsWith("pointArgument_"),
     );
