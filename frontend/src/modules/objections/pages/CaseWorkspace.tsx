@@ -176,6 +176,23 @@ function MotivatedResponseRoutingSection({
   );
 }
 
+function DecisionProjectRoutingSection({ c, onDocument }: { c: ObjectionCase; onDocument: (kind: string, document?: CaseDocument) => void }) {
+  const routing = c.decisionProjectRouting;
+  if (routing?.channel !== "external" || !routing.sentAt) return null;
+  const recipient = routing.recipients?.find(item => item.id === "subject");
+  const confirmations = c.documents.filter(document => document.kind === "decision-project-delivery-attachment");
+  return <section className="request-documents-section">
+    <h4>Направление проекта решения</h4>
+    <div className="request-documents-list">
+      <div className="request-document-row"><span>{recipient?.recipient || c.org}<small>{`Направлен · ${formatDate(routing.sentAt)}${routing.deliveryPath ? ` · ${routing.deliveryPath}` : ""}${routing.registrationNumber ? ` · №${routing.registrationNumber}` : ""}`}</small></span></div>
+    </div>
+    {confirmations.length > 0 && <div className="request-documents-list">{confirmations.map((document, index) => <div className="request-document-row" key={`${document.name}-${document.date}-${index}`}>
+      <span>{document.name}</span>
+      {document.dataUrl ? <a className="button" href={document.dataUrl} download={document.filename || document.name}>Скачать</a> : <Button onClick={() => onDocument(document.kind, document)}>Просмотр</Button>}
+    </div>)}</div>}
+  </section>;
+}
+
 function Fact({
   label,
   value,
@@ -1415,6 +1432,7 @@ export default function CaseWorkspace({
                           </section>
                         ) : null;
                       })()}
+                      {!isCommission && <DecisionProjectRoutingSection c={c} onDocument={onDocument} />}
                       {(() => {
                         const decisionProject = c.documents
                           .filter(
