@@ -126,6 +126,7 @@ for (const primary of ["ru", "kk"] as const) {
       field.name.startsWith("pointArgument_"),
     );
     assert.equal(applicantFields.length, 2);
+    assert.ok(applicantFields.every(field => field.label === "Доводы заявителя по пункту № 1"));
     assert.ok(
       applicantFields.every(
         (field) => field.readOnly && field.value === originalArgument,
