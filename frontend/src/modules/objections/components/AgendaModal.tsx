@@ -1,14 +1,12 @@
 import { useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Button, Modal } from "../../../components/ui";
-import type { DocumentLanguage, ObjectionCase } from "../../../types";
-import { auditAuthorityKazakhName } from "../../../utils/auditAuthority";
+import type { ObjectionCase } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import {
   applicantIdentifierType,
   agendaOrProtocolIntro,
   auditAuthorityTemplateName,
-  kazakhAppealReference,
 } from "../services/appealTemplates";
 
 function value(text?: string) {
@@ -84,29 +82,18 @@ export function agendaItemText(c: ObjectionCase) {
   return `${value(appealType)} ${appealReference(c)} ${common}`;
 }
 
-export function AgendaDocument({
-  cases,
-  meetingDate,
-  language = "ru",
-}: {
-  cases: ObjectionCase[];
-  meetingDate: string;
-  language?: DocumentLanguage;
-}) {
+export function AgendaDocument({ cases, meetingDate }: { cases: ObjectionCase[]; meetingDate: string }) {
   return (
-    <article className="print-document agenda-template" lang={language}>
-      <h1>
-        {language === "kk" ? <>Қазақстан Республикасының Қаржы министрлігінің апелляциялық<br />комиссиясының {formatDate(meetingDate)} жылға күн тәртібіндегі<br />қарастырылатын материалдар тізімі</> : <>Перечень материалов к рассмотрению<br />на заседании Апелляционной комиссии Министерства финансов<br />Республики Казахстан от {formatDate(meetingDate)}</>}
-      </h1>
+    <article className="print-document agenda-template" lang="ru">
+      <h1>Перечень материалов к рассмотрению<br />на заседании Апелляционной комиссии Министерства финансов<br />Республики Казахстан от {formatDate(meetingDate)}</h1>
       <ol>
         {cases.map((c) => {
           const localized = {
             ...c,
-            request: c.statementTranslations?.[language] || c.request,
-            agendaDetails: c.agendaDetails && { ...c.agendaDetails, procurementSubject: c.agendaDetails.procurementSubjectTranslations?.[language] || c.agendaDetails.procurementSubject },
+            request: c.statementTranslations?.ru || c.request,
+            agendaDetails: c.agendaDetails && { ...c.agendaDetails, procurementSubject: c.agendaDetails.procurementSubjectTranslations?.ru || c.agendaDetails.procurementSubject },
           };
-          const kazakhCase = localized.appealType ? localized : { ...localized, appealType: localized.type === "audit" ? "Возражение на аудиторский отчет" : "Возражение на уведомление" };
-          return <li key={c.id}>{language === "kk" ? `${kazakhAppealReference(kazakhCase, auditAuthorityKazakhName)}.` : agendaItemText(localized)}</li>;
+          return <li key={c.id}>{agendaItemText(localized)}</li>;
         })}
       </ol>
     </article>
@@ -118,7 +105,7 @@ export function agendaDocumentHtml(
   meetingDate: string,
 ) {
   const content = renderToStaticMarkup(
-    <><AgendaDocument cases={cases} meetingDate={meetingDate} language="ru" /><AgendaDocument cases={cases} meetingDate={meetingDate} language="kk" /></>,
+    <AgendaDocument cases={cases} meetingDate={meetingDate} />,
   );
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Повестка дня</title><style>
     @page { size: A4; margin: 22mm 18mm; }
@@ -128,7 +115,6 @@ export function agendaDocumentHtml(
     .agenda-template h1 { margin: 0 0 18mm; text-align: center; font-size: 16pt; line-height: 1.12; font-weight: 700; }
     .agenda-template ol { margin: 0; padding-left: 12mm; }
     .agenda-template li { padding-left: 4mm; text-align: justify; }
-    .agenda-template + .agenda-template { break-before: page; page-break-before: always; margin-top: 16px; }
     @media print { body { padding: 0; background: #fff; } .agenda-template { min-height: 0; padding: 0; } }
   </style></head><body>${content}</body></html>`;
 }
@@ -145,7 +131,6 @@ export default function AgendaModal({
   onClose: () => void;
 }) {
   const [meetingDate, setMeetingDate] = useState(date);
-  const [language, setLanguage] = useState<DocumentLanguage>("ru");
   const [error, setError] = useState("");
   const print = () => {
     const popup = window.open("", "_blank");
@@ -171,12 +156,8 @@ export default function AgendaModal({
           required
         />
       </label>
-      <div className="request-modal-tabs" role="tablist" aria-label="Язык повестки дня">
-        <button type="button" role="tab" aria-selected={language === "ru"} className={language === "ru" ? "active" : ""} onClick={() => setLanguage("ru")}>Русский</button>
-        <button type="button" role="tab" aria-selected={language === "kk"} className={language === "kk" ? "active" : ""} onClick={() => setLanguage("kk")}>Қазақша</button>
-      </div>
       <div className="agenda-print-preview">
-        <AgendaDocument cases={cases} meetingDate={meetingDate} language={language} />
+        <AgendaDocument cases={cases} meetingDate={meetingDate} />
       </div>
       {error && (
         <p className="form-error" role="alert">
