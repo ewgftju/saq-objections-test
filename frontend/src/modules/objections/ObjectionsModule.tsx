@@ -942,6 +942,7 @@ export default function ObjectionsModule() {
     ) {
       return;
     }
+    refreshMeetingAgenda(meeting, next.cases);
     meeting.agendaSigned = true;
     meeting.agendaSignedAt = next.date;
     meeting.agendaCaseIds ??= [...meeting.caseIds];
@@ -2343,12 +2344,11 @@ export default function ObjectionsModule() {
             onExcludeCases={excludeCasesFromMeeting}
             onTransferCases={transferCasesToMeeting}
             onMoveCase={moveMeetingCase}
-            onPreviewAgenda={(meeting) =>
-              previewWordDocument(
-                "Повестка дня №" + meeting.number,
-                meeting.agendaHtml,
-              )
-            }
+            onPreviewAgenda={(meeting) => {
+              const preview = structuredClone(meeting);
+              if (!preview.agendaSigned) refreshMeetingAgenda(preview, model.state.cases);
+              previewWordDocument("Повестка дня №" + meeting.number, preview.agendaHtml);
+            }}
             onSignAgenda={signMeetingAgenda}
             onCompleteMeeting={completeMeeting}
             initialMeetingId={model.route.meetingId}

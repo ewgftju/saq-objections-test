@@ -27,7 +27,12 @@ function documentReference(c: ObjectionCase) {
   return `от ${formatDate(c.document.date)} ${numbered(c.document.number)}`;
 }
 
-export function agendaItemText(c: ObjectionCase) {
+export function agendaApplicantName(c: ObjectionCase) {
+  return c.documentApplicantNames?.certificate?.ru?.trim() || c.orgTranslations?.ru?.trim() || c.org;
+}
+
+export function agendaItemText(input: ObjectionCase, applicantName?: string) {
+  const c = { ...input, org: applicantName?.trim() || agendaApplicantName(input), request: input.statementTranslations?.ru || input.request, agendaDetails: input.agendaDetails && { ...input.agendaDetails, procurementSubject: input.agendaDetails.procurementSubjectTranslations?.ru || input.agendaDetails.procurementSubject } };
   const sharedIntro = agendaOrProtocolIntro(c);
   if (sharedIntro) return sharedIntro;
 
@@ -88,13 +93,7 @@ export function AgendaDocument({ cases, meetingDate, applicantNames = {} }: { ca
       <h1>Перечень материалов к рассмотрению<br />на заседании Апелляционной комиссии Министерства финансов<br />Республики Казахстан от {formatDate(meetingDate)}</h1>
       <ol>
         {cases.map((c) => {
-          const localized = {
-            ...c,
-            org: applicantNames[c.id]?.trim() || c.orgTranslations?.ru?.trim() || c.org,
-            request: c.statementTranslations?.ru || c.request,
-            agendaDetails: c.agendaDetails && { ...c.agendaDetails, procurementSubject: c.agendaDetails.procurementSubjectTranslations?.ru || c.agendaDetails.procurementSubject },
-          };
-          return <li key={c.id}>{agendaItemText(localized)}</li>;
+          return <li key={c.id}>{agendaItemText(c, applicantNames[c.id])}</li>;
         })}
       </ol>
     </article>
@@ -134,7 +133,7 @@ export default function AgendaModal({
 }) {
   const [meetingDate, setMeetingDate] = useState(date);
   const [error, setError] = useState("");
-  const [applicantNames, setApplicantNames] = useState<Record<string, string>>(() => Object.fromEntries(cases.map(c => [c.id, c.orgTranslations?.ru?.trim() || c.org])));
+  const [applicantNames, setApplicantNames] = useState<Record<string, string>>(() => Object.fromEntries(cases.map(c => [c.id, agendaApplicantName(c)])));
   const print = () => {
     const popup = window.open("", "_blank");
     if (!popup) {

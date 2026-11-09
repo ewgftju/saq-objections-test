@@ -31,3 +31,14 @@ test("наименование в повестке редактируется о
   const html = renderToStaticMarkup(createElement(AgendaDocument, { cases: [c], meetingDate: "2026-11-09", applicantNames: { [c.id]: "Исходного названия" } }));
   assert.match(html, /Исходного названия/); assert.equal(c.org, "Исходное название"); assert.equal(c.orgTranslations.ru, "Исходное название");
 });
+
+test("повестка использует русскую форму из справки и исходное имя при её отсутствии", () => {
+  const c = initialState().cases[0]; c.appealLanguage = "kk"; c.org = "Қазақша атауы";
+  c.orgTranslations = { kk: c.org, ru: "Организация" };
+  c.documentApplicantNames = { certificate: { ru: "Организации", kk: "Ұйымның" } };
+  const html = renderToStaticMarkup(createElement(AgendaDocument, { cases: [c], meetingDate: "2026-11-09" }));
+  assert.match(html, /Организации/); assert.doesNotMatch(html, /Ұйымның/);
+  c.documentApplicantNames = { certificate: { kk: "Ұйымның" } };
+  const fallback = renderToStaticMarkup(createElement(AgendaDocument, { cases: [c], meetingDate: "2026-11-09" }));
+  assert.match(fallback, /Организация/);
+});
