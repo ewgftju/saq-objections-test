@@ -1158,7 +1158,7 @@ export function actionForm(
     const fieldLanguages = action === "analysis" && !langs.includes("ru") ? [...langs, "ru" as const] : langs;
     for (const language of fieldLanguages) {
       const key = `documentApplicantName_${language}`;
-      const original = values[`applicantName_${language}`] ?? c.orgTranslations?.[language] ?? (language === appealLanguage(c) ? c.org : "");
+      const original = (action === "vote" ? c.documentApplicantNames?.certificate?.[language]?.trim() : undefined) || values[`applicantName_${language}`] || c.orgTranslations?.[language] || (language === appealLanguage(c) ? c.org : "");
       const forAgenda = action === "analysis" && language === "ru";
       const label = forAgenda ? "Наименование заявителя в нужном падеже для повестки — Русский" : `${action === "create-decision-project" || action === "deliver" ? "Наименование заявителя в адресате" : "Наименование заявителя в тексте документа"} — ${LANGUAGE_LABELS[language]}`;
       fields.push({ ...input(key, label, values[key] ?? original), language: action === "analysis" && language === "ru" && !langs.includes("ru") ? undefined : action === "analysis" || action === "vote" ? language : undefined, required: forAgenda });

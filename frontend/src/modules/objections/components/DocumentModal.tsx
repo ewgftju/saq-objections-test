@@ -341,7 +341,7 @@ function LegacyDocumentContent({
     language === "kk" ? auditAuthorityKazakhName : auditAuthorityFullName;
   const snapshot = document?.snapshot ? { ...c, ...document.snapshot } : c;
   const savedNames = document?.snapshot ? document.snapshot.documentApplicantNames : c.documentApplicantNames;
-  const nameInDocument = savedNames?.[kind]?.[language || "ru"]?.trim();
+  const nameInDocument = savedNames?.[kind]?.[language || "ru"]?.trim() || (kind === "protocol" ? savedNames?.certificate?.[language || "ru"]?.trim() : undefined);
   const textSnapshot = nameInDocument ? { ...snapshot, org: nameInDocument } : snapshot;
   const request =
     requestPreview ||
@@ -1091,8 +1091,8 @@ function LegacyDocumentContent({
       (snapshot.appealType === "Жалоба на уведомление"
         ? `Жалоба от ${textSnapshot.org}, ${applicantIdentifierType(snapshot)} ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на уведомление об устранении нарушений от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityTemplateName(snapshot)}.`
         : snapshot.appealType === "Возражение на аудиторский отчет"
-          ? `Возражение от ${snapshot.org}, ${applicantIdentifierType(snapshot, "БИН")} ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на аудиторский отчет от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityTemplateName(snapshot)}.`
-          : `Возражение «${snapshot.org}», ${applicantIdentifierType(snapshot, "БИН")} ${snapshot.bin} от ${formatDate(snapshot.appealDate || snapshot.filed)} года №${snapshot.appealNumber || snapshot.document.number} к уведомлению ${auditAuthorityTemplateName(snapshot)} от ${formatDate(snapshot.document.date)} года №${snapshot.document.number}.`);
+          ? `Возражение от ${textSnapshot.org}, ${applicantIdentifierType(snapshot, "БИН")} ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на аудиторский отчет от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityTemplateName(snapshot)}.`
+          : `Возражение «${textSnapshot.org}», ${applicantIdentifierType(snapshot, "БИН")} ${snapshot.bin} от ${formatDate(snapshot.appealDate || snapshot.filed)} года №${snapshot.appealNumber || snapshot.document.number} к уведомлению ${auditAuthorityTemplateName(snapshot)} от ${formatDate(snapshot.document.date)} года №${snapshot.document.number}.`);
     return (
       <article className="print-document protocol-template">
         <h1>
@@ -1234,20 +1234,20 @@ function LegacyDocumentContent({
           {decision}{" "}
           {language === "kk" ? (
             <>
-              {snapshot.org},{" "}
+              {textSnapshot.org},{" "}
               {formatDate(snapshot.appealDate || snapshot.filed)} жылғы №{" "}
               {snapshot.appealNumber || snapshot.document.number}{" "}
               {kazakhAppealObject(snapshot)}.
             </>
           ) : snapshot.appealType?.startsWith("Жалоба") ? (
             <>
-              жалобу {snapshot.org} от{" "}
+              жалобу {textSnapshot.org} от{" "}
               {formatDate(snapshot.appealDate || snapshot.filed)} года №{" "}
               {snapshot.appealNumber || snapshot.document.number}.
             </>
           ) : (
             <>
-              {appealTypeLabel} {snapshot.org} от{" "}
+              {appealTypeLabel} {textSnapshot.org} от{" "}
               {formatDate(snapshot.appealDate || snapshot.filed)} года №
               {snapshot.appealNumber || snapshot.document.number}.
             </>

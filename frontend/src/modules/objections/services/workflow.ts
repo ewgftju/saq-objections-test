@@ -1022,7 +1022,8 @@ export function applyAction(
   if (applicantNameDocumentKind) {
     const names: Partial<Record<"ru" | "kk", string>> = {};
     for (const language of ["ru", "kk"] as const) {
-      const value = String(form.get(`documentApplicantName_${language}`) || "").trim();
+      const key = `documentApplicantName_${language}`;
+      const value = String(form.has(key) ? form.get(key) || "" : action === "vote" ? c.documentApplicantNames?.certificate?.[language] || "" : "").trim();
       if (value) names[language] = value;
     }
     if (action === "analysis") {
