@@ -1025,6 +1025,10 @@ export function applyAction(
       const value = String(form.get(`documentApplicantName_${language}`) || "").trim();
       if (value) names[language] = value;
     }
+    if (action === "analysis") {
+      if (!form.has("documentApplicantName_ru")) names.ru = c.orgTranslations?.ru?.trim() || (appealLanguage(c) === "ru" ? c.org?.trim() : "") || undefined;
+      if (!names.ru) throw new Error("Заполните наименование заявителя в нужном падеже на русском языке для повестки.");
+    }
     c.documentApplicantNames = { ...c.documentApplicantNames, [applicantNameDocumentKind]: names };
   }
   if ((action === "create-decision-project" || (action === "deliver" && isMotivatedResponseStage(c))) && !kazakhApplicantName(c)) {
