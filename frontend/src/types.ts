@@ -348,6 +348,7 @@ export interface CaseDocument {
     appealLanguage?: DocumentLanguage;
     org?: string;
     orgTranslations?: Partial<Record<DocumentLanguage, string>>;
+    documentApplicantNames?: Record<string, Partial<Record<DocumentLanguage, string>>>;
     agendaDetails?: AgendaDetails;
     request?: string;
     statementTranslations?: Partial<Record<DocumentLanguage, string>>;
@@ -616,6 +617,7 @@ export interface HistoryEvent {
 export interface ObjectionCase {
   appealLanguage?: DocumentLanguage;
   orgTranslations?: Partial<Record<DocumentLanguage, string>>;
+  documentApplicantNames?: Record<string, Partial<Record<DocumentLanguage, string>>>;
   id: string;
   type: CaseType;
   appealType?: string;

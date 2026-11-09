@@ -869,6 +869,7 @@ export function addDocument(
       appealLanguage: c.appealLanguage,
       org: c.org,
       orgTranslations: c.orgTranslations,
+      documentApplicantNames: c.documentApplicantNames,
       ...(kind === "certificate" ? { agendaDetails: c.agendaDetails, request: c.request, statementTranslations: c.statementTranslations } : {}),
       issues: c.issues,
       result: c.result || null,
@@ -1016,6 +1017,15 @@ export function applyAction(
         c.orgTranslations = { ...c.orgTranslations, [language]: value };
       }
     }
+  }
+  const applicantNameDocumentKind = action === "request" ? "request" : action === "analysis" ? "certificate" : action === "vote" ? "protocol" : action === "create-decision-project" ? "decision-project" : action === "deliver" && !requiresConclusion(c) ? "final-response" : undefined;
+  if (applicantNameDocumentKind) {
+    const names: Partial<Record<"ru" | "kk", string>> = {};
+    for (const language of ["ru", "kk"] as const) {
+      const value = String(form.get(`documentApplicantName_${language}`) || "").trim();
+      if (value) names[language] = value;
+    }
+    c.documentApplicantNames = { ...c.documentApplicantNames, [applicantNameDocumentKind]: names };
   }
   if ((action === "create-decision-project" || (action === "deliver" && isMotivatedResponseStage(c))) && !kazakhApplicantName(c)) {
     throw new Error("Заполните наименование объекта заявителя — Қазақша");

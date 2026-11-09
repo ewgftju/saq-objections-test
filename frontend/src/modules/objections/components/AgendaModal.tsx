@@ -82,7 +82,7 @@ export function agendaItemText(c: ObjectionCase) {
   return `${value(appealType)} ${appealReference(c)} ${common}`;
 }
 
-export function AgendaDocument({ cases, meetingDate }: { cases: ObjectionCase[]; meetingDate: string }) {
+export function AgendaDocument({ cases, meetingDate, applicantNames = {} }: { cases: ObjectionCase[]; meetingDate: string; applicantNames?: Record<string, string> }) {
   return (
     <article className="print-document agenda-template" lang="ru">
       <h1>Перечень материалов к рассмотрению<br />на заседании Апелляционной комиссии Министерства финансов<br />Республики Казахстан от {formatDate(meetingDate)}</h1>
@@ -90,7 +90,7 @@ export function AgendaDocument({ cases, meetingDate }: { cases: ObjectionCase[];
         {cases.map((c) => {
           const localized = {
             ...c,
-            org: c.orgTranslations?.ru?.trim() || c.org,
+            org: applicantNames[c.id]?.trim() || c.orgTranslations?.ru?.trim() || c.org,
             request: c.statementTranslations?.ru || c.request,
             agendaDetails: c.agendaDetails && { ...c.agendaDetails, procurementSubject: c.agendaDetails.procurementSubjectTranslations?.ru || c.agendaDetails.procurementSubject },
           };
@@ -104,9 +104,10 @@ export function AgendaDocument({ cases, meetingDate }: { cases: ObjectionCase[];
 export function agendaDocumentHtml(
   cases: ObjectionCase[],
   meetingDate: string,
+  applicantNames: Record<string, string> = {},
 ) {
   const content = renderToStaticMarkup(
-    <AgendaDocument cases={cases} meetingDate={meetingDate} />,
+    <AgendaDocument cases={cases} meetingDate={meetingDate} applicantNames={applicantNames} />,
   );
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Повестка дня</title><style>
     @page { size: A4; margin: 22mm 18mm; }
@@ -128,11 +129,12 @@ export default function AgendaModal({
 }: {
   cases: ObjectionCase[];
   date: string;
-  onSend: (meetingDate: string) => void;
+  onSend: (meetingDate: string, applicantNames: Record<string, string>) => void;
   onClose: () => void;
 }) {
   const [meetingDate, setMeetingDate] = useState(date);
   const [error, setError] = useState("");
+  const [applicantNames, setApplicantNames] = useState<Record<string, string>>(() => Object.fromEntries(cases.map(c => [c.id, c.orgTranslations?.ru?.trim() || c.org])));
   const print = () => {
     const popup = window.open("", "_blank");
     if (!popup) {
@@ -141,7 +143,7 @@ export default function AgendaModal({
       );
       return;
     }
-    popup.document.write(agendaDocumentHtml(cases, meetingDate));
+    popup.document.write(agendaDocumentHtml(cases, meetingDate, applicantNames));
     popup.document.close();
     popup.focus();
     popup.print();
@@ -157,8 +159,9 @@ export default function AgendaModal({
           required
         />
       </label>
+      {cases.map(c => <label className="field" key={c.id}><span>Наименование заявителя в повестке — {c.id}</span><input value={applicantNames[c.id] || ""} onChange={event => setApplicantNames(prev => ({ ...prev, [c.id]: event.target.value }))} /></label>)}
       <div className="agenda-print-preview">
-        <AgendaDocument cases={cases} meetingDate={meetingDate} />
+        <AgendaDocument cases={cases} meetingDate={meetingDate} applicantNames={applicantNames} />
       </div>
       {error && (
         <p className="form-error" role="alert">
@@ -170,7 +173,7 @@ export default function AgendaModal({
         <Button primary onClick={print}>
           Печать / PDF
         </Button>
-        <Button primary onClick={() => onSend(meetingDate)}>
+        <Button primary onClick={() => onSend(meetingDate, applicantNames)}>
           Направить АК
         </Button>
       </div>

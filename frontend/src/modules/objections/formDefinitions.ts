@@ -1153,6 +1153,14 @@ export function actionForm(
       title = "Добавление материала";
       break;
   }
+  if (["request", "analysis", "vote", "create-decision-project"].includes(action) || (action === "deliver" && !requiresConclusion(c))) {
+    const langs = action === "analysis" || action === "vote" ? selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])) : action === "create-decision-project" || action === "deliver" ? ["kk" as const] : ["ru" as const];
+    for (const language of langs) {
+      const key = `documentApplicantName_${language}`;
+      const original = values[`applicantName_${language}`] ?? c.orgTranslations?.[language] ?? c.org;
+      fields.push({ ...input(key, `${action === "create-decision-project" || action === "deliver" ? "Наименование заявителя в адресате" : "Наименование заявителя в тексте документа"} — ${LANGUAGE_LABELS[language]}`, values[key] ?? original), language: action === "analysis" || action === "vote" ? language : undefined, required: false });
+    }
+  }
   const prepared = preparedActionValues(c, action);
   fields = fields.map((field) =>
     !field.value && prepared[field.name]

@@ -2523,7 +2523,7 @@ export default function ObjectionsModule() {
         <AgendaModal
           cases={dialog.cases}
           date={model.state.date}
-          onSend={(meetingDate) => {
+          onSend={(meetingDate, applicantNames) => {
             const selectedIds = new Set(dialog.cases.map((item) => item.id));
             const next = structuredClone(model.state);
             next.cases
@@ -2544,7 +2544,7 @@ export default function ObjectionsModule() {
               number,
               meetingDate,
               caseIds: dialog.cases.map((item) => item.id),
-              documentHtml: agendaDocumentHtml(dialog.cases, meetingDate),
+              documentHtml: agendaDocumentHtml(dialog.cases, meetingDate, applicantNames),
               created: next.date,
             });
             model.commit(next, "Повестка дня направлена членам АК");

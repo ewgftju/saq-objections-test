@@ -340,6 +340,9 @@ function LegacyDocumentContent({
   const authorityDisplay =
     language === "kk" ? auditAuthorityKazakhName : auditAuthorityFullName;
   const snapshot = document?.snapshot ? { ...c, ...document.snapshot } : c;
+  const savedNames = document?.snapshot ? document.snapshot.documentApplicantNames : c.documentApplicantNames;
+  const nameInDocument = savedNames?.[kind]?.[language || "ru"]?.trim();
+  const textSnapshot = nameInDocument ? { ...snapshot, org: nameInDocument } : snapshot;
   const request =
     requestPreview ||
     (document?.requestId
@@ -500,7 +503,7 @@ function LegacyDocumentContent({
         >
           {request.customText !== undefined
             ? request.customText
-            : requestIntro(c, request.deadline)}
+            : requestIntro(textSnapshot, request.deadline)}
         </p>
         <p className="request-template-regulatory-notice">
           {REQUEST_REGULATORY_NOTICE}
@@ -642,8 +645,8 @@ function LegacyDocumentContent({
         <h2>{document?.certificateVersion?.source === "protocol-result" ? (language === "kk" ? "отырыс хаттамасының қорытындылары бойынша" : "по итогам протокола заседания") : t("по результатам изучения и анализа возражения")}</h2>
         <p className="certificate-template-intro">
           {language === "kk"
-            ? `Қазақстан Республикасы Қаржы министрлігіне ${kazakhAppealReference(snapshot, auditAuthorityKazakhName)} келіп түсті.`
-            : certificateIntro(snapshot)}
+            ? `Қазақстан Республикасы Қаржы министрлігіне ${kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)} келіп түсті.`
+            : certificateIntro(textSnapshot)}
         </p>
         <p className="certificate-template-explanation">
           {t("(наименование, БИН/ИИН лица, подавшего возражение, жалобу)")}
@@ -873,7 +876,7 @@ function LegacyDocumentContent({
           ) : null}
           <div className="final-response-recipient">
             <p>
-              <strong>{useDavgaArguments ? snapshot.orgTranslations?.kk?.trim() || (snapshot.appealLanguage === "kk" || document ? snapshot.org : "—") : snapshot.org}</strong>
+              <strong>{useDavgaArguments ? savedNames?.[kind]?.kk?.trim() || snapshot.orgTranslations?.kk?.trim() || (snapshot.appealLanguage === "kk" || document ? snapshot.org : "—") : snapshot.org}</strong>
             </p>
             {!isDecisionProject && (
               <p>
@@ -1084,9 +1087,9 @@ function LegacyDocumentContent({
         snapshot.appealType.slice(1)
       : "обращение";
     const protocolIntro =
-      agendaOrProtocolIntro(snapshot) ||
+      agendaOrProtocolIntro(textSnapshot) ||
       (snapshot.appealType === "Жалоба на уведомление"
-        ? `Жалоба от ${snapshot.org}, ${applicantIdentifierType(snapshot)} ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на уведомление об устранении нарушений от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityTemplateName(snapshot)}.`
+        ? `Жалоба от ${textSnapshot.org}, ${applicantIdentifierType(snapshot)} ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на уведомление об устранении нарушений от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityTemplateName(snapshot)}.`
         : snapshot.appealType === "Возражение на аудиторский отчет"
           ? `Возражение от ${snapshot.org}, ${applicantIdentifierType(snapshot, "БИН")} ${snapshot.bin || "—"}, № ${snapshot.appealNumber || snapshot.document.number} от ${formatDate(snapshot.appealDate || snapshot.filed)} года, на аудиторский отчет от ${formatDate(snapshot.document.date)} года № ${snapshot.document.number || "—"}, проведенный ${auditAuthorityTemplateName(snapshot)}.`
           : `Возражение «${snapshot.org}», ${applicantIdentifierType(snapshot, "БИН")} ${snapshot.bin} от ${formatDate(snapshot.appealDate || snapshot.filed)} года №${snapshot.appealNumber || snapshot.document.number} к уведомлению ${auditAuthorityTemplateName(snapshot)} от ${formatDate(snapshot.document.date)} года №${snapshot.document.number}.`);
@@ -1148,7 +1151,7 @@ function LegacyDocumentContent({
         </div>
         <p className="protocol-template-intro">
           {language === "kk"
-            ? `${kazakhAppealReference(snapshot, auditAuthorityKazakhName)}.`
+            ? `${kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)}.`
             : protocolIntro}
         </p>
         <p>
@@ -1769,6 +1772,7 @@ export function DocumentContent(props: DocumentContentProps) {
                           ...props.c,
                           ...props.document.snapshot,
                           orgTranslations: props.document.snapshot.orgTranslations,
+                          documentApplicantNames: props.document.snapshot.documentApplicantNames,
                           ...((props.kind === "certificate" || props.kind === "protocol") ? { statementTranslations: props.document.snapshot.statementTranslations } : {}),
                           decisionProjectDavgaOverrides:
                             props.document.snapshot
