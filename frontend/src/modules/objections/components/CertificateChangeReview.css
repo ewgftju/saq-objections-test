@@ -1,0 +1,9 @@
+.certificate-change-review { display: grid; gap: 18px; }
+.certificate-change-reason { padding: 14px 16px; border: 1px solid #d6e4ee; border-radius: 7px; background: #f4f9fc; }
+.certificate-change-reason div { margin-top: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.certificate-change-card { display: grid; gap: 16px; padding: 18px; border: 1px solid #d6e1e9; border-radius: 8px; }
+.certificate-change-card h3 { margin: 0; font-size: 16px; }
+.review-argument h4 { margin: 0 0 8px; font-size: 14px; }
+.review-argument-text { padding: 14px; border: 1px solid #dce4eb; border-radius: 6px; background: #f8fafb; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.review-argument-expand { padding: 8px 0 0; border: 0; background: transparent; color: #006298; font-weight: 600; cursor: pointer; }
+.review-argument-expand:hover { text-decoration: underline; }

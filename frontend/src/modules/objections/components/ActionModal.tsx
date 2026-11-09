@@ -1,4 +1,3 @@
-import "./RecommendationRecipientSelect.css";
 import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS } from "../services/documentLanguage";
 import type { DocumentLanguage } from "../../../types";
 import { useRef, useState } from "react";
@@ -145,6 +144,36 @@ export function Field({
       )}
     </label>
   );
+}
+
+function ReviewArgument({ title, text }: { title: string; text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const limit = 500;
+  const isLong = text.length > limit || text.split("\n").length > 8;
+  const preview = text.split("\n").slice(0, 8).join("\n").slice(0, limit);
+  return <div className="review-argument"><h4>{title}</h4><div className="review-argument-text">{text ? (isLong && !expanded ? `${preview}…` : text) : "—"}</div>{isLong && <button className="review-argument-expand" type="button" aria-expanded={expanded} onClick={() => setExpanded(current => !current)}>{expanded ? "Свернуть" : "Показать полностью"}</button>}</div>;
+}
+
+function CertificateChangeReview({ c, fields }: { c: ObjectionCase; fields: FormField[] }) {
+  const request = c.certificateChangeRequests?.at(-1);
+  const date = fields.find(field => field.name === "date");
+  const comment = fields.find(field => field.name === "reviewComment");
+  return <div className="certificate-change-review">
+    {date && <Field field={date} />}
+    {request?.reason && <div className="certificate-change-reason"><b>Причина предложения</b><div>{request.reason}</div></div>}
+    {request?.changes.map((change) => {
+      const key = `${change.pointId}${change.language === "kk" ? "_kk" : ""}`;
+      const before = fields.find(field => field.name === `before_${key}`);
+      const decision = fields.find(field => field.name === `decision_${key}`);
+      return <section className="certificate-change-card" key={key}>
+        <h3>Пункт № {change.pointNumber} · {LANGUAGE_LABELS[change.language || "ru"]}</h3>
+        <ReviewArgument title={before?.label || "Доводы в справке"} text={change.before} />
+        <ReviewArgument title="Предлагаемые доводы" text={change.proposed} />
+        {decision && <Field field={decision} />}
+      </section>;
+    })}
+    {comment && <Field field={comment} />}
+  </div>;
 }
 
 function RecommendationRecipientSelect() {
@@ -1584,6 +1613,8 @@ export default function ActionModal({
               </>
             )}
           </>
+        ) : action === "review-certificate-change" ? (
+          <CertificateChangeReview c={c} fields={definition.fields} />
         ) : [
           "record-decision-project-delivery",
           "submit-decision-project-comment",
