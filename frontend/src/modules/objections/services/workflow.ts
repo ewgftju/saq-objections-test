@@ -1853,6 +1853,14 @@ export function applyAction(
             c.agendaDetails.procurementSubjectTranslations = { ...c.agendaDetails.procurementSubjectTranslations, [language]: value };
           }
         }
+        if (appealLanguage(c) === "kk") {
+          const applicant = String(form.get("agendaApplicantRu") || "").trim();
+          const statement = String(form.get("agendaStatementRu") || "").trim();
+          const procurement = String(form.get("agendaProcurementRu") || "").trim();
+          if (applicant) c.orgTranslations = { ...c.orgTranslations, ru: applicant };
+          if (statement && c.appealType === "Заявление") c.statementTranslations = { ...c.statementTranslations, ru: statement };
+          if (procurement && c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails) c.agendaDetails.procurementSubjectTranslations = { ...c.agendaDetails.procurementSubjectTranslations, ru: procurement };
+        }
         c.certificate = {
           languages, davgaArguments: "", memberPositions: [],
           davgaArgumentsByPoint: Object.fromEntries(points.map(point => [point.id, languages.includes("ru") ? text(`davgaArguments_${point.id}`, `Доводы ДАВГА № ${point.number} — Русский`) : c.certificate?.davgaArgumentsByPoint?.[point.id] || ""])),

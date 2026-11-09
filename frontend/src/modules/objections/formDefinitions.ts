@@ -458,6 +458,13 @@ export function actionForm(
       fields.push(languageModeField(c, values), ...pointTranslationFields(c, values, true));
       const langs = selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0]));
       fields.push(...applicantTranslationFields(c, values, langs));
+      if (appealLanguage(c) === "kk" && !langs.includes("ru")) {
+        const agendaFields: FormField[] = [];
+        if (!c.orgTranslations?.ru?.trim()) agendaFields.push({ ...input("agendaApplicantRu", "Наименование заявителя на русском", values.agendaApplicantRu || ""), required: false });
+        if (c.appealType === "Заявление" && c.request && !c.statementTranslations?.ru?.trim()) agendaFields.push({ ...area("agendaStatementRu", "О чём заявление на русском", values.agendaStatementRu || ""), required: false });
+        if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject && !c.agendaDetails.procurementSubjectTranslations?.ru?.trim()) agendaFields.push({ ...area("agendaProcurementRu", "Предмет государственной закупки на русском", values.agendaProcurementRu || ""), required: false });
+        if (agendaFields.length) fields.push(heading("agendaRussianDetails", "Данные для повестки на русском языке"), ...agendaFields);
+      }
       if (c.appealType === "Заявление" && c.request) {
         for (const language of langs.filter(item => item !== appealLanguage(c))) {
           const key = `statementTranslation_${language}`;

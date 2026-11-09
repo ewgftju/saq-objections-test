@@ -90,6 +90,7 @@ export function AgendaDocument({ cases, meetingDate }: { cases: ObjectionCase[];
         {cases.map((c) => {
           const localized = {
             ...c,
+            org: c.orgTranslations?.ru?.trim() || c.org,
             request: c.statementTranslations?.ru || c.request,
             agendaDetails: c.agendaDetails && { ...c.agendaDetails, procurementSubject: c.agendaDetails.procurementSubjectTranslations?.ru || c.agendaDetails.procurementSubject },
           };
