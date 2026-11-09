@@ -15,3 +15,12 @@ test('казахский протокол жалобы на уведомлени
  assert.ok(html.includes(expected),months[i]);
  }
 });
+
+test('итог казахского протокола жалобы на уведомление следует шаблону и решению голосования', () => {
+ const c=initialState().cases[0]; c.appealType='Жалоба на уведомление'; c.appealLanguage='kk'; c.org='Исходное'; c.orgTranslations={kk:c.org}; c.appealDate='2026-09-08'; c.appealNumber='5-Ж'; c.documentApplicantNames={certificate:{kk:'Ұйымның'}}; c.votes=null;
+ for (const [result, phrase] of [['accept','қанағаттандыру'],['partial','ішінара қанағаттандыру'],['reject','қанағаттандырудан бас тарту'],['refuse','қараудан бас тарту']] as const) {
+  c.issues=c.issues.map(p=>({...p,disputed:true,final:result}));
+  const html=renderToStaticMarkup(createElement(DocumentContent,{c,kind:'protocol',languages:['kk'],language:'kk'}));
+  assert.ok(html.includes(`Апелляциялық комиссия мүшелерінің дауыс беру нәтижелері негізінде Ұйымның 2026 жылғы 08 қыркүйектегі № 5-Ж шағымын ${phrase} туралы шешім қабылданды.`),result);
+ }
+});

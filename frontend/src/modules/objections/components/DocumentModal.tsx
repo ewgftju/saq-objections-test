@@ -1246,28 +1246,18 @@ function LegacyDocumentContent({
           </tbody>
         </table>
         <p className="protocol-template-result">
-          {t(
-            "На основании результатов голосования членов Апелляционной комиссии принято РЕШЕНИЕ",
-          )}{" "}
-          {decision}{" "}
-          {language === "kk" ? (
-            <>
-              {textSnapshot.org},{" "}
-              {formatDate(snapshot.appealDate || snapshot.filed)} жылғы №{" "}
-              {snapshot.appealNumber || snapshot.document.number}{" "}
-              {kazakhAppealObject(snapshot)}.
-            </>
-          ) : snapshot.appealType?.startsWith("Жалоба") ? (
-            <>
-              жалобу {textSnapshot.org} от{" "}
-              {formatDate(snapshot.appealDate || snapshot.filed)} года №{" "}
-              {snapshot.appealNumber || snapshot.document.number}.
-            </>
+          {language === "kk" && snapshot.appealType === "Жалоба на уведомление" ? (
+            <>Апелляциялық комиссия мүшелерінің дауыс беру нәтижелері негізінде {textSnapshot.org || "—"} {kazakhProtocolDate(snapshot.appealDate || snapshot.filed)} № {snapshot.appealNumber || "—"} шағымын {decision} туралы шешім қабылданды.</>
           ) : (
             <>
-              {appealTypeLabel} {textSnapshot.org} от{" "}
-              {formatDate(snapshot.appealDate || snapshot.filed)} года №
-              {snapshot.appealNumber || snapshot.document.number}.
+              {t("На основании результатов голосования членов Апелляционной комиссии принято РЕШЕНИЕ")} {decision}{" "}
+              {language === "kk" ? (
+                <>{textSnapshot.org}, {formatDate(snapshot.appealDate || snapshot.filed)} жылғы № {snapshot.appealNumber || snapshot.document.number} {kazakhAppealObject(snapshot)}.</>
+              ) : snapshot.appealType?.startsWith("Жалоба") ? (
+                <>жалобу {textSnapshot.org} от {formatDate(snapshot.appealDate || snapshot.filed)} года № {snapshot.appealNumber || snapshot.document.number}.</>
+              ) : (
+                <>{appealTypeLabel} {textSnapshot.org} от {formatDate(snapshot.appealDate || snapshot.filed)} года №{snapshot.appealNumber || snapshot.document.number}.</>
+              )}
             </>
           )}
         </p>
