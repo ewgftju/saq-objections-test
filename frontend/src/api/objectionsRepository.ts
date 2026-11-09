@@ -1,3 +1,4 @@
+import { installDigitalAuditCases } from "../data/digitalAuditCases";
 import { restoreSkippedProtocolCertificate } from "../modules/objections/services/workflow";
 import {
   COMMISSION_ATTENDANCE_MEMBERS,
@@ -17,7 +18,7 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 13;
+const CURRENT_VERSION = 14;
 
 /**
  * Карточки из старого демонстрационного набора больше не должны появляться
@@ -51,7 +52,7 @@ export function initialState(): DemoState {
   return {
     version: CURRENT_VERSION,
     date: "2026-09-08",
-    cases: seed(),
+    cases: installDigitalAuditCases(seed()),
     agendas: [],
     notifications: [],
     recommendations: [],
@@ -73,7 +74,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -340,9 +341,9 @@ export function createDemoRepository(
           ),
         activeCommissionMemberId:
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
-        cases: casesWithSharedCases,
+        cases: value.version < 14 ? installDigitalAuditCases(casesWithSharedCases) : casesWithSharedCases,
       };
-      if (restoredProtocolCertificate) {
+      if (restoredProtocolCertificate || value.version < 14) {
         try { storage.setItem(STORAGE_KEY, JSON.stringify(restoredState)); } catch { /* Restored data remains available in memory. */ }
       }
       return restoredState;
