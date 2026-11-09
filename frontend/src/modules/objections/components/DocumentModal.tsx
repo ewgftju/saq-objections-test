@@ -144,7 +144,7 @@ const KAZAKH_DIRECTOR_TITLE =
   "Ішкі мемлекеттік аудит бойынша апелляция департаментінің директоры";
 
 function appealDateAndNumber(c: ObjectionCase) {
-  return `${formatDate(c.appealDate || c.filed)} жылғы ${c.appealNumber || "—"}`;
+  return `${kazakhProtocolDate(c.appealDate || c.filed)} ${c.appealNumber || "—"}`;
 }
 
 /** Первый абзац мотивированного ответа и проекта решения. */
