@@ -1026,6 +1026,10 @@ export function applyAction(
       const value = String(form.has(key) ? form.get(key) || "" : action === "vote" ? c.documentApplicantNames?.certificate?.[language] || "" : "").trim();
       if (value) names[language] = value;
     }
+    if (action === "vote" && selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0] || ""))).includes("kk")) {
+      if (!form.has("documentApplicantName_kk")) names.kk = names.kk || c.orgTranslations?.kk?.trim() || (appealLanguage(c) === "kk" ? c.org?.trim() : "") || undefined;
+      if (!names.kk) throw new Error("Заполните наименование заявителя в тексте документа — Қазақша.");
+    }
     if (action === "analysis") {
       if (!form.has("documentApplicantName_ru")) names.ru = c.orgTranslations?.ru?.trim() || (appealLanguage(c) === "ru" ? c.org?.trim() : "") || undefined;
       if (!names.ru) throw new Error("Заполните наименование заявителя в нужном падеже на русском языке для повестки.");

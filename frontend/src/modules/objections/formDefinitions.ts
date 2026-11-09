@@ -1161,7 +1161,13 @@ export function actionForm(
       const original = (action === "vote" ? c.documentApplicantNames?.certificate?.[language]?.trim() : undefined) || values[`applicantName_${language}`] || c.orgTranslations?.[language] || (language === appealLanguage(c) ? c.org : "");
       const forAgenda = action === "analysis" && language === "ru";
       const label = forAgenda ? "Наименование заявителя в нужном падеже для повестки — Русский" : `${action === "create-decision-project" || action === "deliver" ? "Наименование заявителя в адресате" : "Наименование заявителя в тексте документа"} — ${LANGUAGE_LABELS[language]}`;
-      fields.push({ ...input(key, label, values[key] ?? original), language: action === "analysis" && language === "ru" && !langs.includes("ru") ? undefined : action === "analysis" || action === "vote" ? language : undefined, required: forAgenda });
+      const field = { ...input(key, label, values[key] ?? original), language: action === "analysis" && language === "ru" && !langs.includes("ru") ? undefined : action === "analysis" || action === "vote" ? language : undefined, required: forAgenda || (action === "vote" && language === "kk") };
+      if (action === "vote" && language === "kk") {
+        const applicantIndex = fields.findIndex(item => item.name === "applicantName_kk");
+        const firstKazakhIndex = fields.findIndex(item => item.language === "kk");
+        const index = applicantIndex >= 0 ? applicantIndex + 1 : firstKazakhIndex >= 0 ? firstKazakhIndex : fields.length;
+        fields.splice(index, 0, field);
+      } else fields.push(field);
     }
   }
   const prepared = preparedActionValues(c, action);
