@@ -206,9 +206,18 @@ function LanguageFields({ fields, primary, values }: { fields: FormField[]; prim
   const languages = [...new Set(fields.flatMap(field => field.language ? [field.language] : []))];
   const [selected, setSelected] = useState<DocumentLanguage>(primary);
   const active = languages.includes(selected) ? selected : languages[0];
+  const isFilled = (language: DocumentLanguage) => {
+    const editable = fields.filter(field => field.language === language && !field.readOnly && field.type !== "heading");
+    const required = editable.filter(field => field.required);
+    const checked = required.length ? required : editable;
+    return checked.length > 0 && checked.every(field => {
+      const value = (values[field.name] ?? field.value ?? "").trim();
+      return Boolean(value) && !/^[\s—–-]+$/u.test(value);
+    });
+  };
   return <>
     {fields.filter(field => !field.language).map(field => <Field key={field.name} field={{ ...field, value: field.readOnly ? field.value : values[field.name] ?? field.value }} />)}
-    {languages.length > 0 && <div className="request-modal-tabs" role="tablist" aria-label="Язык заполнения">{languages.map(language => <button key={language} type="button" role="tab" aria-selected={active === language} className={active === language ? "active" : ""} onClick={() => setSelected(language)}>{LANGUAGE_LABELS[language]} · {fields.filter(field => field.language === language && field.required).every(field => (values[field.name] ?? field.value ?? "").trim()) ? "Заполнено" : "Не заполнено"}</button>)}</div>}
+    {languages.length > 0 && <div className="request-modal-tabs" role="tablist" aria-label="Язык заполнения">{languages.map(language => <button key={language} type="button" role="tab" aria-selected={active === language} className={active === language ? "active" : ""} onClick={() => setSelected(language)}>{LANGUAGE_LABELS[language]} · {isFilled(language) ? "Заполнено" : "Не заполнено"}</button>)}</div>}
     {languages.map(language => <div key={language} hidden={active !== language}>{fields.filter(field => field.language === language).map(field => <Field key={field.name} field={{ ...field, value: field.readOnly ? field.value : values[field.name] ?? field.value }} />)}</div>)}
   </>;
 }
