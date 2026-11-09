@@ -1,3 +1,4 @@
+import "./RecommendationRecipientSelect.css";
 import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS } from "../services/documentLanguage";
 import type { DocumentLanguage } from "../../../types";
 import { useRef, useState } from "react";
@@ -144,6 +145,32 @@ export function Field({
       )}
     </label>
   );
+}
+
+function RecommendationRecipientSelect() {
+  const options = ["Кабинет ДВГА", "Кабинет КВГА", "Кабинет Объекта", "Кабинет вышестоящего органа"];
+  const [value, setValue] = useState("");
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const matches = options.filter(option => option.toLocaleLowerCase("ru-RU").includes(value.toLocaleLowerCase("ru-RU").trim()));
+  const choose = (option: string) => { setValue(option); setActive(0); inputRef.current?.focus(); setOpen(false); };
+  return <div className="field">
+    <span><label htmlFor="recommendation-saq-recipient">Кому направить рекомендацию <span className="required">*</span></label></span>
+    <div className="recommendation-recipient-select" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }}>
+      <input id="recommendation-saq-recipient" ref={inputRef} name="recommendationSaqRecipient" role="combobox" aria-autocomplete="list" aria-expanded={open} aria-controls="recommendation-saq-recipient-list" aria-activedescendant={open && matches[active] ? `recommendation-saq-option-${options.indexOf(matches[active])}` : undefined} value={value} placeholder="Начните вводить название кабинета" required
+        onFocus={() => setOpen(true)} onChange={event => { setValue(event.currentTarget.value); setActive(0); setOpen(true); }}
+        onKeyDown={event => {
+          if (event.key === "ArrowDown") { event.preventDefault(); setOpen(true); setActive(index => Math.min(index + (open ? 1 : 0), Math.max(matches.length - 1, 0))); }
+          else if (event.key === "ArrowUp") { event.preventDefault(); setActive(index => Math.max(index - 1, 0)); }
+          else if (event.key === "Enter" && open && matches[active]) { event.preventDefault(); choose(matches[active]); }
+          else if (event.key === "Escape") setOpen(false);
+        }} />
+      <button className="recommendation-recipient-toggle" type="button" tabIndex={-1} aria-label="Показать список кабинетов" onMouseDown={event => event.preventDefault()} onClick={() => { inputRef.current?.focus(); setOpen(!open); }}>▾</button>
+      {open && matches.length > 0 && <div className="recommendation-recipient-options" id="recommendation-saq-recipient-list" role="listbox">{matches.map((option, index) => <button type="button" role="option" id={`recommendation-saq-option-${options.indexOf(option)}`} aria-selected={index === active} key={option} onMouseDown={event => event.preventDefault()} onMouseEnter={() => setActive(index)} onClick={() => choose(option)}>{option}</button>)}</div>}
+    </div>
+    <small>Найдите получателя по названию кабинета SAQ.</small>
+  </div>;
 }
 
 function LanguageFields({ fields, primary, values }: { fields: FormField[]; primary: DocumentLanguage; values: FormValues }) {
@@ -850,24 +877,7 @@ export default function ActionModal({
                 </select>
               </label>
               {recommendationChannel === "saq" ? (
-                <label className="field">
-                  <span>
-                    Кому направить рекомендацию <span className="required">*</span>
-                  </span>
-                  <input
-                    name="recommendationSaqRecipient"
-                    list="recommendation-saq-recipients"
-                    placeholder="Начните вводить название кабинета"
-                    required
-                  />
-                  <datalist id="recommendation-saq-recipients">
-                    <option value="Кабинет ДВГА" />
-                    <option value="Кабинет КВГА" />
-                    <option value="Кабинет Объекта" />
-                    <option value="Кабинет вышестоящего органа" />
-                  </datalist>
-                  <small>Найдите получателя по названию кабинета SAQ.</small>
-                </label>
+                <RecommendationRecipientSelect />
               ) : (
                 <>
                   <label className="field">

@@ -1,0 +1,6 @@
+.recommendation-recipient-select { position: relative; }
+.recommendation-recipient-select input { width: 100%; padding-right: 38px; }
+.recommendation-recipient-toggle { position: absolute; right: 0; top: 0; height: 100%; width: 38px; padding: 0; border: 0; background: transparent; color: #24333d; cursor: pointer; }
+.recommendation-recipient-options { position: absolute; z-index: 10; top: calc(100% + 4px); left: 0; right: 0; overflow-y: auto; max-height: 220px; padding: 4px 0; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; box-shadow: 0 4px 12px rgb(20 40 60 / 15%); }
+.recommendation-recipient-options button { display: block; width: 100%; padding: 10px 12px; border: 0; background: #fff; color: #182530; text-align: left; cursor: pointer; }
+.recommendation-recipient-options button[aria-selected="true"], .recommendation-recipient-options button:hover { background: #eef5f9; }
