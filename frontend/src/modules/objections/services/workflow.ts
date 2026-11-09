@@ -879,6 +879,7 @@ export function addDocument(
       delivery: c.delivery || null,
       certificate: c.certificate || null,
       decisionProjectDavgaOverrides: c.decisionProjectDavgaOverrides,
+      decisionProjectDavgaByPoint: kind === "decision-project" ? Object.fromEntries(disputed(c).map(point => [point.id, decisionProjectDavga(c, point.id, appealLanguage(c))])) : undefined,
       motivatedResponseDavgaByPoint: kind === "final-response" && /мотивированн/i.test(name)
         ? Object.fromEntries(disputed(c).map((point) => [point.id, motivatedResponseDavga(c, point.id, appealLanguage(c))]))
         : undefined,

@@ -822,16 +822,17 @@ function LegacyDocumentContent({
       )?.[0];
       const reason = useDavgaArguments
         ? (isDecisionProject
-            ? decisionProjectDavga(
+            ? (document?.snapshot?.decisionProjectDavgaByPoint && language === (document.snapshot.appealLanguage || "ru") ? document.snapshot.decisionProjectDavgaByPoint[point.id] || "" : decisionProjectDavga(
                 {
                   ...snapshot,
+                  ...(document?.snapshot ? { documents: [] } : {}),
                   decisionProjectDavgaOverrides: document?.snapshot
                     ? document.snapshot.decisionProjectDavgaOverrides
                     : c.decisionProjectDavgaOverrides,
                 },
                 point.id,
                 language,
-              )
+              ))
             : document?.snapshot
               ? (document.snapshot.motivatedResponseDavgaByPoint?.[point.id] ??
                 signedProtocolDavga(snapshot, point.id, language).text)

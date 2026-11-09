@@ -86,7 +86,7 @@ test("русское обращение: казахский протокол н�
   assert.throws(() => applyAction(state, c.id, "create-decision-project", "work", new FormData()), /Предложите перевод/);
 });
 
-test("русские доводы справки предлагаются для сверки, а в проект попадают после принятия", () => {
+test("если протокол на другом языке, проект использует последнюю справку и сохраняет её текст", () => {
   let state = initialState();
   const c = state.cases[0];
   c.appealLanguage = "ru"; c.appealType = "Жалоба на уведомление"; c.status = "decision_project"; c.orgTranslations = { kk: "Ұйым" };
@@ -96,23 +96,42 @@ test("русские доводы справки предлагаются для
   c.certificate.languages = ["kk"];
   c.votes = { p1: { yes: 1, no: 0, approved: true, chair: "chair", present: 1, eligible: 1, votes: { chair: "accept" } } };
   c.meeting = { date: state.date, number: "ПЗ-1", audio: "", signed: state.date, languages: ["kk"], protocolVersions: [{ createdAt: state.date, signedAt: state.date, languages: ["kk"], author: "Исполнитель", rows: [{ pointId: "p1", pointNumber: "1", memberId: "chair", memberName: "Председатель", vote: "accept", original: "", edited: "", editedKk: "Жұмыс органының (ҚР ҚМ ДАВГА) дәлелдері: Өзгертілген дәлел" }] }] };
-  const fields = actionForm("propose-certificate-change", c, state.date, {}).fields;
-  assert.equal(fields.find(field => field.name === "sourceDavga_p1")?.value, "Өзгертілген дәлел");
-  const draft = fields.find(field => field.name === "proposedDavga_p1")!;
-  assert.equal(draft.value, "Русская основа из справки");
-  assert.match(draft.label, /из справки, проверьте соответствие протоколу/);
-  assert.equal(decisionProjectDavga(c, "p1", "ru"), "");
-  assert.throws(() => applyAction(state, c.id, "create-decision-project", "work", new FormData()), /Предложите перевод/);
-  const proposal = new FormData(); proposal.set("proposedDavga_p1", draft.value!);
-  state = applyAction(state, c.id, "propose-certificate-change", "work", proposal);
+  assert.equal(decisionProjectDavga(c, "p1", "ru"), "Русская основа из справки");
+  state = applyAction(state, c.id, "create-decision-project", "work", new FormData());
   let saved = state.cases.find(item => item.id === c.id)!;
-  assert.equal(saved.certificateChangeRequests?.at(-1)?.changes[0].before, "");
-  assert.equal(decisionProjectDavga(saved, "p1", "ru"), "");
+  const draft = saved.documents.at(-1)!;
+  assert.match(renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "decision-project", document: draft, language: "ru" })), /Русская основа из справки/);
+  saved.certificate!.languages = ["ru"];
+  saved.certificate!.davgaArgumentsByPoint!["p1"] = "Более поздний текст";
+  addDocument(saved, "work", state.date, "Новая справка", "certificate", "");
+  assert.match(renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "decision-project", document: draft, language: "ru" })), /Русская основа из справки/);
+  saved.status = "decision_project";
+  assert.equal(decisionProjectDavga(saved, "p1", "ru"), "Более поздний текст");
+  const proposal = new FormData(); proposal.set("proposedDavga_p1", "Согласованные доводы");
+  state = applyAction(state, c.id, "propose-certificate-change", "work", proposal);
   const review = new FormData(); review.set("decision_p1", "accepted");
   state = applyAction(state, c.id, "review-certificate-change", "director", review);
   saved = state.cases.find(item => item.id === c.id)!;
-  assert.equal(decisionProjectDavga(saved, "p1", "ru"), "Русская основа из справки");
+  assert.equal(decisionProjectDavga(saved, "p1", "ru"), "Согласованные доводы");
+});
+
+test("для казахского обращения используется последняя казахская справка, если протокол на русском", () => {
+  let state = initialState(); const c = state.cases[0];
+  c.appealLanguage = "kk"; c.appealType = "Жалоба на уведомление"; c.status = "decision_project";
+  const point = { ...c.issues.find(item => item.disputed)!, id: "p1", number: "1" }; c.issues = [point]; c.documents = [];
+  c.certificate = { languages: ["kk"], davgaArguments: "", davgaArgumentsByPointKk: { p1: "Бірінші мәтін" }, memberPositions: [] };
+  addDocument(c, "work", state.date, "Справка 1", "certificate", "");
+  c.certificate.davgaArgumentsByPointKk!.p1 = "Соңғы қазақша дәлел";
+  addDocument(c, "work", state.date, "Справка 2", "certificate", "");
+  c.votes = { p1: { yes: 1, no: 0, approved: true, chair: "chair", present: 1, eligible: 1, votes: { chair: "accept" } } };
+  c.meeting = { date: state.date, number: "ПЗ-1", audio: "", signed: state.date, languages: ["ru"], protocolVersions: [{ createdAt: state.date, signedAt: state.date, languages: ["ru"], author: "Исполнитель", rows: [{ pointId: "p1", pointNumber: "1", memberId: "chair", memberName: "Председатель", vote: "accept", original: "", edited: "Доводы рабочего органа (ДАВГА МФ РК): Текст RU" }] }] };
+  assert.equal(decisionProjectDavga(c, "p1", "kk"), "Соңғы қазақша дәлел");
   state = applyAction(state, c.id, "create-decision-project", "work", new FormData());
-  const result = state.cases.find(item => item.id === c.id)!;
-  assert.match(renderToStaticMarkup(createElement(DocumentContent, { c: result, kind: "decision-project", document: result.documents.at(-1), language: "ru" })), /Русская основа из справки/);
+  let saved = state.cases.find(item => item.id === c.id)!;
+  const project = saved.documents.at(-1)!;
+  assert.match(renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "decision-project", document: project, language: "kk" })), /Соңғы қазақша дәлел/);
+  state = applyAction(state, c.id, "approve-decision-project", "deputy", new FormData());
+  state = applyAction(state, c.id, "sign-decision-project", "director", new FormData());
+  saved = state.cases.find(item => item.id === c.id)!;
+  assert.equal(motivatedResponseDavga(saved, "p1", "kk"), "Соңғы қазақша дәлел");
 });

@@ -360,6 +360,7 @@ export interface CaseDocument {
     delivery: Delivery | null;
     certificate: CaseCertificate | null;
     decisionProjectDavgaOverrides?: { protocolSignedAt: string; byPoint: Record<string, string>; byPointKk?: Record<string, string> };
+    decisionProjectDavgaByPoint?: Record<string, string>;
     motivatedResponseDavgaByPoint?: Record<string, string>;
     /** Адресаты и их ответы на момент формирования версии документа. */
     requests?: CaseRequest[];
