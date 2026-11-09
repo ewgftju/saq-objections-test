@@ -122,37 +122,14 @@ for (const primary of ["ru", "kk"] as const) {
         .every((field) => !field.readOnly),
     );
     assert.ok(fields.some(field => field.label === `Описание оспариваемого вопроса № 1 — ${primary === "ru" ? "Русский" : "Қазақша"}`));
-    const applicantFields = fields.filter((field) =>
-      field.name.startsWith("pointArgument_"),
-    );
-    assert.equal(applicantFields.length, 2);
-    assert.ok(applicantFields.every(field => field.label === "Доводы заявителя по пункту № 1"));
-    assert.ok(
-      applicantFields.every(
-        (field) => field.readOnly && field.value === originalArgument,
-      ),
-    );
+    assert.ok(fields.every(field => !field.name.startsWith("pointArgument_") && !field.name.startsWith("pointAdditional_")));
     const modal = renderToStaticMarkup(
       createElement(ActionModal, {
-        c: h.c,
-        action: "analysis",
-        role: "work",
-        date: h.state.date,
-        onClose() {},
-        onSubmit() {},
-        onSaveDraft() {},
+        c: h.c, action: "analysis", role: "work", date: h.state.date,
+        onClose() {}, onSubmit() {}, onSaveDraft() {},
       }),
     );
-    const inputs = [
-      ...modal.matchAll(
-        /<textarea([^>]*)name="pointArgument_(ru|kk)_p1"([^>]*)>([^<]*)<\/textarea>/g,
-      ),
-    ];
-    assert.equal(inputs.length, 2);
-    for (const input of inputs) {
-      assert.match(input[0], /readonly/i);
-      assert.equal(input[4], originalArgument);
-    }
+    assert.doesNotMatch(modal, /name="point(?:Argument|Additional)_/);
     const preview = modal.match(
       /<article class="print-document certificate-template">([\s\S]*?)<\/article>/,
     )![1];
@@ -291,19 +268,7 @@ for (const primary of ["ru", "kk"] as const) {
       documentLanguageMode: "both",
       [`pointArgument_${other}_p1`]: "Подмена из старого черновика",
     }).fields;
-    for (const field of fields.filter(
-      (field) =>
-        field.name.startsWith("pointArgument_") ||
-        field.name.startsWith("pointAdditional_"),
-    )) {
-      assert.equal(field.readOnly, true);
-      assert.equal(
-        field.value,
-        field.name.startsWith("pointArgument_")
-          ? original
-          : "Исходное дополнение",
-      );
-    }
+    assert.ok(fields.every(field => !field.name.startsWith("pointArgument_") && !field.name.startsWith("pointAdditional_")));
     h.run("analysis", "work", {
       documentLanguageMode: "both",
       [`pointTitle_${other}_p1`]: "Описание на втором языке",

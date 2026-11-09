@@ -172,9 +172,7 @@ function applicantTranslationFields(c: ObjectionCase, values: FormValues, langua
 function pointTranslationFields(c: ObjectionCase, values: FormValues, editableSource = false): FormField[] {
   return disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).flatMap(language => [
     { ...area(`pointTitle_${language}_${point.id}`, `Описание оспариваемого вопроса № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language)), language, readOnly: !editableSource && language === appealLanguage(c) },
-    { ...area(`pointArgument_${language}_${point.id}`, `Доводы заявителя по пункту № ${point.number}`, point.argument), language, readOnly: true },
     ...(editableSource && language !== appealLanguage(c) ? [{ ...area(`certificateArgumentTranslation_${language}_${point.id}`, `Перевод доводов заявителя по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`certificateArgumentTranslation_${language}_${point.id}`] ?? point.certificateArgumentTranslations?.[language] ?? ""), language, required: false }] : []),
-    ...(point.additionalArguments || []).map((argument,index) => ({ ...area(`pointAdditional_${language}_${point.id}_${index}`, `Дополнительный довод № ${index + 1}, пункт № ${point.number} (без перевода)`, argument), language, readOnly: true })),
   ]));
 }
 
