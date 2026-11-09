@@ -1697,7 +1697,7 @@ export default function CaseWorkspace({
                             </section>
                           );
                         })}
-                      {(!hideRequestBlocks || role === "commission") &&
+                      {(!hideRequestBlocks || role === "commission" || role === "work") &&
                         c.requests.length > 0 && (
                           <>
                             {[
@@ -1869,6 +1869,7 @@ export default function CaseWorkspace({
                   .filter(
                     (document) =>
                       role === "commission" ||
+                      role === "work" ||
                       !hideRequestBlocks ||
                       !["request", "request-appendix"].includes(document.kind),
                   )

@@ -2615,8 +2615,8 @@ test("справка формируется с отдельными довода
     }),
   );
   assert.match(commissionMaterialsHtml, /<h4>Ответ ДВГА<\/h4>/);
-  assert.doesNotMatch(commissionMaterialsHtml, /<h4>Запрос в ДВГА<\/h4>/);
-  assert.doesNotMatch(
+  assert.match(commissionMaterialsHtml, /<h4>Запрос в ДВГА<\/h4>/);
+  assert.match(
     commissionMaterialsHtml,
     /<h4>Запрос в другие органы<\/h4>/,
   );
