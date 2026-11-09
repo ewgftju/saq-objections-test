@@ -51,6 +51,22 @@ import {
   requestTemplateIntro,
 } from "../services/appealTemplates";
 
+const KAZAKH_PROTOCOL_MONTHS = [
+  "қаңтардағы", "ақпандағы", "наурыздағы", "сәуірдегі", "мамырдағы", "маусымдағы",
+  "шілдедегі", "тамыздағы", "қыркүйектегі", "қазандағы", "қарашадағы", "желтоқсандағы",
+];
+
+function kazakhProtocolDate(date?: string) {
+  const match = date?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "—";
+  const month = KAZAKH_PROTOCOL_MONTHS[Number(match[2]) - 1];
+  return month ? `${match[1]} жылғы ${match[3]} ${month}` : "—";
+}
+
+function kazakhNoticeComplaintProtocolIntro(c: ObjectionCase) {
+  return `${auditAuthorityKazakhName(c.issuer)} жүргізген ${kazakhProtocolDate(c.document.date)} № ${c.document.number || "—"} бұзушылықтарды жою туралы хабарламаға ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} ${c.org || "—"} шағымы.`;
+}
+
 function requestDeadlineDate(deadline: string) {
   return formatDate(deadline.slice(0, 10));
 }
@@ -1151,7 +1167,9 @@ function LegacyDocumentContent({
         </div>
         <p className="protocol-template-intro">
           {language === "kk"
-            ? `${kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)}.`
+            ? snapshot.appealType === "Жалоба на уведомление"
+              ? kazakhNoticeComplaintProtocolIntro(textSnapshot)
+              : `${kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)}.`
             : protocolIntro}
         </p>
         <p>
