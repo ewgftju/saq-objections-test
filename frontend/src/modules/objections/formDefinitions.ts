@@ -455,9 +455,9 @@ export function actionForm(
       break;
     case "analysis": {
       title = "Сформировать справку";
-      fields.push(languageModeField(c, values), ...pointTranslationFields(c, values, true));
+      fields.push(languageModeField(c, values));
       const langs = selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0]));
-      fields.push(...applicantTranslationFields(c, values, langs));
+      fields.push(...applicantTranslationFields(c, values, langs), ...pointTranslationFields(c, values, true));
       if (appealLanguage(c) === "kk" && !langs.includes("ru")) {
         const agendaFields: FormField[] = [];
         if (!c.orgTranslations?.ru?.trim()) agendaFields.push({ ...input("agendaApplicantRu", "Наименование заявителя на русском", values.agendaApplicantRu || ""), required: false });
@@ -1162,7 +1162,7 @@ export function actionForm(
       const forAgenda = action === "analysis" && language === "ru";
       const label = forAgenda ? "Наименование заявителя в нужном падеже для повестки — Русский" : `${action === "create-decision-project" || action === "deliver" ? "Наименование заявителя в адресате" : "Наименование заявителя в тексте документа"} — ${LANGUAGE_LABELS[language]}`;
       const field = { ...input(key, label, values[key] ?? original), language: action === "analysis" && language === "ru" && !langs.includes("ru") ? undefined : action === "analysis" || action === "vote" ? language : undefined, required: forAgenda || (action === "vote" && language === "kk") };
-      if (action === "vote" && language === "kk") {
+      if ((action === "vote" || action === "analysis") && language === "kk") {
         const applicantIndex = fields.findIndex(item => item.name === "applicantName_kk");
         const firstKazakhIndex = fields.findIndex(item => item.language === "kk");
         const index = applicantIndex >= 0 ? applicantIndex + 1 : firstKazakhIndex >= 0 ? firstKazakhIndex : fields.length;

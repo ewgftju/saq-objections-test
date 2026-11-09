@@ -202,7 +202,7 @@ function RecommendationRecipientSelect() {
   </div>;
 }
 
-function LanguageFields({ fields, primary, values }: { fields: FormField[]; primary: DocumentLanguage; values: FormValues }) {
+export function LanguageFields({ fields, primary, values, certificatePoints }: { fields: FormField[]; primary: DocumentLanguage; values: FormValues; certificatePoints?: ObjectionCase["issues"] }) {
   const languages = [...new Set(fields.flatMap(field => field.language ? [field.language] : []))];
   const [selected, setSelected] = useState<DocumentLanguage>(primary);
   const active = languages.includes(selected) ? selected : languages[0];
@@ -218,7 +218,22 @@ function LanguageFields({ fields, primary, values }: { fields: FormField[]; prim
   return <>
     {fields.filter(field => !field.language).map(field => <Field key={field.name} field={{ ...field, value: field.readOnly ? field.value : values[field.name] ?? field.value }} />)}
     {languages.length > 0 && <div className="request-modal-tabs" role="tablist" aria-label="Язык заполнения">{languages.map(language => <button key={language} type="button" role="tab" aria-selected={active === language} className={active === language ? "active" : ""} onClick={() => setSelected(language)}>{LANGUAGE_LABELS[language]} · {isFilled(language) ? "Заполнено" : "Не заполнено"}</button>)}</div>}
-    {languages.map(language => <div key={language} hidden={active !== language}>{fields.filter(field => field.language === language).map(field => <Field key={field.name} field={{ ...field, value: field.readOnly ? field.value : values[field.name] ?? field.value }} />)}</div>)}
+    {languages.map(language => {
+      const languageFields = fields.filter(field => field.language === language);
+      const pointFields = (point: ObjectionCase["issues"][number]) => languageFields.filter(field => [
+        `pointTitle_${language}_${point.id}`, `certificateArgumentTranslation_${language}_${point.id}`,
+        `${language === "kk" ? "davgaArgumentsKk" : "davgaArguments"}_${point.id}`,
+      ].includes(field.name));
+      const groupedNames = new Set((certificatePoints || []).flatMap(point => pointFields(point).map(field => field.name)));
+      const renderField = (field: FormField) => <Field key={field.name} field={{ ...field, value: field.readOnly ? field.value : values[field.name] ?? field.value }} />;
+      return <div key={language} hidden={active !== language}>
+        {languageFields.filter(field => !groupedNames.has(field.name)).map(renderField)}
+        {certificatePoints?.map(point => {
+          const group = pointFields(point);
+          return group.length ? <section className="certificate-form-point" key={point.id} aria-label={`Пункт № ${point.number}`}><h4>Пункт № {point.number}</h4>{group.map(renderField)}</section> : null;
+        })}
+      </div>;
+    })}
   </>;
 }
 
@@ -1162,7 +1177,7 @@ export default function ActionModal({
               </button>
             </div>
             <div hidden={requestTab !== "form"}>
-              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} />
+              <LanguageFields fields={definition.fields} primary={appealLanguage(c)} values={values} certificatePoints={disputed(c)} />
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
               {previewLanguageTabs}

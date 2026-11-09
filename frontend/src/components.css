@@ -1739,3 +1739,12 @@
   align-items: center;
   gap: 8px 28px;
 }
+
+.certificate-form-point {
+  border: 1px solid #d5e2ea;
+  border-radius: 6px;
+  padding: 16px 18px 2px;
+  margin: 18px 0;
+  background: #f8fbfd;
+}
+.certificate-form-point h4 { margin: 0 0 16px; color: #12374d; font-size: 16px; }
