@@ -73,10 +73,13 @@ const KAZAKH_AUDIT_AUTHORITIES: Record<string, string> = {
     "Абай облысы бойынша Ішкі мемлекеттік аудит департаменті",
 };
 
-/** Наименование органа аудита на казахском для шапки решения. */
+/** Полное наименование органа аудита на казахском для печатных форм. */
 export function auditAuthorityKazakhName(value?: string) {
   const name = value?.trim() || "";
-  return KAZAKH_AUDIT_AUTHORITIES[name] || name || "—";
+  const translated = KAZAKH_AUDIT_AUTHORITIES[name];
+  if (translated && name !== "КВГА")
+    return `Қазақстан Республикасы Қаржы министрлігінің Ішкі мемлекеттік аудит комитетінің ${translated}`;
+  return translated || name || "—";
 }
 
 /** Полное наименование выводится только в печатных формах. */
