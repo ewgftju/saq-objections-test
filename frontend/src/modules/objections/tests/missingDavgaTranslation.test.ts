@@ -4,10 +4,35 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { initialState } from "../../../api/objectionsRepository";
 import { addDocument, applyAction } from "../services/workflow";
-import { decisionProjectDavga, motivatedResponseDavga } from "../services/protocolReason";
+import { certificateBasisForPoint, decisionProjectDavga, motivatedResponseDavga, protocolDavgaFromReason } from "../services/protocolReason";
 import { actionForm } from "../formDefinitions";
 import { DocumentContent } from "../components/DocumentModal";
 import ActionModal from "../components/ActionModal";
+
+for (const original of ["ru", "kk"] as const) test(`до формирования протокола можно согласовать недостающие доводы: исходный язык ${original}`, () => {
+  let state = initialState();
+  const c = state.cases[0];
+  c.status = "meeting"; c.appealLanguage = original; c.documents = [];
+  const point = { ...c.issues.find(item => item.disputed)!, id: "p1", number: "1" }; c.issues = [point];
+  c.certificate = { languages: [original], davgaArguments: "", davgaArgumentsByPoint: original === "ru" ? { p1: "Русские доводы" } : {}, davgaArgumentsByPointKk: original === "kk" ? { p1: "Қазақша дәлел" } : {}, memberPositions: [] };
+  addDocument(c, "work", state.date, "Справка", "certificate", "");
+  const target = original === "ru" ? "kk" : "ru";
+  const key = target === "kk" ? "proposedDavgaKk_p1" : "proposedDavga_p1";
+  const field = actionForm("propose-certificate-change", c, state.date, {}).fields.find(item => item.name === key);
+  assert.equal(field?.value, "");
+  assert.equal(field?.language, target);
+  const proposed = target === "kk" ? "Жаңа қазақша дәлел" : "Новые русские доводы";
+  const form = new FormData(); form.set(key, proposed);
+  state = applyAction(state, c.id, "propose-certificate-change", "work", form);
+  let saved = state.cases.find(item => item.id === c.id)!;
+  assert.equal(saved.certificateChangeRequests!.at(-1)!.changes[0].before, "");
+  assert.equal(protocolDavgaFromReason(certificateBasisForPoint(saved, saved.issues[0], target)), "—");
+  const review = new FormData(); review.set(target === "kk" ? "decision_p1_kk" : "decision_p1", "accepted");
+  state = applyAction(state, c.id, "review-certificate-change", "director", review);
+  saved = state.cases.find(item => item.id === c.id)!;
+  assert.equal(protocolDavgaFromReason(certificateBasisForPoint(saved, saved.issues[0], target)), proposed);
+  assert.equal(protocolDavgaFromReason(certificateBasisForPoint(saved, saved.issues[0], original)), original === "ru" ? "Русские доводы" : "Қазақша дәлел");
+});
 
 for (const stage of ["decision-project", "motivated-response"] as const) for (const hasProject of stage === "motivated-response" ? [false, true] : [false]) {
   test(`${stage}, проект ${hasProject}: перевод принимается до формирования`, () => {

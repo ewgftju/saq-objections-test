@@ -1047,7 +1047,7 @@ export function applyAction(
   switch (action) {
     case "propose-certificate-change": {
       if (!c.certificate) throw new Error("Справка ещё не сформирована");
-      const changes = disputed(c).flatMap(point => [...new Set([...(c.certificate?.languages || [appealLanguage(c)]), ...(c.meeting?.languages || []), ...((c.status === "decision_project" || isMotivatedResponseStage(c)) ? [appealLanguage(c)] : [])])].map(language => {
+      const changes = disputed(c).flatMap(point => [...new Set([...(c.certificate?.languages || [appealLanguage(c)]), ...(c.meeting?.languages || []), ...((c.status === "decision_project" || isMotivatedResponseStage(c)) ? [appealLanguage(c)] : ["ru", "kk"] as const)])].map(language => {
         const rawBefore = c.status === "decision_project" ? decisionProjectDavga(c, point.id, language) : isMotivatedResponseStage(c) ? motivatedResponseDavga(c, point.id, language) : protocolDavgaFromReason(certificateBasisForPoint(c, point, language));
         const before = hasDavgaText(rawBefore) ? rawBefore : "";
         const key = `${language === "kk" ? "proposedDavgaKk" : "proposedDavga"}_${point.id}`;

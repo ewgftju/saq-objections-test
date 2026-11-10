@@ -217,11 +217,11 @@ export function actionForm(
           if (!hasDavgaText(getDavga(c, point.id, target)) && hasDavgaText(original)) fields.push({ ...area(`sourceDavga_${point.id}`, `Исходные доводы ДАВГА № ${point.number} — ${LANGUAGE_LABELS[source]}`, original), readOnly: true, required: false });
         }
       }
-      fields.push(...disputed(c).flatMap(point => [...new Set([...(c.certificate?.languages || [appealLanguage(c)]), ...(c.meeting?.languages || []), ...((c.status === "decision_project" || (c.status === "decided" && requiresMotivatedResponse(c))) ? [appealLanguage(c)] : [])])].map(language => {
+      fields.push(...disputed(c).flatMap(point => [...new Set([...(c.certificate?.languages || [appealLanguage(c)]), ...(c.meeting?.languages || []), ...((c.status === "decision_project" || (c.status === "decided" && requiresMotivatedResponse(c))) ? [appealLanguage(c)] : ["ru", "kk"] as const)])].map(language => {
         const isDecisionStage = c.status === "decision_project" || (c.status === "decided" && requiresMotivatedResponse(c));
         const current = c.status === "decision_project" ? decisionProjectDavga(c, point.id, language) : c.status === "decided" && requiresMotivatedResponse(c) ? motivatedResponseDavga(c, point.id, language) : protocolDavgaFromReason(certificateBasisForPoint(c, point, language));
         const draft = isDecisionStage && language === appealLanguage(c) && !hasDavgaText(current) ? certificateDavgaDraft(c, point.id, language) : "";
-        return { ...area(`${language === "kk" ? "proposedDavgaKk" : "proposedDavga"}_${point.id}`, `Доводы ДАВГА № ${point.number} — ${LANGUAGE_LABELS[language]}${draft ? " (из справки, проверьте соответствие протоколу)" : ""}`, draft || current), language, required: false };
+        return { ...area(`${language === "kk" ? "proposedDavgaKk" : "proposedDavga"}_${point.id}`, `Доводы ДАВГА № ${point.number} — ${LANGUAGE_LABELS[language]}${draft ? " (из справки, проверьте соответствие протоколу)" : ""}`, draft || (hasDavgaText(current) ? current : "")), language, required: false };
       })));
       fields.push({ ...area("changeReason", "Причина изменения"), required: false });
       break;
