@@ -58,6 +58,18 @@ const KAZAKH_PROTOCOL_MONTHS = [
   "шілдедегі", "тамыздағы", "қыркүйектегі", "қазандағы", "қарашадағы", "желтоқсандағы",
 ];
 
+const KAZAKH_DEADLINE_MONTHS = [
+  "қаңтарға", "ақпанға", "наурызға", "сәуірге", "мамырға", "маусымға",
+  "шілдеге", "тамызға", "қыркүйекке", "қазанға", "қарашаға", "желтоқсанға",
+];
+
+function kazakhDeadlineDate(date?: string) {
+  const match = date?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return "—";
+  const month = KAZAKH_DEADLINE_MONTHS[Number(match[2]) - 1];
+  return month ? `${match[1]} жылғы ${match[3]} ${month}` : "—";
+}
+
 function kazakhProtocolDate(date?: string) {
   const match = date?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return "—";
@@ -200,6 +212,11 @@ export function appendixPageCount(items: AppendixPageItem[]) {
 }
 
 function requestIntro(c: ObjectionCase, deadline: string) {
+  if (["Возражение на уведомление", "Возражение на уведомления"].includes(c.appealType || "") || (!c.appealType && c.type === "notice")) {
+    const applicant = c.documentApplicantNames?.request?.kk?.trim() || c.orgTranslations?.kk?.trim() || (c.appealLanguage === "kk" ? c.org : "") || "—";
+    const identifier = c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН";
+    return `Қазақстан Республикасы Қаржы министрлігінің Апелляциялық комиссиясының қарауына ${applicant}, ${identifier} ${c.bin || "—"}, ${auditAuthorityKazakhName(c.issuer)} камералдық бақылау нәтижелері бойынша анықтаған бұзушылықтарды жою туралы ${kazakhProtocolDate(c.document.date)} № ${c.document.number || "—"} хабарламаға қатысты ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} қарсылығының келіп түсуіне байланысты, ${kazakhDeadlineDate(deadline)} дейінгі мерзімде қарсылықтың дәлелдері бойынша дәлелді жауапты және растайтын құжаттарды қоса бере отырып ұсынуыңызды талап етеміз.`;
+  }
   const templateIntro = requestTemplateIntro(c);
   if (templateIntro) return templateIntro;
 

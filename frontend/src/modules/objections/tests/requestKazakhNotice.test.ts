@@ -19,3 +19,20 @@ test("казахские срок, подпись и исполнитель вы
     assert.doesNotMatch(html, /Также сообщаем, что в соответствии с пунктом 14/);
   }
 });
+
+test("возражение на уведомление: казахский первый абзац с данными и сроком по каждому месяцу", () => {
+  const c = initialState().cases[0];
+  c.appealType = "Возражение на уведомление"; c.appealLanguage = "ru";
+  c.org = "Русское название"; c.documentApplicantNames = { request: { kk: "Ұйымның" } };
+  c.applicantIdentifierType = "ИИН"; c.bin = "001002003004";
+  c.document.date = "2026-08-25"; c.document.number = "6"; c.appealDate = "2026-08-25"; c.appealNumber = "5";
+  const months = ["қаңтарға", "ақпанға", "наурызға", "сәуірге", "мамырға", "маусымға", "шілдеге", "тамызға", "қыркүйекке", "қазанға", "қарашаға", "желтоқсанға"];
+  months.forEach((month, i) => {
+    const deadline = `2026-${String(i + 1).padStart(2, "0")}-25T18:00`;
+    const html = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "request", requestPreview: { recipient: "ДВГА по г. Алматы", deadline, template: "dvga" } }));
+    assert.match(html, /Ұйымның, ЖСН 001002003004/);
+    assert.match(html, /2026 жылғы 25 тамыздағы № 6 хабарламаға қатысты 2026 жылғы 25 тамыздағы № 5/);
+    assert.ok(html.includes(`2026 жылғы 25 ${month} дейінгі мерзімде`));
+    assert.doesNotMatch(html, /Русское название/);
+  });
+});
