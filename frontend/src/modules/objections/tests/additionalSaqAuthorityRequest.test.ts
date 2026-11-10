@@ -1,9 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { initialState } from "../../../api/objectionsRepository";
+import { createDemoRepository, initialState } from "../../../api/objectionsRepository";
 import { actionForm } from "../formDefinitions";
 import { additionalActions, applyAction, nextAction } from "../services/workflow";
 import { isRequestForAuthority } from "../services/statusPresentation";
+import { subjectRoleForCase } from "../services/saqCabinets";
 
 for (const role of ["dvga", "kvga"] as const) test(`дополнительный запрос и отдельный ответ: ${role}`, () => {
   let state = initialState();
@@ -28,7 +29,37 @@ for (const role of ["dvga", "kvga"] as const) test(`дополнительный
   assert.ok(additionalActions(afterSign).some(a => a.action === "subject-response" && a.role === role));
   assert.throws(() => applyAction(state, c.id, "subject-response", role === "dvga" ? "kvga" : "dvga", new FormData()));
   run("subject-response", role);
+  assert.equal(state.cases[0].requests.find(r => r.id === id)?.responded, undefined);
+  assert.notEqual(state.cases[0].status, "materials");
+  assert.equal(nextAction(state.cases[0], role)?.action, "approve-response");
+  run("approve-response", role);
+  assert.equal(nextAction(state.cases[0], role)?.action, "sign-response");
+  assert.equal(state.cases[0].requests.find(r => r.id === id)?.responded, undefined);
+  run("sign-response", role);
   assert.ok(state.cases[0].requests.find(r => r.id === id)?.responded);
   assert.equal(state.cases[0].requests[0].responseSigned, state.date);
+  assert.equal(state.cases[0].status, "materials");
+});
+
+test("ответ объекта направляется только после согласования и подписи", () => {
+  let state = initialState();
+  const c = state.cases[0];
+  c.status = "request_approved";
+  c.requests = [{ id: "subject-request", recipient: "Кабинет Объекта SAQ", date: state.date, deadline: state.date, text: "Запрос", template: "other", sent: state.date, saqRecipient: "subject", lifecycleStatus: "waiting_response" }];
+  const role = subjectRoleForCase(c);
+  const run = (action: Parameters<typeof applyAction>[2]) => { state = applyAction(state, c.id, action, role, new FormData()); };
+  run("subject-response");
+  assert.equal(state.cases[0].requests[0].responded, undefined);
+  assert.equal(state.cases[0].status, "request_approved");
+  let saved = "";
+  const repository = createDemoRepository({ getItem: () => saved, setItem: (_key, value) => { saved = value; } });
+  repository.save(state);
+  state = repository.load();
+  assert.equal(state.cases.find(item => item.id === c.id)?.requests[0].saqRecipient, "subject");
+  assert.equal(additionalActions(state.cases[0]).find(a => a.role === role && a.action === "approve-response")?.label, "Согласовать ответ");
+  run("approve-response");
+  assert.equal(state.cases[0].requests[0].responded, undefined);
+  run("sign-response");
+  assert.equal(state.cases[0].requests[0].responded, state.date);
   assert.equal(state.cases[0].status, "materials");
 });

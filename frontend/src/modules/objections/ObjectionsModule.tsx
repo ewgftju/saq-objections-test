@@ -1402,7 +1402,7 @@ export default function ObjectionsModule() {
         : action === "fill-request-response"
           ? "Ответ ДВГА/КВГА и вложения сохранены"
           : action === "subject-response"
-            ? "Ответ Объекта направлен рабочему органу"
+            ? "Ответ подготовлен и направлен на согласование"
             : action === "deliver"
               ? "Заключение по обращению вложено"
               : action === "send-recommendations"

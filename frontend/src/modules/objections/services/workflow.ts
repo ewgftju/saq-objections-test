@@ -394,6 +394,18 @@ function authorityResponseAction(
   return null;
 }
 
+function saqResponseRequest(c: ObjectionCase, role: Role) {
+  return c.requests.find(request => request.template === "other" && !request.cancelled && request.sent && !request.responded && (request.saqRecipient === role || (request.saqRecipient === "subject" && role === subjectRoleForCase(c))));
+}
+
+function saqResponseAction(c: ObjectionCase, role: Role): ActionOption | null {
+  const request = saqResponseRequest(c, role);
+  if (!request) return null;
+  if (!request.responsePrepared) return { action: "subject-response", label: "Подготовить ответ", role };
+  if (!request.responseApproved) return { action: "approve-response", label: "Согласовать ответ", role };
+  return { action: "sign-response", label: "Подписать ответ", role };
+}
+
 function authorityStatus(c: ObjectionCase): ObjectionCase["status"] | null {
   const requests = authorityRequestsForRole(c);
   if (requests.some((request) => !request.responded)) return "request_approved";
@@ -411,9 +423,7 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
   if (role === "dvga" || role === "kvga") {
     const authorityAction = authorityResponseAction(c, role);
     if (authorityAction) return authorityAction;
-    if (c.requests.some(request => request.template === "other" && request.saqRecipient === role && request.sent && !request.responded && !request.cancelled))
-      return { action: "subject-response", label: "Направить ответ", role };
-    return null;
+    return saqResponseAction(c, role);
   }
   if ((["meeting", "decision_project"].includes(c.status) || isMotivatedResponseStage(c)) && c.certificateChangeRequests?.at(-1)?.status === "pending")
     return role === "work"
@@ -667,20 +677,8 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
     });
   }
   for (const recipient of [subjectRoleForCase(c), "dvga", "kvga"] as Role[]) {
-  if (
-    c.requests.some(
-      (request) =>
-        request.template === "other" &&
-        (request.saqRecipient === recipient || (request.saqRecipient === "subject" && recipient === subjectRoleForCase(c))) &&
-        Boolean(request.sent) &&
-        requestLifecycleStatus(request) === "waiting_response",
-    )
-  )
-    options.push({
-      action: "subject-response",
-      label: "Направить ответ",
-      role: recipient,
-    });
+    const responseAction = saqResponseAction(c, recipient);
+    if (responseAction) options.push(responseAction);
   }
   if (
     c.status === "decision_project_comments" &&
@@ -1708,26 +1706,28 @@ export function applyAction(
       break;
     }
     case "approve-response": {
-      const request = authorityRequestsForRole(c, role).find(
+      const request = (role === "dvga" || role === "kvga" || role === "demo-superuser" ? authorityRequestsForRole(c, role) : []).find(
         (item) => !!item.responded && !item.responseApproved,
-      );
+      ) || saqResponseRequest(c, role);
+      if (request?.template === "other" && (!request.responsePrepared || request.responseApproved)) throw new Error("Нет ответа, ожидающего согласования");
       if (!request) throw new Error("Нет ответа, ожидающего согласования");
       request.responseApproved = date;
-      c.status =
-        requestRoutingStatus(c) || authorityStatus(c) || "response_signed";
-      title = "Ответ ДВГА/КВГА согласован";
-      note = "Согласованный ответ ДВГА/КВГА ожидает подписания.";
+      if (request.template !== "other") c.status = requestRoutingStatus(c) || authorityStatus(c) || "response_signed";
+      title = "Ответ согласован";
+      note = "Согласованный ответ ожидает подписания.";
       break;
     }
     case "sign-response": {
-      const request = authorityRequestsForRole(c, role).find(
+      const request = (role === "dvga" || role === "kvga" || role === "demo-superuser" ? authorityRequestsForRole(c, role) : []).find(
         (item) => !!item.responseApproved && !item.responseSigned,
-      );
+      ) || saqResponseRequest(c, role);
+      if (request?.template === "other" && (!request.responsePrepared || !request.responseApproved)) throw new Error("Нет согласованного ответа для подписания");
       if (!request) throw new Error("Нет согласованного ответа для подписания");
-      if (c.appealLanguage) for (const point of disputed(c)) {
+      if (request.template !== "other" && c.appealLanguage) for (const point of disputed(c)) {
         if (!request.authorityResponses?.[point.id]?.finding || !request.authorityResponses?.[point.id]?.response || !request.authorityResponsesKk?.[point.id]?.finding || !request.authorityResponsesKk?.[point.id]?.response) throw new Error(`Заполните ответ по пункту № ${point.number} на русском и казахском языках`);
       }
       request.responseSigned = date;
+      if (request.template === "other") request.responded = date;
       request.requestNumber ||= requestNumber(c, request);
       request.responseNumber ||= responseNumber(c, request);
       request.lifecycleStatus = "response_received";
@@ -1735,7 +1735,7 @@ export function applyAction(
       if (pausedDays === null)
         c.status =
           requestRoutingStatus(c) || authorityStatus(c) || "request_approved";
-      title = "Ответ ДВГА/КВГА подписан";
+      title = request.template === "other" ? "Ответ подписан и направлен" : "Ответ ДВГА/КВГА подписан";
       note =
         pausedDays === null
           ? "Ответ получен в кабинете SAQ. Обращение ожидает ответы по остальным направленным запросам."
@@ -1834,27 +1834,10 @@ export function applyAction(
       );
       if (!request) throw new Error("Нет запроса, ожидающего ответа получателя");
       request.requestNumber ||= requestNumber(c, request);
-      request.responded = date;
-      request.responseNumber ||= responseNumber(c, request);
-      request.lifecycleStatus = "response_received";
-      const pausedDays = advanceAfterResponses(c, date);
-      title = "Ответ направлен рабочему органу";
-      note =
-        pausedDays === null
-          ? `Ответ ${request.recipient} направлен в кабинет рабочего органа.`
-          : "Все ответы поступили в SAQ. Обращение автоматически переведено на этап «Материалы».";
-      if (pausedDays && pausedDays > 0)
-        note += ` Срок рассмотрения продлён на ${pausedDays} раб. дн.`;
-      next.notifications.push({
-        id: `notification-${c.id}-${next.notifications.length + 1}`,
-        caseId: c.id,
-        recipient: ROLES.work,
-        recipientRole: "work",
-        date,
-        read: false,
-        kind: "request-response",
-        text: `Из кабинета ${request.recipient} поступил ответ на запрос по обращению №${c.appealNumber || c.id}. Откройте обращение для ознакомления.`,
-      });
+      if (request.responsePrepared) throw new Error("Ответ уже подготовлен и ожидает согласования");
+      request.responsePrepared = date;
+      title = "Ответ подготовлен";
+      note = "Ответ ожидает согласования и подписания в кабинете получателя.";
       break;
     }
     case "analysis": {

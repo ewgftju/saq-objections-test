@@ -412,6 +412,8 @@ export interface CaseRequest {
   approved?: string;
   sent?: string;
   responded?: string;
+  /** Подготовленный ответ из кабинета SAQ до согласования и подписания. */
+  responsePrepared?: string;
   /** Ответ органа хранится в запросе и недоступен другому адресату. */
   authorityResponses?: Record<string, { finding: string; response: string }>;
   authorityResponsesKk?: Record<string, { finding: string; response: string }>;
@@ -613,6 +615,7 @@ export interface HistoryEvent {
   title: string;
   text: string;
 }
+
 
 export interface ObjectionCase {
   appealLanguage?: DocumentLanguage;

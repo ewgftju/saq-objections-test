@@ -36,7 +36,7 @@ export function isRequestForAuthority(request: CaseRequest, role: Role) {
 }
 
 export function authorityRequestStatusLabel(request: CaseRequest) {
-  if (request.template === "other") return request.responded ? "Ответ направлен" : "Подготовка ответа на запрос";
+  if (request.template === "other") return request.responded ? "Ответ направлен" : request.responseApproved ? "Подписание ответа" : request.responsePrepared ? "Согласование ответа" : "Подготовка ответа на запрос";
   if (request.responseSigned) return "Ответ направлен";
   if (request.responseApproved) return "Подписание ответа";
   if (request.responded) return "Согласование ответа";

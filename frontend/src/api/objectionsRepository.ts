@@ -165,7 +165,7 @@ export function createDemoRepository(
         const requests = normalized.requests.map((request) =>
           request.template === "other" &&
           request.saqRecipient === "subject" &&
-          request.recipient !== "Кабинет Объекта"
+          !["Кабинет Объекта", "Кабинет Объекта SAQ", "Кабинет Объект №2 SAQ"].includes(request.recipient)
             ? { ...request, saqRecipient: undefined }
             : request,
         );

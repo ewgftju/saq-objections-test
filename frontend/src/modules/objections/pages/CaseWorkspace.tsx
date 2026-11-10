@@ -428,7 +428,7 @@ function AuthorityRequestMaterials({
                 ))}
               </div>
             </section>
-            {request.responded && (
+            {(request.responded || request.responsePrepared) && (
               <section className="request-documents-section">
                 <h4>Ответ {authorityLabel}</h4>
                 <div className="request-documents-list">
@@ -599,10 +599,10 @@ function SubjectRequestMaterials({
       </section>,
       requestDocuments,
     );
-    if (request.responded && responseDocuments.length > 0) {
+    if ((request.responded || request.responsePrepared) && responseDocuments.length > 0) {
       addSection(
         `response-${request.id}`,
-        latestDocumentDate(responseDocuments, request.responded),
+        latestDocumentDate(responseDocuments, request.responded || request.responsePrepared),
         <section className="request-documents-section">
           <h4>Ответ на запрос</h4>
           <div className="request-documents-list">
@@ -799,9 +799,10 @@ export default function CaseWorkspace({
   const visibleStatus = caseStatusLabelForRole(c, role);
   const authorityAnswerSent =
     isAuthorityRole(role) && visibleStatus === "Ответ направлен";
-  const visibleDocuments = isCommission
-    ? c.documents.filter((document) => document.kind !== "conclusion" && commissionCanViewCertificate(document))
-    : c.documents;
+  const visibleDocuments = c.documents.filter((document) => {
+    if (document.kind === "subject-response-attachment" && c.requests.some(request => request.id === document.requestId && request.responsePrepared && !request.responded)) return false;
+    return !isCommission || (document.kind !== "conclusion" && commissionCanViewCertificate(document));
+  });
   const visibleHistory = isCommission
     ? c.history.filter(
         (event) =>
@@ -1191,12 +1192,12 @@ export default function CaseWorkspace({
                             <h4>
                               {subjectCanCommentOnDecisionProject
                                 ? subjectProjectRouting?.commentDraft ? "Подписать замечание к проекту решения" : "Подготовить замечание к проекту решения"
-                                : "Направить ответ на запрос"}
+                                : subjectRequest?.responseApproved ? "Подписать ответ на запрос" : subjectRequest?.responsePrepared ? "Согласовать ответ на запрос" : "Подготовить ответ на запрос"}
                             </h4>
                             <p>
                               {subjectCanCommentOnDecisionProject
                                 ? subjectProjectRouting?.commentDraft ? "Подпишите замечание, чтобы направить его рабочему органу." : "После подготовки подпишите замечание для направления рабочему органу."
-                                : "Вложите ответ и направьте его в кабинет рабочего органа."}
+                                : subjectRequest?.responseApproved ? "Подпишите ответ для направления рабочему органу." : subjectRequest?.responsePrepared ? "Проверьте и согласуйте подготовленный ответ." : "Вложите ответ для согласования и подписания."}
                             </p>
                           </div>
                           <div className="consideration-task-action">
@@ -1211,7 +1212,7 @@ export default function CaseWorkspace({
                                 onAction(
                                   subjectCanCommentOnDecisionProject
                                     ? subjectProjectRouting?.commentDraft ? "sign-decision-project-comment" : "submit-decision-project-comment"
-                                    : "subject-response",
+                                    : subjectRequest?.responseApproved ? "sign-response" : subjectRequest?.responsePrepared ? "approve-response" : "subject-response",
                                   role,
                                 )
                               }
@@ -1219,7 +1220,7 @@ export default function CaseWorkspace({
                               {subjectCanCommentOnDecisionProject
                                 ? subjectProjectRouting?.commentDraft ? "Подписать замечание" : "Подготовить замечание"
                                 : subjectRequest
-                                  ? "Направить ответ"
+                                  ? subjectRequest.responseApproved ? "Подписать ответ" : subjectRequest.responsePrepared ? "Согласовать ответ" : "Подготовить ответ"
                                   : "Ответ направлен"}
                             </Button>
                           </div>
