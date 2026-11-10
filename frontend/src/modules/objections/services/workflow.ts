@@ -2170,7 +2170,10 @@ export function applyAction(
             : replaceProtocolApplicantArgument(String(form.get(`protocolReason_${point.id}_${member.id}`) || "").trim(), c, point, "ru", previousApplicantTranslations[point.id]?.ru);
           const originalKk = replaceProtocolApplicantArgument(originalRows.find(row => row.pointId === point.id && row.memberId === member.id)?.originalKk ?? certificateBasisForPoint(c, point, "kk"), c, point, "kk", previousApplicantTranslations[point.id]?.kk);
           const editedKk = protocolLanguages.includes("kk") ? replaceProtocolDavga(replaceProtocolApplicantArgument(previous?.editedKk || originalKk, c, point, "kk", previousApplicantTranslations[point.id]?.kk), text(`protocolDavgaKk_${point.id}_${member.id}`, `Доводы ДАВГА: ${member.name}, пункт ${point.number} — Қазақша`)) : previous?.editedKk;
-          if ((form.has("documentLanguageMode") || c.appealLanguage) && protocolLanguages.includes("ru") && !protocolDavgaFromReason(edited).trim()) throw new Error(`Заполните доводы ДАВГА по пункту № ${point.number} — Русский`);
+          if (form.has("documentLanguageMode") || c.appealLanguage) {
+            if (protocolLanguages.includes("ru") && !hasDavgaText(protocolDavgaFromReason(edited))) throw new Error(`Заполните обоснование по пункту № ${point.number} для ${member.name} — Русский`);
+            if (protocolLanguages.includes("kk") && !hasDavgaText(protocolDavgaFromReason(editedKk || ""))) throw new Error(`Заполните обоснование по пункту № ${point.number} для ${member.name} — Қазақша`);
+          }
           const changed = edited !== (previous?.edited ?? original) || editedKk !== (previous?.editedKk ?? originalKk);
           protocolRows.push({ pointId: point.id, pointNumber: point.number, memberId: member.id, memberName: member.name, vote: memberVotes[member.id], original, edited, originalKk, editedKk, changedBy: changed ? c.assignee : previous?.changedBy, changedAt: changed ? changedAt : previous?.changedAt });
         }

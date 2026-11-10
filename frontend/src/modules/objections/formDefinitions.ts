@@ -163,7 +163,7 @@ function defaultDecisionProjectChannel(c: ObjectionCase) {
 function languageModeField(c: ObjectionCase, values: FormValues): FormField {
   const primary = appealLanguage(c);
   const saved = c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0] || primary;
-  return select("documentLanguageMode", "Язык документа", [["ru", LANGUAGE_LABELS.ru], ["kk", LANGUAGE_LABELS.kk], ["both", "Русский и қазақша"]], values.documentLanguageMode || saved);
+  return select("documentLanguageMode", "Язык документа", [["ru", LANGUAGE_LABELS.ru], ["kk", LANGUAGE_LABELS.kk], ["both", "Қазақша и русский"]], values.documentLanguageMode || saved);
 }
 function applicantTranslationFields(c: ObjectionCase, values: FormValues, languages: Array<"ru" | "kk">): FormField[] {
   return languages.filter(language => language !== appealLanguage(c) && !c.orgTranslations?.[language]?.trim()).map(language => ({

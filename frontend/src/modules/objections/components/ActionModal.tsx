@@ -8,7 +8,7 @@ import { Button, Modal, Notice } from "../../../components/ui";
 import { actionForm, requiresConclusion, requiresMotivatedResponse } from "../formDefinitions";
 import type { FormField, FormValues } from "../formDefinitions";
 import { disputed, normalizeVoteChoice } from "../services/decisions";
-import { certificateBasisForPoint, currentProtocolRows, protocolDavgaFromReason, replaceProtocolDavga, replaceProtocolApplicantArgument, missingAppealDavga } from "../services/protocolReason";
+import { certificateBasisForPoint, currentProtocolRows, protocolDavgaFromReason, replaceProtocolDavga, replaceProtocolApplicantArgument, missingAppealDavga, hasDavgaText } from "../services/protocolReason";
 import { DocumentContent } from "./DocumentModal";
 import { DEMO_USER } from "../../../config";
 import { OUTCOMES } from "../../../data/constants";
@@ -305,6 +305,11 @@ function HearingChoiceCards({
   );
 }
 
+function editableProtocolDavga(reason: string) {
+  const value = protocolDavgaFromReason(reason);
+  return hasDavgaText(value) ? value : "";
+}
+
 function ProtocolVotesFields({
   c,
   members,
@@ -345,7 +350,7 @@ function ProtocolVotesFields({
                 const vote = normalizeVoteChoice(values[voteName]);
                 const certificateBasis = certificateBasisForPoint(c, point);
                 const existing = currentProtocolRows(c)?.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasis;
-                const reason = values[reasonName] ?? protocolDavgaFromReason(existing);
+                const reason = values[reasonName] ?? editableProtocolDavga(existing);
                 const fullReason = replaceProtocolDavga(existing, reason);
                 return (
                   <tr key={`${point.id}-${member.id}`}>
@@ -364,7 +369,7 @@ function ProtocolVotesFields({
                         const basis = language === "kk" ? certificateBasisForPoint(c, point, "kk") : certificateBasis;
                         const old = currentProtocolRows(c)?.find(row => row.pointId === point.id && row.memberId === member.id);
                         const prior = language === "kk" ? old?.editedKk ?? basis : old?.edited ?? basis;
-                        const value = values[name] ?? protocolDavgaFromReason(prior);
+                        const value = values[name] ?? editableProtocolDavga(prior);
                         return <label className="field" key={language}><span>{LANGUAGE_LABELS[language]}</span><input type="hidden" name={`${language === "kk" ? "protocolReasonKk" : "protocolReason"}_${point.id}_${member.id}`} value={replaceProtocolDavga(prior,value)} /><textarea name={name} value={value} rows={6} required aria-label={`Доводы ДАВГА: ${member.name}, пункт ${point.number} — ${LANGUAGE_LABELS[language]}`} onChange={event => onReasonChange(name,event.currentTarget.value)} /></label>;
                       })}
                       {fullReason !== certificateBasis && <small>Изменено</small>}
@@ -502,10 +507,10 @@ export default function ActionModal({
             `protocolVote_${point.id}_${member.id}`,
             normalizeVoteChoice(c.votes?.[point.id]?.votes?.[member.id]),
           ],
-          [`protocolDavgaKk_${point.id}_${member.id}`, protocolDavgaFromReason(currentProtocolRows(c)?.find(row => row.pointId === point.id && row.memberId === member.id)?.editedKk ?? certificateBasisForPoint(c, point, "kk"))],
+          [`protocolDavgaKk_${point.id}_${member.id}`, editableProtocolDavga(currentProtocolRows(c)?.find(row => row.pointId === point.id && row.memberId === member.id)?.editedKk ?? certificateBasisForPoint(c, point, "kk"))],
           [
             `protocolDavga_${point.id}_${member.id}`,
-            protocolDavgaFromReason(currentProtocolRows(c)?.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point)),
+            editableProtocolDavga(currentProtocolRows(c)?.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point)),
           ],
         ]),
       ),

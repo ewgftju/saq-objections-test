@@ -81,3 +81,22 @@ test("поле перевода на казахской вкладке расп�
   assert.match(html, /Перевод доводов заявителя по пункту № 1 — Қазақша/);
   assert.doesNotMatch(html, /name="protocolArgumentTranslation_ru_p1"/);
 });
+
+test("отсутствующие доводы не заполняются прочерком и обоснование обязательно на каждом языке", () => {
+  const { state, c, form } = fixture("ru", "Аударма");
+  c.certificate!.languages = ["ru", "kk"];
+  c.certificate!.davgaArgumentsByPointKk = {};
+  c.documents = [];
+  addDocument(c, "work", state.date, "Справка", "certificate", "");
+  const html = renderToStaticMarkup(createElement(ActionModal, { c, action: "vote", date: state.date, role: "work", onSubmit() {}, onClose() {} }));
+  assert.match(html, /name="protocolDavgaKk_p1_chair"[^>]*required[^>]*><\/textarea>/);
+  for (const value of ["", "—", " - "]) {
+    form.set("protocolDavgaKk_p1_chair", value);
+    assert.throws(() => applyAction(state, c.id, "vote", "work", form), /Заполните (обоснование|поле «Доводы ДАВГА)/);
+    form.set("protocolDavgaKk_p1_chair", "Қазақша дәлел");
+    form.set("protocolDavga_p1_chair", value);
+    assert.throws(() => applyAction(state, c.id, "vote", "work", form), /Заполните обоснование/);
+    form.set("protocolDavga_p1_chair", "Русские доводы");
+  }
+  assert.doesNotThrow(() => applyAction(state, c.id, "vote", "work", form));
+});
