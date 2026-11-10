@@ -234,6 +234,7 @@ function LanguageOverview({ c }: { c: ObjectionCase }) {
       const protocolDescription = version?.pointTitles?.[point.id]?.[language];
       if (protocolDescription && protocolDescription !== description) add(`Описание оспариваемого вопроса № ${point.number} (протокол)`, language, protocolDescription);
       add(`Перевод доводов заявителя по пункту № ${point.number}`, language, point.certificateArgumentTranslations?.[language]);
+      if (point.protocolArgumentTranslations?.[language] && point.protocolArgumentTranslations[language] !== point.certificateArgumentTranslations?.[language]) add(`Перевод доводов заявителя по пункту № ${point.number} (протокол)`, language, point.protocolArgumentTranslations[language]);
       add(`Доводы ДАВГА по пункту № ${point.number} (справка)`, language, language === "ru" ? certificate?.davgaArgumentsByPoint?.[point.id] : certificate?.davgaArgumentsByPointKk?.[point.id]);
     }
     for (const request of c.requests.filter(item => item.responseSigned)) {

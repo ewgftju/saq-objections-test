@@ -1,9 +1,9 @@
-import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, protocolIssuesWithTitles, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS, localizedCase, kazakhApplicantName, isAuditReport } from "./documentLanguage";
+import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, protocolIssuesWithTitles, certificateStatementSource, protocolStatementTranslation, certificateApplicantArgumentTranslation, protocolApplicantArgumentTranslation, LANGUAGE_LABELS, localizedCase, kazakhApplicantName, isAuditReport } from "./documentLanguage";
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
 import { nextRequestNumber, requestNumber, responseNumber } from "./requestNumbering";
-import { certificateBasisForPoint, decisionProjectDavga, motivatedResponseDavga, protocolDavgaFromReason, replaceProtocolDavga, signedProtocolDavga, missingAppealDavga, hasDavgaText } from "./protocolReason";
+import { certificateBasisForPoint, decisionProjectDavga, motivatedResponseDavga, protocolDavgaFromReason, replaceProtocolDavga, replaceProtocolApplicantArgument, signedProtocolDavga, missingAppealDavga, hasDavgaText } from "./protocolReason";
 import type {
   Action,
   ActionOption,
@@ -2064,6 +2064,16 @@ export function applyAction(
       break;
     case "vote": {
       const protocolLanguages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0] || "")));
+      const previousApplicantTranslations = Object.fromEntries(disputed(c).map(point => [point.id, { ...point.protocolArgumentTranslations }]));
+      if (c.appealLanguage || form.has("documentLanguageMode")) for (const point of disputed(c)) {
+        if (!point.argument?.trim()) continue;
+        for (const language of protocolLanguages.filter(item => item !== appealLanguage(c))) {
+          const fromCertificate = certificateApplicantArgumentTranslation(c, point, language);
+          const value = fromCertificate || String(form.get(`protocolArgumentTranslation_${language}_${point.id}`) ?? protocolApplicantArgumentTranslation(c, point, language)).trim();
+          if (!value) throw new Error(`Заполните перевод доводов заявителя по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`);
+          if (!fromCertificate) point.protocolArgumentTranslations = { ...point.protocolArgumentTranslations, [language]: value };
+        }
+      }
       const pointTitles: Record<string, Partial<Record<"ru" | "kk", string>>> = {};
       if (form.has("documentLanguageMode") || c.appealLanguage) {
         for (const point of disputed(c)) {
@@ -2152,14 +2162,14 @@ export function applyAction(
         if (!outcome)
           throw new Error("Не удалось определить результат голосования");
         for (const member of c.members) {
-          const original = originalRows.find((row) => row.pointId === point.id && row.memberId === member.id)?.original ?? certificateBasisForPoint(c, point);
+          const original = replaceProtocolApplicantArgument(originalRows.find((row) => row.pointId === point.id && row.memberId === member.id)?.original ?? certificateBasisForPoint(c, point), c, point, "ru", previousApplicantTranslations[point.id]?.ru);
           const previous = previousRows.find((row) => row.pointId === point.id && row.memberId === member.id);
           const davgaName = `protocolDavga_${point.id}_${member.id}`;
           const edited = form.has(davgaName)
-            ? replaceProtocolDavga(previous?.edited ?? original, String(form.get(davgaName) ?? "").trim())
-            : String(form.get(`protocolReason_${point.id}_${member.id}`) || "").trim();
-          const originalKk = originalRows.find(row => row.pointId === point.id && row.memberId === member.id)?.originalKk ?? certificateBasisForPoint(c, point, "kk");
-          const editedKk = protocolLanguages.includes("kk") ? replaceProtocolDavga(previous?.editedKk || originalKk, text(`protocolDavgaKk_${point.id}_${member.id}`, `Доводы ДАВГА: ${member.name}, пункт ${point.number} — Қазақша`)) : previous?.editedKk;
+            ? replaceProtocolDavga(replaceProtocolApplicantArgument(previous?.edited ?? original, c, point, "ru", previousApplicantTranslations[point.id]?.ru), String(form.get(davgaName) ?? "").trim())
+            : replaceProtocolApplicantArgument(String(form.get(`protocolReason_${point.id}_${member.id}`) || "").trim(), c, point, "ru", previousApplicantTranslations[point.id]?.ru);
+          const originalKk = replaceProtocolApplicantArgument(originalRows.find(row => row.pointId === point.id && row.memberId === member.id)?.originalKk ?? certificateBasisForPoint(c, point, "kk"), c, point, "kk", previousApplicantTranslations[point.id]?.kk);
+          const editedKk = protocolLanguages.includes("kk") ? replaceProtocolDavga(replaceProtocolApplicantArgument(previous?.editedKk || originalKk, c, point, "kk", previousApplicantTranslations[point.id]?.kk), text(`protocolDavgaKk_${point.id}_${member.id}`, `Доводы ДАВГА: ${member.name}, пункт ${point.number} — Қазақша`)) : previous?.editedKk;
           if ((form.has("documentLanguageMode") || c.appealLanguage) && protocolLanguages.includes("ru") && !protocolDavgaFromReason(edited).trim()) throw new Error(`Заполните доводы ДАВГА по пункту № ${point.number} — Русский`);
           const changed = edited !== (previous?.edited ?? original) || editedKk !== (previous?.editedKk ?? originalKk);
           protocolRows.push({ pointId: point.id, pointNumber: point.number, memberId: member.id, memberName: member.name, vote: memberVotes[member.id], original, edited, originalKk, editedKk, changedBy: changed ? c.assignee : previous?.changedBy, changedAt: changed ? changedAt : previous?.changedAt });

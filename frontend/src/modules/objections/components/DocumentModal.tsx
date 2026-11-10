@@ -34,6 +34,7 @@ import { requiresMotivatedResponse } from "../formDefinitions";
 import {
   decisionProjectDavga,
   displayProtocolReason,
+  hasDavgaText,
   motivatedResponseDavga,
   signedProtocolDavga,
 } from "../services/protocolReason";
@@ -628,28 +629,25 @@ function LegacyDocumentContent({
   if (kind === "certificate") {
     const points = snapshot.issues.filter((point) => point.disputed);
     const authorityRequests = (snapshot.requests || c.requests).filter((item) =>
-      /ДВГА|КВГА/i.test(item.recipient),
+      item.template !== "other" && !item.cancelled && /ДВГА|КВГА/i.test(item.recipient),
     );
     const authorityText = (pointId: string, field: "finding" | "response") => {
-      if (!authorityRequests.length)
-        return [{ authority: "ДВГА/КВГА", value: "—", additional: false }];
-      return authorityRequests.map((item) => {
+      const entries = authorityRequests.map((item) => {
         const authority = item.recipient.toUpperCase().includes("КВГА")
           ? "КВГА"
           : "ДВГА";
-        const point = points.find((value) => value.id === pointId);
-        const fallback =
-          authorityRequests.length === 1
-            ? field === "finding"
-              ? point?.authorityFinding
-              : point?.position
-            : undefined;
         return {
           authority,
-          value: item.authorityResponses?.[pointId]?.[field] || fallback || "—",
+          value: item.authorityResponses?.[pointId]?.[field]?.trim() || "",
           additional: Boolean(item.route && item.route !== "initial"),
         };
-      });
+      }).filter(item => hasDavgaText(item.value));
+      if (entries.length) return entries;
+      const point = points.find((value) => value.id === pointId);
+      const fallback = (field === "finding" ? point?.authorityFinding : point?.position)?.trim() || "";
+      return hasDavgaText(fallback)
+        ? [{ authority: authorityRequests[0]?.recipient.toUpperCase().includes("КВГА") ? "КВГА" : authorityRequests.length ? "ДВГА" : "ДВГА/КВГА", value: fallback, additional: false }]
+        : [];
     };
     return (
       <article className="print-document certificate-template">

@@ -89,6 +89,17 @@ export function certificatePointTitle(c: ObjectionCase, point: ViolationPoint, l
   return pointText({ ...c, ...source, appealLanguage: source?.appealLanguage || c.appealLanguage }, sourcePoint, "title", language);
 }
 
+/** Перевод из последней справки, не меняющий исходные доводы заявителя. */
+export function certificateApplicantArgumentTranslation(c: ObjectionCase, point: ViolationPoint, language: DocumentLanguage): string {
+  const snapshot = [...c.documents].reverse().find(item => item.kind === "certificate" && item.snapshot?.certificate)?.snapshot;
+  const source = snapshot?.issues.find(item => item.id === point.id) || point;
+  return source.certificateArgumentTranslations?.[language]?.trim() || "";
+}
+
+export function protocolApplicantArgumentTranslation(c: ObjectionCase, point: ViolationPoint, language: DocumentLanguage): string {
+  return certificateApplicantArgumentTranslation(c, point, language) || point.protocolArgumentTranslations?.[language]?.trim() || "";
+}
+
 export function protocolPointTitle(c: ObjectionCase, point: ViolationPoint, language: DocumentLanguage): string {
   const fromCertificate = certificatePointTitle(c, point, language);
   if (fromCertificate) return fromCertificate;

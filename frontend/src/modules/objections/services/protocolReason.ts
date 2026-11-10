@@ -1,4 +1,4 @@
-import { languagesForDocument, localizedCase } from "./documentLanguage";
+import { appealLanguage, languagesForDocument, localizedCase, protocolApplicantArgumentTranslation } from "./documentLanguage";
 import type { DocumentLanguage, ObjectionCase } from "../../../types";
 import { disputed, normalizeVoteChoice, pointOutcomeFromVotes } from "./decisions";
 
@@ -82,11 +82,27 @@ export function replaceProtocolDavga(reason: string, davga: string) {
   return `${match.index < 0 ? `${reason}\n\n` : reason.slice(0, match.index)}${label}${davga}`;
 }
 
+/** Обновить только текст довода заявителя, сохранив остальные части обоснования. */
+export function replaceProtocolApplicantArgument(reason: string, c: ObjectionCase, point: ObjectionCase["issues"][number], language: DocumentLanguage, previousTranslation?: string) {
+  if (language === appealLanguage(c)) return reason;
+  const translation = protocolApplicantArgumentTranslation(c, point, language);
+  if (!translation) return reason;
+  const savedPoint = [...c.documents].reverse().find(item => item.kind === "certificate" && item.snapshot?.certificate)?.snapshot?.issues.find(item => item.id === point.id);
+  const original = savedPoint?.argument || point.argument;
+  const label = language === "kk" ? "Мемлекеттік аудит объектісінің (өтініш берушінің) дәлелдері: " : "Доводы объекта государственного аудита (заявителя): ";
+  const start = reason.indexOf(label);
+  if (start < 0) return reason;
+  const textStart = start + label.length;
+  const existing = [previousTranslation, original].filter((value): value is string => Boolean(value)).find(value => reason.startsWith(value, textStart));
+  return existing ? reason.slice(0, textStart) + translation + reason.slice(textStart + existing.length) : reason;
+}
+
 export function certificateBasisForPoint(
   c: ObjectionCase,
   point: ReturnType<typeof disputed>[number],
   language: DocumentLanguage = "ru",
 ) {
+  const translatedArgument = language !== appealLanguage(c) ? protocolApplicantArgumentTranslation(c, point, language) : "";
   if (language === "kk") { c = localizedCase(c, language); point = c.issues.find(item => item.id === point.id)!; }
   const kk = language === "kk";
   const latestCertificate = [...c.documents]
@@ -152,7 +168,7 @@ export function certificateBasisForPoint(
     .join("\n\n");
   return [
     responses.length ? authorityArguments : `${kk ? "ІМАД/ІМАК дәлелдері" : "Доводы ДВГА/КВГА"}: ${authorityArguments}`,
-    `${kk ? "Мемлекеттік аудит объектісінің (өтініш берушінің) дәлелдері" : "Доводы объекта государственного аудита (заявителя)"}: ${sourcePoint.argument || "—"}`,
+    `${kk ? "Мемлекеттік аудит объектісінің (өтініш берушінің) дәлелдері" : "Доводы объекта государственного аудита (заявителя)"}: ${translatedArgument || sourcePoint.argument || "—"}`,
     additionalApplicantArguments,
     responses.length
       ? authorityReply

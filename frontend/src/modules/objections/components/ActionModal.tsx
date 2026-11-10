@@ -8,7 +8,7 @@ import { Button, Modal, Notice } from "../../../components/ui";
 import { actionForm, requiresConclusion, requiresMotivatedResponse } from "../formDefinitions";
 import type { FormField, FormValues } from "../formDefinitions";
 import { disputed, normalizeVoteChoice } from "../services/decisions";
-import { certificateBasisForPoint, currentProtocolRows, protocolDavgaFromReason, replaceProtocolDavga, missingAppealDavga } from "../services/protocolReason";
+import { certificateBasisForPoint, currentProtocolRows, protocolDavgaFromReason, replaceProtocolDavga, replaceProtocolApplicantArgument, missingAppealDavga } from "../services/protocolReason";
 import { DocumentContent } from "./DocumentModal";
 import { DEMO_USER } from "../../../config";
 import { OUTCOMES } from "../../../data/constants";
@@ -516,6 +516,7 @@ export default function ActionModal({
   const activePreviewLanguage = documentLanguages.includes(previewLanguage) ? previewLanguage : documentLanguages[0];
   const previewLanguageTabs = <div className="request-modal-tabs" role="tablist" aria-label="Язык печатной формы">{documentLanguages.map(language => <button key={language} type="button" role="tab" aria-selected={activePreviewLanguage === language} className={activePreviewLanguage === language ? "active" : ""} onClick={() => setPreviewLanguage(language)}>{LANGUAGE_LABELS[language]}</button>)}</div>;
   const previewCase = { ...c, statementTranslations: ["analysis", "vote"].includes(action) && c.appealType === "Заявление" ? { ...(action === "vote" ? certificateStatementSource(c).translations : c.statementTranslations), ...Object.fromEntries(documentLanguages.filter(language => language !== appealLanguage(c)).map(language => [language, action === "vote" ? certificateStatementSource(c).translations?.[language] || values[`statementTranslation_${language}`] || protocolStatementTranslation(c, language) : values[`statementTranslation_${language}`] ?? c.statementTranslations?.[language] ?? ""])) } : c.statementTranslations, request: action === "vote" && c.appealType === "Заявление" ? certificateStatementSource(c).request : c.request, agendaDetails: c.agendaDetails && action === "analysis" ? { ...c.agendaDetails, procurementSubjectTranslations: { ...c.agendaDetails.procurementSubjectTranslations, ...Object.fromEntries(documentLanguages.filter(language => values[`procurementSubject_${language}`] !== undefined).map(language => [language, values[`procurementSubject_${language}`]])) } } : c.agendaDetails, issues: c.issues.map(point => ({ ...point, certificateArgumentTranslations: action === "analysis" ? { ...point.certificateArgumentTranslations, ...Object.fromEntries(documentLanguages.filter(language => language !== appealLanguage(c) && values[`certificateArgumentTranslation_${language}_${point.id}`] !== undefined).map(language => [language, values[`certificateArgumentTranslation_${language}_${point.id}`]])) } : point.certificateArgumentTranslations, translations: { ...point.translations, ...Object.fromEntries(documentLanguages.map(language => [language, { ...point.translations?.[language], title: action === "vote" ? (certificatePointTitle(c, point, language) || values[`pointTitle_${language}_${point.id}`] || protocolPointTitle(c, point, language) || "") : values[`pointTitle_${language}_${point.id}`] ?? pointText(c, point, "title", language) }])) } })) };
+  if (action === "vote") previewCase.issues = previewCase.issues.map(point => ({ ...point, protocolArgumentTranslations: { ...point.protocolArgumentTranslations, ...Object.fromEntries(documentLanguages.filter(language => values[`protocolArgumentTranslation_${language}_${point.id}`] !== undefined).map(language => [language, values[`protocolArgumentTranslation_${language}_${point.id}`]])) } }));
   const applicantNameDocumentKind = action === "request" ? "request" : action === "analysis" ? "certificate" : action === "vote" ? "protocol" : action === "create-decision-project" ? "decision-project" : action === "deliver" ? "final-response" : undefined;
   if (applicantNameDocumentKind) previewCase.documentApplicantNames = { ...c.documentApplicantNames, [applicantNameDocumentKind]: Object.fromEntries((["ru", "kk"] as const).filter(lang => values[`documentApplicantName_${lang}`] !== undefined).map(lang => [lang, values[`documentApplicantName_${lang}`]])) };
   previewCase.orgTranslations = { ...c.orgTranslations, ...Object.fromEntries((["ru", "kk"] as const).filter(language => values[`applicantName_${language}`] !== undefined).map(language => [language, values[`applicantName_${language}`]])) };
@@ -1350,7 +1351,7 @@ export default function ActionModal({
               </button>
             </div>
             <div hidden={requestTab !== "form"}>
-              <LanguageFields fields={definition.fields.filter(field => !field.name.startsWith("pointTitle_") && !field.name.startsWith("statementTranslation_"))} primary={appealLanguage(c)} values={values} />
+              <LanguageFields fields={definition.fields.filter(field => !field.name.startsWith("pointTitle_") && !field.name.startsWith("statementTranslation_") && !field.name.startsWith("protocolArgumentTranslation_"))} primary={appealLanguage(c)} values={values} />
               <ProtocolVotesFields
                 c={c}
                 members={protocolMembers}
@@ -1359,7 +1360,7 @@ export default function ActionModal({
                   setValues((current) => ({ ...current, [name]: value }))
                 }
               />
-              {definition.fields.some(field => field.name.startsWith("pointTitle_") || field.name.startsWith("statementTranslation_")) && <LanguageFields fields={definition.fields.filter(field => field.name.startsWith("pointTitle_") || field.name.startsWith("statementTranslation_"))} primary={appealLanguage(c)} values={values} />}
+              {definition.fields.some(field => field.name.startsWith("pointTitle_") || field.name.startsWith("statementTranslation_") || field.name.startsWith("protocolArgumentTranslation_")) && <LanguageFields fields={definition.fields.filter(field => field.name.startsWith("pointTitle_") || field.name.startsWith("statementTranslation_") || field.name.startsWith("protocolArgumentTranslation_"))} primary={appealLanguage(c)} values={values} />}
             </div>
             <div hidden={requestTab !== "print"} className="request-print-preview">
               {previewLanguageTabs}
@@ -1391,14 +1392,14 @@ export default function ActionModal({
                       ),
                     ]),
                   ),
-                  voteReasonsKk: Object.fromEntries(disputed(c).map(point => [point.id, Object.fromEntries(protocolMembers.map(member => [member.id, replaceProtocolDavga(currentProtocolRows(c)?.find(row => row.pointId === point.id && row.memberId === member.id)?.editedKk ?? certificateBasisForPoint(c, point, "kk"), values[`protocolDavgaKk_${point.id}_${member.id}`] ?? "")]))])),
+                  voteReasonsKk: Object.fromEntries(disputed(previewCase).map(point => [point.id, Object.fromEntries(protocolMembers.map(member => [member.id, replaceProtocolDavga(replaceProtocolApplicantArgument(currentProtocolRows(c)?.find(row => row.pointId === point.id && row.memberId === member.id)?.editedKk ?? certificateBasisForPoint(previewCase, point, "kk"), previewCase, point, "kk", c.issues.find(item => item.id === point.id)?.protocolArgumentTranslations?.kk), values[`protocolDavgaKk_${point.id}_${member.id}`] ?? "")]))])),
                   voteReasons: Object.fromEntries(
-                    disputed(c).map((point) => [
+                    disputed(previewCase).map((point) => [
                       point.id,
                       Object.fromEntries(
                         protocolMembers.map((member) => [
                           member.id,
-                          replaceProtocolDavga(currentProtocolRows(c)?.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(c, point), values[`protocolDavga_${point.id}_${member.id}`] ?? ""),
+                          replaceProtocolDavga(replaceProtocolApplicantArgument(currentProtocolRows(c)?.find((row) => row.pointId === point.id && row.memberId === member.id)?.edited ?? certificateBasisForPoint(previewCase, point), previewCase, point, "ru", c.issues.find(item => item.id === point.id)?.protocolArgumentTranslations?.ru), values[`protocolDavga_${point.id}_${member.id}`] ?? ""),
                         ]),
                       ),
                     ]),
