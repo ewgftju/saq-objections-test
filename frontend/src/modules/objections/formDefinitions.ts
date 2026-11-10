@@ -1160,7 +1160,7 @@ export function actionForm(
       const key = `documentApplicantName_${language}`;
       const original = (action === "vote" ? c.documentApplicantNames?.certificate?.[language]?.trim() : undefined) || values[`applicantName_${language}`] || c.orgTranslations?.[language] || (language === appealLanguage(c) ? c.org : "");
       const forAgenda = action === "analysis" && language === "ru";
-      const label = forAgenda ? "Наименование заявителя в нужном падеже для повестки — Русский" : `${action === "create-decision-project" || action === "deliver" ? "Наименование заявителя в адресате" : "Наименование заявителя в тексте документа"} — ${LANGUAGE_LABELS[language]}`;
+      const label = forAgenda ? "Наименование заявителя в родительном падеже — Русский" : `${action === "create-decision-project" || action === "deliver" ? "Наименование заявителя в адресате" : "Наименование заявителя в тексте документа"} — ${LANGUAGE_LABELS[language]}`;
       const field = { ...input(key, label, values[key] ?? original), language: action === "analysis" && language === "ru" && !langs.includes("ru") ? undefined : action === "analysis" || action === "vote" ? language : undefined, required: forAgenda || (action === "vote" && language === "kk") };
       if ((action === "vote" || action === "analysis") && language === "kk") {
         const applicantIndex = fields.findIndex(item => item.name === "applicantName_kk");

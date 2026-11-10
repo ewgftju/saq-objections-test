@@ -33,6 +33,7 @@ import {
 import { requiresMotivatedResponse } from "../formDefinitions";
 import {
   decisionProjectDavga,
+  displayProtocolReason,
   motivatedResponseDavga,
   signedProtocolDavga,
 } from "../services/protocolReason";
@@ -1222,7 +1223,7 @@ function LegacyDocumentContent({
                           })()}
                     </td>
                     <td style={{ whiteSpace: "pre-wrap" }}>
-                      {protocolPreview?.voteReasons?.[point.id]?.[member.id] ||
+                      {displayProtocolReason(protocolPreview?.voteReasons?.[point.id]?.[member.id] ||
                         snapshot.meeting?.protocolVersions
                           ?.at(-1)
                           ?.rows.find(
@@ -1236,7 +1237,7 @@ function LegacyDocumentContent({
                             | undefined
                         )?.voteReasons?.[member.id] ||
                         member.reason ||
-                        "—"}
+                        "—", language)}
                     </td>
                   </tr>
                 )),

@@ -6,7 +6,7 @@ import { normalizeVoteChoice } from "../services/decisions";
 type DiffPart = { text: string; kind: "same" | "removed" | "added" };
 
 function davgaText(reason: string) {
-  const label = /(?:Доводы рабочего органа\s*\(ДАВГА МФ РК\)|Доводы ДАВГА|Жұмыс органының\s*\(ҚР ҚМ ДАВГА\) дәлелдері)\s*:\s*/gi;
+  const label = /(?:Доводы рабочего органа\s*\(ДАВГА МФ РК\)|Доводы ДАВГА|Жұмыс органының\s*\(ҚР ҚМ (?:ДАВГА|ІМАЖАД)\) дәлелдері)\s*:\s*/gi;
   let match: RegExpExecArray | null;
   let start = -1;
   while ((match = label.exec(reason))) start = match.index + match[0].length;

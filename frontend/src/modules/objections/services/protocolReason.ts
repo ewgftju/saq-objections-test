@@ -3,6 +3,13 @@ import type { DocumentLanguage, ObjectionCase } from "../../../types";
 import { disputed, normalizeVoteChoice, pointOutcomeFromVotes } from "./decisions";
 
 const DAVGA_LABEL = "Доводы рабочего органа (ДАВГА МФ РК): ";
+const KAZAKH_DAVGA_LABEL = "Жұмыс органының (ҚР ҚМ ІМАЖАД) дәлелдері: ";
+const LEGACY_KAZAKH_DAVGA_LABEL = "Жұмыс органының (ҚР ҚМ ДАВГА) дәлелдері: ";
+const DAVGA_LABELS = [DAVGA_LABEL, KAZAKH_DAVGA_LABEL, LEGACY_KAZAKH_DAVGA_LABEL];
+
+export function displayProtocolReason(reason: string, language?: DocumentLanguage) {
+  return language === "kk" ? reason.replaceAll(LEGACY_KAZAKH_DAVGA_LABEL, KAZAKH_DAVGA_LABEL) : reason;
+}
 
 export function currentProtocolRows(c: ObjectionCase) {
   const latest = c.meeting?.protocolVersions?.at(-1);
@@ -10,9 +17,8 @@ export function currentProtocolRows(c: ObjectionCase) {
 }
 
 export function protocolDavgaFromReason(reason: string) {
-  const label = reason.includes(DAVGA_LABEL) ? DAVGA_LABEL : "Жұмыс органының (ҚР ҚМ ДАВГА) дәлелдері: ";
-  const index = reason.lastIndexOf(label);
-  return index < 0 ? "" : reason.slice(index + label.length);
+  const match = DAVGA_LABELS.map(label => ({ label, index: reason.lastIndexOf(label) })).sort((a, b) => b.index - a.index)[0];
+  return match.index < 0 ? "" : reason.slice(match.index + match.label.length);
 }
 
 export function signedProtocolDavga(c: ObjectionCase, pointId: string, language: DocumentLanguage = "ru") {
@@ -71,9 +77,9 @@ export function missingAppealDavga(c: ObjectionCase, stage: "decision-project" |
 }
 
 export function replaceProtocolDavga(reason: string, davga: string) {
-  const label = reason.includes("Жұмыс органының (ҚР ҚМ ДАВГА) дәлелдері: ") ? "Жұмыс органының (ҚР ҚМ ДАВГА) дәлелдері: " : DAVGA_LABEL;
-  const index = reason.lastIndexOf(label);
-  return `${index < 0 ? `${reason}\n\n` : reason.slice(0, index)}${label}${davga}`;
+  const match = DAVGA_LABELS.map(label => ({ label, index: reason.lastIndexOf(label) })).sort((a, b) => b.index - a.index)[0];
+  const label = match.label === LEGACY_KAZAKH_DAVGA_LABEL ? KAZAKH_DAVGA_LABEL : match.label;
+  return `${match.index < 0 ? `${reason}\n\n` : reason.slice(0, match.index)}${label}${davga}`;
 }
 
 export function certificateBasisForPoint(
@@ -151,7 +157,7 @@ export function certificateBasisForPoint(
     responses.length
       ? authorityReply
       : `${kk ? "ІМАД/ІМАК уәжді жауабы" : "Мотивированный ответ ДВГА/КВГА"}: ${authorityReply}`,
-    `${kk ? "Жұмыс органының (ҚР ҚМ ДАВГА) дәлелдері" : "Доводы рабочего органа (ДАВГА МФ РК)"}: ${davgaArguments}`,
+    `${kk ? "Жұмыс органының (ҚР ҚМ ІМАЖАД) дәлелдері" : "Доводы рабочего органа (ДАВГА МФ РК)"}: ${davgaArguments}`,
   ].filter(Boolean).join("\n\n");
 }
 
