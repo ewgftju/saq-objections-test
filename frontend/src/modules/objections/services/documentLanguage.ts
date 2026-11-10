@@ -13,6 +13,9 @@ export function appealLanguage(c: ObjectionCase): DocumentLanguage {
 export function kazakhApplicantName(c: ObjectionCase): string {
   return c.orgTranslations?.kk?.trim() || (appealLanguage(c) === "kk" ? c.org.trim() : "");
 }
+export function isAuditReport(c: ObjectionCase): boolean {
+  return ["Возражение на аудиторский отчет", "Возражение на аудиторский отчёт"].includes((c.appealType || "").trim());
+}
 export function selectedLanguages(
   c: ObjectionCase,
   mode?: string,

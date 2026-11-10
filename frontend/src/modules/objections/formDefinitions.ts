@@ -1,4 +1,4 @@
-import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS, kazakhApplicantName } from "./services/documentLanguage";
+import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS, kazakhApplicantName, isAuditReport } from "./services/documentLanguage";
 import { preparedActionValues } from "./demoForm";
 import type { Action, ObjectionCase, Role } from "../../types";
 import { DEMO_USER } from "../../config";
@@ -719,8 +719,8 @@ export function actionForm(
           : requiresMotivatedResponse(c)
             ? "Сформировать мотивированный ответ"
             : "Сформировать окончательный ответ";
-      if ((action === "create-decision-project" || requiresMotivatedResponse(c)) && !kazakhApplicantName(c)) {
-        fields.push(input("applicantName_kk", "Наименование объекта заявителя — Қазақша", values.applicantName_kk || ""));
+      if ((action === "deliver" && isAuditReport(c)) || ((action === "create-decision-project" || requiresMotivatedResponse(c)) && !kazakhApplicantName(c))) {
+        fields.push(input("applicantName_kk", "Наименование объекта заявителя — Қазақша", values.applicantName_kk ?? kazakhApplicantName(c)));
       }
       if (action === "create-decision-project") {
         const defaultChannel = defaultDecisionProjectChannel(c);
@@ -1155,7 +1155,7 @@ export function actionForm(
       title = "Добавление материала";
       break;
   }
-  if (["request", "analysis", "vote", "create-decision-project"].includes(action) || (action === "deliver" && !requiresConclusion(c))) {
+  if (["request", "analysis", "vote", "create-decision-project"].includes(action) || (action === "deliver" && !requiresConclusion(c) && !isAuditReport(c))) {
     const langs = action === "analysis" || action === "vote" ? selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])) : action === "create-decision-project" || action === "deliver" ? ["kk" as const] : ["ru" as const];
     const fieldLanguages = action === "analysis" && !langs.includes("ru") ? [...langs, "ru" as const] : langs;
     for (const language of fieldLanguages) {

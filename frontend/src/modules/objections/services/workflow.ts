@@ -1,4 +1,4 @@
-import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, protocolIssuesWithTitles, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS, localizedCase, kazakhApplicantName } from "./documentLanguage";
+import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, protocolIssuesWithTitles, certificateStatementSource, protocolStatementTranslation, LANGUAGE_LABELS, localizedCase, kazakhApplicantName, isAuditReport } from "./documentLanguage";
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
@@ -1029,6 +1029,7 @@ export function applyAction(
       const value = String(form.has(key) ? form.get(key) || "" : action === "vote" ? c.documentApplicantNames?.certificate?.[language] || "" : "").trim();
       if (value) names[language] = value;
     }
+    if (action === "deliver" && isAuditReport(c)) names.kk = kazakhApplicantName(c) || undefined;
     if (action === "vote" && selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0] || ""))).includes("kk")) {
       if (!form.has("documentApplicantName_kk")) names.kk = names.kk || c.orgTranslations?.kk?.trim() || (appealLanguage(c) === "kk" ? c.org?.trim() : "") || undefined;
       if (!names.kk) throw new Error("Заполните наименование заявителя в тексте документа — Қазақша.");
