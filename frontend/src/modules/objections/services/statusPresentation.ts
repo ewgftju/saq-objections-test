@@ -24,7 +24,7 @@ export function statusLabelForRole(status: CaseStatus, role: Role) {
 export function isRequestForAuthority(request: CaseRequest, role: Role) {
   if (
     (role !== "dvga" && role !== "kvga") ||
-    request.template === "other" ||
+    (request.template === "other" && request.saqRecipient !== role) ||
     request.cancelled ||
     !request.sent
   )
@@ -36,6 +36,7 @@ export function isRequestForAuthority(request: CaseRequest, role: Role) {
 }
 
 export function authorityRequestStatusLabel(request: CaseRequest) {
+  if (request.template === "other") return request.responded ? "Ответ направлен" : "Подготовка ответа на запрос";
   if (request.responseSigned) return "Ответ направлен";
   if (request.responseApproved) return "Подписание ответа";
   if (request.responded) return "Согласование ответа";
@@ -49,8 +50,8 @@ export function authorityStatusRequest(c: ObjectionCase, role: Role) {
   );
   return (
     requests.find((request) => !request.responded) ||
-    requests.find((request) => !request.responseApproved) ||
-    requests.find((request) => !request.responseSigned) ||
+    requests.find((request) => request.template !== "other" && !request.responseApproved) ||
+    requests.find((request) => request.template !== "other" && !request.responseSigned) ||
     requests.at(-1)
   );
 }

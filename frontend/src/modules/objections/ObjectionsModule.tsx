@@ -1229,7 +1229,8 @@ export default function ObjectionsModule() {
           ? c.requests.find(
               (request) =>
                 request.template === "other" &&
-                request.saqRecipient === "subject" &&
+                (request.saqRecipient === model.role || (request.saqRecipient === "subject" && (model.role === "subject" || model.role === "subject2"))) &&
+                Boolean(request.sent) &&
                 !request.responded,
             )?.id
           : action === "record-external-response"

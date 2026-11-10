@@ -201,6 +201,7 @@ export function createDemoRepository(
         );
         const documents = documentsAfterExternalResponseMigration.map((document) => {
           if (document.kind !== "subject-response-attachment") return document;
+          if (requests.some(request => request.id === document.requestId && (request.saqRecipient === "dvga" || request.saqRecipient === "kvga"))) return document;
           const subjectRequest =
             subjectRequests.find((request) => request.responded === document.date) ||
             (subjectRequests.length === 1 ? subjectRequests[0] : undefined);

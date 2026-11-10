@@ -179,6 +179,7 @@ function authorityRequestsForRole(c: ObjectionCase, role?: Role) {
   return c.requests.filter(
     (request) =>
       isActiveRequest(request) &&
+      request.template !== "other" &&
       isDvgaOrKvgaRequest(request.recipient) &&
       Boolean(request.sent) &&
       ((role !== "dvga" && role !== "kvga") ||
@@ -275,7 +276,7 @@ function advanceAfterResponses(c: ObjectionCase, date: string) {
 function directedToDvgaOrKvga(c: ObjectionCase) {
   return c.requests.some(
     (request) =>
-      isActiveRequest(request) && isDvgaOrKvgaRequest(request.recipient),
+      isActiveRequest(request) && request.template !== "other" && isDvgaOrKvgaRequest(request.recipient),
   );
 }
 
@@ -410,6 +411,8 @@ export function nextAction(c: ObjectionCase, role?: Role): ActionOption | null {
   if (role === "dvga" || role === "kvga") {
     const authorityAction = authorityResponseAction(c, role);
     if (authorityAction) return authorityAction;
+    if (c.requests.some(request => request.template === "other" && request.saqRecipient === role && request.sent && !request.responded && !request.cancelled))
+      return { action: "subject-response", label: "Направить ответ", role };
     return null;
   }
   if ((["meeting", "decision_project"].includes(c.status) || isMotivatedResponseStage(c)) && c.certificateChangeRequests?.at(-1)?.status === "pending")
@@ -663,11 +666,12 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
       role: "work",
     });
   }
+  for (const recipient of [subjectRoleForCase(c), "dvga", "kvga"] as Role[]) {
   if (
     c.requests.some(
       (request) =>
         request.template === "other" &&
-        request.saqRecipient === "subject" &&
+        (request.saqRecipient === recipient || (request.saqRecipient === "subject" && recipient === subjectRoleForCase(c))) &&
         Boolean(request.sent) &&
         requestLifecycleStatus(request) === "waiting_response",
     )
@@ -675,8 +679,9 @@ export function additionalActions(c: ObjectionCase): ActionOption[] {
     options.push({
       action: "subject-response",
       label: "Направить ответ",
-      role: subjectRoleForCase(c),
+      role: recipient,
     });
+  }
   if (
     c.status === "decision_project_comments" &&
     c.decisionProjectRouting &&
@@ -947,7 +952,7 @@ export function applyAction(
   if ((["meeting", "decision_project"].includes(c.status) || isMotivatedResponseStage(c)) && c.certificateChangeRequests?.at(-1)?.status === "pending" && action !== "review-certificate-change" && action !== "vote" && action !== "create-decision-project" && action !== "deliver" && action !== "upload")
     throw new Error("Сначала директор должен рассмотреть предложенные изменения справки");
   const available = [nextAction(c, role), ...additionalActions(c)].find(
-    (item) => item?.action === action,
+    (item) => item?.action === action && (role === "demo-superuser" || item.role === role || action === "upload"),
   );
   if (
     !available ||
@@ -1218,9 +1223,9 @@ export function applyAction(
     }
     case "request-saq": {
       const saqRecipient = text("saqRecipient", "Получатель SAQ") as Role;
-      if (saqRecipient !== "subject")
+      if (!["subject", "dvga", "kvga"].includes(saqRecipient))
         throw new Error("Выберите получателя с кабинетом SAQ");
-      const recipient = `Кабинет ${subjectCabinetName(c)} SAQ`;
+      const recipient = saqRecipient === "subject" ? `Кабинет ${subjectCabinetName(c)} SAQ` : `Кабинет ${saqRecipient === "dvga" ? "ДВГА" : "КВГА"} SAQ`;
       const customText = text("customRequestText", "Текст запроса");
       const deadline = `${addWorkdays(date, 2)}T18:00`;
       const requestId = `request-${c.requests.length + 1}`;
@@ -1370,7 +1375,7 @@ export function applyAction(
       request.requestNumber = nextRequestNumber(c);
       request.sent = date;
       request.lifecycleStatus = "waiting_response";
-      if (isDvgaOrKvgaRequest(request.recipient))
+      if (isDvgaOrKvgaRequest(request.recipient) && request.template !== "other")
         next.notifications.push({
           id: `notification-${c.id}-${next.notifications.length + 1}`,
           caseId: c.id,
@@ -1390,6 +1395,8 @@ export function applyAction(
           read: false,
           text: `В ваш кабинет направлен запрос по обращению №${c.appealNumber || c.id} для предоставления необходимых материалов.`,
         });
+      if (request.template === "other" && (request.saqRecipient === "dvga" || request.saqRecipient === "kvga"))
+        next.notifications.push({ id: `notification-${c.id}-${next.notifications.length + 1}`, caseId: c.id, recipient: request.recipient, recipientRole: request.saqRecipient, date, read: false, text: `В ваш кабинет направлен дополнительный запрос по обращению №${c.appealNumber || c.id}.` });
       if (firstSignedRequest) {
         if (canSuspendReview(c)) c.requestPauseStartedAt = date;
         if (!isComplaintOrStatement(c))
@@ -1815,18 +1822,17 @@ export function applyAction(
     }
     case "subject-response": {
       if (
-        (role !== "demo-superuser" && !isSubjectRole(role)) ||
-        (role !== "demo-superuser" && role !== subjectRoleForCase(c))
+        role !== "demo-superuser" && !isSubjectRole(role) && role !== "dvga" && role !== "kvga"
       )
-        throw new Error("Ответ может направить только Объект");
+        throw new Error("Ответ может направить только получатель запроса");
       const request = c.requests.find(
         (item) =>
           item.template === "other" &&
-          item.saqRecipient === "subject" &&
+          (role === "demo-superuser" ? Boolean(item.saqRecipient) : item.saqRecipient === role || (item.saqRecipient === "subject" && role === subjectRoleForCase(c))) &&
           Boolean(item.sent) &&
           !item.responded,
       );
-      if (!request) throw new Error("Нет запроса, ожидающего ответа Объекта");
+      if (!request) throw new Error("Нет запроса, ожидающего ответа получателя");
       request.requestNumber ||= requestNumber(c, request);
       request.responded = date;
       request.responseNumber ||= responseNumber(c, request);
@@ -1835,7 +1841,7 @@ export function applyAction(
       title = "Ответ направлен рабочему органу";
       note =
         pausedDays === null
-          ? "Ответ Объекта направлен в кабинет рабочего органа."
+          ? `Ответ ${request.recipient} направлен в кабинет рабочего органа.`
           : "Все ответы поступили в SAQ. Обращение автоматически переведено на этап «Материалы».";
       if (pausedDays && pausedDays > 0)
         note += ` Срок рассмотрения продлён на ${pausedDays} раб. дн.`;
@@ -1847,7 +1853,7 @@ export function applyAction(
         date,
         read: false,
         kind: "request-response",
-        text: `Из кабинета Объекта поступил ответ на запрос по обращению №${c.appealNumber || c.id}. Откройте обращение для ознакомления.`,
+        text: `Из кабинета ${request.recipient} поступил ответ на запрос по обращению №${c.appealNumber || c.id}. Откройте обращение для ознакомления.`,
       });
       break;
     }

@@ -119,6 +119,8 @@ const EXTERNAL_REQUEST_PATH_OPTIONS = [
 const SAQ_RECIPIENT_OPTIONS = [
   ["", "Выберите получателя SAQ"],
   ["subject", "Кабинет Объекта SAQ"],
+  ["dvga", "Кабинет ДВГА"],
+  ["kvga", "Кабинет КВГА"],
 ] as const satisfies FormField["options"];
 
 const RECOMMENDATION_RECIPIENT_OPTIONS = [

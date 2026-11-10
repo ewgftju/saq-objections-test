@@ -139,7 +139,7 @@ export function executionDeadline(
   }
   if (role === "dvga" || role === "kvga") {
     const request = authorityStatusRequest(c, role);
-    return request?.sent && !request.responseSigned
+    return request?.sent && !(request.template === "other" ? request.responded : request.responseSigned)
       ? addWorkdays(request.sent, 2)
       : null;
   }

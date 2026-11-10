@@ -399,7 +399,7 @@ function AuthorityRequestMaterials({
         const documents = c.documents.filter(
           (document) =>
             document.requestId === request.id &&
-            ["request", "request-appendix"].includes(document.kind),
+            ["request", "request-appendix", "request-attachment"].includes(document.kind),
         );
         const responseDocuments = c.documents.filter(
           (document) =>
@@ -407,6 +407,7 @@ function AuthorityRequestMaterials({
             [
               "authority-response-appendix",
               "authority-response-attachment",
+              "subject-response-attachment",
             ].includes(document.kind),
         );
         return (
@@ -414,7 +415,7 @@ function AuthorityRequestMaterials({
             <section className="request-documents-section">
               <h4>
                 Запрос в {authorityLabel}{" "}
-                <span className={`badge ${request.responseSigned ? "green" : "blue"}`}>
+                <span className={`badge ${(request.responseSigned || (request.template === "other" && request.responded)) ? "green" : "blue"}`}>
                   {authorityRequestStatusLabel(request)}
                 </span>
               </h4>
@@ -422,9 +423,7 @@ function AuthorityRequestMaterials({
                 {documents.map((document) => (
                   <div className="request-document-row" key={document.name}>
                     <span>{document.name}</span>
-                    <Button onClick={() => onDocument(document.kind, document)}>
-                      Просмотр
-                    </Button>
+                    {document.dataUrl ? <a className="button" href={document.dataUrl} download={document.filename || document.name}>Скачать</a> : <Button onClick={() => onDocument(document.kind, document)}>Просмотр</Button>}
                   </div>
                 ))}
               </div>
