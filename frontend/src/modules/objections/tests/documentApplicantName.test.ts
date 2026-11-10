@@ -8,6 +8,29 @@ import { DocumentContent } from "../components/DocumentModal";
 import { AgendaDocument } from "../components/AgendaModal";
 import { applyAction } from "../services/workflow";
 
+test("запрос в орган аудита требует казахскую форму имени и сохраняет перевод заявления", () => {
+  let state = initialState(); const c = state.cases[0];
+  c.status = "accepted"; c.appealType = "Заявление"; c.appealLanguage = "ru"; c.org = "Организация"; c.orgTranslations = { ru: c.org }; c.request = "О строительстве школы";
+  const fields = actionForm("request", c, state.date, {}).fields;
+  assert.equal(fields.find(field => field.name === "documentApplicantName_kk")?.required, true);
+  assert.equal(fields.find(field => field.name === "statementTranslation_kk")?.value, "");
+  const form = new FormData(); form.set("recipient", "ДВГА по г. Алматы");
+  assert.throws(() => applyAction(state, c.id, "request", "work", form), /Наименование заявителя в тексте документа — Қазақша/i);
+  form.set("documentApplicantName_kk", "Ұйымның"); form.set("statementTranslation_kk", "Мектеп құрылысы туралы");
+  state = applyAction(state, c.id, "request", "work", form);
+  const saved = state.cases.find(item => item.id === c.id)!;
+  const document = saved.documents.findLast(item => item.kind === "request")!;
+  assert.equal(saved.org, "Организация"); assert.equal(saved.request, "О строительстве школы");
+  assert.equal(document.snapshot?.documentApplicantNames?.request?.kk, "Ұйымның");
+  assert.equal(document.snapshot?.statementTranslations?.kk, "Мектеп құрылысы туралы");
+  assert.equal(saved.statementTranslations?.kk, "Мектеп құрылысы туралы");
+  saved.documentApplicantNames!.request!.kk = "Другая форма";
+  saved.statementTranslations!.kk = "Басқа мәтін";
+  assert.equal(document.snapshot?.documentApplicantNames?.request?.kk, "Ұйымның");
+  assert.equal(document.snapshot?.statementTranslations?.kk, "Мектеп құрылысы туралы");
+  assert.ok(!actionForm("request-saq", saved, state.date, {}).fields.some(field => field.name === "documentApplicantName_kk"));
+});
+
 test("отдельная форма наименования сохраняется в справке, не меняя карточку и старую версию", () => {
   let state = initialState();
   const c = state.cases[0]; c.status = "materials"; c.appealLanguage = "ru"; c.appealType = "Возражение на аудиторский отчет";

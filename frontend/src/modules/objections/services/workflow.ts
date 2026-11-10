@@ -873,7 +873,7 @@ export function addDocument(
       org: c.org,
       orgTranslations: c.orgTranslations,
       documentApplicantNames: c.documentApplicantNames,
-      ...(kind === "certificate" ? { agendaDetails: c.agendaDetails, request: c.request, statementTranslations: c.statementTranslations } : {}),
+      ...(["certificate", "request"].includes(kind) ? { agendaDetails: c.agendaDetails, request: c.request, statementTranslations: c.statementTranslations } : {}),
       issues: c.issues,
       result: c.result || null,
       members: c.members,
@@ -1030,6 +1030,7 @@ export function applyAction(
       if (value) names[language] = value;
     }
     if (action === "deliver" && isAuditReport(c)) names.kk = kazakhApplicantName(c) || undefined;
+    if (action === "request" && !names.kk) throw new Error("Заполните наименование заявителя в тексте документа — Қазақша.");
     if (action === "vote" && selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0] || ""))).includes("kk")) {
       if (!form.has("documentApplicantName_kk")) names.kk = names.kk || c.orgTranslations?.kk?.trim() || (appealLanguage(c) === "kk" ? c.org?.trim() : "") || undefined;
       if (!names.kk) throw new Error("Заполните наименование заявителя в тексте документа — Қазақша.");
@@ -1197,6 +1198,9 @@ export function applyAction(
     }
     case "request": {
       const recipient = text("recipient", "Кому направить запрос");
+      if (c.appealType === "Заявление" && appealLanguage(c) === "ru" && form.has("statementTranslation_kk")) {
+        c.statementTranslations = { ...c.statementTranslations, kk: String(form.get("statementTranslation_kk") || "").trim() };
+      }
       const deadline = `${addWorkdays(date, 2)}T18:00`;
       const requestId = `request-${c.requests.length + 1}`;
       note = `Запрос сформирован для ${recipient}. Срок рассмотрения: ${deadline}.`;
