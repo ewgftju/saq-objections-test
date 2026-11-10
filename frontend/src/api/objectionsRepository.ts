@@ -1,4 +1,3 @@
-import { installDigitalAuditCases } from "../data/digitalAuditCases";
 import { restoreSkippedProtocolCertificate } from "../modules/objections/services/workflow";
 import {
   COMMISSION_ATTENDANCE_MEMBERS,
@@ -18,7 +17,8 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 14;
+const CURRENT_VERSION = 15;
+const REQUESTED_REMOVED_CASE_IDS = new Set(Array.from({ length: 9 }, (_, index) => `Ж-2026-${String(index + 4).padStart(3, "0")}`));
 
 /**
  * Карточки из старого демонстрационного набора больше не должны появляться
@@ -36,10 +36,10 @@ function migratedCaseId(id: string) {
   return RENAMED_DEMO_CASE_IDS.get(id) || id;
 }
 
-function normalizeCaseIds(ids: readonly string[] | undefined) {
+function normalizeCaseIds(ids: readonly string[] | undefined, removeRequested = false) {
   return (ids || [])
     .map(migratedCaseId)
-    .filter((id) => !REMOVED_DEMO_CASE_IDS.has(id));
+    .filter((id) => !REMOVED_DEMO_CASE_IDS.has(id) && !(removeRequested && REQUESTED_REMOVED_CASE_IDS.has(id)));
 }
 
 function isRemovedDemoCase(id: string) {
@@ -52,7 +52,7 @@ export function initialState(): DemoState {
   return {
     version: CURRENT_VERSION,
     date: "2026-09-08",
-    cases: installDigitalAuditCases(seed()),
+    cases: seed(),
     agendas: [],
     notifications: [],
     recommendations: [],
@@ -74,7 +74,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -86,8 +86,10 @@ export function createDemoRepository(
       // удаляем карточки, которые больше не входят в исходный набор демо.
       // Сначала устраняем дубли, которые могли появиться при одновременном
       // наличии старого и нового номера в localStorage.
+      const removeRequested = value.version < 15;
+      const removedForMigration = (id: string) => isRemovedDemoCase(id) || (removeRequested && REQUESTED_REMOVED_CASE_IDS.has(id));
       const persistedCases = value.cases.reduce<typeof value.cases>((result, item) => {
-        if (isRemovedDemoCase(item.id)) return result;
+        if (removedForMigration(item.id)) return result;
         const id = migratedCaseId(item.id);
         if (result.some((existing) => existing.id === id)) return result;
         result.push({
@@ -238,7 +240,7 @@ export function createDemoRepository(
         return result;
       });
       const previousNotifications = (value.notifications || [])
-        .filter((notification) => !isRemovedDemoCase(notification.caseId))
+        .filter((notification) => !removedForMigration(notification.caseId))
         .map((notification) => ({
           ...notification,
           caseId: migratedCaseId(notification.caseId),
@@ -295,15 +297,15 @@ export function createDemoRepository(
         agendas: (value.agendas || [])
           .map((agenda) => ({
             ...agenda,
-            caseIds: normalizeCaseIds(agenda.caseIds),
+            caseIds: normalizeCaseIds(agenda.caseIds, removeRequested),
           }))
           .filter((agenda) => agenda.caseIds.length > 0),
         meetings: (value.meetings || [])
           .map((meeting) => ({
             ...meeting,
-            caseIds: normalizeCaseIds(meeting.caseIds),
+            caseIds: normalizeCaseIds(meeting.caseIds, removeRequested),
             postponedCaseIds: meeting.postponedCaseIds
-              ? normalizeCaseIds(meeting.postponedCaseIds)
+              ? normalizeCaseIds(meeting.postponedCaseIds, removeRequested)
               : undefined,
             inactiveCases: meeting.inactiveCases
               ?.map((item) =>
@@ -315,7 +317,7 @@ export function createDemoRepository(
                 (item) =>
                   item &&
                   typeof item.caseId === "string" &&
-                  !isRemovedDemoCase(item.caseId),
+                  !removedForMigration(item.caseId),
               ),
           }))
           .filter(
@@ -325,7 +327,7 @@ export function createDemoRepository(
           ),
         notifications: [...previousNotifications, ...legacyFinalResponseNotifications],
         recommendations: (value.recommendations || [])
-          .filter((recommendation) => !isRemovedDemoCase(recommendation.caseId))
+          .filter((recommendation) => !removedForMigration(recommendation.caseId))
           .map((recommendation) => ({
             ...recommendation,
             caseId: migratedCaseId(recommendation.caseId),
@@ -333,7 +335,7 @@ export function createDemoRepository(
         attendancePolls: (value.attendancePolls || [])
           .map((poll) => ({
             ...poll,
-            caseIds: normalizeCaseIds(poll.caseIds),
+            caseIds: normalizeCaseIds(poll.caseIds, removeRequested),
           }))
           .filter(
             (poll) =>
@@ -342,9 +344,9 @@ export function createDemoRepository(
           ),
         activeCommissionMemberId:
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
-        cases: value.version < 14 ? installDigitalAuditCases(casesWithSharedCases) : casesWithSharedCases,
+        cases: casesWithSharedCases,
       };
-      if (restoredProtocolCertificate || value.version < 14) {
+      if (restoredProtocolCertificate || value.version < CURRENT_VERSION) {
         try { storage.setItem(STORAGE_KEY, JSON.stringify(restoredState)); } catch { /* Restored data remains available in memory. */ }
       }
       return restoredState;

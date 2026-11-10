@@ -1918,7 +1918,7 @@ export default function CaseWorkspace({
             )}
           </div>
         </section>
-        {((!isSubjectRole(role) && (!isCommission || currentExecutionDeadline)) ||
+        {((!isSubjectRole(role) && (!isAuthorityRole(role) || isAuditAuthorityForCase(c, role)) && (!isCommission || currentExecutionDeadline)) ||
           (subjectProjectReceivedAt && subjectProjectCommentsDeadline)) && (
           <aside className="right-column">
             <section

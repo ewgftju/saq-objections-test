@@ -10,6 +10,7 @@ import {
   authorityStatusRequest,
   caseStatusLabelForRole,
   isRequestForAuthority,
+  isAuditAuthorityForCase,
 } from "../services/statusPresentation";
 
 const APPEAL_TYPE_OPTIONS = [
@@ -227,7 +228,7 @@ export default function CasesList({
         ? c.status === "paused"
           ? null
           : reviewDeadline(c)
-        : executionDeadline(c, role);
+        : authorityRole && !isAuditAuthorityForCase(c, role) ? null : executionDeadline(c, role);
     return [...filtered].sort((left, right) => {
       const leftDeadline = deadline(left);
       const rightDeadline = deadline(right);
@@ -482,7 +483,7 @@ export default function CasesList({
                 <th>Объект</th>
                 <th>Вид обращения</th>
                 <th>Статус</th>
-                <th>
+                {!subjectRole && <th>
                   <button
                     type="button"
                     className={`registry-sort-button ${
@@ -494,8 +495,8 @@ export default function CasesList({
                     {commissionRole ? "Исполнить до" : "Срок исполнения"}{" "}
                     <span>{sortIcon("execution")}</span>
                   </button>
-                </th>
-                {!authorityRole && !commissionRole && (
+                </th>}
+                {!recipientRole && !commissionRole && (
                   <th>
                     <button
                       type="button"
@@ -557,9 +558,9 @@ export default function CasesList({
                       "—"
                     )}
                   </td>
-                  <td>
+                  {!subjectRole && <td>
                     {(() => {
-                      const deadline = executionDeadline(c, role);
+                      const deadline = authorityRole && !isAuditAuthorityForCase(c, role) ? null : executionDeadline(c, role);
                       return deadline ? (
                         <strong
                           className={
@@ -574,8 +575,8 @@ export default function CasesList({
                         "—"
                       );
                     })()}
-                  </td>
-                  {!authorityRole && !commissionRole && (
+                  </td>}
+                  {!recipientRole && !commissionRole && (
                     <td>
                       <strong
                         className={

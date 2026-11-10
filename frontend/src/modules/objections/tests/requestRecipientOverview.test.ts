@@ -4,6 +4,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { initialState } from "../../../api/objectionsRepository";
 import CaseWorkspace from "../pages/CaseWorkspace";
+import CasesList from "../pages/CasesList";
 import { isAuditAuthorityForCase } from "../services/statusPresentation";
 import type { Role } from "../../../types";
 
@@ -20,6 +21,23 @@ test("карточка обращения доступна органу ауди
   assert.match(html, /Материалы и результаты/);
   assert.doesNotMatch(html, /Наименование объекта заявителя/);
   assert.doesNotMatch(render("subject"), />Обращение<\/button>/);
+});
+
+test("получатель SAQ не видит сроки обращения, орган аудита видит срок своей работы", () => {
+  const c = initialState().cases[0];
+  c.issuer = "ДВГА по г. Алматы";
+  c.requests = [
+    { id: "q1", recipient: "Кабинет КВГА SAQ", date: "2026-09-08", sent: "2026-09-08", deadline: "2026-09-10", template: "other", saqRecipient: "kvga", text: "Запрос" },
+    { id: "q2", recipient: "ДВГА по г. Алматы", date: "2026-09-08", sent: "2026-09-08", deadline: "2026-09-10", template: "dvga", text: "Запрос" },
+    { id: "q3", recipient: "Кабинет Объекта SAQ", date: "2026-09-08", sent: "2026-09-08", deadline: "2026-09-10", template: "other", saqRecipient: "subject", text: "Запрос" },
+  ];
+  const renderRegistry = (role: Role) => renderToStaticMarkup(createElement(CasesList, { cases: [c], date: "2026-09-08", role, onOpen() {}, onCreate() {}, onExport() {} }));
+  const subject = renderRegistry("subject");
+  assert.doesNotMatch(subject, /Срок исполнения|Срок рассмотрения/);
+  const renderCard = (role: Role) => renderToStaticMarkup(createElement(CaseWorkspace, { c, tab: "review", role, onBack() {}, onTab() {}, onAction() {}, onDocument() {}, onUpload() {} }));
+  assert.doesNotMatch(renderCard("kvga"), /<h3>Сроки<\/h3>/);
+  assert.match(renderCard("dvga"), /<h3>Сроки<\/h3>/);
+  assert.doesNotMatch(renderCard("subject"), /<h3>Сроки<\/h3>/);
 });
 
 test("комитет видит карточку, когда является органом аудита", () => {
