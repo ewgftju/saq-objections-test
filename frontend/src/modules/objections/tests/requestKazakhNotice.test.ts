@@ -5,6 +5,18 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { initialState } from "../../../api/objectionsRepository";
 import { DocumentContent } from "../components/DocumentModal";
 
+test("получатель запроса выводится на казахском в дательном падеже", () => {
+  const c = initialState().cases[0];
+  for (const [recipient, expected] of [
+    ["ДВГА по Туркестанской области", "Түркістан облысы бойынша Ішкі мемлекеттік аудит департаментіне"],
+    ["ДВГА по г. Алматы", "Алматы қаласы бойынша Ішкі мемлекеттік аудит департаментіне"],
+    ["КВГА", "Қазақстан Республикасы Қаржы министрлігінің Ішкі мемлекеттік аудит комитетіне"],
+  ]) {
+    const html = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "request", requestPreview: { recipient, deadline: "2026-09-10T18:00", template: "dvga" } }));
+    assert.ok(html.includes(expected));
+  }
+});
+
 test("казахские срок, подпись и исполнитель выводятся в стандартных запросах по всем видам", () => {
   const c = initialState().cases[0];
   const requestPreview = { recipient: "ДВГА по г. Алматы", deadline: "2026-09-10T18:00", template: "dvga" as const };

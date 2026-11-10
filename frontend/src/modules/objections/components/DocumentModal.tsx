@@ -528,7 +528,9 @@ function LegacyDocumentContent({
         ) : null}
         <p className="request-template-recipient">
           <b>
-            {auditAuthorityFullName(request.recipient) ||
+            {auditAuthorityKazakhName(request.recipient)
+              .replace(/департаменті$/, "департаментіне")
+              .replace(/комитеті$/, "комитетіне") ||
               "Кому направить запрос"}
           </b>
         </p>
