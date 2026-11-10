@@ -67,7 +67,7 @@ export function motivatedResponseDavga(c: ObjectionCase, pointId: string, langua
     if (project.snapshot.decisionProjectDavgaByPoint && language === (project.snapshot.appealLanguage || "ru")) return project.snapshot.decisionProjectDavgaByPoint[pointId] || "";
     return decisionProjectDavga({ ...c, ...project.snapshot, documents: [], decisionProjectDavgaOverrides: project.snapshot.decisionProjectDavgaOverrides }, pointId, language);
   }
-  return signedProtocolDavga(c, pointId, language).text;
+  return decisionProjectDavga(c, pointId, language);
 }
 
 export function missingAppealDavga(c: ObjectionCase, stage: "decision-project" | "motivated-response") {

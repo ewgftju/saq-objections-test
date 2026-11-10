@@ -135,3 +135,32 @@ test("для казахского обращения используется п
   saved = state.cases.find(item => item.id === c.id)!;
   assert.equal(motivatedResponseDavga(saved, "p1", "kk"), "Соңғы қазақша дәлел");
 });
+
+for (const language of ["kk", "ru"] as const) test(`мотивированный ответ без проекта: последние доводы из справки на ${language}`, () => {
+  let state = initialState();
+  const c = state.cases[0];
+  c.appealLanguage = language;
+  c.appealType = "Возражение на аудиторский отчет";
+  c.status = "decided";
+  c.orgTranslations = { kk: "Ұйым" };
+  c.documents = [];
+  const point = { ...c.issues.find(item => item.disputed)!, id: "p1", number: "1" };
+  c.issues = [point];
+  c.certificate = { languages: [language], davgaArguments: "", davgaArgumentsByPoint: { p1: "Первый русский" }, davgaArgumentsByPointKk: { p1: "Алғашқы қазақша" }, memberPositions: [] };
+  addDocument(c, "work", state.date, "Справка 1", "certificate", "");
+  const latest = language === "kk" ? "Соңғы қазақша дәлел" : "Последний русский довод";
+  if (language === "kk") c.certificate.davgaArgumentsByPointKk!.p1 = latest;
+  else c.certificate.davgaArgumentsByPoint!.p1 = latest;
+  addDocument(c, "work", state.date, "Справка 2", "certificate", "");
+  const protocolLanguage = language === "kk" ? "ru" : "kk";
+  c.votes = { p1: { yes: 1, no: 0, approved: true, chair: "chair", present: 1, eligible: 1, votes: { chair: "accept" } } };
+  c.meeting = { date: state.date, number: "ПЗ-1", audio: "", signed: state.date, languages: [protocolLanguage], protocolVersions: [{ createdAt: state.date, signedAt: state.date, languages: [protocolLanguage], author: "Исполнитель", rows: [{ pointId: "p1", pointNumber: "1", memberId: "chair", memberName: "Председатель", vote: "accept", original: "", edited: "Доводы рабочего органа (ДАВГА МФ РК): Другой язык", editedKk: "Жұмыс органының (ҚР ҚМ ІМАЖАД) дәлелдері: Басқа тіл" }] }] };
+  assert.equal(motivatedResponseDavga(c, "p1", language), latest);
+  const preview = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "final-response", language }));
+  assert.match(preview, new RegExp(latest));
+  state = applyAction(state, c.id, "deliver", "work", new FormData());
+  const saved = state.cases.find(item => item.id === c.id)!;
+  const doc = saved.documents.filter(item => item.kind === "final-response").at(-1)!;
+  assert.equal(doc.snapshot?.motivatedResponseDavgaByPoint?.p1, latest);
+  assert.match(renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "final-response", document: doc, language })), new RegExp(latest));
+});

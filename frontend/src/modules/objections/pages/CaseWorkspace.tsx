@@ -37,6 +37,7 @@ import {
   authorityStatusRequest,
   caseStatusLabelForRole,
   isRequestForAuthority,
+  isAuditAuthorityForCase,
 } from "../services/statusPresentation";
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
@@ -809,7 +810,8 @@ export default function CaseWorkspace({
           !/заключени[ея] по обращению/i.test(`${event.title} ${event.text}`),
       )
     : c.history;
-  const canViewOverview = !recipientLimited || isAuthorityRole(role);
+  const canViewOverview = !recipientLimited || isAuditAuthorityForCase(c, role);
+  const activeTab = tab === "overview" && !canViewOverview ? "review" : tab;
   const commissionNextAction =
     role === "commission" ? nextAction(c, role) : null;
   const commissionCurrentTaskHidden =
@@ -868,7 +870,7 @@ export default function CaseWorkspace({
               .map(([value, label]) => (
                 <button
                   key={value}
-                  className={tab === value ? "active" : ""}
+                  className={activeTab === value ? "active" : ""}
                   onClick={() => onTab(value)}
                 >
                   {label}
@@ -879,7 +881,7 @@ export default function CaseWorkspace({
               ))}
           </div>
           <div className="card-body">
-            {tab === "overview" && canViewOverview && (
+            {activeTab === "overview" && canViewOverview && (
               <>
                 {(!isAuthorityRole(role) || authorityHasPendingRequest) &&
                   !commissionCurrentTaskHidden && (
@@ -1159,7 +1161,7 @@ export default function CaseWorkspace({
                 )}
               </>
             )}
-            {tab === "review" &&
+            {activeTab === "review" &&
               (isAuthorityRole(role) ? (
                 <>
                   {authorityHasPendingRequest && (
@@ -1838,7 +1840,7 @@ export default function CaseWorkspace({
                   )}
                 </>
               ))}
-            {tab === "documents" && !recipientLimited && (
+            {activeTab === "documents" && !recipientLimited && (
               <>
                 <div className="section-heading">
                   <h3>Материалы обращения</h3>
@@ -1900,7 +1902,7 @@ export default function CaseWorkspace({
                   ))}
               </>
             )}
-            {tab === "history" && !recipientLimited && role !== "commission" && (
+            {activeTab === "history" && !recipientLimited && role !== "commission" && (
               <div className="event-list">
                 {[...visibleHistory].reverse().map((event, index) => (
                   <article className="history-event" key={index}>

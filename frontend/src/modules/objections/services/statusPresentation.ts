@@ -35,6 +35,14 @@ export function isRequestForAuthority(request: CaseRequest, role: Role) {
     : recipient.includes("ДВГА") && !recipient.includes("КВГА");
 }
 
+/** Кабинеты ДВГА и КВГА в демонстрации соответствуют типу органа аудита. */
+export function isAuditAuthorityForCase(c: ObjectionCase, role: Role) {
+  const issuer = (c.issuer || "").trim();
+  if (role === "dvga") return /^(?:ДВГА|Департамент внутреннего государственного аудита)/iu.test(issuer);
+  if (role === "kvga") return /^(?:КВГА|Комитет внутреннего государственного аудита)/iu.test(issuer);
+  return false;
+}
+
 export function authorityRequestStatusLabel(request: CaseRequest) {
   if (request.template === "other") return request.responded ? "Ответ направлен" : request.responseApproved ? "Подписание ответа" : request.responsePrepared ? "Согласование ответа" : "Подготовка ответа на запрос";
   if (request.responseSigned) return "Ответ направлен";
