@@ -1160,7 +1160,7 @@ export function actionForm(
       break;
   }
   if (["request", "analysis", "vote", "create-decision-project"].includes(action) || (action === "deliver" && !requiresConclusion(c) && !isAuditReport(c))) {
-    const langs = action === "analysis" || action === "vote" ? selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])) : action === "create-decision-project" || action === "deliver" ? ["kk" as const] : ["ru" as const, "kk" as const];
+    const langs = action === "analysis" || action === "vote" ? selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])) : ["kk" as const];
     const fieldLanguages = action === "analysis" && !langs.includes("ru") ? [...langs, "ru" as const] : langs;
     for (const language of fieldLanguages) {
       const key = `documentApplicantName_${language}`;

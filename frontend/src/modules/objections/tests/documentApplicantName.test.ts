@@ -13,6 +13,7 @@ test("запрос в орган аудита требует казахскую 
   c.status = "accepted"; c.appealType = "Заявление"; c.appealLanguage = "ru"; c.org = "Организация"; c.orgTranslations = { ru: c.org }; c.request = "О строительстве школы";
   const fields = actionForm("request", c, state.date, {}).fields;
   assert.equal(fields.find(field => field.name === "documentApplicantName_kk")?.required, true);
+  assert.ok(!fields.some(field => field.name === "documentApplicantName_ru"));
   assert.equal(fields.find(field => field.name === "statementTranslation_kk")?.value, "");
   const form = new FormData(); form.set("recipient", "ДВГА по г. Алматы");
   assert.throws(() => applyAction(state, c.id, "request", "work", form), /Наименование заявителя в тексте документа — Қазақша/i);
