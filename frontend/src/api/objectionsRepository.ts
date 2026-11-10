@@ -1,3 +1,4 @@
+import { installDigitalAuditCases } from "../data/digitalAuditCases";
 import { restoreSkippedProtocolCertificate } from "../modules/objections/services/workflow";
 import {
   COMMISSION_ATTENDANCE_MEMBERS,
@@ -16,9 +17,9 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 16;
+const CURRENT_VERSION = 17;
 const REMOVED_COMPLAINT_IDS = new Set(Array.from({ length: 7 }, (_, index) => `Ж-2026-${String(index + 6).padStart(3, "0")}`));
-const RESTORED_COMPLAINT_IDS = new Set(["Ж-2026-004", "Ж-2026-005"]);
+const RESTORED_COMPLAINT_IDS = new Map([["Ж-2026-004", "Ж-2026-001"], ["Ж-2026-005", "Ж-2026-002"]]);
 
 /**
  * Карточки из старого демонстрационного набора больше не должны появляться
@@ -40,10 +41,10 @@ function removedInMigration(id: string, version: number) {
   return (version < 15 && REMOVED_COMPLAINT_IDS.has(id)) || (version < 16 && id === "З-2026-002");
 }
 
-function normalizeCaseIds(ids: readonly string[] | undefined, version = CURRENT_VERSION) {
+function normalizeCaseIds(ids: readonly string[] | undefined, version = CURRENT_VERSION, renumber = new Map<string, string>()) {
   return (ids || [])
-    .map(migratedCaseId)
-    .filter((id) => !REMOVED_DEMO_CASE_IDS.has(id) && !removedInMigration(id, version));
+    .filter((id) => !REMOVED_DEMO_CASE_IDS.has(id) && !removedInMigration(id, version))
+    .map((id) => migratedCaseId(renumber.get(id) || id));
 }
 
 function isRemovedDemoCase(id: string) {
@@ -69,7 +70,8 @@ export function initialState(): DemoState {
 function restoreRequestedComplaints(cases: DemoState["cases"]) {
   const restored = [...cases];
   for (const c of installDigitalAuditCases(seed())) {
-    if (RESTORED_COMPLAINT_IDS.has(c.id) && !restored.some(item => item.id === c.id)) restored.push(c);
+    const newId = RESTORED_COMPLAINT_IDS.get(c.id);
+    if (newId && !restored.some(item => item.id === c.id || item.id === newId)) restored.push({ ...c, id: newId });
   }
   return restored;
 }
@@ -87,7 +89,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -100,9 +102,14 @@ export function createDemoRepository(
       // Сначала устраняем дубли, которые могли появиться при одновременном
       // наличии старого и нового номера в localStorage.
       const removedForMigration = (id: string) => isRemovedDemoCase(id) || removedInMigration(id, value.version);
+      const renumber = new Map<string, string>();
+      if (value.version < 17) for (const [oldId, newId] of RESTORED_COMPLAINT_IDS) {
+        if (value.cases.some(item => item.id === oldId) && !value.cases.some(item => item.id === newId)) renumber.set(oldId, newId);
+      }
+      const caseId = (id: string) => migratedCaseId(renumber.get(id) || id);
       const persistedCases = value.cases.reduce<typeof value.cases>((result, item) => {
         if (removedForMigration(item.id)) return result;
-        const id = migratedCaseId(item.id);
+        const id = caseId(item.id);
         if (result.some((existing) => existing.id === id)) return result;
         result.push({
           ...item,
@@ -130,7 +137,7 @@ export function createDemoRepository(
         const matchingMeeting = (value.meetings || [])
           .filter(
             (meeting) =>
-              meeting.caseIds.includes(c.id) &&
+              meeting.caseIds.some(id => caseId(id) === c.id) &&
               (!normalized.attendanceMeetingDate ||
                 meeting.dateTime.slice(0, 10) ===
                   normalized.attendanceMeetingDate),
@@ -142,7 +149,7 @@ export function createDemoRepository(
               (poll) => poll.id === matchingMeeting.pollId,
             )
           : (value.attendancePolls || [])
-              .filter((poll) => poll.caseIds.includes(c.id))
+              .filter((poll) => poll.caseIds.some(id => caseId(id) === c.id))
               .at(-1);
         const attendanceMembers = latestAttendancePoll
           ? COMMISSION_ATTENDANCE_MEMBERS
@@ -255,7 +262,7 @@ export function createDemoRepository(
         .filter((notification) => !removedForMigration(notification.caseId))
         .map((notification) => ({
           ...notification,
-          caseId: migratedCaseId(notification.caseId),
+          caseId: caseId(notification.caseId),
         }));
       const legacyFinalResponseNotifications =
         value.version < CURRENT_VERSION
@@ -308,20 +315,20 @@ export function createDemoRepository(
         agendas: (value.agendas || [])
           .map((agenda) => ({
             ...agenda,
-            caseIds: normalizeCaseIds(agenda.caseIds, value.version),
+            caseIds: normalizeCaseIds(agenda.caseIds, value.version, renumber),
           }))
           .filter((agenda) => agenda.caseIds.length > 0),
         meetings: (value.meetings || [])
           .map((meeting) => ({
             ...meeting,
-            caseIds: normalizeCaseIds(meeting.caseIds, value.version),
+            caseIds: normalizeCaseIds(meeting.caseIds, value.version, renumber),
             postponedCaseIds: meeting.postponedCaseIds
-              ? normalizeCaseIds(meeting.postponedCaseIds, value.version)
+              ? normalizeCaseIds(meeting.postponedCaseIds, value.version, renumber)
               : undefined,
             inactiveCases: meeting.inactiveCases
               ?.map((item) =>
                 item && typeof item.caseId === "string"
-                  ? { ...item, caseId: migratedCaseId(item.caseId) }
+                  ? { ...item, caseId: caseId(item.caseId) }
                   : item,
               )
               .filter(
@@ -341,12 +348,13 @@ export function createDemoRepository(
           .filter((recommendation) => !removedForMigration(recommendation.caseId))
           .map((recommendation) => ({
             ...recommendation,
-            caseId: migratedCaseId(recommendation.caseId),
+            caseId: caseId(recommendation.caseId),
+            caseReference: renumber.get(recommendation.caseReference) || recommendation.caseReference,
           })),
         attendancePolls: (value.attendancePolls || [])
           .map((poll) => ({
             ...poll,
-            caseIds: normalizeCaseIds(poll.caseIds, value.version),
+            caseIds: normalizeCaseIds(poll.caseIds, value.version, renumber),
           }))
           .filter(
             (poll) =>
@@ -355,7 +363,7 @@ export function createDemoRepository(
           ),
         activeCommissionMemberId:
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
-        cases: value.version < 16 ? restoreRequestedComplaints(casesWithSharedCases) : casesWithSharedCases,
+        cases: value.version < 17 ? restoreRequestedComplaints(casesWithSharedCases) : casesWithSharedCases,
       };
       if (restoredProtocolCertificate || value.version < CURRENT_VERSION) {
         try { storage.setItem(STORAGE_KEY, JSON.stringify(restoredState)); } catch { /* Restored data remains available in memory. */ }
@@ -367,4 +375,3 @@ export function createDemoRepository(
     },
   };
 }
-import { installDigitalAuditCases } from "../data/digitalAuditCases";
