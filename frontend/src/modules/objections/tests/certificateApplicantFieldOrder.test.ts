@@ -3,6 +3,16 @@ import test from 'node:test';
 import { initialState } from '../../../api/objectionsRepository';
 import { actionForm } from '../formDefinitions';
 
+test('родительный падеж русского наименования расположен сразу после наименования заявителя', () => {
+ const c=initialState().cases[0]; c.appealType='Заявление'; c.appealLanguage='kk'; c.org='Ұйым'; c.orgTranslations={kk:c.org}; c.request='мектеп салу туралы';
+ for (const mode of ['ru','both']) {
+  const fields=actionForm('analysis',c,'2026-09-08',{documentLanguageMode:mode}).fields.filter(f=>f.language==='ru');
+  const name=fields.findIndex(f=>f.name==='applicantName_ru');
+  assert.ok(name>=0); assert.equal(fields[name+1].name,'documentApplicantName_ru');
+  assert.ok(fields.findIndex(f=>f.name==='statementTranslation_ru')>name+1);
+ }
+});
+
 test('в казахской версии справки наименования заявителя стоят рядом перед описаниями', () => {
  const c=initialState().cases[0]; c.appealLanguage='ru'; c.orgTranslations={ru:c.org};
  for (const mode of ['kk','both']) {

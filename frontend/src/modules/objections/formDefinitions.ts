@@ -1169,7 +1169,11 @@ export function actionForm(
       const forAgenda = action === "analysis" && language === "ru";
       const label = forAgenda ? "Наименование заявителя в родительном падеже — Русский" : `${action === "create-decision-project" || action === "deliver" ? "Наименование заявителя в адресате" : "Наименование заявителя в тексте документа"} — ${LANGUAGE_LABELS[language]}`;
       const field = { ...input(key, label, values[key] ?? original), language: action === "analysis" && language === "ru" && !langs.includes("ru") ? undefined : action === "analysis" || action === "vote" ? language : undefined, required: forAgenda || ((action === "vote" || action === "request") && language === "kk") };
-      if ((action === "vote" || action === "analysis") && language === "kk") {
+      if (action === "analysis" && language === "ru" && langs.includes("ru")) {
+        const applicantIndex = fields.findIndex(item => item.name === "applicantName_ru");
+        const firstRussianIndex = fields.findIndex(item => item.language === "ru");
+        fields.splice(applicantIndex >= 0 ? applicantIndex + 1 : firstRussianIndex >= 0 ? firstRussianIndex : fields.length, 0, field);
+      } else if ((action === "vote" || action === "analysis") && language === "kk") {
         const applicantIndex = fields.findIndex(item => item.name === "applicantName_kk");
         const firstKazakhIndex = fields.findIndex(item => item.language === "kk");
         const index = applicantIndex >= 0 ? applicantIndex + 1 : firstKazakhIndex >= 0 ? firstKazakhIndex : fields.length;
