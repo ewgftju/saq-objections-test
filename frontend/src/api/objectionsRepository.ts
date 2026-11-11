@@ -18,7 +18,11 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 19;
+const CURRENT_VERSION = 20;
+const REQUESTED_REMOVAL_IDS = new Set([
+  "В-2026-002", "В-2026-007", "В-2026-008",
+  "З-2026-010", "З-2026-011", "З-2026-012", "З-2026-013", "З-2026-014",
+]);
 const REMOVED_COMPLAINT_IDS = new Set(Array.from({ length: 7 }, (_, index) => `Ж-2026-${String(index + 6).padStart(3, "0")}`));
 const RESTORED_COMPLAINT_IDS = new Map([["Ж-2026-004", "Ж-2026-001"], ["Ж-2026-005", "Ж-2026-002"]]);
 
@@ -39,7 +43,7 @@ function migratedCaseId(id: string) {
 }
 
 function removedInMigration(id: string, version: number) {
-  return (version < 15 && REMOVED_COMPLAINT_IDS.has(id)) || (version < 16 && id === "З-2026-002");
+  return (version < 15 && REMOVED_COMPLAINT_IDS.has(id)) || (version < 16 && id === "З-2026-002") || (version < 20 && REQUESTED_REMOVAL_IDS.has(id));
 }
 
 function normalizeCaseIds(ids: readonly string[] | undefined, version = CURRENT_VERSION, renumber = new Map<string, string>()) {
@@ -58,7 +62,7 @@ export function initialState(): DemoState {
   return {
     version: CURRENT_VERSION,
     date: "2026-09-08",
-    cases: installKazakhTestStatements(installTestStatements(installAuditPlusCases(restoreRequestedComplaints(seed().filter(c => c.id !== "З-2026-002"))))),
+    cases: installKazakhTestStatements(installTestStatements(installAuditPlusCases(restoreRequestedComplaints(seed().filter(c => c.id !== "З-2026-002"))))).filter(c => !REQUESTED_REMOVAL_IDS.has(c.id)),
     agendas: [],
     notifications: [],
     recommendations: [],
@@ -90,7 +94,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -364,7 +368,7 @@ export function createDemoRepository(
           ),
         activeCommissionMemberId:
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
-        cases: value.version < 19 ? installKazakhTestStatements(value.version < 18 ? installTestStatements(installAuditPlusCases(value.version < 17 ? restoreRequestedComplaints(casesWithSharedCases) : casesWithSharedCases)) : casesWithSharedCases) : casesWithSharedCases,
+        cases: (value.version < 19 ? installKazakhTestStatements(value.version < 18 ? installTestStatements(installAuditPlusCases(value.version < 17 ? restoreRequestedComplaints(casesWithSharedCases) : casesWithSharedCases)) : casesWithSharedCases) : casesWithSharedCases).filter(c => !removedForMigration(c.id)),
       };
       if (restoredProtocolCertificate || value.version < CURRENT_VERSION) {
         try { storage.setItem(STORAGE_KEY, JSON.stringify(restoredState)); } catch { /* Restored data remains available in memory. */ }
