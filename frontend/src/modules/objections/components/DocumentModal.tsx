@@ -118,10 +118,31 @@ function kazakhStatementProtocolIntro(c: ObjectionCase) {
   return `${c.org || "—"}, ${identifier} ${c.bin || "—"}, ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} ${subject || "—"} өтініші.`;
 }
 
+function kazakhAuditOrDecisionReference(c: ObjectionCase) {
+  const identifier = c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН";
+  const who = `${c.org || "—"}, ${identifier} ${c.bin || "—"}`;
+  const authority = auditAuthorityKazakhName(c.issuer);
+  const source = `${kazakhProtocolDate(c.document.date)} № ${c.document.number || "—"}`;
+  const appeal = `${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"}`;
+  if (["Возражение на аудиторский отчет", "Возражение на аудиторский отчёт"].includes(c.appealType || "") || (!c.appealType && c.type === "audit")) return { text: `${who}, ${authority} жүргізген ${source} аудиторлық есебіне ${appeal}`, object: "қарсылық" };
+  if (c.appealType !== "Жалоба на решение КВГА/ДВГА") return undefined;
+  switch (c.agendaDetails?.decisionKind) {
+    case "prescription":
+    case "prescription-audit": return { text: `${who}, ${authority} жүргізген аудиторлық есеп бойынша ${source} нұсқамаға ${appeal}`, object: "шағым" };
+    case "prescription-preventive": return { text: `${authority} жіберген профилактикалық бақылау нәтижелері бойынша анықталған бұзушылықтарды жою туралы ${source} нұсқамасына ${who}, ${appeal}`, object: "шағым" };
+    case "preventive-control-act": return { text: `${who}, ${authority} жүргізген ${source} профилактикалық бақылау нәтижесі туралы актіге ${appeal}`, object: "шағым" };
+    case "quality-control": return { text: `${who}, ${authority} жүргізген ${source} сапаны бақылау нәтижелері бойынша шешімге ${appeal}`, object: "шағым" };
+    case "administrative-act": return { text: `${who}, ${authority} жүргізген ${source} әкімшілік актіге ${appeal}`, object: "шағым" };
+    default: return undefined;
+  }
+}
+
 export function kazakhAgendaProtocolIntro(c: ObjectionCase) {
   if (c.appealType === "Заявление") return kazakhStatementProtocolIntro(c);
   if (c.appealType === "Жалоба на действие/бездействие") return `${kazakhActionComplaintReference(c)} шағымы.`;
   if (c.appealType === "Жалоба на уведомление") return `${kazakhNoticeComplaintReference(c)}.`;
+  const reference = kazakhAuditOrDecisionReference(c);
+  if (reference) return `${reference.text} ${reference.object === "шағым" ? "шағымы" : "қарсылығы"}.`;
   return `${kazakhAppealReference(c, auditAuthorityKazakhName)}.`;
 }
 
@@ -256,6 +277,30 @@ export function appendixPageCount(items: AppendixPageItem[]) {
 }
 
 function requestIntro(c: ObjectionCase, deadline: string) {
+  if (["Возражение на аудиторский отчет", "Возражение на аудиторский отчёт"].includes(c.appealType || "") || (!c.appealType && c.type === "audit")) {
+    const applicant = c.documentApplicantNames?.request?.kk?.trim() || c.orgTranslations?.kk?.trim() || (c.appealLanguage === "kk" ? c.org : "") || "—";
+    const identifier = c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН";
+    return `Қазақстан Республикасы Қаржы министрлігінің Апелляциялық комиссиясының қарауына ${applicant}, ${identifier} ${c.bin || "—"}, ${auditAuthorityKazakhName(c.issuer)} жүргізген ${kazakhProtocolDate(c.document.date)} № ${c.document.number || "—"} аудиторлық есебіне ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} қарсылығының келіп түсуіне байланысты, ${kazakhDeadlineDate(deadline)} дейінгі мерзімде қарсылықтың дәлелдері бойынша дәлелді жауапты және растайтын құжаттарды қоса бере отырып ұсынуыңызды талап етеміз.`;
+  }
+  if (c.appealType === "Жалоба на уведомление" || c.appealType === "Жалоба на решение КВГА/ДВГА") {
+    const applicant = c.documentApplicantNames?.request?.kk?.trim() || c.orgTranslations?.kk?.trim() || (c.appealLanguage === "kk" ? c.org : "") || "—";
+    const identifier = c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН";
+    const who = `${applicant}, ${identifier} ${c.bin || "—"}`;
+    const authority = auditAuthorityKazakhName(c.issuer);
+    const source = `${kazakhProtocolDate(c.document.date)} № ${c.document.number || "—"}`;
+    const appeal = `${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"}`;
+    const prefix = "Қазақстан Республикасы Қаржы министрлігінің апелляциялық комиссиясының қарауына";
+    const finish = `байланысты ${kazakhDeadlineDate(deadline)} дейінгі мерзімде шағымның дәлелдері бойынша дәлелді жауапты және растайтын құжаттарды қоса бере отырып ұсынуыңызды талап етеміз.`;
+    if (c.appealType === "Жалоба на уведомление") return `${prefix} ${who}, ${authority} жүргізген ${source} бұзушылықтарды жою туралы хабарламаға ${appeal} шағымның келіп түсуіне ${finish}`;
+    switch (c.agendaDetails?.decisionKind) {
+      case "prescription":
+      case "prescription-audit": return `${prefix} ${who}, ${authority} жүргізген аудиторлық есеп бойынша ${source} нұсқамаға ${appeal} шағымның келіп түсуіне ${finish}`;
+      case "prescription-preventive": return `${prefix} ${authority} жіберген профилактикалық бақылау нәтижелері бойынша анықталған бұзушылықтарды жою туралы ${source} нұсқамасына ${who}, ${appeal} шағым келіп түсуіне ${finish}`;
+      case "preventive-control-act": return `${prefix} ${who}, ${authority} жүргізген ${source} профилактикалық бақылау нәтижесі туралы актіге ${appeal} шағым келіп түсуіне ${finish}`;
+      case "quality-control": return `${prefix} ${who}, ${authority} жүргізген ${source} сапаны бақылау нәтижелері бойынша шешімге ${appeal} шағым келіп түсуіне ${finish}`;
+      case "administrative-act": return `${prefix} ${who}, ${authority} жүргізген ${source} әкімшілік актіге ${appeal} шағым келіп түсуіне ${finish}`;
+    }
+  }
   if (c.appealType === "Жалоба на действие/бездействие") {
     const applicant = c.documentApplicantNames?.request?.kk?.trim() || c.orgTranslations?.kk?.trim() || (c.appealLanguage === "kk" ? c.org : "") || "—";
     return `Қазақстан Республикасы Қаржы министрлігінің Апелляциялық комиссиясының қарауына ${kazakhActionComplaintReference(c, applicant)} шағымның келіп түсуіне байланысты ${kazakhDeadlineDate(deadline)} дейінгі мерзімде шағымның дәлелдері бойынша дәлелді жауапты және растайтын құжаттарды қоса бере отырып ұсынуыңызды талап етеміз.`;
@@ -738,6 +783,8 @@ function LegacyDocumentContent({
               ? kazakhStatementCertificateIntro(textSnapshot)
               : snapshot.appealType === "Жалоба на действие/бездействие"
               ? `Қазақстан Республикасының Қаржы министрлігіне ${kazakhActionComplaintReference(textSnapshot)} шағым келіп түсті.`
+              : kazakhAuditOrDecisionReference(textSnapshot)
+              ? `Қазақстан Республикасының Қаржы министрлігіне ${kazakhAuditOrDecisionReference(textSnapshot)!.text} ${kazakhAuditOrDecisionReference(textSnapshot)!.object} келіп түсті.`
               : (["Возражение на уведомление", "Возражение на уведомления"].includes(snapshot.appealType || "") || (!snapshot.appealType && snapshot.type === "notice"))
               ? kazakhNoticeObjectionCertificateIntro(textSnapshot)
               : `Қазақстан Республикасы Қаржы министрлігіне ${snapshot.appealType === "Жалоба на уведомление" ? kazakhNoticeComplaintReference(textSnapshot) : kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)} келіп түсті.`
