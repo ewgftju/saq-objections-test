@@ -95,7 +95,7 @@ function actionInactionComplaintReference(c: ObjectionCase) {
         .join(", ")}`
     : "";
 
-  return `${applicantReference(c)}, касательно действий (бездействий) ${actions}${procurement}`;
+  return `${applicantReference(c)}, касательно действий (бездействия) ${actions}${procurement}`;
 }
 
 function statementReference(c: ObjectionCase) {
