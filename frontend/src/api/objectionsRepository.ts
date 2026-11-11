@@ -1,5 +1,6 @@
 import { installDigitalAuditCases } from "../data/digitalAuditCases";
 import { installAuditPlusCases, installTestStatements, installKazakhTestStatements } from "../data/auditPlusCases";
+import { installComplaintTestCases } from "../data/complaintTestCases";
 import { restoreSkippedProtocolCertificate } from "../modules/objections/services/workflow";
 import {
   COMMISSION_ATTENDANCE_MEMBERS,
@@ -18,7 +19,7 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 21;
+const CURRENT_VERSION = 22;
 const REQUESTED_REMOVAL_IDS = new Set([
   "В-2026-002", "В-2026-007", "В-2026-008",
   "З-2026-010", "З-2026-011", "З-2026-012", "З-2026-013", "З-2026-014",
@@ -62,7 +63,7 @@ export function initialState(): DemoState {
   return {
     version: CURRENT_VERSION,
     date: "2026-09-08",
-    cases: installKazakhTestStatements(installTestStatements(installAuditPlusCases(restoreRequestedComplaints(seed().filter(c => c.id !== "З-2026-002"))))).filter(c => !REQUESTED_REMOVAL_IDS.has(c.id) && c.id !== "Ж-2026-002"),
+    cases: installComplaintTestCases(installKazakhTestStatements(installTestStatements(installAuditPlusCases(restoreRequestedComplaints(seed().filter(c => c.id !== "З-2026-002"))))).filter(c => !REQUESTED_REMOVAL_IDS.has(c.id) && c.id !== "Ж-2026-002")),
     agendas: [],
     notifications: [],
     recommendations: [],
@@ -94,7 +95,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -368,7 +369,10 @@ export function createDemoRepository(
           ),
         activeCommissionMemberId:
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
-        cases: (value.version < 19 ? installKazakhTestStatements(value.version < 18 ? installTestStatements(installAuditPlusCases(value.version < 17 ? restoreRequestedComplaints(casesWithSharedCases) : casesWithSharedCases)) : casesWithSharedCases) : casesWithSharedCases).filter(c => !removedForMigration(c.id)),
+        cases: (() => {
+          const prior = (value.version < 19 ? installKazakhTestStatements(value.version < 18 ? installTestStatements(installAuditPlusCases(value.version < 17 ? restoreRequestedComplaints(casesWithSharedCases) : casesWithSharedCases)) : casesWithSharedCases) : casesWithSharedCases).filter(c => !removedForMigration(c.id));
+          return value.version < 22 ? installComplaintTestCases(prior) : prior;
+        })(),
       };
       if (restoredProtocolCertificate || value.version < CURRENT_VERSION) {
         try { storage.setItem(STORAGE_KEY, JSON.stringify(restoredState)); } catch { /* Restored data remains available in memory. */ }

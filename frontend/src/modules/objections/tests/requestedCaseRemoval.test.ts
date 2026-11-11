@@ -15,7 +15,7 @@ test("однократно удаляет указанные обращения 
   assert.ok(removed.every(id => !loaded.cases.some(c => c.id === id)));
   assert.ok(loaded.cases.some(c => c.id === "З-2026-015"));
   assert.equal(loaded.notifications.filter(n => removed.includes(n.caseId)).length, 0);
-  assert.equal(loaded.version, 21);
+  assert.equal(loaded.version, 22);
   loaded.cases.push({ ...structuredClone(template), id: "З-2026-014" });
   repository.save(loaded);
   assert.ok(repository.load().cases.some(c => c.id === "З-2026-014"));
