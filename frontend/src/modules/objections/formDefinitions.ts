@@ -474,6 +474,12 @@ export function actionForm(
         if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject && !c.agendaDetails.procurementSubjectTranslations?.ru?.trim()) agendaFields.push({ ...area("agendaProcurementRu", "Предмет государственной закупки на русском", values.agendaProcurementRu || ""), required: false });
         if (agendaFields.length) fields.push(heading("agendaRussianDetails", "Данные для повестки на русском языке"), ...agendaFields);
       }
+      if (appealLanguage(c) === "ru" && !langs.includes("kk")) {
+        const agendaFields: FormField[] = [];
+        if (c.appealType === "Заявление" && c.request?.trim() && !c.statementTranslations?.kk?.trim()) agendaFields.push({ ...area("agendaStatementKk", "О чём заявление — Қазақша", values.agendaStatementKk || ""), required: false });
+        if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementSubject?.trim() && !c.agendaDetails.procurementSubjectTranslations?.kk?.trim()) agendaFields.push({ ...area("agendaProcurementKk", "Предмет — Қазақша", values.agendaProcurementKk || ""), required: false });
+        if (agendaFields.length) fields.push(heading("agendaKazakhDetails", "Данные для повестки на казахском языке"), ...agendaFields);
+      }
       if (c.appealType === "Заявление" && c.request) {
         for (const language of langs.filter(item => item !== appealLanguage(c))) {
           const key = `statementTranslation_${language}`;

@@ -5,7 +5,7 @@ import {
   Notice,
   PageHeading,
 } from "../../../components/ui";
-import { agendaItemText } from "../components/AgendaModal";
+import { agendaItemText, agendaItemTextKk } from "../components/AgendaModal";
 import { AgendaResultsTable } from "../components/AgendaResultsModal";
 import { meetingAgendaCaseIds } from "../services/meetingAgenda";
 import { caseStatusLabelForRole } from "../services/statusPresentation";
@@ -1055,7 +1055,8 @@ export function SessionsPage({
                       key={caseItem.id}
                       className={excluded ? "agenda-item-excluded" : undefined}
                     >
-                      <span>{agendaItemText(caseItem)}</span>
+                      <span lang="kk">{agendaItemTextKk(caseItem)}</span>
+                      <span lang="ru" style={{ display: "block", marginTop: 8 }}>{agendaItemText(caseItem)}</span>
                       {excluded && (
                         <span className="badge gray">Исключено из заседания</span>
                       )}

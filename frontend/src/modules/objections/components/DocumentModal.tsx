@@ -118,6 +118,13 @@ function kazakhStatementProtocolIntro(c: ObjectionCase) {
   return `${c.org || "—"}, ${identifier} ${c.bin || "—"}, ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} ${subject || "—"} өтініші.`;
 }
 
+export function kazakhAgendaProtocolIntro(c: ObjectionCase) {
+  if (c.appealType === "Заявление") return kazakhStatementProtocolIntro(c);
+  if (c.appealType === "Жалоба на действие/бездействие") return `${kazakhActionComplaintReference(c)} шағымы.`;
+  if (c.appealType === "Жалоба на уведомление") return `${kazakhNoticeComplaintReference(c)}.`;
+  return `${kazakhAppealReference(c, auditAuthorityKazakhName)}.`;
+}
+
 function requestDeadlineDate(deadline: string) {
   return formatDate(deadline.slice(0, 10));
 }
@@ -1237,13 +1244,7 @@ function LegacyDocumentContent({
         </div>
         <p className="protocol-template-intro">
           {language === "kk"
-            ? snapshot.appealType === "Заявление"
-              ? kazakhStatementProtocolIntro(textSnapshot)
-              : snapshot.appealType === "Жалоба на действие/бездействие"
-              ? `${kazakhActionComplaintReference(textSnapshot)} шағымы.`
-              : snapshot.appealType === "Жалоба на уведомление"
-              ? `${kazakhNoticeComplaintReference(textSnapshot)}.`
-              : `${kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)}.`
+            ? kazakhAgendaProtocolIntro(textSnapshot)
             : protocolIntro}
         </p>
         <p>

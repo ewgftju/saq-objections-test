@@ -1878,6 +1878,12 @@ export function applyAction(
           if (statement && c.appealType === "Заявление") c.statementTranslations = { ...c.statementTranslations, ru: statement };
           if (procurement && c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails) c.agendaDetails.procurementSubjectTranslations = { ...c.agendaDetails.procurementSubjectTranslations, ru: procurement };
         }
+        if (appealLanguage(c) === "ru") {
+          const statement = String(form.get("agendaStatementKk") || "").trim();
+          const procurement = String(form.get("agendaProcurementKk") || "").trim();
+          if (statement && c.appealType === "Заявление") c.statementTranslations = { ...c.statementTranslations, kk: statement };
+          if (procurement && c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails) c.agendaDetails.procurementSubjectTranslations = { ...c.agendaDetails.procurementSubjectTranslations, kk: procurement };
+        }
         c.certificate = {
           languages, davgaArguments: "", memberPositions: [],
           davgaArgumentsByPoint: Object.fromEntries(points.map(point => [point.id, languages.includes("ru") ? text(`davgaArguments_${point.id}`, `Доводы ДАВГА № ${point.number} — Русский`) : c.certificate?.davgaArgumentsByPoint?.[point.id] || ""])),
