@@ -86,6 +86,12 @@ function kazakhNoticeObjectionCertificateIntro(c: ObjectionCase) {
   return `Қазақстан Республикасының Қаржы министрлігіне ${c.org || "—"}, ${identifier} ${c.bin || "—"}, ${auditAuthorityKazakhName(c.issuer)} камералдық бақылау нәтижелері бойынша жолдаған ${kazakhProtocolDate(c.document.date)} № ${c.document.number || "—"} бұзушылықтарды жою туралы хабарламаға ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} қарсылық келіп түсті.`;
 }
 
+function kazakhStatementCertificateIntro(c: ObjectionCase) {
+  const identifier = c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН";
+  const subject = c.appealLanguage === "kk" ? c.request?.trim() : c.statementTranslations?.kk?.trim();
+  return `Қазақстан Республикасы Қаржы министрлігіне ${c.org || "—"}, ${identifier} ${c.bin || "—"}, ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} ${subject || "—"} өтініші келіп түсті.`;
+}
+
 function requestDeadlineDate(deadline: string) {
   return formatDate(deadline.slice(0, 10));
 }
@@ -691,7 +697,9 @@ function LegacyDocumentContent({
         <h2>{document?.certificateVersion?.source === "protocol-result" ? (language === "kk" ? "отырыс хаттамасының қорытындылары бойынша" : "по итогам протокола заседания") : t("по результатам изучения и анализа возражения")}</h2>
         <p className="certificate-template-intro">
           {language === "kk"
-            ? (["Возражение на уведомление", "Возражение на уведомления"].includes(snapshot.appealType || "") || (!snapshot.appealType && snapshot.type === "notice"))
+            ? snapshot.appealType === "Заявление"
+              ? kazakhStatementCertificateIntro(textSnapshot)
+              : (["Возражение на уведомление", "Возражение на уведомления"].includes(snapshot.appealType || "") || (!snapshot.appealType && snapshot.type === "notice"))
               ? kazakhNoticeObjectionCertificateIntro(textSnapshot)
               : `Қазақстан Республикасы Қаржы министрлігіне ${snapshot.appealType === "Жалоба на уведомление" ? kazakhNoticeComplaintReference(textSnapshot) : kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)} келіп түсті.`
             : certificateIntro(textSnapshot)}
