@@ -873,7 +873,7 @@ export function addDocument(
       org: c.org,
       orgTranslations: c.orgTranslations,
       documentApplicantNames: c.documentApplicantNames,
-      ...(["certificate", "request"].includes(kind) ? { agendaDetails: c.agendaDetails, request: c.request, statementTranslations: c.statementTranslations } : {}),
+      ...(["certificate", "request", "protocol"].includes(kind) ? { agendaDetails: c.agendaDetails, request: c.request, statementTranslations: c.statementTranslations } : {}),
       issues: c.issues,
       result: c.result || null,
       members: c.members,
@@ -1201,6 +1201,9 @@ export function applyAction(
       const recipient = text("recipient", "Кому направить запрос");
       if (c.appealType === "Заявление" && appealLanguage(c) === "ru" && form.has("statementTranslation_kk")) {
         c.statementTranslations = { ...c.statementTranslations, kk: String(form.get("statementTranslation_kk") || "").trim() };
+      }
+      if (c.appealType === "Жалоба на действие/бездействие" && appealLanguage(c) === "ru" && c.agendaDetails && form.has("procurementSubject_kk")) {
+        c.agendaDetails.procurementSubjectTranslations = { ...c.agendaDetails.procurementSubjectTranslations, kk: String(form.get("procurementSubject_kk") || "").trim() };
       }
       const deadline = `${addWorkdays(date, 2)}T18:00`;
       const requestId = `request-${c.requests.length + 1}`;
@@ -1858,7 +1861,7 @@ export function applyAction(
             if (form.has(key)) c.statementTranslations = { ...c.statementTranslations, [language]: String(form.get(key) || "").trim() };
           }
         }
-        if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject) {
+        if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementSubject?.trim()) {
           for (const language of languages) {
             const key = `procurementSubject_${language}`;
             const initial = c.agendaDetails.procurementSubjectTranslations?.[language] ?? (language === appealLanguage(c) ? c.agendaDetails.procurementSubject : "");
@@ -2069,6 +2072,9 @@ export function applyAction(
       break;
     case "vote": {
       const protocolLanguages = selectedLanguages(c, String(form.get("documentLanguageMode") || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0] || "")));
+      if (c.appealType === "Жалоба на действие/бездействие" && appealLanguage(c) === "ru" && c.agendaDetails && form.has("procurementSubject_kk")) {
+        c.agendaDetails.procurementSubjectTranslations = { ...c.agendaDetails.procurementSubjectTranslations, kk: String(form.get("procurementSubject_kk") || "").trim() };
+      }
       const previousApplicantTranslations = Object.fromEntries(disputed(c).map(point => [point.id, { ...point.protocolArgumentTranslations }]));
       if (c.appealLanguage || form.has("documentLanguageMode")) for (const point of disputed(c)) {
         if (!point.argument?.trim()) continue;
