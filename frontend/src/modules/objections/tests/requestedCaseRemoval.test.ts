@@ -15,9 +15,22 @@ test("однократно удаляет указанные обращения 
   assert.ok(removed.every(id => !loaded.cases.some(c => c.id === id)));
   assert.ok(loaded.cases.some(c => c.id === "З-2026-015"));
   assert.equal(loaded.notifications.filter(n => removed.includes(n.caseId)).length, 0);
-  assert.equal(loaded.version, 20);
+  assert.equal(loaded.version, 21);
   loaded.cases.push({ ...structuredClone(template), id: "З-2026-014" });
   repository.save(loaded);
   assert.ok(repository.load().cases.some(c => c.id === "З-2026-014"));
   assert.ok(removed.every(id => !initialState().cases.some(c => c.id === id)));
+});
+
+test("удаляет Ж-2026-002 из версии 20 и не затрагивает заново созданные номера", () => {
+  const state = initialState();
+  const template = state.cases[0];
+  state.version = 20;
+  state.cases.push({ ...structuredClone(template), id: "Ж-2026-002" }, { ...structuredClone(template), id: "З-2026-014" });
+  const memory = new Map([[STORAGE_KEY, JSON.stringify(state)]]);
+  const repository = createDemoRepository({ getItem: key => memory.get(key) ?? null, setItem: (key, value) => { memory.set(key, value); } });
+  const loaded = repository.load();
+  assert.ok(!loaded.cases.some(c => c.id === "Ж-2026-002"));
+  assert.ok(loaded.cases.some(c => c.id === "З-2026-014"));
+  assert.ok(!initialState().cases.some(c => c.id === "Ж-2026-002"));
 });

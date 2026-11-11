@@ -18,7 +18,7 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 20;
+const CURRENT_VERSION = 21;
 const REQUESTED_REMOVAL_IDS = new Set([
   "В-2026-002", "В-2026-007", "В-2026-008",
   "З-2026-010", "З-2026-011", "З-2026-012", "З-2026-013", "З-2026-014",
@@ -43,7 +43,7 @@ function migratedCaseId(id: string) {
 }
 
 function removedInMigration(id: string, version: number) {
-  return (version < 15 && REMOVED_COMPLAINT_IDS.has(id)) || (version < 16 && id === "З-2026-002") || (version < 20 && REQUESTED_REMOVAL_IDS.has(id));
+  return (version < 15 && REMOVED_COMPLAINT_IDS.has(id)) || (version < 16 && id === "З-2026-002") || (version < 20 && REQUESTED_REMOVAL_IDS.has(id)) || (version < 21 && id === "Ж-2026-002");
 }
 
 function normalizeCaseIds(ids: readonly string[] | undefined, version = CURRENT_VERSION, renumber = new Map<string, string>()) {
@@ -62,7 +62,7 @@ export function initialState(): DemoState {
   return {
     version: CURRENT_VERSION,
     date: "2026-09-08",
-    cases: installKazakhTestStatements(installTestStatements(installAuditPlusCases(restoreRequestedComplaints(seed().filter(c => c.id !== "З-2026-002"))))).filter(c => !REQUESTED_REMOVAL_IDS.has(c.id)),
+    cases: installKazakhTestStatements(installTestStatements(installAuditPlusCases(restoreRequestedComplaints(seed().filter(c => c.id !== "З-2026-002"))))).filter(c => !REQUESTED_REMOVAL_IDS.has(c.id) && c.id !== "Ж-2026-002"),
     agendas: [],
     notifications: [],
     recommendations: [],
@@ -94,7 +94,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
