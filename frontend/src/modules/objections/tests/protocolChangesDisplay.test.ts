@@ -5,6 +5,28 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ProtocolVersion } from "../../../types";
 import { ProtocolChanges } from "../components/ProtocolChanges";
 
+test("история протокола показывает изменённые и совпадающие со справкой доводы на обоих языках", () => {
+  const version: ProtocolVersion = { author: "Исполнитель", createdAt: "2026-11-11T10:00:00Z", languages: ["ru", "kk"], rows: [
+    { pointId: "1", pointNumber: "1", memberId: "a", memberName: "Алиева", vote: "accept", original: "Доводы ДАВГА: Русский довод", edited: "Доводы ДАВГА: Русский довод", originalKk: "Жұмыс органының (ҚР ҚМ ІМАЖАД) дәлелдері: Қазақша дәлел", editedKk: "Жұмыс органының (ҚР ҚМ ІМАЖАД) дәлелдері: Өзгерген дәлел" },
+    { pointId: "2", pointNumber: "2", memberId: "b", memberName: "Кенбеил", vote: "reject", original: "Доводы ДАВГА: Второй довод", edited: "Доводы ДАВГА: Второй довод", originalKk: "Жұмыс органының (ҚР ҚМ ІМАЖАД) дәлелдері: Екінші дәлел", editedKk: "Жұмыс органының (ҚР ҚМ ІМАЖАД) дәлелдері: Екінші дәлел" },
+  ] };
+  const html = renderToStaticMarkup(createElement(ProtocolChanges, { version, expanded: true }));
+  assert.match(html, /Пункт № 1 · Русский/); assert.match(html, /Пункт № 1 · Қазақша/);
+  assert.match(html, /Пункт № 2 · Русский/); assert.match(html, /Пункт № 2 · Қазақша/);
+  assert.match(html, /Алиева/); assert.match(html, /Кенбеил/);
+  assert.equal((html.match(/Без изменений · Соответствует справке/g) || []).length, 3);
+  assert.match(html, /Изменено: 1/); assert.match(html, /title="Добавлено"/);
+});
+
+test("история показывает доводы даже когда все они соответствуют справке", () => {
+  const version: ProtocolVersion = { author: "Исполнитель", createdAt: "2026-11-11", languages: ["ru"], rows: [
+    { pointId: "1", pointNumber: "1", memberId: "a", memberName: "Алиева", vote: "accept", original: "Доводы ДАВГА: Текст справки", edited: "Доводы ДАВГА: Текст справки" },
+  ] };
+  const html = renderToStaticMarkup(createElement(ProtocolChanges, { version, expanded: true }));
+  assert.match(html, /Текст справки/); assert.match(html, /Без изменений · Соответствует справке/);
+  assert.match(html, /Изменено: 0/); assert.doesNotMatch(html, /title="Добавлено"/);
+});
+
 test("сравнение показывает только доводы ДАВГА и группирует одинаковые изменения", () => {
   const original = "Доводы ДВГА: СТАРЫЙ ТЕКСТ\n\nДоводы рабочего органа (ДАВГА МФ РК): Позиция";
   const edited = "Доводы ДВГА: СТАРЫЙ ТЕКСТ\n\nДоводы рабочего органа (ДАВГА МФ РК): Позиция дополнена";

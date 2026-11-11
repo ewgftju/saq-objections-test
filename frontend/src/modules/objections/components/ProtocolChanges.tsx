@@ -14,11 +14,15 @@ function davgaText(reason: string) {
   return /(?:Доводы ДВГА|Доводы КВГА|Доводы объекта|Мотивированный ответ)/i.test(reason) ? "" : reason;
 }
 
-export function davgaChanges(version: ProtocolVersion) {
+function davgaRows(version: ProtocolVersion) {
   return version.rows.flatMap(row => [
     ...(!version.languages || version.languages.includes("ru") ? [{ ...row, language: "ru", original: davgaText(row.original), edited: davgaText(row.edited) }] : []),
     ...(row.editedKk !== undefined && (!version.languages || version.languages.includes("kk")) ? [{ ...row, language: "kk", original: davgaText(row.originalKk || ""), edited: davgaText(row.editedKk) }] : []),
-  ]).filter(row => row.original !== row.edited);
+  ]);
+}
+
+export function davgaChanges(version: ProtocolVersion) {
+  return davgaRows(version).filter(row => row.original !== row.edited);
 }
 
 function compareText(original: string, edited: string): DiffPart[] {
@@ -63,20 +67,22 @@ function compareText(original: string, edited: string): DiffPart[] {
 
 export function ProtocolChanges({ version, expanded = false }: { version: ProtocolVersion; expanded?: boolean }) {
   const changes = davgaChanges(version);
-  if (!changes.length) return <p>Доводы ДАВГА соответствуют справке.</p>;
-  const groups = new Map<string, typeof changes>();
-  for (const row of changes) {
+  const rowsToShow = expanded ? davgaRows(version) : changes;
+  if (!rowsToShow.length) return <p>Доводы ДАВГА соответствуют справке.</p>;
+  const groups = new Map<string, typeof rowsToShow>();
+  for (const row of rowsToShow) {
     const key = JSON.stringify([row.pointId, row.language, row.original, row.edited]);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(row);
   }
   return <details open={expanded || undefined}>
-    <summary>Изменены обоснования: {changes.length} · Посмотреть изменения</summary>
-    <p><span style={{ color: "#b42318", textDecoration: "line-through" }}>Удалено</span> · <span style={{ color: "#175cd3" }}>Добавлено</span></p>
+    <summary>{expanded ? `Доводы ДАВГА: ${rowsToShow.length} · Изменено: ${changes.length}` : `Изменены обоснования: ${changes.length} · Посмотреть изменения`}</summary>
+    {changes.length > 0 && <p><span style={{ color: "#b42318", textDecoration: "line-through" }}>Удалено</span> · <span style={{ color: "#175cd3" }}>Добавлено</span></p>}
     {[...groups.entries()].map(([key, rows]) => {
       const first = rows[0];
       return <section key={key} style={{ border: "1px solid #dce5ed", borderRadius: 8, padding: 16, margin: "12px 0" }}>
         <strong>Пункт № {first.pointNumber} · {first.language === "kk" ? "Қазақша" : "Русский"}</strong>
+        {first.original === first.edited && <div>Без изменений · Соответствует справке</div>}
         {rows.map((row) => {
           const vote = normalizeVoteChoice(row.vote);
           return <div key={`${row.pointId}-${row.memberId}`} style={{ marginTop: 8 }}>
