@@ -1011,7 +1011,7 @@ export function applyAction(
     }
   };
 
-  if (["analysis", "vote", "create-decision-project", "deliver"].includes(action)) {
+  if (["request", "analysis", "vote", "create-decision-project", "deliver"].includes(action)) {
     for (const language of ["ru", "kk"] as const) {
       const key = `applicantName_${language}`;
       if (form.has(key)) {
@@ -1021,6 +1021,7 @@ export function applyAction(
       }
     }
   }
+  if (action === "request" && !kazakhApplicantName(c)) throw new Error("Заполните наименование заявителя — Қазақша.");
   const applicantNameDocumentKind = action === "request" ? "request" : action === "analysis" ? "certificate" : action === "vote" ? "protocol" : action === "create-decision-project" ? "decision-project" : action === "deliver" && !requiresConclusion(c) ? "final-response" : undefined;
   if (applicantNameDocumentKind) {
     const names: Partial<Record<"ru" | "kk", string>> = {};

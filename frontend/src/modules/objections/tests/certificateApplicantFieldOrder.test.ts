@@ -16,7 +16,7 @@ test('в казахской версии справки наименования
 test('если исходное казахское наименование известно, форма документа остаётся перед описаниями', () => {
  const c=initialState().cases[0]; c.appealLanguage='kk'; c.orgTranslations={kk:'Ұйым'};
  const fields=actionForm('analysis',c,'2026-09-08',{documentLanguageMode:'kk'}).fields.filter(f=>f.language==='kk');
- assert.equal(fields[0].name,'documentApplicantName_kk'); assert.ok(fields.findIndex(f=>f.name.startsWith('pointTitle_'))>0);
+ assert.equal(fields[0].name,'applicantName_kk'); assert.equal(fields[0].value,'Ұйым'); assert.equal(fields[1].name,'documentApplicantName_kk'); assert.ok(fields.findIndex(f=>f.name.startsWith('pointTitle_'))>1);
 });
 
 test('поля каждого пункта справки сгруппированы отдельно', async () => {

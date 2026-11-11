@@ -12,10 +12,13 @@ test("запрос в орган аудита требует казахскую 
   let state = initialState(); const c = state.cases[0];
   c.status = "accepted"; c.appealType = "Заявление"; c.appealLanguage = "ru"; c.org = "Организация"; c.orgTranslations = { ru: c.org }; c.request = "О строительстве школы";
   const fields = actionForm("request", c, state.date, {}).fields;
+  assert.equal(fields.find(field => field.name === "applicantName_kk")?.required, true);
   assert.equal(fields.find(field => field.name === "documentApplicantName_kk")?.required, true);
   assert.ok(!fields.some(field => field.name === "documentApplicantName_ru"));
   assert.equal(fields.find(field => field.name === "statementTranslation_kk")?.value, "");
   const form = new FormData(); form.set("recipient", "ДВГА по г. Алматы");
+  assert.throws(() => applyAction(state, c.id, "request", "work", form), /наименование заявителя — Қазақша/i);
+  form.set("applicantName_kk", "Ұйым");
   assert.throws(() => applyAction(state, c.id, "request", "work", form), /Наименование заявителя в тексте документа — Қазақша/i);
   form.set("documentApplicantName_kk", "Ұйымның"); form.set("statementTranslation_kk", "Мектеп құрылысы туралы");
   state = applyAction(state, c.id, "request", "work", form);
@@ -25,11 +28,29 @@ test("запрос в орган аудита требует казахскую 
   assert.equal(document.snapshot?.documentApplicantNames?.request?.kk, "Ұйымның");
   assert.equal(document.snapshot?.statementTranslations?.kk, "Мектеп құрылысы туралы");
   assert.equal(saved.statementTranslations?.kk, "Мектеп құрылысы туралы");
+  const printed = renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "request", document }));
+  assert.match(printed, /Ұйымның, БСН .*Мектеп құрылысы туралы өтініштің келіп түсуіне байланысты/);
+  assert.match(printed, /2026 жылғы 10 қыркүйекке дейінгі мерзімде/);
+  const certificateFields = actionForm("analysis", saved, state.date, { documentLanguageMode: "kk" }).fields;
+  assert.equal(certificateFields.find(field => field.name === "applicantName_kk")?.value, "Ұйым");
+  assert.equal(certificateFields.find(field => field.name === "documentApplicantName_kk")?.value, "Ұйымның");
+  const edited = actionForm("analysis", saved, state.date, { documentLanguageMode: "kk", applicantName_kk: "Жаңа атау", documentApplicantName_kk: "Жаңа атаудың" }).fields;
+  assert.equal(edited.find(field => field.name === "applicantName_kk")?.value, "Жаңа атау");
+  assert.equal(edited.find(field => field.name === "documentApplicantName_kk")?.value, "Жаңа атаудың");
   saved.documentApplicantNames!.request!.kk = "Другая форма";
   saved.statementTranslations!.kk = "Басқа мәтін";
   assert.equal(document.snapshot?.documentApplicantNames?.request?.kk, "Ұйымның");
   assert.equal(document.snapshot?.statementTranslations?.kk, "Мектеп құрылысы туралы");
+  assert.match(renderToStaticMarkup(createElement(DocumentContent, { c: saved, kind: "request", document })), /Ұйымның, БСН .*Мектеп құрылысы туралы өтініштің/);
   assert.ok(!actionForm("request-saq", saved, state.date, {}).fields.some(field => field.name === "documentApplicantName_kk"));
+});
+
+test("для заявления на казахском запрос использует исходный текст заявления", () => {
+  const c = initialState().cases[0]; c.appealType = "Заявление"; c.appealLanguage = "kk"; c.request = "Мектеп құрылысы туралы";
+  c.applicantIdentifierType = "ИИН"; c.documentApplicantNames = { request: { kk: "Азаматтың" } };
+  const html = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "request", requestPreview: { recipient: "КВГА", deadline: "2026-07-25T18:00", template: "dvga" } }));
+  assert.match(html, /Азаматтың, ЖСН .*Мектеп құрылысы туралы өтініштің/);
+  assert.match(html, /2026 жылғы 25 шілдеге дейінгі мерзімде/);
 });
 
 test("отдельная форма наименования сохраняется в справке, не меняя карточку и старую версию", () => {

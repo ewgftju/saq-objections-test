@@ -81,6 +81,11 @@ function kazakhNoticeComplaintReference(c: ObjectionCase) {
   return `${auditAuthorityKazakhName(c.issuer)} жүргізген ${kazakhProtocolDate(c.document.date)} № ${c.document.number || "—"} бұзушылықтарды жою туралы хабарламаға ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} ${c.org || "—"} шағымы`;
 }
 
+function kazakhNoticeObjectionCertificateIntro(c: ObjectionCase) {
+  const identifier = c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН";
+  return `Қазақстан Республикасының Қаржы министрлігіне ${c.org || "—"}, ${identifier} ${c.bin || "—"}, ${auditAuthorityKazakhName(c.issuer)} камералдық бақылау нәтижелері бойынша жолдаған ${kazakhProtocolDate(c.document.date)} № ${c.document.number || "—"} бұзушылықтарды жою туралы хабарламаға ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} қарсылық келіп түсті.`;
+}
+
 function requestDeadlineDate(deadline: string) {
   return formatDate(deadline.slice(0, 10));
 }
@@ -212,6 +217,12 @@ export function appendixPageCount(items: AppendixPageItem[]) {
 }
 
 function requestIntro(c: ObjectionCase, deadline: string) {
+  if (c.appealType === "Заявление") {
+    const applicant = c.documentApplicantNames?.request?.kk?.trim() || c.orgTranslations?.kk?.trim() || (c.appealLanguage === "kk" ? c.org : "") || "—";
+    const identifier = c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН";
+    const subject = c.appealLanguage === "kk" ? c.request?.trim() : c.statementTranslations?.kk?.trim();
+    return `Қазақстан Республикасы Қаржы министрлігінің апелляциялық комиссиясының қарауына ${applicant}, ${identifier} ${c.bin || "—"}, ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} ${subject || "—"} өтініштің келіп түсуіне байланысты ${kazakhDeadlineDate(deadline)} дейінгі мерзімде өтініштің дәлелдері бойынша дәлелді жауапты және растайтын құжаттарды қоса бере отырып ұсынуыңызды талап етеміз.`;
+  }
   if (["Возражение на уведомление", "Возражение на уведомления"].includes(c.appealType || "") || (!c.appealType && c.type === "notice")) {
     const applicant = c.documentApplicantNames?.request?.kk?.trim() || c.orgTranslations?.kk?.trim() || (c.appealLanguage === "kk" ? c.org : "") || "—";
     const identifier = c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН";
@@ -680,7 +691,9 @@ function LegacyDocumentContent({
         <h2>{document?.certificateVersion?.source === "protocol-result" ? (language === "kk" ? "отырыс хаттамасының қорытындылары бойынша" : "по итогам протокола заседания") : t("по результатам изучения и анализа возражения")}</h2>
         <p className="certificate-template-intro">
           {language === "kk"
-            ? `Қазақстан Республикасы Қаржы министрлігіне ${snapshot.appealType === "Жалоба на уведомление" ? kazakhNoticeComplaintReference(textSnapshot) : kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)} келіп түсті.`
+            ? (["Возражение на уведомление", "Возражение на уведомления"].includes(snapshot.appealType || "") || (!snapshot.appealType && snapshot.type === "notice"))
+              ? kazakhNoticeObjectionCertificateIntro(textSnapshot)
+              : `Қазақстан Республикасы Қаржы министрлігіне ${snapshot.appealType === "Жалоба на уведомление" ? kazakhNoticeComplaintReference(textSnapshot) : kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)} келіп түсті.`
             : certificateIntro(textSnapshot)}
         </p>
         <p className="certificate-template-explanation">
@@ -703,7 +716,7 @@ function LegacyDocumentContent({
           {t("(перечень обжалуемых вопросов)")}
         </p>
         <p className="certificate-template-lead">
-          {language === "kk" ? "Жүргізілген талдау нәтижелері бойынша жұмыс органы (ҚР ҚМ Ішкі мемлекеттік аудит жөніндегі апелляция департаменті) мынаны хабарлайды:" : t("По результатам проведенного анализа рабочий орган (ДАВГА) сообщает следующее:")}
+          {language === "kk" ? "Жүргізілген талдау нәтижелері бойынша жұмыс органы (ІМАЖАД) мынаны хабарлайды:" : t("По результатам проведенного анализа рабочий орган (ДАВГА) сообщает следующее:")}
         </p>
         {points.map((point) => (
           <section className="certificate-template-point" key={point.id}>
@@ -756,7 +769,7 @@ function LegacyDocumentContent({
               ))}
             </div>
             <div className="certificate-template-line">
-              <b>{language === "kk" ? "Жұмыс органының (ҚР ҚМ Ішкі мемлекеттік аудит жөніндегі апелляция департаменті) дәлелдері:" : t("Доводы рабочего органа (ДАВГА МФ РК):")}</b>{" "}
+              <b>{language === "kk" ? "Жұмыс органының (ІМАЖАД) дәлелдері:" : t("Доводы рабочего органа (ДАВГА МФ РК):")}</b>{" "}
               {certificate?.davgaArgumentsByPoint?.[point.id] ||
                 certificate?.davgaArguments ||
                 "—"}
