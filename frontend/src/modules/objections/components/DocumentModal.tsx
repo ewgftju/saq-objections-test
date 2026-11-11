@@ -92,6 +92,12 @@ function kazakhStatementCertificateIntro(c: ObjectionCase) {
   return `Қазақстан Республикасы Қаржы министрлігіне ${c.org || "—"}, ${identifier} ${c.bin || "—"}, ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} ${subject || "—"} өтініші келіп түсті.`;
 }
 
+function kazakhStatementProtocolIntro(c: ObjectionCase) {
+  const identifier = c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН";
+  const subject = c.appealLanguage === "kk" ? c.request?.trim() : c.statementTranslations?.kk?.trim();
+  return `${c.org || "—"}, ${identifier} ${c.bin || "—"}, ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} ${subject || "—"} өтініші.`;
+}
+
 function requestDeadlineDate(deadline: string) {
   return formatDate(deadline.slice(0, 10));
 }
@@ -1205,7 +1211,9 @@ function LegacyDocumentContent({
         </div>
         <p className="protocol-template-intro">
           {language === "kk"
-            ? snapshot.appealType === "Жалоба на уведомление"
+            ? snapshot.appealType === "Заявление"
+              ? kazakhStatementProtocolIntro(textSnapshot)
+              : snapshot.appealType === "Жалоба на уведомление"
               ? `${kazakhNoticeComplaintReference(textSnapshot)}.`
               : `${kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)}.`
             : protocolIntro}
