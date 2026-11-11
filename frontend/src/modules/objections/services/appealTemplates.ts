@@ -33,8 +33,7 @@ export function applicantReference(c: ObjectionCase) {
 }
 
 function prescriptionAuditReference(c: ObjectionCase) {
-  const details = c.agendaDetails;
-  return `${applicantReference(c)}, на предписание от ${formatDate(details?.relatedDocumentDate)} года № ${value(details?.relatedDocumentNumber)} по аудиторскому отчету, проведенный ${auditAuthorityTemplateName(c)}`;
+  return `${applicantReference(c)}, на предписание от ${formatDate(c.document.date)} года № ${value(c.document.number)} по аудиторскому отчету, проведенный ${auditAuthorityTemplateName(c)}`;
 }
 
 function decisionComplaintReference(c: ObjectionCase) {
