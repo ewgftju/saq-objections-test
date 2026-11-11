@@ -965,6 +965,10 @@
   margin: 0 auto;
   padding: 112px 104px;
   box-shadow: 0 2px 9px #00263e2e;
+  background: #fff;
+}
+.agenda-print-preview .agenda-template + .agenda-template {
+  margin-top: 24px;
 }
 .agenda-template {
   box-sizing: border-box;

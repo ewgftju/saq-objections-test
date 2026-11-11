@@ -16,8 +16,11 @@ test("повестка формируется на казахском и рус�
   assert.match(html, /Перечень материалов к рассмотрению/);
   assert.match(html, /қаралатын материалдар тізімі/);
   assert.ok(html.includes("О пересмотре")); assert.ok(html.includes("Қайта қарау туралы"));
-  const pages = html.split('<article class="print-document agenda-template"');
+  const pages = html.split('<article class="print-document agenda-template');
   assert.equal(pages.length, 3);
+  assert.match(pages[1], /lang="kk"/);
+  assert.match(pages[2], /lang="ru"/);
+  assert.match(pages[2], /page-break-before:always/);
   for (const page of pages.slice(1)) assert.ok(page.indexOf("В-1") < page.indexOf("З-2"));
   const modal = renderToStaticMarkup(createElement(AgendaModal, { cases: [first, second], date: state.date, onSend() {}, onClose() {} }));
   assert.doesNotMatch(modal, /Язык повестки дня/);

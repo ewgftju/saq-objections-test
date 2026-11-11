@@ -101,7 +101,7 @@ export function AgendaDocument({ cases, meetingDate, applicantNames = {} }: { ca
       <h1>Қазақстан Республикасы Қаржы министрлігінің Апелляциялық комиссиясының {formatDate(meetingDate)} отырысында қаралатын материалдар тізімі</h1>
       <ol>{cases.map(c => <li key={c.id}>{agendaItemTextKk(c)}</li>)}</ol>
     </article>
-    <article className="print-document agenda-template" lang="ru">
+    <article className="print-document agenda-template agenda-russian-version" lang="ru" style={{ breakBefore: "page", pageBreakBefore: "always" }}>
       <h1>Перечень материалов к рассмотрению<br />на заседании Апелляционной комиссии Министерства финансов<br />Республики Казахстан от {formatDate(meetingDate)}</h1>
       <ol>
         {cases.map((c) => {
@@ -129,8 +129,8 @@ export function agendaDocumentHtml(
     .agenda-template h1 { margin: 0 0 18mm; text-align: center; font-size: 16pt; line-height: 1.12; font-weight: 700; }
     .agenda-template ol { margin: 0; padding-left: 12mm; }
     .agenda-template li { padding-left: 4mm; text-align: justify; }
-    .agenda-template + .agenda-template { margin-top: 24px; break-before: page; page-break-before: always; }
-    @media print { body { padding: 0; background: #fff; } .agenda-template { min-height: 0; padding: 0; } }
+    .agenda-russian-version { margin-top: 24px; }
+    @media print { body { padding: 0; background: #fff; } .agenda-template { min-height: 0; padding: 0; } .agenda-russian-version { margin-top: 0; break-before: page; page-break-before: always; } }
   </style></head><body>${content}</body></html>`;
 }
 
