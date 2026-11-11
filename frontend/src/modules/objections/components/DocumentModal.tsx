@@ -77,6 +77,26 @@ function kazakhProtocolDate(date?: string) {
   return month ? `${match[1]} жылғы ${match[3]} ${month}` : "—";
 }
 
+function kazakhActionComplaintReference(c: ObjectionCase, applicant = c.org) {
+  const identifier = c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН";
+  const details = c.agendaDetails;
+  const procurement = [
+    details?.procurementNumber?.trim() && `мемлекеттік сатып алу № ${details.procurementNumber.trim()}`,
+    details?.lotNumber?.trim() && `лот № ${details.lotNumber.trim()}`,
+    (details?.procurementSubjectTranslations?.kk?.trim() || details?.procurementSubject?.trim()) &&
+      `сатып алу заты: ${details?.procurementSubjectTranslations?.kk?.trim() || details?.procurementSubject?.trim()}`,
+  ].filter(Boolean).join(", ");
+  const recorded = details?.actionAppealAuthorities?.filter(item => item.issuer || item.documentDate || item.documentNumber);
+  const appeals = recorded?.length ? recorded : [{ issuer: c.issuer, documentDate: c.document.date, documentNumber: c.document.number }];
+  const actions = appeals.map(item => {
+    const authority = auditAuthorityKazakhName(item.issuer)
+      .replace(/департаменті$/, "департаментінің")
+      .replace(/комитеті$/, "комитетінің");
+    return `${authority} ${kazakhProtocolDate(item.documentDate)} № ${item.documentNumber?.trim() || "—"} өтінішті қарау кезіндегі әрекеттеріне (әрекетсіздігіне)`;
+  }).join("; ");
+  return `${applicant?.trim() || "—"}, ${identifier}: ${c.bin || "—"}, ${procurement ? `${procurement} бойынша ` : ""}${actions} қатысты ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"}`;
+}
+
 function kazakhNoticeComplaintReference(c: ObjectionCase) {
   return `${auditAuthorityKazakhName(c.issuer)} жүргізген ${kazakhProtocolDate(c.document.date)} № ${c.document.number || "—"} бұзушылықтарды жою туралы хабарламаға ${kazakhProtocolDate(c.appealDate || c.filed)} № ${c.appealNumber || "—"} ${c.org || "—"} шағымы`;
 }
@@ -229,6 +249,10 @@ export function appendixPageCount(items: AppendixPageItem[]) {
 }
 
 function requestIntro(c: ObjectionCase, deadline: string) {
+  if (c.appealType === "Жалоба на действие/бездействие") {
+    const applicant = c.documentApplicantNames?.request?.kk?.trim() || c.orgTranslations?.kk?.trim() || (c.appealLanguage === "kk" ? c.org : "") || "—";
+    return `Қазақстан Республикасы Қаржы министрлігінің Апелляциялық комиссиясының қарауына ${kazakhActionComplaintReference(c, applicant)} шағымның келіп түсуіне байланысты ${kazakhDeadlineDate(deadline)} дейінгі мерзімде шағымның дәлелдері бойынша дәлелді жауапты және растайтын құжаттарды қоса бере отырып ұсынуыңызды талап етеміз.`;
+  }
   if (c.appealType === "Заявление") {
     const applicant = c.documentApplicantNames?.request?.kk?.trim() || c.orgTranslations?.kk?.trim() || (c.appealLanguage === "kk" ? c.org : "") || "—";
     const identifier = c.applicantIdentifierType === "ИИН" ? "ЖСН" : "БСН";
@@ -705,6 +729,8 @@ function LegacyDocumentContent({
           {language === "kk"
             ? snapshot.appealType === "Заявление"
               ? kazakhStatementCertificateIntro(textSnapshot)
+              : snapshot.appealType === "Жалоба на действие/бездействие"
+              ? `Қазақстан Республикасының Қаржы министрлігіне ${kazakhActionComplaintReference(textSnapshot)} шағым келіп түсті.`
               : (["Возражение на уведомление", "Возражение на уведомления"].includes(snapshot.appealType || "") || (!snapshot.appealType && snapshot.type === "notice"))
               ? kazakhNoticeObjectionCertificateIntro(textSnapshot)
               : `Қазақстан Республикасы Қаржы министрлігіне ${snapshot.appealType === "Жалоба на уведомление" ? kazakhNoticeComplaintReference(textSnapshot) : kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)} келіп түсті.`
@@ -1213,6 +1239,8 @@ function LegacyDocumentContent({
           {language === "kk"
             ? snapshot.appealType === "Заявление"
               ? kazakhStatementProtocolIntro(textSnapshot)
+              : snapshot.appealType === "Жалоба на действие/бездействие"
+              ? `${kazakhActionComplaintReference(textSnapshot)} шағымы.`
               : snapshot.appealType === "Жалоба на уведомление"
               ? `${kazakhNoticeComplaintReference(textSnapshot)}.`
               : `${kazakhAppealReference(textSnapshot, auditAuthorityKazakhName)}.`
