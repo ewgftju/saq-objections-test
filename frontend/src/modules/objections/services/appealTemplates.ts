@@ -88,7 +88,7 @@ function actionInactionComplaintReference(c: ObjectionCase) {
           ? `лот № ${value(c.agendaDetails.lotNumber)}`
           : "",
         c.agendaDetails.procurementSubject
-          ? `предмет: ${value(c.agendaDetails.procurementSubject)}`
+          ? `предмет закупки: ${value(c.agendaDetails.procurementSubject)}`
           : "",
       ]
         .filter(Boolean)
