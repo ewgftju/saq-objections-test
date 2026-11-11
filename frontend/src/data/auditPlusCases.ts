@@ -57,3 +57,29 @@ export function installTestStatements(existing: ObjectionCase[]): ObjectionCase[
   }
   return cases;
 }
+
+/** Добавляет три тестовых заявления в казахской версии один раз. */
+export function installKazakhTestStatements(existing: ObjectionCase[]): ObjectionCase[] {
+  const cases = [...existing];
+  for (let n = 4; n <= 6; n++) {
+    const name = `Тестов Тест Тестұлы #${n}`;
+    if (cases.some(c => c.org === name && c.appealType === "Заявление" && c.appealNumber === `${n}-ВА`)) continue;
+    const c = makeCase({
+      id: nextCaseNumber(cases, "Заявление", "2026-09-08"),
+      type: "control", appealType: "Заявление", appealLanguage: "kk", appealNumber: `${n}-ВА`, appealDate: "2026-09-07",
+      org: name, orgTranslations: { kk: name }, bin: "001002003004", applicantIdentifierType: "БИН", address: "г. Астана", applicant: "",
+      registered: "2026-09-08", filed: "2026-09-08", channel: "ОДО", issuer: "КВГА", authority: "Вышестоящий орган — определить компетенцию",
+      document: { number: "", date: "2026-09-08", received: "2026-09-08", name: "Оспариваемый документ" },
+      agendaDetails: { auditObjectName: name, auditObjectBin: "001002003004", applicantIsAuditObjectRepresentative: false },
+      request: "мектеп салу туралы", amount: 0,
+      issues: [{ id: "point1", number: "1", title: "Каз описание оспариваемого вопроса", finding: "", argument: "каз довод заявителя", evidence: "Тест 2.docx", disputed: true, amount: 0 }],
+    });
+    c.documents = [
+      { name: "Тест 2.docx", filename: "Тест 2.docx", kind: "attachment", text: "Требования заявителя", author: "Заявитель", date: "2026-09-08", dataUrl: attachment },
+      { name: "Тест 2.docx", filename: "Тест 2.docx", kind: "attachment", text: "Доказательства по оспариваемому пункту 1", author: "Заявитель", date: "2026-09-08", dataUrl: attachment },
+    ];
+    c.history.push({ date: "2026-09-08", actor: "Заявитель", title: "Добавлены требования заявителя", text: "Тест 2.docx" });
+    cases.push(c);
+  }
+  return cases;
+}

@@ -1,5 +1,5 @@
 import { installDigitalAuditCases } from "../data/digitalAuditCases";
-import { installAuditPlusCases, installTestStatements } from "../data/auditPlusCases";
+import { installAuditPlusCases, installTestStatements, installKazakhTestStatements } from "../data/auditPlusCases";
 import { restoreSkippedProtocolCertificate } from "../modules/objections/services/workflow";
 import {
   COMMISSION_ATTENDANCE_MEMBERS,
@@ -18,7 +18,7 @@ export interface ObjectionsRepository {
 }
 
 export const STORAGE_KEY = "saq.objections.demo.v1";
-const CURRENT_VERSION = 18;
+const CURRENT_VERSION = 19;
 const REMOVED_COMPLAINT_IDS = new Set(Array.from({ length: 7 }, (_, index) => `Ж-2026-${String(index + 6).padStart(3, "0")}`));
 const RESTORED_COMPLAINT_IDS = new Map([["Ж-2026-004", "Ж-2026-001"], ["Ж-2026-005", "Ж-2026-002"]]);
 
@@ -58,7 +58,7 @@ export function initialState(): DemoState {
   return {
     version: CURRENT_VERSION,
     date: "2026-09-08",
-    cases: installTestStatements(installAuditPlusCases(restoreRequestedComplaints(seed().filter(c => c.id !== "З-2026-002")))),
+    cases: installKazakhTestStatements(installTestStatements(installAuditPlusCases(restoreRequestedComplaints(seed().filter(c => c.id !== "З-2026-002"))))),
     agendas: [],
     notifications: [],
     recommendations: [],
@@ -90,7 +90,7 @@ export function createDemoRepository(
       if (!raw) return initialState();
       const value = JSON.parse(raw) as DemoState;
       if (
-        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, CURRENT_VERSION].includes(value.version) ||
+        ![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, CURRENT_VERSION].includes(value.version) ||
         !Array.isArray(value.cases) ||
         typeof value.date !== "string"
       ) {
@@ -364,7 +364,7 @@ export function createDemoRepository(
           ),
         activeCommissionMemberId:
           value.activeCommissionMemberId || COMMISSION_ATTENDANCE_MEMBERS[0].id,
-        cases: value.version < 18 ? installTestStatements(installAuditPlusCases(value.version < 17 ? restoreRequestedComplaints(casesWithSharedCases) : casesWithSharedCases)) : casesWithSharedCases,
+        cases: value.version < 19 ? installKazakhTestStatements(value.version < 18 ? installTestStatements(installAuditPlusCases(value.version < 17 ? restoreRequestedComplaints(casesWithSharedCases) : casesWithSharedCases)) : casesWithSharedCases) : casesWithSharedCases,
       };
       if (restoredProtocolCertificate || value.version < CURRENT_VERSION) {
         try { storage.setItem(STORAGE_KEY, JSON.stringify(restoredState)); } catch { /* Restored data remains available in memory. */ }
