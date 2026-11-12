@@ -9,9 +9,12 @@ test("повестка формируется на казахском и рус�
   const state = initialState();
   const first = structuredClone(state.cases[0]);
   first.id = "В-1"; first.appealNumber = "В-1"; first.appealType = "Возражение на аудиторский отчет"; first.issuer = "ДВГА по Атырауской области";
+  first.assignee = "Исполнитель рабочего органа";
   const second = structuredClone(first);
   second.id = "З-2"; second.appealNumber = "З-2"; second.appealType = "Заявление"; second.appealLanguage = "ru"; second.request = "О пересмотре"; second.statementTranslations = { kk: "Қайта қарау туралы" };
-  const html = agendaDocumentHtml([first, second], state.date);
+  second.assignee = "Әбілова Әлия";
+  const third = { ...second, id: "З-3", appealNumber: "З-3", assignee: "Не назначен" };
+  const html = agendaDocumentHtml([first, second, third], state.date);
   assert.match(html, /lang="ru"/); assert.match(html, /lang="kk"/);
   assert.match(html, /Перечень материалов к рассмотрению/);
   assert.match(html, /қаралатын материалдар тізімі/);
@@ -21,7 +24,14 @@ test("повестка формируется на казахском и рус�
   assert.match(pages[1], /lang="kk"/);
   assert.match(pages[2], /lang="ru"/);
   assert.match(pages[2], /page-break-before:always/);
-  for (const page of pages.slice(1)) assert.ok(page.indexOf("В-1") < page.indexOf("З-2"));
+  for (const page of pages.slice(1)) {
+    const items = Array.from(page.matchAll(/<li>(.*?)<\/li>/gu), (match) => match[1]);
+    assert.equal(items.length, 3);
+    assert.match(items[0], /В-1.*\. \(Жукенов К\.\)$/u);
+    assert.match(items[1], /З-2.*\. \(Әбілова Ә\.\)$/u);
+    assert.match(items[2], /З-3/u);
+    assert.doesNotMatch(items[2], /\([^()]*\)$/u);
+  }
   const modal = renderToStaticMarkup(createElement(AgendaModal, { cases: [first, second], date: state.date, onSend() {}, onClose() {} }));
   assert.doesNotMatch(modal, /Язык повестки дня/);
 });

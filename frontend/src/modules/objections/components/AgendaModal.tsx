@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Button, Modal } from "../../../components/ui";
+import { DEMO_USER } from "../../../config";
+import { ROLES } from "../../../data/constants";
 import type { ObjectionCase } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import { kazakhAgendaProtocolIntro } from "./DocumentModal";
@@ -32,7 +34,7 @@ export function agendaApplicantName(c: ObjectionCase) {
   return c.documentApplicantNames?.certificate?.ru?.trim() || c.orgTranslations?.ru?.trim() || c.org;
 }
 
-export function agendaItemText(input: ObjectionCase, applicantName?: string) {
+function agendaItemBodyRu(input: ObjectionCase, applicantName?: string) {
   const c = { ...input, org: applicantName?.trim() || agendaApplicantName(input), request: input.statementTranslations?.ru || input.request, agendaDetails: input.agendaDetails && { ...input.agendaDetails, procurementSubject: input.agendaDetails.procurementSubjectTranslations?.ru || input.agendaDetails.procurementSubject } };
   const sharedIntro = agendaOrProtocolIntro(c);
   if (sharedIntro) return sharedIntro;
@@ -46,7 +48,6 @@ export function agendaItemText(input: ObjectionCase, applicantName?: string) {
         ? "Возражение на аудиторский отчет"
         : "");
   const common = `${value(c.org)} ${applicantIdentifierType(c)} ${value(c.bin)}`;
-  const executor = value(c.assignee);
   const issuer = auditAuthorityTemplateName(c);
 
   if (appealType === "Возражение на уведомления") {
@@ -65,7 +66,7 @@ export function agendaItemText(input: ObjectionCase, applicantName?: string) {
     if (!details?.procurementNumber)
       return `Жалоба ${appealReference(c)} ${common} касательно действия/бездействия ${issuer} на аудиторский отчет ${documentReference(c)}`;
     const lot = details.lotNumber ? ` (лот ${numbered(details.lotNumber)})` : "";
-    return `Жалоба ${appealReference(c)} ${common} касательно действия/бездействия ${issuer} при рассмотрении обращения ${documentReference(c)} по государственной закупке ${numbered(details.procurementNumber)}${lot} на ${value(details.procurementSubject)} (${executor})`;
+    return `Жалоба ${appealReference(c)} ${common} касательно действия/бездействия ${issuer} при рассмотрении обращения ${documentReference(c)} по государственной закупке ${numbered(details.procurementNumber)}${lot} на ${value(details.procurementSubject)}`;
   }
 
   if (appealType === "Жалоба на решение КВГА/ДВГА") {
@@ -88,10 +89,34 @@ export function agendaItemText(input: ObjectionCase, applicantName?: string) {
   return `${value(appealType)} ${appealReference(c)} ${common}`;
 }
 
+function withAgendaExecutor(body: string, assignee?: string) {
+  const assigned = assignee?.trim();
+  if (!assigned || assigned === "Не назначен" || assigned === "—") return body;
+
+  // The mock also stores role labels as assignments; only the working-body
+  // role has a named demo user.
+  const name =
+    assigned === "Исполнитель рабочего органа" || assigned === ROLES.work
+      ? DEMO_USER.fullName
+      : assigned;
+  const [surname, givenName] = name.split(/\s+/u);
+  const executor =
+    givenName && !name.endsWith(" ДАВГА")
+      ? `${surname} ${givenName[0].toUpperCase()}.`
+      : name;
+  const sentence = body.trimEnd();
+  return `${sentence}${/[.!?…]$/u.test(sentence) ? "" : "."} (${executor})`;
+}
+
+export function agendaItemText(input: ObjectionCase, applicantName?: string) {
+  return withAgendaExecutor(agendaItemBodyRu(input, applicantName), input.assignee);
+}
+
 export function agendaItemTextKk(c: ObjectionCase) {
   const org = c.documentApplicantNames?.certificate?.kk?.trim() || c.documentApplicantNames?.request?.kk?.trim() || c.orgTranslations?.kk?.trim() || (c.appealLanguage === "kk" ? c.org : "") || "—";
   const subject = c.appealLanguage === "kk" ? c.agendaDetails?.procurementSubject : c.agendaDetails?.procurementSubjectTranslations?.kk;
-  return kazakhAgendaProtocolIntro({ ...c, org, agendaDetails: c.agendaDetails && { ...c.agendaDetails, procurementSubject: subject || (c.agendaDetails.procurementSubject ? "—" : ""), procurementSubjectTranslations: { ...c.agendaDetails.procurementSubjectTranslations, kk: subject || "" } } });
+  const body = kazakhAgendaProtocolIntro({ ...c, org, agendaDetails: c.agendaDetails && { ...c.agendaDetails, procurementSubject: subject || (c.agendaDetails.procurementSubject ? "—" : ""), procurementSubjectTranslations: { ...c.agendaDetails.procurementSubjectTranslations, kk: subject || "" } } });
+  return withAgendaExecutor(body, c.assignee);
 }
 
 export function AgendaDocument({ cases, meetingDate, applicantNames = {} }: { cases: ObjectionCase[]; meetingDate: string; applicantNames?: Record<string, string> }) {
