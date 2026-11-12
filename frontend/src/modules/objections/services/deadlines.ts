@@ -1,4 +1,5 @@
 import type { ObjectionCase, Role } from "../../../types";
+import { responseDate } from "./requestNumbering";
 import { authorityStatusRequest } from "./statusPresentation";
 export const holidays = ["2026-08-31", "2026-10-26", "2026-12-16"];
 export function dateObject(s: string) {
@@ -115,12 +116,24 @@ function authorityResponseDeadline(c: ObjectionCase, role?: Role) {
 }
 
 /**
- * Срок формирования справки считается от даты поступления обращения. Для
- * возражений период ожидания ответа на направленный запрос не включается в
- * эти пять рабочих дней: после фиксации ответа накопленное количество дней
- * хранится в pauseDays и добавляется к исходному сроку.
+ * Дополнительные запросы не сдвигают срок справки, рассчитанный по ответам
+ * первоначального маршрута. Дни приостановления уже прошли к началу анализа.
  */
 function certificateDeadline(c: ObjectionCase) {
+  const lastResponse = c.requests
+    .filter(
+      (request) =>
+        request.sent &&
+        !request.cancelled &&
+        (!request.route || request.route === "initial"),
+    )
+    .map((request) => responseDate(request) || request.confirmed)
+    .filter((date): date is string => Boolean(date))
+    .sort()
+    .at(-1);
+  if (lastResponse) return addWorkdays(lastResponse, 5);
+
+  // Сохраняем прежний срок для карточек без сохранённых дат ответов.
   return addWorkdays(c.document.received, 5 + reviewPauseDays(c));
 }
 
