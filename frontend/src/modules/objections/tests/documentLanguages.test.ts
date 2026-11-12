@@ -33,6 +33,34 @@ test("в электронной форме протокола нет языко�
   }
 });
 
+test("форма направления рекомендаций подставляет казахский текст, затем русский", () => {
+  const { c, state } = fixture("ru");
+  const kazakh = "Бұзушылықтарды жою.";
+  const russian = "Устранить нарушения.";
+
+  for (const [recommendationsKk, recommendations, expected] of [
+    [kazakh, russian, kazakh],
+    [kazakh, undefined, kazakh],
+    [undefined, russian, russian],
+    ["  ", russian, russian],
+    [" — ", russian, russian],
+    [undefined, "—", ""],
+  ] as const) {
+    c.meeting = {
+      date: state.date,
+      number: "П-1",
+      audio: "",
+      signed: state.date,
+      recommendationsKk,
+      recommendations,
+    };
+    const field = actionForm("send-recommendations", c, state.date, {}).fields.find(
+      (field) => field.name === "recommendationText",
+    );
+    assert.equal(field?.value, expected);
+  }
+});
+
 test("справка по уведомлению перечисляет оспариваемые пункты на языке документа", () => {
   const h = fixture("ru");
   h.c.type = "notice";

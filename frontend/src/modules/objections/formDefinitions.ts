@@ -1029,7 +1029,14 @@ export function actionForm(
         "Зафиксируйте направление заявителю через другую систему и приложите файл-подтверждение отправки.";
       break;
     }
-    case "send-recommendations":
+    case "send-recommendations": {
+      const recommendationText = [
+        c.meeting?.recommendationsKk,
+        c.meeting?.recommendations,
+      ].find((recommendation) => {
+        const text = recommendation?.trim();
+        return text && text !== "—";
+      });
       title = "Направить рекомендации";
       fields.push(
         select(
@@ -1050,14 +1057,13 @@ export function actionForm(
         area(
           "recommendationText",
           "Текст рекомендации",
-          c.meeting?.recommendations === "—"
-            ? ""
-            : c.meeting?.recommendations || "",
+          recommendationText ?? "",
         ),
       );
       note =
         "Текст перенесён из протокола и при необходимости может быть изменён. Для каждого адресата создаётся отдельная рекомендация.";
       break;
+    }
     case "receipt":
       title = "Подтверждение вручения результата";
       fields.push(
