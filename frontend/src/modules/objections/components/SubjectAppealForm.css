@@ -178,6 +178,19 @@
 .subject-appeal-point-body label.field > span {
   font-weight: 500;
 }
+.subject-appeal-source-answer {
+  background: #edf4f8;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 14px;
+  white-space: pre-wrap;
+}
+.subject-appeal-source-answer p {
+  margin: 8px 0;
+}
+.subject-appeal-source-answer small {
+  color: #617385;
+}
 .subject-appeal-upload {
   margin: 14px 0 0;
 }

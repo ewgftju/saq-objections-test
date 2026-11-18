@@ -1,5 +1,6 @@
 import { documentLabel } from "../services/documentLabels";
 import { SubjectAppealDocument } from "./SubjectAppealDocument";
+import { auditProgramResultText } from "../services/auditProgramResults";
 import {
   localizedCase,
   languagesForDocument,
@@ -708,7 +709,9 @@ function LegacyDocumentContent({
                             (useLegacyAuthorityValues
                               ? point.authorityFinding
                               : ""))
-                          : point.authorityFinding) ??
+                          : point.auditProgramResult
+                            ? auditProgramResultText(point.auditProgramResult, "answer", language || snapshot.appealLanguage || "ru")
+                            : point.authorityFinding) ??
                         ""}
                     </td>
                     <td>
