@@ -37,6 +37,8 @@ export function SubjectAppealDocument({
   const hasAuditProgramResults = selected.some(
     (point) => point.auditProgramResult,
   );
+  const perPointCircumstances =
+    !submitted || draft.circumstancesMode === "per-point";
   const field = (
     key: "circumstances" | "signerName" | "signerPosition" | "place",
     label: string,
@@ -64,6 +66,84 @@ export function SubjectAppealDocument({
       <input {...props} type="text" />
     );
   };
+  const pointSummary = !onChange && (
+    <section
+      className={
+        perPointCircumstances
+          ? "subject-appeal-point-summary"
+          : "subject-appeal-arguments"
+      }
+    >
+      <h2>
+        {t(
+          "Доводы по оспариваемым вопросам",
+          "Дауланатын мәселелер бойынша уәждер",
+        )}
+      </h2>
+      <p>
+        {t("Аудиторский отчёт", "Аудиторлық есеп")} № {report.number}{" "}
+        {t("от", "күні")} {formatDate(report.date)}
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>№</th>
+            <th>
+              {t(
+                "Описание оспариваемого вопроса",
+                "Дауланатын мәселенің сипаттамасы",
+              )}
+            </th>
+            {hasAuditProgramResults && (
+              <th>
+                {t(
+                  "Нарушение, по которому поступило возражение",
+                  "Қарсылық келіп түскен бұзушылық",
+                )}
+              </th>
+            )}
+            <th>
+              {perPointCircumstances
+                ? t(
+                    "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования, и доказательства, подтверждающие эти обстоятельства",
+                    "Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және осы мән-жайларды растайтын дәлелдемелер",
+                  )
+                : t(
+                    "Обоснование (довод заявителя)",
+                    "Негіздеме (өтініш берушінің уәжі)",
+                  )}
+            </th>
+            <th>{t("Доказательства", "Дәлелдемелер")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {selected.map((point) => (
+            <tr key={point.id}>
+              <td>{point.number}</td>
+              <td>{(kk ? point.titleKk : point.titleRu) || point.title}</td>
+              {hasAuditProgramResults && (
+                <td>
+                  {auditProgramResultText(
+                    point.auditProgramResult,
+                    "answer",
+                    draft.language,
+                    true,
+                  )}
+                </td>
+              )}
+              <td>{draft.argumentsByPoint[point.id]}</td>
+              <td>
+                {draft.attachments
+                  .filter((file) => file.pointId === point.id)
+                  .map((file) => file.name)
+                  .join("; ") || t("Не приложены", "Қоса берілмеген")}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
   return (
     <article className="print-document subject-appeal-paper">
       <header className="subject-appeal-addressee">
@@ -138,14 +218,22 @@ export function SubjectAppealDocument({
       </section>
       <section className="subject-appeal-section">
         <h3>
-          {t(
-            "4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования, и доказательства, подтверждающие эти обстоятельства",
-            "4. Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және осы мән-жайларды растайтын дәлелдемелер",
+          {perPointCircumstances
+            ? t(
+                "4. Оспариваемые пункты и доводы заявителя",
+                "4. Дауланатын тармақтар және өтініш берушінің уәждері",
+              )
+            : t(
+                "4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования, и доказательства, подтверждающие эти обстоятельства",
+                "4. Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және осы мән-жайларды растайтын дәлелдемелер",
+              )}
+          {!perPointCircumstances && onChange && (
+            <span className="required"> *</span>
           )}
-          {onChange && <span className="required"> *</span>}
         </h3>
-        {field("circumstances", t("Обстоятельства", "Мән-жайлар"), true)}
-        {pointEditor}
+        {!perPointCircumstances &&
+          field("circumstances", t("Обстоятельства", "Мән-жайлар"), true)}
+        {pointEditor || (perPointCircumstances && pointSummary)}
       </section>
       <section className="subject-appeal-section">
         <h3>
@@ -160,7 +248,9 @@ export function SubjectAppealDocument({
             <li key={file.id}>{file.name}</li>
           ))}
         </ol>
-        {!draft.attachments.length && <p>{t("Не приложены", "Қоса берілмеген")}</p>}
+        {!draft.attachments.length && (
+          <p>{t("Не приложены", "Қоса берілмеген")}</p>
+        )}
       </section>
       <section className="subject-appeal-signature">
         <h3>
@@ -201,68 +291,7 @@ export function SubjectAppealDocument({
           </p>
         )}
       </section>
-      {!onChange && (
-        <section className="subject-appeal-arguments">
-          <h2>
-            {t(
-              "Доводы по оспариваемым вопросам",
-              "Дауланатын мәселелер бойынша уәждер",
-            )}
-          </h2>
-          <p>
-            {t("Аудиторский отчёт", "Аудиторлық есеп")} № {report.number}{" "}
-            {t("от", "күні")} {formatDate(report.date)}
-          </p>
-          <table>
-            <thead>
-              <tr>
-                <th>№</th>
-                <th>
-                  {t(
-                    "Описание оспариваемого вопроса",
-                    "Дауланатын мәселенің сипаттамасы",
-                  )}
-                </th>
-                {hasAuditProgramResults && (
-                  <th>
-                    {t(
-                      "Нарушение, по которому поступило возражение",
-                      "Қарсылық келіп түскен бұзушылық",
-                    )}
-                  </th>
-                )}
-                <th>{t("Обоснование (довод заявителя)", "Негіздеме (өтініш берушінің уәжі)")}</th>
-                <th>{t("Доказательства", "Дәлелдемелер")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {selected.map((point) => (
-                <tr key={point.id}>
-                  <td>{point.number}</td>
-                  <td>{(kk ? point.titleKk : point.titleRu) || point.title}</td>
-                  {hasAuditProgramResults && (
-                    <td>
-                      {auditProgramResultText(
-                        point.auditProgramResult,
-                        "answer",
-                        draft.language,
-                        true,
-                      )}
-                    </td>
-                  )}
-                  <td>{draft.argumentsByPoint[point.id]}</td>
-                  <td>
-                    {draft.attachments
-                      .filter((file) => file.pointId === point.id)
-                      .map((file) => file.name)
-                      .join("; ") || t("Не приложены", "Қоса берілмеген")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      )}
+      {!perPointCircumstances && pointSummary}
     </article>
   );
 }

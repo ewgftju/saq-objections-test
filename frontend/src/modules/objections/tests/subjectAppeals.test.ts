@@ -225,13 +225,10 @@ test("чужая роль, чужой отчёт, неизвестный пун�
   );
 });
 
-test("проверяются обстоятельства, доводы и размер доказательства", () => {
+test("обстоятельства обязательны по каждому пункту; общее поле не требуется; размер доказательства проверяется", () => {
   const { state, draft } = fixture();
-  assert.throws(
-    () =>
-      submitSubjectAppeal(state, { ...draft, circumstances: " " }, "subject2"),
-    /обстоятельства/,
-  );
+  const submitted = submitSubjectAppeal(state, { ...draft, circumstances: "" }, "subject2").state.cases[0];
+  assert.equal(submitted.issues[0].argument, draft.argumentsByPoint[draft.selectedPointIds[0]]);
   assert.throws(
     () =>
       submitSubjectAppeal(
@@ -269,7 +266,7 @@ test("проверяются обстоятельства, доводы и ра�
 test("печатная форма выводит пять разделов, приложение по пунктам и названия файлов на нужном языке", () => {
   const { report, draft } = fixture();
   draft.language = "kk";
-  draft.circumstances = '<script>alert("x")</script>';
+  draft.argumentsByPoint[draft.selectedPointIds[0]] = '<script>alert("x")</script>';
   const html = subjectAppealHtml(report, draft, "2026-09-08");
   assert.match(html, /Қарсылық/);
   assert.match(html, /Мемлекеттік аудит жүргізген/);
@@ -400,7 +397,7 @@ test("в тестовом отчёте 1-АО доступны два резул
   assert.deepEqual(submitted.subjectAppeal?.report, report);
 });
 
-test("перечень документов содержит только файлы доказательств; обоснование сохраняет довод заявителя", () => {
+test("перечень документов содержит только файлы доказательств; обстоятельства сохраняют довод заявителя", () => {
   const { report, draft } = fixture();
   draft.attachments.push({ ...draft.attachments[0], id: "general-proof", name: "Общее доказательство.pdf", pointId: undefined });
   for (const language of ["ru", "kk"] as const) {
@@ -409,22 +406,47 @@ test("перечень документов содержит только фай
     const manifest = html.match(/<ol class="subject-appeal-manifest">(.*?)<\/ol>/s)![1];
     assert.equal(manifest, "<li>Договор.docx</li><li>Общее доказательство.pdf</li>");
     assert.ok(html.includes(draft.argumentsByPoint[report.points[0].id]));
-    assert.ok(html.includes(language === "ru" ? "Обоснование (довод заявителя)" : "Негіздеме (өтініш берушінің уәжі)"));
+    assert.ok(html.includes(language === "ru" ? "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования, и доказательства, подтверждающие эти обстоятельства" : "Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және осы мән-жайларды растайтын дәлелдемелер"));
   }
   draft.attachments = [];
   const emptyManifest = subjectAppealHtml(report, draft, "2026-09-08").match(/<ol class="subject-appeal-manifest">(.*?)<\/ol>/s)![1];
   assert.equal(emptyManifest, "");
 });
 
-test("в редакторе обоснование находится в обстоятельствах, а общий ввод доказательств — в перечне документов", () => {
+test("в редакторе нет общего поля обстоятельств; по каждому пункту остаётся переименованный ввод довода и документов", () => {
   const { state, draft } = fixture();
   state.subjectAppealDrafts = [draft];
   const html = renderToStaticMarkup(createElement(SubjectAppealForm, {
     state, role: "subject2", draftId: draft.id, onClose() {}, onSave() {}, onSubmit() {},
   }));
-  const circumstances = html.indexOf("4. Обстоятельства");
-  const argument = html.indexOf("Обоснование (довод заявителя)");
+  const argument = html.indexOf("Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования, и доказательства, подтверждающие эти обстоятельства");
   const documents = html.indexOf("5. Перечень прилагаемых документов");
   const files = html.indexOf("Файлы доказательств к обращению");
-  assert.ok(circumstances < argument && argument < documents && documents < files);
+  assert.ok(argument > 0 && argument < documents && documents < files);
+  assert.equal((html.match(/<textarea/g) || []).length, draft.selectedPointIds.length);
+  assert.ok(!html.includes('aria-label="Обстоятельства"'));
+  assert.ok(!html.includes("Обоснование (довод заявителя)"));
+  assert.ok(html.includes("Документы, подтверждающие обстоятельства, на которых объект государственного аудита основывает свои требования, документы, имеющие отношение к возражению"));
+});
+
+test("новая поданная форма и предпросмотр используют обстоятельства по пунктам; старые поданные формы сохраняют общее поле", () => {
+  const { state, report, draft } = fixture();
+  const originalCircumstances = draft.circumstances;
+  const pointId = draft.selectedPointIds[0];
+  draft.circumstances = "";
+  const submitted = submitSubjectAppeal(state, draft, "subject2").state.cases[0];
+  assert.equal(submitted.issues[0].argument, draft.argumentsByPoint[pointId]);
+  assert.equal(submitted.subjectAppeal!.draft.circumstancesMode, "per-point");
+  assert.ok(submitted.documents[0].text.includes(draft.argumentsByPoint[pointId]));
+  for (const signed of [false, true]) {
+    const html = subjectAppealHtml(report, submitted.subjectAppeal!.draft, state.date, signed);
+    assert.ok(!html.includes("4. Обстоятельства,"));
+    assert.ok(html.includes(draft.argumentsByPoint[pointId]));
+    assert.ok(html.indexOf("Доводы по оспариваемым вопросам") < html.indexOf("5. Перечень прилагаемых документов"));
+  }
+  draft.circumstances = originalCircumstances;
+  delete draft.circumstancesMode;
+  const legacy = subjectAppealHtml(report, draft, state.date, true);
+  assert.ok(legacy.includes(originalCircumstances));
+  assert.ok(legacy.includes(draft.argumentsByPoint[pointId]));
 });

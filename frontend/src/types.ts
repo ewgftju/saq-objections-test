@@ -808,6 +808,9 @@ export interface SubjectAppealDraft {
   sourceCaseId: string;
   sourceFingerprint: string;
   language: DocumentLanguage;
+  /** Новая форма: обстоятельства вводятся только отдельно по выбранным вопросам. */
+  circumstancesMode?: "per-point";
+  /** Общее поле старых поданных форм; в новой форме не заполняется. */
   circumstances: string;
   signerName: string;
   signerPosition: string;

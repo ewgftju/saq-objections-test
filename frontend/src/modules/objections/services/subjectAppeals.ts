@@ -90,6 +90,7 @@ export function createSubjectAppealDraft(
     sourceCaseId: report.sourceCaseId,
     sourceFingerprint: reportFingerprint(report),
     language: "ru",
+    circumstancesMode: "per-point",
     circumstances: "",
     signerName: "",
     signerPosition: "Руководитель",
@@ -132,7 +133,7 @@ export function saveSubjectAppealDraft(
       ...(state.subjectAppealDrafts || []).filter(
         (item) => item.id !== draft.id,
       ),
-      structuredClone({ ...draft, savedAt: state.date }),
+      structuredClone({ ...draft, circumstancesMode: "per-point" as const, savedAt: state.date }),
     ],
   };
 }
@@ -143,7 +144,6 @@ export function validateSubjectAppeal(
 ) {
   if (!["ru", "kk"].includes(draft.language))
     throw new Error("Выберите язык обращения.");
-  if (!draft.circumstances.trim()) throw new Error("Заполните обстоятельства.");
   if (!draft.signerName.trim()) throw new Error("Укажите Ф.И.О. подписанта.");
   if (!draft.place.trim()) throw new Error("Укажите место составления.");
   if (!draft.selectedPointIds.length)
@@ -156,7 +156,7 @@ export function validateSubjectAppeal(
     if (!point) throw new Error("Выбран пункт, которого нет в этом отчёте.");
     if (!draft.argumentsByPoint[id]?.trim())
       throw new Error(
-        "Заполните довод заявителя по пункту № " + point.number + ".",
+        "Заполните обстоятельства (довод заявителя) по пункту № " + point.number + ".",
       );
   }
   for (const file of draft.attachments) {
@@ -254,14 +254,14 @@ export function submitSubjectAppeal(
   });
   created.subjectAppeal = structuredClone({
     report,
-    draft,
+    draft: { ...draft, circumstancesMode: "per-point" },
     submittedAt: state.date,
   });
   created.documents = [
     {
       kind: "original",
       name: draft.language === "kk" ? "Қарсылық" : "Возражение",
-      text: draft.circumstances,
+      text: issues.map((point) => "№ " + point.number + ". " + point.argument).join("\n\n"),
       date: state.date,
       author: org,
       languages: [draft.language],
