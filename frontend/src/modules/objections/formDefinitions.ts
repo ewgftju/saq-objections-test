@@ -8,6 +8,7 @@ import { disputed } from "./services/decisions";
 import { certificateBasisForPoint, certificateDavgaDraft, decisionProjectDavga, motivatedResponseDavga, hasDavgaText, protocolDavgaFromReason } from "./services/protocolReason";
 import { controlDecisions } from "./services/workflow";
 import { hasSubjectSaqCabinet, subjectSaqCabinetLabel } from "./services/saqCabinets";
+import { auditProgramResultText } from "./services/auditProgramResults";
 
 export interface FormField {
   language?: "ru" | "kk";
@@ -405,6 +406,9 @@ export function actionForm(
       const authorityRequest = c.requests.find(
         (request) =>
           !request.responded &&
+          !request.cancelled &&
+          Boolean(request.sent) &&
+          request.template !== "other" &&
           (request.recipient.toUpperCase().includes("ДВГА") ||
             request.recipient.toUpperCase().includes("КВГА")) &&
           ((role !== "dvga" && role !== "kvga") ||
@@ -418,16 +422,18 @@ export function actionForm(
           { ...area(
             `authorityFinding_${point.id}`,
             `Нарушение № ${point.number} — Русский`,
-            authorityRequest?.authorityResponses?.[point.id]?.finding,
+            authorityRequest?.authorityResponses?.[point.id]?.finding ??
+              auditProgramResultText(point.auditProgramResult, "answer", "ru"),
           ), language: "ru" },
           { ...area(
             `authorityResponse_${point.id}`,
             `Мотивированный ответ № ${point.number} — Русский`,
             authorityRequest?.authorityResponses?.[point.id]?.response,
           ), language: "ru" },
-          { ...area(`authorityFindingKk_${point.id}`, `Бұзушылық № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.finding), language: "kk" },
+          { ...area(`authorityFindingKk_${point.id}`, `Бұзушылық № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.finding ?? auditProgramResultText(point.auditProgramResult, "answer", "kk")), language: "kk" },
           { ...area(`authorityResponseKk_${point.id}`, `Уәжді жауап № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.response), language: "kk" },
         );
+      note = "Поле «Нарушение» заполняется из ответа аудитора на соответствующий вопрос программы аудита. Русская и казахская версии подставляются при их наличии в исходном отчёте.";
       break;
     case "position":
       title = "Ответ получен";

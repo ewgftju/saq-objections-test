@@ -483,7 +483,7 @@ export default function ActionModal({
   const [values, setValues] = useState<FormValues>(() => {
     if (action === "request" || action === "request-saq")
       return { ...(c.requestDrafts?.[action]?.values || {}) };
-    if (action === "fill-request-response") return { ...(c.requests.find(request => !request.responded && request.sent && /ДВГА|КВГА/.test(request.recipient) && (role !== "dvga" && role !== "kvga" || request.recipient.includes(role === "kvga" ? "КВГА" : "ДВГА")))?.responseDraft?.values || {}) };
+    if (action === "fill-request-response") return { ...(c.requests.find(request => !request.responded && !request.cancelled && request.sent && request.template !== "other" && /ДВГА|КВГА/.test(request.recipient) && (role !== "dvga" && role !== "kvga" || request.recipient.includes(role === "kvga" ? "КВГА" : "ДВГА")))?.responseDraft?.values || {}) };
     if (action === "analysis") return { ...(c.analysisDraft?.values || {}) };
     if (action === "fill-meeting-certificate") return {};
     if (action === "edit-certificate")
@@ -570,6 +570,9 @@ export default function ActionModal({
   const authorityRequestForResponse = c.requests.find(
     (request) =>
       !request.responded &&
+      !request.cancelled &&
+      Boolean(request.sent) &&
+      request.template !== "other" &&
       (request.template === "dvga" ||
         request.recipient.toUpperCase().includes("ДВГА") ||
         request.recipient.toUpperCase().includes("КВГА")) &&
@@ -1143,8 +1146,8 @@ export default function ActionModal({
                 appendixFindingPreview={Object.fromEntries(
                   disputed(c).map((point) => [
                     point.id,
-                    values[`${activePreviewLanguage === "kk" ? "authorityFindingKk" : "authorityFinding"}_${point.id}`] ||
-                      (activePreviewLanguage === "kk" ? authorityRequestForResponse?.authorityResponsesKk : authorityRequestForResponse?.authorityResponses)?.[point.id]?.finding ||
+                    values[`${activePreviewLanguage === "kk" ? "authorityFindingKk" : "authorityFinding"}_${point.id}`] ??
+                      definition.fields.find((field) => field.name === `${activePreviewLanguage === "kk" ? "authorityFindingKk" : "authorityFinding"}_${point.id}`)?.value ??
                       "",
                   ]),
                 )}
