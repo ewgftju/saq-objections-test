@@ -6,7 +6,6 @@ import {
   auditAuthorityKazakhName,
 } from "../../../utils/auditAuthority";
 import { formatDate } from "../../../utils/dateFormat";
-import { auditProgramResultText } from "../services/auditProgramResults";
 
 export function SubjectAppealDocument({
   report,
@@ -33,9 +32,6 @@ export function SubjectAppealDocument({
     : auditAuthorityFullName(report.issuer);
   const selected = report.points.filter((point) =>
     draft.selectedPointIds.includes(point.id),
-  );
-  const hasAuditProgramResults = selected.some(
-    (point) => point.auditProgramResult,
   );
   const perPointCircumstances =
     !submitted || draft.circumstancesMode === "per-point";
@@ -74,74 +70,31 @@ export function SubjectAppealDocument({
           : "subject-appeal-arguments"
       }
     >
-      <h2>
-        {t(
-          "Доводы по оспариваемым вопросам",
-          "Дауланатын мәселелер бойынша уәждер",
-        )}
-      </h2>
-      <p>
-        {t("Аудиторский отчёт", "Аудиторлық есеп")} № {report.number}{" "}
-        {t("от", "күні")} {formatDate(report.date)}
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>№</th>
-            <th>
-              {t(
-                "Описание оспариваемого вопроса",
-                "Дауланатын мәселенің сипаттамасы",
-              )}
-            </th>
-            {hasAuditProgramResults && (
-              <th>
-                {t(
-                  "Нарушение, по которому поступило возражение",
-                  "Қарсылық келіп түскен бұзушылық",
-                )}
-              </th>
+      {!perPointCircumstances && (
+        <>
+          <h2>
+            {t(
+              "Доводы по оспариваемым вопросам",
+              "Дауланатын мәселелер бойынша уәждер",
             )}
-            <th>
-              {perPointCircumstances
-                ? t(
-                    "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования.",
-                    "Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар.",
-                  )
-                : t(
-                    "Обоснование (довод заявителя)",
-                    "Негіздеме (өтініш берушінің уәжі)",
-                  )}
-            </th>
-            <th>{t("Доказательства", "Дәлелдемелер")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {selected.map((point) => (
-            <tr key={point.id}>
-              <td>{point.number}</td>
-              <td>{(kk ? point.titleKk : point.titleRu) || point.title}</td>
-              {hasAuditProgramResults && (
-                <td>
-                  {auditProgramResultText(
-                    point.auditProgramResult,
-                    "answer",
-                    draft.language,
-                    true,
-                  )}
-                </td>
-              )}
-              <td>{draft.argumentsByPoint[point.id]}</td>
-              <td>
-                {draft.attachments
-                  .filter((file) => file.pointId === point.id)
-                  .map((file) => file.name)
-                  .join("; ") || t("Не приложены", "Қоса берілмеген")}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </h2>
+          <p>
+            {t("Аудиторский отчёт", "Аудиторлық есеп")} № {report.number}{" "}
+            {t("от", "күні")} {formatDate(report.date)}
+          </p>
+        </>
+      )}
+      {selected.map((point) => (
+        <div className="subject-appeal-argument" key={point.id}>
+          <h4>
+            № {point.number}. {(kk ? point.titleKk : point.titleRu) || point.title}
+          </h4>
+          <p>
+            <b>{t("Обоснование:", "Негіздеме:")}</b>{" "}
+            {draft.argumentsByPoint[point.id]}
+          </p>
+        </div>
+      ))}
     </section>
   );
   return (
@@ -306,7 +259,7 @@ export function subjectAppealHtml(
     />,
   );
   const css =
-    "body{font:12pt 'Times New Roman',serif;color:#111;margin:25mm auto;max-width:180mm;padding:0 12mm}h2{text-align:center;font-size:16pt}h3{font-size:12pt;font-weight:normal}.subject-appeal-addressee{max-width:88mm;margin-left:auto}.subject-appeal-reference{text-align:center}.subject-appeal-value,p{white-space:pre-wrap;line-height:1.45}.subject-appeal-arguments{break-before:page;margin-top:24mm}table{width:100%;border-collapse:collapse;table-layout:fixed}td,th{border:1px solid #888;padding:8px;vertical-align:top;overflow-wrap:anywhere;white-space:pre-wrap}th:first-child{width:6%}.subject-appeal-demo-signature{font-size:10pt;color:#555}li{overflow-wrap:anywhere}@media print{body{margin:0;max-width:none;padding:0}@page{size:A4;margin:20mm}}";
+    "body{font:12pt 'Times New Roman',serif;color:#111;margin:25mm auto;max-width:180mm;padding:0 12mm}h2{text-align:center;font-size:16pt}h3{font-size:12pt;font-weight:normal}.subject-appeal-addressee{max-width:88mm;margin-left:auto}.subject-appeal-reference{text-align:center}.subject-appeal-value,p{white-space:pre-wrap;line-height:1.45}.subject-appeal-arguments{break-before:page;margin-top:24mm}.subject-appeal-argument{margin:0 0 7mm;overflow-wrap:anywhere}.subject-appeal-argument h4{font:inherit;font-weight:bold;text-align:left;margin:0 0 2mm;white-space:pre-wrap;break-after:avoid}.subject-appeal-argument p{margin:0;orphans:2;widows:2}.subject-appeal-demo-signature{font-size:10pt;color:#555}li{overflow-wrap:anywhere}@media print{body{margin:0;max-width:none;padding:0}@page{size:A4;margin:20mm}}";
   return (
     '<!DOCTYPE html><html lang="' +
     (draft.language === "kk" ? "kk" : "ru") +

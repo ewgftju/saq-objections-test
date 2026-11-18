@@ -272,7 +272,7 @@ test("печатная форма выводит пять разделов, пр
   assert.match(html, /Мемлекеттік аудит жүргізген/);
   assert.match(html, /Атырау облысы/);
   assert.match(html, /Есептің төртінші тармағы/);
-  assert.match(html, /растайтын құжаттар ұсынылмаған/);
+  assert.doesNotMatch(html, /растайтын құжаттар ұсынылмаған/);
   assert.match(html, /Договор.docx/);
   assert.match(html, /Қоса берілетін құжаттардың тізбесі/);
   assert.match(html, /&lt;script&gt;/);
@@ -351,14 +351,13 @@ test("приложение к запросу сохраняет ответ из 
   assert.ok(!html.includes("Новый текст от органа аудита"));
 });
 
-test("поданная форма без результата программы аудита сохраняет прежние колонки", () => {
+test("поданная форма без результата программы аудита выводит номер, название и обоснование без таблицы", () => {
   const { report, draft } = fixture();
   delete report.points[0].auditProgramResult;
   const html = subjectAppealHtml(report, draft, "2026-09-08", true);
-  assert.ok(
-    !html.includes("<th>Нарушение, по которому поступило возражение</th>"),
-  );
-  assert.match(html, /Описание оспариваемого вопроса/);
+  assert.doesNotMatch(html, /<table|Нарушение, по которому поступило возражение/);
+  assert.ok(html.includes(report.points[0].titleRu || report.points[0].title));
+  assert.match(html, /Обоснование:/);
 });
 
 test("в тестовом отчёте 1-АО доступны два результата без изменения существующих обращений", () => {
@@ -443,11 +442,59 @@ test("новая поданная форма и предпросмотр исп�
     const html = subjectAppealHtml(report, submitted.subjectAppeal!.draft, state.date, signed);
     assert.ok(html.includes("4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования."));
     assert.ok(html.includes(draft.argumentsByPoint[pointId]));
-    assert.ok(html.indexOf("Доводы по оспариваемым вопросам") < html.indexOf("5. Перечень прилагаемых документов"));
+    assert.ok(html.indexOf('class="subject-appeal-argument"') < html.indexOf("5. Перечень прилагаемых документов"));
   }
   draft.circumstances = originalCircumstances;
   delete draft.circumstancesMode;
   const legacy = subjectAppealHtml(report, draft, state.date, true);
   assert.ok(legacy.includes(originalCircumstances));
   assert.ok(legacy.includes(draft.argumentsByPoint[pointId]));
+});
+
+test("предпросмотр и поданная форма выводят доводы текстом внутри заявления на обоих языках", () => {
+  const { report, draft } = fixture();
+  const points = report.points.slice(0, 2);
+  draft.circumstancesMode = "per-point";
+  draft.selectedPointIds = points.map(point => point.id);
+  points.forEach((point, index) => {
+    point.number = index === 0 ? "1.2" : "7";
+    point.titleRu = `Название вопроса ${index + 1}`;
+    point.titleKk = `Мәселенің атауы ${index + 1}`;
+    point.auditProgramResult = {
+      number: point.number,
+      name: point.titleRu,
+      answer: `SOURCE_VIOLATION_${index + 1}`,
+      language: "ru",
+      translations: { kk: { answer: `SOURCE_VIOLATION_KK_${index + 1}` } },
+    };
+    draft.argumentsByPoint[point.id] = `ДОВОД_${index + 1}\n` + `Подробное обоснование ${index + 1}. `.repeat(60);
+  });
+  const snapshot = structuredClone(report);
+  for (const language of ["ru", "kk"] as const) {
+    draft.language = language;
+    for (const submitted of [false, true]) {
+      const html = subjectAppealHtml(report, draft, "2026-09-08", submitted);
+      const blocks = [...html.matchAll(/<div class="subject-appeal-argument">(.*?)<\/div>/gs)].map(match => match[1]);
+      assert.equal(blocks.length, 2);
+      points.forEach((point, index) => {
+        assert.ok(blocks[index].includes(`№ ${point.number}. ${language === "ru" ? point.titleRu : point.titleKk}`));
+        assert.ok(blocks[index].includes(draft.argumentsByPoint[point.id]));
+        assert.ok(blocks[index].includes(language === "ru" ? "Обоснование:" : "Негіздеме:"));
+        assert.ok(!blocks[index].includes(`ДОВОД_${index === 0 ? 2 : 1}`));
+      });
+      assert.doesNotMatch(html, /<table|SOURCE_VIOLATION|Нарушение, по которому|Қарсылық келіп түскен бұзушылық/);
+      assert.equal((html.match(/Договор\.docx/g) || []).length, 1);
+      assert.ok(html.indexOf('class="subject-appeal-argument"') < html.indexOf('class="subject-appeal-manifest"'));
+    }
+  }
+  assert.deepEqual(report, snapshot);
+});
+
+test("старая поданная форма сохраняет общее поле обстоятельств и выводит доводы текстом без нарушения", () => {
+  const { report, draft } = fixture();
+  delete draft.circumstancesMode;
+  const html = subjectAppealHtml(report, draft, "2026-09-08", true);
+  assert.ok(html.includes(draft.circumstances));
+  assert.ok(html.includes(draft.argumentsByPoint[draft.selectedPointIds[0]]));
+  assert.doesNotMatch(html, /<table|подтверждающие документы не представлены/);
 });

@@ -230,19 +230,23 @@
   padding-top: 22px;
   border-top: 1px solid #b9c8d2;
 }
-.subject-appeal-arguments table,
-.subject-appeal-point-summary table {
-  table-layout: fixed;
-}
-.subject-appeal-arguments td,
-.subject-appeal-point-summary td {
-  vertical-align: top;
-  white-space: pre-wrap;
+.subject-appeal-argument {
+  margin: 0 0 22px;
   overflow-wrap: anywhere;
 }
-.subject-appeal-arguments th:first-child,
-.subject-appeal-point-summary th:first-child {
-  width: 35px;
+.subject-appeal-argument h4 {
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  margin: 0 0 8px;
+  white-space: pre-wrap;
+  break-after: avoid;
+}
+.subject-appeal-argument p {
+  margin: 0;
+  white-space: pre-wrap;
+  orphans: 2;
+  widows: 2;
 }
 .subject-appeal-paper .subject-appeal-demo-signature {
   font:
