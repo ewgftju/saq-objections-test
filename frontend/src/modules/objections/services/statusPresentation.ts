@@ -1,5 +1,7 @@
 import { STATUS } from "../../../data/constants";
 import type { CaseRequest, CaseStatus, ObjectionCase, Role } from "../../../types";
+import { isSubjectRole } from "./saqCabinets";
+import { subjectCaseStatus } from "./subjectRegistry";
 
 /** Членам АК показываем только статусы, относящиеся к их работе с делом. */
 const COMMISSION_STATUS: Partial<Record<CaseStatus, string>> = {
@@ -71,6 +73,7 @@ export function hasBeenConsideredAtMeeting(c: ObjectionCase): boolean {
 }
 
 export function caseStatusLabelForRole(c: ObjectionCase, role: Role) {
+  if (isSubjectRole(role)) return subjectCaseStatus(c);
   if (role === "dvga" || role === "kvga") {
     const request = authorityStatusRequest(c, role);
     return request ? authorityRequestStatusLabel(request) : undefined;

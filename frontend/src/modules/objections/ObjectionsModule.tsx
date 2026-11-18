@@ -7,6 +7,7 @@ import { ROLES } from "../../data/constants";
 import { COMMISSION_ATTENDANCE_MEMBERS } from "../../data/objections";
 import type {
   Action,
+  CaseTab,
   CaseRecommendation,
   CaseDocument,
   CommissionAttendancePoll,
@@ -22,7 +23,8 @@ import AgendaModal, { agendaDocumentHtml } from "./components/AgendaModal";
 import AgendaResultsModal from "./components/AgendaResultsModal";
 import DocumentModal from "./components/DocumentModal";
 import NewCaseModal from "./components/NewCaseModal";
-import SubjectAppealForm, { SubjectAppealReceipt, SubjectAppealsPanel } from "./components/SubjectAppealForm";
+import SubjectAppealForm, { SubjectAppealReceipt } from "./components/SubjectAppealForm";
+import { isApplicantCase, isSubjectRequest, subjectCanOpenCase } from "./services/subjectRegistry";
 import { saveSubjectAppealDraft, submitSubjectAppeal } from "./services/subjectAppeals";
 import CasesList from "./pages/CasesList";
 import CaseWorkspace from "./pages/CaseWorkspace";
@@ -333,36 +335,11 @@ export default function ObjectionsModule() {
       model.state.attendancePolls,
       model.state.meetings,
     )?.responses[activeCommissionMember.id] === "yes";
-  const subjectCanOpenCase = (item: ObjectionCase) => {
-    const isApplicantCabinet = subjectRoleForCase(item) === model.role;
-    const hasMotivatedResponse = Boolean(
-      item.delivery?.recipientRoles?.includes(model.role) &&
-        item.documents.some((document) => document.kind === "final-response"),
-    );
-    return (
-      hasMotivatedResponse ||
-      (isApplicantCabinet &&
-        (item.requests.some(
-          (request) =>
-            request.template === "other" &&
-            request.saqRecipient === "subject" &&
-            Boolean(request.sent) &&
-            !request.responded,
-        ) ||
-          Boolean(
-            item.decisionProjectRouting?.channel === "saq" &&
-              [
-                "decision_project_comments",
-                "decision_project_hearing",
-              ].includes(item.status),
-          )))
-    );
-  };
   const close = () => {
     setDialog(null);
     setDialogError("");
   };
-  const openCase = (c: ObjectionCase) => {
+  const openCase = (c: ObjectionCase, initialTab?: CaseTab, requestId?: string) => {
     if (!caseVisibleToRole(c, model.role)) {
       model.setToast("Обращение станет доступно после назначения исполнителя директором ДАВГА.");
       return;
@@ -373,9 +350,9 @@ export default function ObjectionsModule() {
       );
       return;
     }
-    if (isSubjectRole(model.role) && !subjectCanOpenCase(c)) {
+    if (isSubjectRole(model.role) && !subjectCanOpenCase(c, model.role)) {
       model.setToast(
-        "В кабинет заявителя поступают запросы, проект решения и подписанные окончательные ответы.",
+        "Карточка недоступна этому кабинету объекта.",
       );
       return;
     }
@@ -389,7 +366,7 @@ export default function ObjectionsModule() {
       if (model.role === "work") target.unreadForAssignee = false;
       model.commit(next, "");
     }
-    model.navigate({ page: "detail", caseId: c.id, tab: "review" });
+    model.navigate({ page: "detail", caseId: c.id, tab: initialTab || (isSubjectRole(model.role) && isApplicantCase(c, model.role) ? "overview" : "review"), requestId, registryTab: isSubjectRole(model.role) ? (requestId ? "requests" : "appeals") : undefined });
   };
   const openNotifications = () => {
     if (model.state.notifications.some((notification) => !notification.read)) {
@@ -1094,6 +1071,8 @@ export default function ObjectionsModule() {
 
   async function submitAction(action: Action, form: FormData) {
     if (!c) return;
+    const selectedRequestId = (dialog?.type === "action" ? dialog.requestId : undefined) || model.route.requestId;
+    if (isSubjectRole(model.role) && selectedRequestId && ["subject-response", "approve-response", "sign-response"].includes(action)) form.set("requestId", selectedRequestId);
     // In the Appeals Commission cabinet a member votes only on their own behalf.
     // The selected demo cabinet member is also enforced here, not just in the UI.
     if (action === "commission-vote" && model.role === "commission") {
@@ -1230,10 +1209,10 @@ export default function ObjectionsModule() {
                   : request.recipient.toUpperCase().includes("ДВГА"))),
           )?.id
         : action === "subject-response"
-          ? c.requests.find(
+          ? String(form.get("requestId") || "") || c.requests.find(
               (request) =>
                 request.template === "other" &&
-                (request.saqRecipient === model.role || (request.saqRecipient === "subject" && (model.role === "subject" || model.role === "subject2"))) &&
+                (isSubjectRole(model.role) ? isSubjectRequest(c, request, model.role) : request.saqRecipient === model.role) &&
                 Boolean(request.sent) &&
                 !request.responded,
             )?.id
@@ -2135,14 +2114,11 @@ export default function ObjectionsModule() {
           onOpen={openCase}
           onCreate={() => setDialog({ type: "new" })}
           onCreateSubjectAppeal={() => setDialog({ type: "subject-appeal" })}
-          subjectPanel={model.role === "subject2" ? (
-            <SubjectAppealsPanel
-              drafts={(model.state.subjectAppealDrafts || []).filter((draft) => draft.ownerRole === "subject2")}
-              submitted={model.state.cases.filter((item) => item.subjectAppeal?.draft.ownerRole === "subject2" && subjectRoleForCase(item) === "subject2")}
-              onContinue={(draftId) => setDialog({ type: "subject-appeal", draftId })}
-              onView={(caseId) => setDialog({ type: "subject-appeal-receipt", caseId })}
-            />
-          ) : undefined}
+          subjectDrafts={model.state.subjectAppealDrafts}
+          onContinueSubjectAppeal={(draftId) => setDialog({ type: "subject-appeal", draftId })}
+          subjectRegistryTab={model.route.registryTab || "appeals"}
+          onSubjectRegistryTabChange={(registryTab) => model.navigate({ page: "registry", registryTab })}
+          onOpenSubjectRequest={(item, requestId) => openCase(item, "review", requestId)}
           onExport={(cases) =>
             downloadFile(
               "saq-objections.csv",
@@ -2163,10 +2139,9 @@ export default function ObjectionsModule() {
               Карточка обращения доступна члену АК только после ответа «Да» в
               опросе о присутствии на заседании.
             </Notice>
-          ) : isSubjectRole(model.role) && !subjectCanOpenCase(c) ? (
+          ) : isSubjectRole(model.role) && !subjectCanOpenCase(c, model.role) ? (
             <Notice tone="amber">
-              Карточка обращения недоступна: в кабинете объекта отображаются
-              запросы, проекты решений и подписанные окончательные ответы.
+              Карточка обращения недоступна этому кабинету объекта.
             </Notice>
           ) : (
             <CaseWorkspace
@@ -2181,7 +2156,8 @@ export default function ObjectionsModule() {
                 ),
               )}
               recommendations={model.state.recommendations}
-              onBack={() => model.navigate({ page: "registry" })}
+              onBack={() => model.navigate({ page: "registry", registryTab: model.route.registryTab })}
+              selectedRequestId={model.route.requestId}
               onTab={(tab) => model.navigate({ ...model.route, tab })}
               onAction={(action, role, requestId) => {
                 if (
@@ -2240,6 +2216,7 @@ export default function ObjectionsModule() {
                   action === "sign"
                 ) {
                   const form = new FormData();
+                  if (requestId) form.set("requestId", requestId);
                   if (action === "screen") {
                     form.set("identity", "on");
                     form.set("document", "on");
@@ -2321,7 +2298,7 @@ export default function ObjectionsModule() {
                   return;
                 }
                 if (model.role !== "demo-superuser") model.setRole(role);
-                setDialog({ type: "action", action });
+                setDialog({ type: "action", action, requestId });
               }}
               onDocument={(kind, document) =>
                 setDialog({ type: "document", kind, document })

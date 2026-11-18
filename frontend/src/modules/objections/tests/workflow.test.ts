@@ -2146,7 +2146,7 @@ test("кабинет объекта получает возможность на
   );
 });
 
-test("кабинет объекта видит в реестре только подписанные запросы, ожидающие ответа", () => {
+test("вкладка запросов объекта показывает направленные запросы, включая отвеченные", () => {
   const h = harness();
   const awaiting = structuredClone(h.c);
   awaiting.id = "subject-awaiting";
@@ -2174,6 +2174,7 @@ test("кабинет объекта видит в реестре только п
       cases: [awaiting, unsigned, answered],
       date: "2026-09-08",
       role: "subject",
+      subjectRegistryTab: "requests",
       onOpen() {},
       onCreate() {},
       onExport() {},
@@ -2181,7 +2182,7 @@ test("кабинет объекта видит в реестре только п
   );
   assert.match(html, /subject-awaiting/);
   assert.doesNotMatch(html, /subject-unsigned/);
-  assert.doesNotMatch(html, /subject-answered/);
+  assert.match(html, /subject-answered/);
   assert.doesNotMatch(html, /Новое возражение\/обращение/);
 });
 
@@ -4383,7 +4384,7 @@ test("материалы заявителя показываются от нов
   const h = harness(2);
   h.c.appealType = "Жалоба на уведомление";
   h.c.bin = "001002003004";
-  h.c.decisionProjectRouting = { channel: "saq", recipients: [] };
+  h.c.decisionProjectRouting = { channel: "saq", sentAt: "2026-09-09", recipients: [] };
   h.c.delivery = {
     date: "2026-09-10",
     number: "",

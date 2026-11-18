@@ -39,6 +39,7 @@ import {
   subjectRoleForIdentifier,
   subjectRoleForCase,
 } from "./saqCabinets";
+import { isSubjectRequest } from "./subjectRegistry";
 
 export const controlDecisions = [
   ["cancel", "Отменить административный акт"],
@@ -394,12 +395,12 @@ function authorityResponseAction(
   return null;
 }
 
-function saqResponseRequest(c: ObjectionCase, role: Role) {
-  return c.requests.find(request => request.template === "other" && !request.cancelled && request.sent && !request.responded && (request.saqRecipient === role || (request.saqRecipient === "subject" && role === subjectRoleForCase(c))));
+function saqResponseRequest(c: ObjectionCase, role: Role, requestId = "") {
+  return c.requests.find(request => (!requestId || request.id === requestId) && request.template === "other" && !request.cancelled && request.sent && !request.responded && (isSubjectRole(role) ? isSubjectRequest(c, request, role) : request.saqRecipient === role));
 }
 
-function saqResponseAction(c: ObjectionCase, role: Role): ActionOption | null {
-  const request = saqResponseRequest(c, role);
+function saqResponseAction(c: ObjectionCase, role: Role, requestId = ""): ActionOption | null {
+  const request = saqResponseRequest(c, role, requestId);
   if (!request) return null;
   if (!request.responsePrepared) return { action: "subject-response", label: "Подготовить ответ", role };
   if (!request.responseApproved) return { action: "approve-response", label: "Согласовать ответ", role };
@@ -949,7 +950,8 @@ export function applyAction(
   if (!c) throw new Error("Обращение не найдено");
   if ((["meeting", "decision_project"].includes(c.status) || isMotivatedResponseStage(c)) && c.certificateChangeRequests?.at(-1)?.status === "pending" && action !== "review-certificate-change" && action !== "vote" && action !== "create-decision-project" && action !== "deliver" && action !== "upload")
     throw new Error("Сначала директор должен рассмотреть предложенные изменения справки");
-  const available = [nextAction(c, role), ...additionalActions(c)].find(
+  const selectedSubjectAction = isSubjectRole(role) && form.get("requestId") ? saqResponseAction(c, role, String(form.get("requestId"))) : null;
+  const available = [selectedSubjectAction, nextAction(c, role), ...additionalActions(c)].find(
     (item) => item?.action === action && (role === "demo-superuser" || item.role === role || action === "upload"),
   );
   if (
@@ -1717,7 +1719,7 @@ export function applyAction(
     case "approve-response": {
       const request = (role === "dvga" || role === "kvga" || role === "demo-superuser" ? authorityRequestsForRole(c, role) : []).find(
         (item) => !!item.responded && !item.responseApproved,
-      ) || saqResponseRequest(c, role);
+      ) || saqResponseRequest(c, role, String(form.get("requestId") || ""));
       if (request?.template === "other" && (!request.responsePrepared || request.responseApproved)) throw new Error("Нет ответа, ожидающего согласования");
       if (!request) throw new Error("Нет ответа, ожидающего согласования");
       request.responseApproved = date;
@@ -1729,7 +1731,7 @@ export function applyAction(
     case "sign-response": {
       const request = (role === "dvga" || role === "kvga" || role === "demo-superuser" ? authorityRequestsForRole(c, role) : []).find(
         (item) => !!item.responseApproved && !item.responseSigned,
-      ) || saqResponseRequest(c, role);
+      ) || saqResponseRequest(c, role, String(form.get("requestId") || ""));
       if (request?.template === "other" && (!request.responsePrepared || !request.responseApproved)) throw new Error("Нет согласованного ответа для подписания");
       if (!request) throw new Error("Нет согласованного ответа для подписания");
       if (request.template !== "other" && c.appealLanguage) for (const point of disputed(c)) {
@@ -1836,8 +1838,9 @@ export function applyAction(
         throw new Error("Ответ может направить только получатель запроса");
       const request = c.requests.find(
         (item) =>
-          item.template === "other" &&
-          (role === "demo-superuser" ? Boolean(item.saqRecipient) : item.saqRecipient === role || (item.saqRecipient === "subject" && role === subjectRoleForCase(c))) &&
+          (!form.get("requestId") || item.id === String(form.get("requestId"))) &&
+          !item.cancelled && item.template === "other" &&
+          (role === "demo-superuser" ? Boolean(item.saqRecipient) : isSubjectRole(role) ? isSubjectRequest(c, item, role) : item.saqRecipient === role) &&
           Boolean(item.sent) &&
           !item.responded,
       );

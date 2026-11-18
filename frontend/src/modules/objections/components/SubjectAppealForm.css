@@ -310,3 +310,43 @@
     max-width: none;
   }
 }
+
+.subject-registry .registry-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 18px;
+}
+.subject-registry .registry-tabs button {
+  min-height: 46px;
+  padding: 10px 20px;
+  font-size: 14px;
+}
+.subject-registry .subject-registry-filters {
+  grid-template-columns: minmax(230px, 2fr) repeat(2, minmax(150px, 1fr)) repeat(2, minmax(130px, 1fr));
+}
+.subject-registry-summary { padding: 0 22px 16px; }
+.subject-registry-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 22px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+}
+.subject-registry-pagination label { margin-right: auto; }
+.subject-registry-pagination select { margin-left: 8px; padding: 6px; border: 1px solid var(--line); border-radius: 4px; }
+.subject-registry .registry-table td { vertical-align: top; }
+.subject-registry .registry-table th:nth-child(1) { width: 15%; }
+.subject-registry .registry-table th:nth-child(2) { width: 12%; }
+.subject-registry .registry-table th:nth-child(3) { width: 21%; }
+.subject-registry .registry-table th:nth-child(4) { width: 22%; }
+.subject-registry .registry-table th:nth-child(5) { width: 14%; }
+.subject-registry .registry-table th:nth-child(6) { width: 16%; }
+@media (max-width: 1200px) { .subject-registry .subject-registry-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) {
+  .subject-registry .subject-registry-filters { grid-template-columns: 1fr; }
+  .subject-registry .table-scroll { overflow-x: auto; }
+  .subject-registry .registry-table { min-width: 720px; }
+  .subject-registry .registry-tabs button { padding: 10px 12px; }
+}

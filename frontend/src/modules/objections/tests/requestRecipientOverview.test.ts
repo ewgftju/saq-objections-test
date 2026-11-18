@@ -20,7 +20,8 @@ test("карточка обращения доступна органу ауди
   assert.doesNotMatch(html, />Обращение<\/button>/);
   assert.match(html, /Материалы и результаты/);
   assert.doesNotMatch(html, /Наименование объекта заявителя/);
-  assert.doesNotMatch(render("subject"), />Обращение<\/button>/);
+  assert.match(render("subject"), />Обращение<\/button>/);
+  assert.doesNotMatch(render("subject2"), />Обращение<\/button>/);
 });
 
 test("получатель SAQ не видит сроки обращения, орган аудита видит срок своей работы", () => {

@@ -186,7 +186,7 @@ export function useObjectionsModel() {
     try { localStorage.setItem("saq.objections.demo-role.v1", role); } catch { /* In-memory demo remains usable. */ }
   }, [role]);
   const [route, setRoute] = useState<Route>(() =>
-    routeFromPath(window.location.pathname),
+    routeFromPath(window.location.pathname + window.location.search),
   );
   const [loaded] = useState(() => {
     try {
@@ -213,7 +213,7 @@ export function useObjectionsModel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
-    const handler = () => setRoute(routeFromPath(window.location.pathname));
+    const handler = () => setRoute(routeFromPath(window.location.pathname + window.location.search));
     window.addEventListener("popstate", handler);
     return () => window.removeEventListener("popstate", handler);
   }, []);

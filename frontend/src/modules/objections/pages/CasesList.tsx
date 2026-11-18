@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import { Button, PageHeading } from "../../../components/ui";
 import { CLOSED, TYPES } from "../../../data/constants";
-import type { CaseStatus, ObjectionCase, Role } from "../../../types";
+import type { CaseStatus, ObjectionCase, Role, SubjectAppealDraft } from "../../../types";
+import SubjectRegistry from "./SubjectRegistry";
 import { formatDate } from "../../../utils/dateFormat";
 import { applicantIdentifierType } from "../services/appealTemplates";
 import { executionDeadline, reviewDeadline } from "../services/deadlines";
@@ -106,16 +106,7 @@ function normalizedAppealType(c: ObjectionCase) {
     .replace("аудиторский отчёт", "аудиторский отчет");
 }
 
-export default function CasesList({
-  cases,
-  date,
-  role,
-  onOpen,
-  onCreate,
-  onExport,
-  onCreateSubjectAppeal,
-  subjectPanel,
-}: {
+export interface CasesListProps {
   cases: ObjectionCase[];
   date: string;
   role: Role;
@@ -123,8 +114,26 @@ export default function CasesList({
   onCreate: () => void;
   onExport: (cases: ObjectionCase[]) => void;
   onCreateSubjectAppeal?: () => void;
-  subjectPanel?: ReactNode;
-}) {
+  subjectDrafts?: SubjectAppealDraft[];
+  onContinueSubjectAppeal?: (id: string) => void;
+  subjectRegistryTab?: "appeals" | "requests";
+  onSubjectRegistryTabChange?: (tab: "appeals" | "requests") => void;
+  onOpenSubjectRequest?: (c: ObjectionCase, requestId: string) => void;
+}
+
+export default function CasesList(props: CasesListProps) {
+  return isSubjectRole(props.role) ? <SubjectRegistry {...props} /> : <InternalCasesList {...props} />;
+}
+
+function InternalCasesList({
+  cases,
+  date,
+  role,
+  onOpen,
+  onCreate,
+  onExport,
+  onCreateSubjectAppeal,
+}: CasesListProps) {
   const authorityRole = isAuthorityRole(role);
   const subjectRole = isSubjectRole(role);
   const commissionRole = role === "commission";
@@ -349,7 +358,6 @@ export default function CasesList({
           </>
         }
       />
-      {subjectPanel}
       <div className={`stats${commissionRole ? " stats-commission" : ""}`}>
         {stats.map(([number, label, description, accent]) => (
           <section className={`stat stat-${accent}`} key={label}>

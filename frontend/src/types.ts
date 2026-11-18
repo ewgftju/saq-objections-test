@@ -849,6 +849,8 @@ export interface Route {
   /** Открытая карточка заседания внутри раздела «Заседания комиссии». */
   meetingId?: string;
   tab?: CaseTab;
+  registryTab?: "appeals" | "requests";
+  requestId?: string;
 }
 
 export type Action =

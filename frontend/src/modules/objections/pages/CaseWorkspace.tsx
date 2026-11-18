@@ -42,6 +42,8 @@ import {
 import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
+import { isApplicantCase, isSubjectRequest } from "../services/subjectRegistry";
+import { auditProgramResultText } from "../services/auditProgramResults";
 import { protocolDavgaFromReason } from "../services/protocolReason";
 
 function isSyntheticExternalResponse(document: CaseDocument, request: CaseRequest) {
@@ -263,10 +265,12 @@ function PointCard({
   point,
   documents,
   review = false,
+  applicantView = false,
 }: {
   point: ViolationPoint;
   documents: CaseDocument[];
   review?: boolean;
+  applicantView?: boolean;
 }) {
   const [expanded, setExpanded] = useState(true);
   const result = point.final || point.proposal;
@@ -301,6 +305,7 @@ function PointCard({
         </div>
       </div>
       <div hidden={!expanded}>
+        {applicantView && point.auditProgramResult && <p><b>Нарушение, по которому поступило возражение:</b> {auditProgramResultText(point.auditProgramResult, "answer", point.auditProgramResult.language, true)}</p>}
         {point.finding && (
           <p>
             <b>Документы подтверждающие нарушение:</b> {point.finding}
@@ -491,17 +496,10 @@ function SubjectRequestMaterials({
   role: Role;
   onDocument: (kind: string, document?: CaseDocument) => void;
 }) {
-  const isApplicantCabinet = subjectRoleForCase(c) === role;
-  const requests = isApplicantCabinet
-    ? c.requests.filter(
-        (request) =>
-          request.template === "other" &&
-          request.saqRecipient === "subject" &&
-          Boolean(request.sent),
-      )
-    : [];
+  const isApplicantCabinet = isApplicantCase(c, role);
+  const requests = c.requests.filter(request => isSubjectRequest(c, request, role));
   const decisionProject =
-    isApplicantCabinet && c.decisionProjectRouting?.channel === "saq"
+    isApplicantCabinet && c.decisionProjectRouting?.channel === "saq" && Boolean(c.decisionProjectRouting.sentAt)
       ? c.documents
           .filter((document) => document.kind === "decision-project")
           .at(-1)
@@ -594,7 +592,7 @@ function SubjectRequestMaterials({
       `request-${request.id}`,
       latestDocumentDate(requestDocuments, request.date),
       <section className="request-documents-section">
-        <h4>Запрос в кабинет Объекта SAQ</h4>
+        <h4>Запрос № {requestNumber(c, request)}</h4>
         <div className="request-documents-list">
           {sortedDocuments(requestDocuments).map(documentRow)}
         </div>
@@ -676,6 +674,7 @@ function SubjectRequestMaterials({
   return (
     <>
       <h3 className="form-section">Материалы и результаты рассмотрения</h3>
+      {!sections.length && <p className="muted">Направленные вам материалы появятся здесь по мере рассмотрения обращения.</p>}
       {sections.map((section) => (
         <Fragment key={section.key}>{section.content}</Fragment>
       ))}
@@ -695,6 +694,7 @@ export default function CaseWorkspace({
   onAction,
   onDocument,
   onUpload,
+  selectedRequestId,
 }: {
   c: ObjectionCase;
   /** Текущая дата демонстрационного календаря SAQ. */
@@ -708,6 +708,7 @@ export default function CaseWorkspace({
   onAction: (action: Action, role: Role, requestId?: string) => void;
   onDocument: (kind: string, document?: CaseDocument) => void;
   onUpload: () => void;
+  selectedRequestId?: string;
 }) {
   const [issuesExpanded, setIssuesExpanded] = useState(true);
   const [protocolHistoryOpen, setProtocolHistoryOpen] = useState(false);
@@ -765,17 +766,17 @@ export default function CaseWorkspace({
     (request) => !request.responseSigned,
   );
   const subjectRequest =
-    isSubjectRole(role) && subjectRoleForCase(c) === role
+    isSubjectRole(role)
       ? c.requests.find(
           (request) =>
-            request.template === "other" &&
-            request.saqRecipient === "subject" &&
-            Boolean(request.sent) &&
+            isSubjectRequest(c, request, role) &&
+            (!selectedRequestId || request.id === selectedRequestId) &&
             !request.responded,
         )
       : undefined;
   const subjectProjectRouting =
     isSubjectRole(role) &&
+    !selectedRequestId &&
     subjectRoleForCase(c) === role &&
     c.status === "decision_project_comments" &&
     c.decisionProjectRouting?.channel === "saq"
@@ -811,8 +812,8 @@ export default function CaseWorkspace({
           !/заключени[ея] по обращению/i.test(`${event.title} ${event.text}`),
       )
     : c.history;
-  const canViewOverview = !recipientLimited || isAuditAuthorityForCase(c, role);
-  const activeTab = tab === "overview" && !canViewOverview ? "review" : tab;
+  const canViewOverview = !recipientLimited || isAuditAuthorityForCase(c, role) || isApplicantCase(c, role);
+  const activeTab = (tab === "overview" && !canViewOverview) || (isSubjectRole(role) && !["overview", "review"].includes(tab)) ? "review" : tab;
   const commissionNextAction =
     role === "commission" ? nextAction(c, role) : null;
   const commissionCurrentTaskHidden =
@@ -833,14 +834,14 @@ export default function CaseWorkspace({
         subtitle={isAuthorityRole(role) || isCommission ? c.org : `${c.org} · Язык обращения: ${c.appealLanguage === "kk" ? "казахский" : c.appealLanguage === "ru" ? "русский" : "не указан"}`}
         action={
           <>
-            {(!recipientLimited || isAuthorityRole(role)) && visibleStatus && (
+            {visibleStatus && (
               <span className={`badge ${authorityAnswerSent ? "green" : "blue"}`}>
                 {visibleStatus}
               </span>
             )}
-            {!recipientLimited && (
+            {(!recipientLimited || isApplicantCase(c, role)) && (
               <Button onClick={() => onDocument("original")}>
-                Исходное обращение
+                {isSubjectRole(role) ? "Поданное обращение" : "Исходное обращение"}
               </Button>
             )}
           </>
@@ -854,7 +855,7 @@ export default function CaseWorkspace({
                 ["overview", "Обращение"],
                 [
                   "review",
-                  role === "commission" || recipientLimited
+                  role === "commission" || isAuthorityRole(role)
                     ? "Материалы и результаты"
                     : "Процесс рассмотрения",
                 ],
@@ -1130,10 +1131,11 @@ export default function CaseWorkspace({
                     value={c.request}
                     wide
                   />
-                  {c.subjectAppeal && (
+                  {c.subjectAppeal?.draft.circumstances && (
                     <Fact label="Обстоятельства" value={c.subjectAppeal.draft.circumstances} wide />
                   )}
                 </div>
+                {isSubjectRole(role) && c.documents.some(document => document.kind === "attachment" && document.dataUrl) && <section className="request-documents-section"><h4>Приложения к обращению</h4><div className="request-documents-list">{c.documents.filter(document => document.kind === "attachment" && document.dataUrl).map((document, index) => <div className="request-document-row" key={index}><span>{document.filename || document.name}</span><a className="button" href={document.dataUrl} download={document.filename || document.name}>Скачать</a></div>)}</div></section>}
                 {["work", "deputy", "director", "demo-superuser"].includes(role) && <LanguageOverview c={c} />}
                 {c.affectedParties && <Notice>{c.affectedParties}</Notice>}
                 <div className="issues-section-heading">
@@ -1152,6 +1154,7 @@ export default function CaseWorkspace({
                     <PointCard
                       key={point.id}
                       point={point}
+                      applicantView={isSubjectRole(role)}
                       documents={c.documents}
                     />
                   ))}
@@ -1200,6 +1203,9 @@ export default function CaseWorkspace({
                                 ? subjectProjectRouting?.commentDraft ? "Подписать замечание к проекту решения" : "Подготовить замечание к проекту решения"
                                 : subjectRequest?.responseApproved ? "Подписать ответ на запрос" : subjectRequest?.responsePrepared ? "Согласовать ответ на запрос" : "Подготовить ответ на запрос"}
                             </h4>
+                            {!subjectCanCommentOnDecisionProject && subjectRequest && (
+                              <p>Запрос № {requestNumber(c, subjectRequest)} от {formatDate(subjectRequest.sent || subjectRequest.date)}</p>
+                            )}
                             <p>
                               {subjectCanCommentOnDecisionProject
                                 ? subjectProjectRouting?.commentDraft ? "Подпишите замечание, чтобы направить его рабочему органу." : "После подготовки подпишите замечание для направления рабочему органу."
@@ -1220,6 +1226,7 @@ export default function CaseWorkspace({
                                     ? subjectProjectRouting?.commentDraft ? "sign-decision-project-comment" : "submit-decision-project-comment"
                                     : subjectRequest?.responseApproved ? "sign-response" : subjectRequest?.responsePrepared ? "approve-response" : "subject-response",
                                   role,
+                                  subjectRequest?.id,
                                 )
                               }
                             >
