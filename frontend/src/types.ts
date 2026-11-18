@@ -67,6 +67,15 @@ export type Page =
   | "sources";
 export type CaseTab = "overview" | "review" | "documents" | "history";
 
+/** Результат по вопросу программы аудита из исходного аудиторского отчёта ВГА. */
+export interface AuditProgramResult {
+  number: string;
+  name: string;
+  answer: string;
+  language: DocumentLanguage;
+  translations?: Partial<Record<DocumentLanguage, { name?: string; answer?: string }>>;
+}
+
 export interface ViolationPoint {
   id: string;
   number: string;
@@ -83,6 +92,8 @@ export interface ViolationPoint {
   disputed: boolean;
   evidence?: string;
   authorityFinding?: string;
+  /** Исходный ответ ВГА; не заменяется ответами на запросы КВГА/ДВГА. */
+  auditProgramResult?: AuditProgramResult;
   position?: string;
   analysis?: string;
   legal?: string;
@@ -777,6 +788,7 @@ export interface SubjectAuditReport {
     titleKk?: string;
     titleRu?: string;
     finding: string;
+    auditProgramResult?: AuditProgramResult;
     amount: number;
   }>;
 }

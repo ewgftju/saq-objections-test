@@ -9,6 +9,7 @@ import type {
 } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import { downloadFile } from "../../../utils/download";
+import { auditProgramResultText } from "../services/auditProgramResults";
 import {
   createSubjectAppealDraft,
   MAX_APPEAL_FILE_SIZE,
@@ -314,7 +315,11 @@ export default function SubjectAppealForm({
                             />
                             <span>
                               <b>
-                                {t("Пункт", "Тармақ")} № {point.number}
+                                {t(
+                                  "Вопрос программы аудита",
+                                  "Аудит бағдарламасының сұрағы",
+                                )}{" "}
+                                № {point.number}
                               </b>
                               <span>
                                 {(kk ? point.titleKk : point.titleRu) ||
@@ -324,6 +329,32 @@ export default function SubjectAppealForm({
                           </label>
                           {selected && (
                             <div className="subject-appeal-point-body">
+                              <div className="subject-appeal-source-answer">
+                                <b>
+                                  {t(
+                                    "Нарушение, по которому поступило возражение",
+                                    "Қарсылық келіп түскен бұзушылық",
+                                  )}
+                                </b>
+                                <p>
+                                  {auditProgramResultText(
+                                    point.auditProgramResult,
+                                    "answer",
+                                    draft.language,
+                                    true,
+                                  ) ||
+                                    t(
+                                      "Ответ на вопрос программы аудита не передан из ВГА.",
+                                      "Аудит бағдарламасының сұрағына жауап ІМА модулінен берілмеген.",
+                                    )}
+                                </p>
+                                <small>
+                                  {t(
+                                    "Из поля «Ответ на вопрос программы аудита» аудиторского отчёта. Заполняется автоматически.",
+                                    "Аудиторлық есептің «Аудит бағдарламасының сұрағына жауап» өрісінен автоматты түрде толтырылады.",
+                                  )}
+                                </small>
+                              </div>
                               <label className="field">
                                 <span>
                                   {t(

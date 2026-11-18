@@ -6,6 +6,7 @@ import {
   auditAuthorityKazakhName,
 } from "../../../utils/auditAuthority";
 import { formatDate } from "../../../utils/dateFormat";
+import { auditProgramResultText } from "../services/auditProgramResults";
 
 export function SubjectAppealDocument({
   report,
@@ -30,6 +31,9 @@ export function SubjectAppealDocument({
     : auditAuthorityFullName(report.issuer);
   const selected = report.points.filter((point) =>
     draft.selectedPointIds.includes(point.id),
+  );
+  const hasAuditProgramResults = selected.some(
+    (point) => point.auditProgramResult,
   );
   const field = (
     key: "circumstances" | "signerName" | "signerPosition" | "place",
@@ -226,6 +230,14 @@ export function SubjectAppealDocument({
                     "Дауланатын мәселенің сипаттамасы",
                   )}
                 </th>
+                {hasAuditProgramResults && (
+                  <th>
+                    {t(
+                      "Нарушение, по которому поступило возражение",
+                      "Қарсылық келіп түскен бұзушылық",
+                    )}
+                  </th>
+                )}
                 <th>{t("Довод заявителя", "Өтініш берушінің уәжі")}</th>
                 <th>{t("Доказательства", "Дәлелдемелер")}</th>
               </tr>
@@ -235,6 +247,16 @@ export function SubjectAppealDocument({
                 <tr key={point.id}>
                   <td>{point.number}</td>
                   <td>{(kk ? point.titleKk : point.titleRu) || point.title}</td>
+                  {hasAuditProgramResults && (
+                    <td>
+                      {auditProgramResultText(
+                        point.auditProgramResult,
+                        "answer",
+                        draft.language,
+                        true,
+                      )}
+                    </td>
+                  )}
                   <td>{draft.argumentsByPoint[point.id]}</td>
                   <td>
                     {draft.attachments

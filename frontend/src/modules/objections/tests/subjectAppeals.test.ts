@@ -38,6 +38,20 @@ function fixture() {
     disputed: false,
   });
   source.issues[0].translations = { kk: { title: "Есептің төртінші тармағы" } };
+  source.issues[0].auditProgramResult = {
+    number: "4",
+    name: source.issues[0].title,
+    answer:
+      "Ответ на вопрос программы аудита: подтверждающие документы не представлены.",
+    language: "ru",
+    translations: {
+      kk: {
+        name: "Есептің төртінші тармағы",
+        answer:
+          "Аудит бағдарламасының сұрағына жауап: растайтын құжаттар ұсынылмаған.",
+      },
+    },
+  };
   source.orgTranslations = { ru: source.org, kk: "«Аудит» ЖШС" };
   const report = subjectAuditReports(state.cases, "subject2")[0];
   const draft: SubjectAppealDraft = {
@@ -145,7 +159,7 @@ test("подача переносит выбранные пункты и фай�
   );
   assert.equal(
     c.issues[0].authorityFinding,
-    report.points[0].finding || report.points[0].title,
+    report.points[0].auditProgramResult?.answer,
   );
   assert.equal(c.issues[0].evidence, "Договор.docx");
   assert.equal(c.subjectAppeal?.draft.circumstances, draft.circumstances);
@@ -259,6 +273,7 @@ test("печатная форма выводит пять разделов, пр
   assert.match(html, /Мемлекеттік аудит жүргізген/);
   assert.match(html, /Атырау облысы/);
   assert.match(html, /Есептің төртінші тармағы/);
+  assert.match(html, /растайтын құжаттар ұсынылмаған/);
   assert.match(html, /Договор.docx/);
   assert.match(html, /Қоса берілетін құжаттардың тізбесі/);
   assert.match(html, /&lt;script&gt;/);
@@ -284,4 +299,65 @@ test("директор открывает ту же поданную форму,
     }),
   );
   assert.equal(html, expected);
+});
+
+test("номер, наименование и ответ берутся из результата программы аудита, а не из старых реквизитов пункта", () => {
+  const { state, source, draft } = fixture();
+  const point = source.issues[0];
+  point.number = "Старый номер";
+  point.title = "Старое описание";
+  point.finding = "Документ, подтверждающий нарушение.pdf";
+  point.authorityFinding = "Ответ органа аудита на запрос";
+  point.auditProgramResult!.number = "4.2";
+  point.auditProgramResult!.name = "Проверка исполнения договора";
+  const report = subjectAuditReports(state.cases, "subject2")[0];
+  draft.sourceFingerprint = reportFingerprint(report);
+  const submitted = submitSubjectAppeal(state, draft, "subject2").state
+    .cases[0];
+  assert.equal(submitted.issues[0].number, "4.2");
+  assert.equal(submitted.issues[0].title, "Проверка исполнения договора");
+  assert.equal(
+    submitted.issues[0].authorityFinding,
+    point.auditProgramResult!.answer,
+  );
+  assert.equal(submitted.issues[0].finding, point.finding);
+  point.auditProgramResult!.answer = "Позднее изменение исходного отчёта";
+  assert.notEqual(
+    submitted.subjectAppeal!.report.points[0].auditProgramResult!.answer,
+    point.auditProgramResult!.answer,
+  );
+});
+
+test("при отсутствии ответа отчёта нарушение не заменяется названием вопроса, доказательством или внутренним ответом органа", () => {
+  const { state, source, draft } = fixture();
+  delete source.issues[0].auditProgramResult;
+  source.issues[0].finding = "Доказательство.pdf";
+  source.issues[0].authorityFinding = "Внутренний ответ органа";
+  const report = subjectAuditReports(state.cases, "subject2")[0];
+  draft.sourceFingerprint = reportFingerprint(report);
+  const submitted = submitSubjectAppeal(state, draft, "subject2").state
+    .cases[0];
+  assert.equal(submitted.issues[0].authorityFinding, "");
+  assert.equal(submitted.issues[0].auditProgramResult, undefined);
+});
+
+test("приложение к запросу сохраняет ответ из исходного отчёта после ответа органа", () => {
+  const { state, draft } = fixture();
+  const c = submitSubjectAppeal(state, draft, "subject2").state.cases[0];
+  c.issues[0].authorityFinding = "Новый текст от органа аудита";
+  const html = renderToStaticMarkup(
+    createElement(DocumentContent, { c, kind: "request-appendix" }),
+  );
+  assert.match(html, /подтверждающие документы не представлены/);
+  assert.ok(!html.includes("Новый текст от органа аудита"));
+});
+
+test("поданная форма без результата программы аудита сохраняет прежние колонки", () => {
+  const { report, draft } = fixture();
+  delete report.points[0].auditProgramResult;
+  const html = subjectAppealHtml(report, draft, "2026-09-08", true);
+  assert.ok(
+    !html.includes("<th>Нарушение, по которому поступило возражение</th>"),
+  );
+  assert.match(html, /Описание оспариваемого вопроса/);
 });
