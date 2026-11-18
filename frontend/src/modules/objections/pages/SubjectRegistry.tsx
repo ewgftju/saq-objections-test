@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Button, PageHeading } from "../../../components/ui";
+import { Button, Notice, PageHeading } from "../../../components/ui";
+import { subjectAuditReports, subjectAppealFilingWindow } from "../services/subjectAppeals";
 import { TYPES } from "../../../data/constants";
 import { formatDate } from "../../../utils/dateFormat";
 import { downloadFile } from "../../../utils/download";
@@ -33,6 +34,8 @@ export default function SubjectRegistry(props: CasesListProps) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const ownCases = cases.filter((c) => isApplicantCase(c, role));
+  const reports = subjectAuditReports(cases, role);
+  const canFileAppeal = reports.some((report) => subjectAppealFilingWindow(report, props.date).allowed);
   const drafts = subjectDrafts.filter((draft) => draft.ownerRole === role);
   const requests = cases.flatMap((c) =>
     c.requests
@@ -153,13 +156,16 @@ export default function SubjectRegistry(props: CasesListProps) {
             {tab === "appeals" &&
               role === "subject2" &&
               onCreateSubjectAppeal && (
-                <Button primary onClick={onCreateSubjectAppeal}>
+                <Button primary disabled={!canFileAppeal} onClick={onCreateSubjectAppeal} title={canFileAppeal ? undefined : "Нет отчётов, доступных для подачи возражения в установленный срок"}>
                   Подать обращение
                 </Button>
               )}
           </>
         }
       />
+      {tab === "appeals" && role === "subject2" && reports.length > 0 && !canFileAppeal && (
+        <Notice tone="amber">Возражение можно подать в течение 10 рабочих дней с даты представления подписанного аудиторского отчёта. Сейчас нет отчётов, по которым подача доступна в этот срок.</Notice>
+      )}
       <section className="card subject-registry">
         <div
           className="tabs registry-tabs"

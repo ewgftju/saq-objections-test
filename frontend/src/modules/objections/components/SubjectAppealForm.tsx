@@ -14,6 +14,7 @@ import {
   createSubjectAppealDraft,
   MAX_APPEAL_FILE_SIZE,
   subjectAuditReports,
+  subjectAppealFilingWindow,
   validateSubjectAppeal,
 } from "../services/subjectAppeals";
 import {
@@ -68,10 +69,11 @@ export default function SubjectAppealForm({
     const saved = state.subjectAppealDrafts?.find(
       (item) => item.id === draftId && item.ownerRole === role,
     );
+    const firstReport = reports.find((item) => subjectAppealFilingWindow(item, state.date).allowed) || reports[0];
     return saved
       ? structuredClone(saved)
-      : reports[0]
-        ? newDraft(state, reports[0])
+      : firstReport
+        ? newDraft(state, firstReport)
         : undefined;
   });
   const [preview, setPreview] = useState(false);
@@ -82,6 +84,7 @@ export default function SubjectAppealForm({
     (item) => item.sourceCaseId === draft?.sourceCaseId,
   );
   const kk = draft?.language === "kk";
+  const filing = report && subjectAppealFilingWindow(report, state.date);
   const t = (ru: string, kz: string) => (kk ? kz : ru);
   async function addFiles(files: FileList | null, pointId?: string) {
     if (!files?.length || !draft) return;
@@ -194,7 +197,7 @@ export default function SubjectAppealForm({
             if (sending.current || uploading) return;
             setError("");
             try {
-              validateSubjectAppeal(draft, report);
+              validateSubjectAppeal(draft, report, state.date);
               sending.current = true;
               onSubmit(draft);
             } catch (cause) {
@@ -259,6 +262,21 @@ export default function SubjectAppealForm({
                 : t("Предпросмотр", "Алдын ала қарау")}
             </Button>
           </div>
+          {filing && (
+            <Notice tone={filing.allowed ? "" : "amber"}>
+              {filing.status === "missing-date" ? t(
+                "Не указана корректная дата представления подписанного аудиторского отчёта. Подача возражения недоступна.",
+                "Қол қойылған аудиторлық есептің ұсынылған күні дұрыс көрсетілмеген. Қарсылық беру қолжетімсіз.",
+              ) : (
+                <>
+                  <p>{t("Дата представления подписанного аудиторского отчёта", "Қол қойылған аудиторлық есептің ұсынылған күні")}: <b>{formatDate(filing.presentedAt)}</b>.</p>
+                  <p>{t("Подать возражение можно до", "Қарсылық беру мерзімі")}: <b>{formatDate(filing.deadline)}</b> {t("включительно — 10 рабочих дней с даты представления отчёта.", "күнін қоса алғанда — есеп ұсынылған күннен бастап 10 жұмыс күні.")}</p>
+                  {filing.status === "expired" && <p>{t("Срок подачи возражения истёк.", "Қарсылық беру мерзімі аяқталды.")}</p>}
+                  {filing.status === "not-started" && <p>{t("Подача станет доступна с даты представления подписанного отчёта.", "Қарсылық беру қол қойылған есеп ұсынылған күннен бастап қолжетімді болады.")}</p>}
+                </>
+              )}
+            </Notice>
+          )}
           <div className="subject-appeal-paper-background">
             <SubjectAppealDocument
               report={report}
@@ -429,7 +447,7 @@ export default function SubjectAppealForm({
             >
               {t("Сохранить черновик", "Жобаны сақтау")}
             </Button>
-            <Button primary type="submit" disabled={uploading}>
+            <Button primary type="submit" disabled={uploading || !filing?.allowed}>
               {t("Подписать и направить", "Қол қою және жіберу")}
             </Button>
           </div>

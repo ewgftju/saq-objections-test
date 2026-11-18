@@ -65,7 +65,12 @@ export function filingDeadline(c: ObjectionCase) {
         c.document.received,
         c.document.appealExplained === false ? 6 : 3,
       )
-    : addWorkdays(c.document.received, c.type === "audit" ? 10 : 5);
+    : addWorkdays(
+        c.type === "audit"
+          ? c.document.signedReportPresentedAt ?? c.document.received
+          : c.document.received,
+        c.type === "audit" ? 10 : 5,
+      );
 }
 
 export function reviewDuration(c: ObjectionCase) {

@@ -656,6 +656,8 @@ export interface ObjectionCase {
     number: string;
     date: string;
     received: string;
+    /** Дата представления объекту подписанного аудиторского отчёта из ВГА. */
+    signedReportPresentedAt?: string;
     name: string;
     appealExplained?: boolean;
   };
@@ -775,6 +777,8 @@ export interface SubjectAuditReport {
   number: string;
   date: string;
   received: string;
+  /** Для старых отчётов дата представления хранится в received. */
+  signedReportPresentedAt?: string;
   org: string;
   orgTranslations?: Partial<Record<DocumentLanguage, string>>;
   bin: string;

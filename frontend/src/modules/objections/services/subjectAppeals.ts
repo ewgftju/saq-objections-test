@@ -10,9 +10,38 @@ import type {
 import { nextCaseNumber } from "./caseNumbering";
 import { subjectRoleForIdentifier } from "./saqCabinets";
 import { auditProgramResultText } from "./auditProgramResults";
+import { addWorkdays, dateObject } from "./deadlines";
+import { formatDate } from "../../../utils/dateFormat";
 
 export const SUBJECT_APPEAL_TYPE = "Возражение на аудиторский отчет";
 export const MAX_APPEAL_FILE_SIZE = 2 * 1024 * 1024;
+
+export function subjectAppealFilingWindow(
+  report: Pick<SubjectAuditReport, "received" | "signedReportPresentedAt">,
+  date: string,
+) {
+  const presentedAt = report.signedReportPresentedAt ?? report.received;
+  let deadline = "";
+  try {
+    deadline = addWorkdays(presentedAt, 10);
+  } catch {
+    return { allowed: false, status: "missing-date" as const, presentedAt, deadline };
+  }
+  dateObject(date);
+  const status = date < presentedAt ? "not-started" as const
+    : date > deadline ? "expired" as const : "open" as const;
+  return { allowed: status === "open", status, presentedAt, deadline };
+}
+
+function assertSubjectAppealFilingOpen(report: SubjectAuditReport, date: string) {
+  const window = subjectAppealFilingWindow(report, date);
+  if (window.status === "missing-date")
+    throw new Error("Не указана корректная дата представления подписанного аудиторского отчёта. Подача возражения недоступна.");
+  if (window.status === "not-started")
+    throw new Error("Подача возражения доступна с даты представления подписанного аудиторского отчёта: " + formatDate(window.presentedAt) + ".");
+  if (window.status === "expired")
+    throw new Error("Срок подачи возражения истёк. Последний день подачи — " + formatDate(window.deadline) + " включительно (10 рабочих дней с даты представления подписанного аудиторского отчёта).");
+}
 
 /**
  * Адаптер исходных отчётов макета. В рабочей SAQ этот список поступает из ВГА,
@@ -47,6 +76,7 @@ export function subjectAuditReports(
         number: c.document.number,
         date: c.document.date,
         received: c.document.received,
+        signedReportPresentedAt: c.document.signedReportPresentedAt,
         org: c.org,
         orgTranslations: c.orgTranslations && { ...c.orgTranslations },
         bin: c.bin,
@@ -141,7 +171,9 @@ export function saveSubjectAppealDraft(
 export function validateSubjectAppeal(
   draft: SubjectAppealDraft,
   report: SubjectAuditReport,
+  date: string,
 ) {
+  assertSubjectAppealFilingOpen(report, date);
   if (!["ru", "kk"].includes(draft.language))
     throw new Error("Выберите язык обращения.");
   if (!draft.signerName.trim()) throw new Error("Укажите Ф.И.О. подписанта.");
@@ -188,7 +220,7 @@ export function submitSubjectAppeal(
   );
   if (existing) return { state, caseId: existing.id };
   const report = reportForDraft(state, draft, role);
-  validateSubjectAppeal(draft, report);
+  validateSubjectAppeal(draft, report, state.date);
   const selected = new Set(draft.selectedPointIds);
   const id = nextCaseNumber(state.cases, SUBJECT_APPEAL_TYPE, state.date);
   const org = report.orgTranslations?.[draft.language] || report.org;
@@ -241,6 +273,7 @@ export function submitSubjectAppeal(
       number: report.number,
       date: report.date,
       received: report.received,
+      signedReportPresentedAt: report.signedReportPresentedAt,
     },
     agendaDetails: { auditObjectName: report.org, auditObjectBin: report.bin },
     amount: issues.reduce((sum, point) => sum + point.amount, 0),
