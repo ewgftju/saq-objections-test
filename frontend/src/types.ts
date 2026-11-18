@@ -620,6 +620,8 @@ export interface HistoryEvent {
 
 
 export interface ObjectionCase {
+  /** Поданное объектом обращение: исходный текст и отчёт на момент подачи. */
+  subjectAppeal?: SubjectAppealSubmission;
   appealLanguage?: DocumentLanguage;
   orgTranslations?: Partial<Record<DocumentLanguage, string>>;
   documentApplicantNames?: Record<string, Partial<Record<DocumentLanguage, string>>>;
@@ -755,6 +757,62 @@ export type NewCaseInput = Pick<
   Partial<
     Pick<ObjectionCase, "procurement" | "affectedParties" | "agendaDetails" | "orgTranslations">
   >;
+
+/** Реквизиты и пункты отчёта, доступные объекту для подачи обращения. */
+export interface SubjectAuditReport {
+  sourceCaseId: string;
+  number: string;
+  date: string;
+  received: string;
+  org: string;
+  orgTranslations?: Partial<Record<DocumentLanguage, string>>;
+  bin: string;
+  identifierType: ApplicantIdentifierType;
+  address: string;
+  issuer: string;
+  points: Array<{
+    id: string;
+    number: string;
+    title: string;
+    titleKk?: string;
+    titleRu?: string;
+    finding: string;
+    amount: number;
+  }>;
+}
+
+export interface SubjectAppealAttachment {
+  id: string;
+  name: string;
+  size: number;
+  dataUrl: string;
+  /** Не заполнено для общего приложения к обращению. */
+  pointId?: string;
+}
+
+export interface SubjectAppealDraft {
+  id: string;
+  ownerRole: "subject2";
+  sourceCaseId: string;
+  sourceFingerprint: string;
+  language: DocumentLanguage;
+  circumstances: string;
+  signerName: string;
+  signerPosition: string;
+  place: string;
+  selectedPointIds: string[];
+  argumentsByPoint: Record<string, string>;
+  attachments: SubjectAppealAttachment[];
+  savedAt?: string;
+}
+
+/** Неизменяемый снимок документа, поданного из кабинета объекта. */
+export interface SubjectAppealSubmission {
+  draft: SubjectAppealDraft;
+  report: SubjectAuditReport;
+  submittedAt: string;
+}
+
 export interface DemoState {
   version: number;
   date: string;
@@ -768,6 +826,7 @@ export interface DemoState {
   recommendations: CaseRecommendation[];
   attendancePolls: CommissionAttendancePoll[];
   activeCommissionMemberId: string;
+  subjectAppealDrafts?: SubjectAppealDraft[];
 }
 export interface Route {
   page: Page;

@@ -1,4 +1,5 @@
 import { documentLabel } from "../services/documentLabels";
+import { SubjectAppealDocument } from "./SubjectAppealDocument";
 import {
   localizedCase,
   languagesForDocument,
@@ -1850,6 +1851,10 @@ export type DocumentContentProps = Parameters<
   typeof LegacyDocumentContent
 >[0] & { language?: DocumentLanguage; languages?: DocumentLanguage[] };
 export function DocumentContent(props: DocumentContentProps) {
+  if (props.kind === "original" && props.c.subjectAppeal) {
+    const saved = props.c.subjectAppeal;
+    return <SubjectAppealDocument report={saved.report} draft={saved.draft} date={saved.submittedAt} submitted />;
+  }
   const supported = [
     "certificate",
     "protocol",

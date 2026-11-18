@@ -22,6 +22,8 @@ import AgendaModal, { agendaDocumentHtml } from "./components/AgendaModal";
 import AgendaResultsModal from "./components/AgendaResultsModal";
 import DocumentModal from "./components/DocumentModal";
 import NewCaseModal from "./components/NewCaseModal";
+import SubjectAppealForm, { SubjectAppealReceipt, SubjectAppealsPanel } from "./components/SubjectAppealForm";
+import { saveSubjectAppealDraft, submitSubjectAppeal } from "./services/subjectAppeals";
 import CasesList from "./pages/CasesList";
 import CaseWorkspace from "./pages/CaseWorkspace";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -59,6 +61,8 @@ type DialogState =
   | { type: "attendance"; cases: ObjectionCase[] }
   | { type: "attendance-answer"; notificationId: string }
   | { type: "meeting" }
+  | { type: "subject-appeal"; draftId?: string }
+  | { type: "subject-appeal-receipt"; caseId: string }
   | { type: "new" | "clock" | "reset" | "upload" }
   | null;
 
@@ -2130,6 +2134,15 @@ export default function ObjectionsModule() {
           role={model.role}
           onOpen={openCase}
           onCreate={() => setDialog({ type: "new" })}
+          onCreateSubjectAppeal={() => setDialog({ type: "subject-appeal" })}
+          subjectPanel={model.role === "subject2" ? (
+            <SubjectAppealsPanel
+              drafts={(model.state.subjectAppealDrafts || []).filter((draft) => draft.ownerRole === "subject2")}
+              submitted={model.state.cases.filter((item) => item.subjectAppeal?.draft.ownerRole === "subject2" && subjectRoleForCase(item) === "subject2")}
+              onContinue={(draftId) => setDialog({ type: "subject-appeal", draftId })}
+              onView={(caseId) => setDialog({ type: "subject-appeal-receipt", caseId })}
+            />
+          ) : undefined}
           onExport={(cases) =>
             downloadFile(
               "saq-objections.csv",
@@ -2687,6 +2700,24 @@ export default function ObjectionsModule() {
             />
           );
         })()}
+      {dialog?.type === "subject-appeal" && model.role === "subject2" && (
+        <SubjectAppealForm
+          state={model.state}
+          role={model.role}
+          draftId={dialog.draftId}
+          onClose={close}
+          onSave={(draft) => model.commit(saveSubjectAppealDraft(model.state, draft, model.role), "Черновик обращения сохранён")}
+          onSubmit={(draft) => {
+            const submitted = submitSubjectAppeal(model.state, draft, model.role);
+            model.commit(submitted.state, "Обращение направлено директору ДАВГА");
+            setDialog({ type: "subject-appeal-receipt", caseId: submitted.caseId });
+          }}
+        />
+      )}
+      {dialog?.type === "subject-appeal-receipt" && model.role === "subject2" && (() => {
+        const submitted = model.state.cases.find((item) => item.id === dialog.caseId && item.subjectAppeal?.draft.ownerRole === "subject2" && subjectRoleForCase(item) === model.role);
+        return submitted ? <SubjectAppealReceipt c={submitted} onClose={close} /> : null;
+      })()}
       {dialog?.type === "new" && (
         <NewCaseModal
           state={model.state}

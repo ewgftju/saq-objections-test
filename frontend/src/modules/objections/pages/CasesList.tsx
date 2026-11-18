@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { Button, PageHeading } from "../../../components/ui";
 import { CLOSED, TYPES } from "../../../data/constants";
 import type { CaseStatus, ObjectionCase, Role } from "../../../types";
@@ -112,6 +113,8 @@ export default function CasesList({
   onOpen,
   onCreate,
   onExport,
+  onCreateSubjectAppeal,
+  subjectPanel,
 }: {
   cases: ObjectionCase[];
   date: string;
@@ -119,6 +122,8 @@ export default function CasesList({
   onOpen: (c: ObjectionCase) => void;
   onCreate: () => void;
   onExport: (cases: ObjectionCase[]) => void;
+  onCreateSubjectAppeal?: () => void;
+  subjectPanel?: ReactNode;
 }) {
   const authorityRole = isAuthorityRole(role);
   const subjectRole = isSubjectRole(role);
@@ -333,6 +338,9 @@ export default function CasesList({
         action={
           <>
             <Button onClick={() => onExport(visible)}>Экспорт CSV</Button>
+            {role === "subject2" && onCreateSubjectAppeal && (
+              <Button primary onClick={onCreateSubjectAppeal}>Подать обращение</Button>
+            )}
             {!recipientRole && (
               <Button primary onClick={onCreate}>
                 + Новое возражение/обращение
@@ -341,6 +349,7 @@ export default function CasesList({
           </>
         }
       />
+      {subjectPanel}
       <div className={`stats${commissionRole ? " stats-commission" : ""}`}>
         {stats.map(([number, label, description, accent]) => (
           <section className={`stat stat-${accent}`} key={label}>

@@ -1130,6 +1130,9 @@ export default function CaseWorkspace({
                     value={c.request}
                     wide
                   />
+                  {c.subjectAppeal && (
+                    <Fact label="Обстоятельства" value={c.subjectAppeal.draft.circumstances} wide />
+                  )}
                 </div>
                 {["work", "deputy", "director", "demo-superuser"].includes(role) && <LanguageOverview c={c} />}
                 {c.affectedParties && <Notice>{c.affectedParties}</Notice>}

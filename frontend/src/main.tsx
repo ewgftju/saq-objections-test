@@ -10,6 +10,7 @@ import "./styles.css";
 import "./components.css";
 import "./modules/objections/components/RecommendationRecipientSelect.css";
 import "./modules/objections/components/CertificateChangeReview.css";
+import "./modules/objections/components/SubjectAppealForm.css";
 import ObjectionsModule from "./modules/objections/ObjectionsModule";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
