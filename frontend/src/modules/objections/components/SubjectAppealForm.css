@@ -71,7 +71,7 @@
 }
 .subject-appeal-paper h3 {
   font-size: 15px;
-  font-weight: 400;
+  font-weight: 700;
   margin: 0 0 8px;
 }
 .subject-appeal-paper small {
@@ -169,6 +169,7 @@
 }
 .subject-appeal-point-toggle span span {
   display: block;
+  font-weight: 700;
   line-height: 1.5;
   margin-top: 6px;
 }

@@ -91,7 +91,9 @@ export function SubjectAppealDocument({
         return (
           <div className="subject-appeal-argument" key={point.id}>
             <h4>
-              № {point.number}. {(kk ? point.titleKk : point.titleRu) || point.title}
+              <strong>
+                № {point.number}. {(kk ? point.titleKk : point.titleRu) || point.title}
+              </strong>
             </h4>
             <h5>{t("Обоснование", "Негіздеме")}</h5>
             <p>{draft.argumentsByPoint[point.id]}</p>
