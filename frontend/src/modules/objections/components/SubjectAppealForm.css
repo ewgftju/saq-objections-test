@@ -248,6 +248,78 @@
   orphans: 2;
   widows: 2;
 }
+.subject-appeal-argument h5 {
+  font: inherit;
+  font-weight: 700;
+  margin: 12px 0 4px;
+  break-after: avoid;
+}
+.subject-appeal-evidence {
+  margin: 0;
+  padding-left: 28px;
+  white-space: pre-wrap;
+}
+.subject-appeal-final {
+  font-size: 15px;
+  line-height: 1.4;
+}
+.subject-appeal-final p {
+  font: inherit;
+  margin: 0 0 12px;
+}
+.subject-appeal-final > h2 {
+  font-size: 28px;
+  margin: 30px 0 8px;
+}
+.subject-appeal-final h3 {
+  font-weight: 700;
+  break-after: avoid;
+}
+.subject-appeal-final .subject-appeal-addressee {
+  width: 50.5%;
+  font-size: 13px;
+}
+.subject-appeal-final .subject-appeal-place {
+  margin-bottom: 12px;
+}
+.subject-appeal-final .subject-appeal-place p {
+  margin-bottom: 0;
+}
+.subject-appeal-final small {
+  font: 12px "Times New Roman", serif;
+  color: #666;
+}
+.subject-appeal-final p.subject-appeal-autofill {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0 0 0 10px;
+}
+.subject-appeal-final .subject-appeal-argument {
+  margin-left: 10px;
+}
+.subject-appeal-final .subject-appeal-argument p {
+  margin: 0 0 0 10px;
+}
+.subject-appeal-final .subject-appeal-manifest {
+  margin: 0;
+  padding-left: 38px;
+}
+.subject-appeal-final .subject-appeal-signature {
+  margin-top: 24px;
+  break-inside: avoid;
+}
+.subject-appeal-final .subject-appeal-signature-fields p {
+  margin: 0 0 4px;
+}
+.subject-appeal-final .subject-appeal-signature-fields label:last-child {
+  text-align: right;
+}
+.subject-appeal-final p.subject-appeal-demo-signature {
+  font: 12px/1.5 "Times New Roman", serif;
+  color: #666;
+  margin-top: 24px;
+}
 .subject-appeal-paper .subject-appeal-demo-signature {
   font:
     12px/1.5 Roboto,
@@ -298,6 +370,9 @@
   }
   .subject-appeal-signature-fields {
     grid-template-columns: 1fr;
+  }
+  .subject-appeal-final .subject-appeal-signature-fields label:last-child {
+    text-align: left;
   }
   .subject-appeal-point-heading {
     display: block;

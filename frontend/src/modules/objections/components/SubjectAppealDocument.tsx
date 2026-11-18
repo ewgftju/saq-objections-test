@@ -84,21 +84,34 @@ export function SubjectAppealDocument({
           </p>
         </>
       )}
-      {selected.map((point) => (
-        <div className="subject-appeal-argument" key={point.id}>
-          <h4>
-            № {point.number}. {(kk ? point.titleKk : point.titleRu) || point.title}
-          </h4>
-          <p>
-            <b>{t("Обоснование:", "Негіздеме:")}</b>{" "}
-            {draft.argumentsByPoint[point.id]}
-          </p>
-        </div>
-      ))}
+      {selected.map((point) => {
+        const evidence = draft.attachments.filter(
+          (file) => file.pointId === point.id,
+        );
+        return (
+          <div className="subject-appeal-argument" key={point.id}>
+            <h4>
+              № {point.number}. {(kk ? point.titleKk : point.titleRu) || point.title}
+            </h4>
+            <h5>{t("Обоснование", "Негіздеме")}</h5>
+            <p>{draft.argumentsByPoint[point.id]}</p>
+            <h5>{t("Доказательства", "Дәлелдемелер")}</h5>
+            {evidence.length ? (
+              <ol className="subject-appeal-evidence">
+                {evidence.map((file) => (
+                  <li key={file.id}>{file.name}</li>
+                ))}
+              </ol>
+            ) : (
+              <p>{t("Не приложены", "Қоса берілмеген")}</p>
+            )}
+          </div>
+        );
+      })}
     </section>
   );
   return (
-    <article className="print-document subject-appeal-paper">
+    <article className={"print-document subject-appeal-paper" + (!onChange ? " subject-appeal-final" : "")}>
       <header className="subject-appeal-addressee">
         <p>
           {t(
@@ -214,6 +227,7 @@ export function SubjectAppealDocument({
               "signerPosition",
               t("Должность подписанта", "Қол қоюшының лауазымы"),
             )}
+            {!onChange && <small>{t("Должность", "Лауазымы")}</small>}
           </label>
           <label>
             {onChange && (
@@ -228,6 +242,7 @@ export function SubjectAppealDocument({
               "signerName",
               t("Ф.И.О. подписанта", "Қол қоюшының аты-жөні"),
             )}
+            {!onChange && <small>{t("Ф.И.О. подписанта", "Қол қоюшының аты-жөні")}</small>}
           </label>
         </div>
         {submitted && (
@@ -258,8 +273,35 @@ export function subjectAppealHtml(
       submitted={submitted}
     />,
   );
-  const css =
-    "body{font:12pt 'Times New Roman',serif;color:#111;margin:25mm auto;max-width:180mm;padding:0 12mm}h2{text-align:center;font-size:16pt}h3{font-size:12pt;font-weight:normal}.subject-appeal-addressee{max-width:88mm;margin-left:auto}.subject-appeal-reference{text-align:center}.subject-appeal-value,p{white-space:pre-wrap;line-height:1.45}.subject-appeal-arguments{break-before:page;margin-top:24mm}.subject-appeal-argument{margin:0 0 7mm;overflow-wrap:anywhere}.subject-appeal-argument h4{font:inherit;font-weight:bold;text-align:left;margin:0 0 2mm;white-space:pre-wrap;break-after:avoid}.subject-appeal-argument p{margin:0;orphans:2;widows:2}.subject-appeal-demo-signature{font-size:10pt;color:#555}li{overflow-wrap:anywhere}@media print{body{margin:0;max-width:none;padding:0}@page{size:A4;margin:20mm}}";
+  const css = `
+    body{font:11.5pt/1.4 'Times New Roman',serif;color:#111;margin:16mm auto;max-width:170mm;padding:0 12mm}
+    h2{text-align:center;font-size:21pt;margin:8mm 0 2mm}
+    h3{font-size:11.5pt;font-weight:bold;margin:0 0 2.5mm;break-after:avoid}
+    p{white-space:pre-wrap;margin:0 0 3mm}
+    small{font-size:9pt;color:#666}
+    .subject-appeal-addressee{width:50.5%;margin-left:auto;font-size:10pt;line-height:1.35}
+    .subject-appeal-addressee p{margin:0 0 3mm}
+    .subject-appeal-place .subject-appeal-value{margin-bottom:0}
+    .subject-appeal-place{margin-bottom:3mm}
+    .subject-appeal-reference{text-align:center;margin:0 0 7mm}
+    .subject-appeal-section{margin-bottom:4mm}
+    .subject-appeal-autofill{margin-left:2.5mm}
+    .subject-appeal-arguments{break-before:page;margin-top:24mm}
+    .subject-appeal-argument{margin:0 0 5mm 2.5mm;overflow-wrap:anywhere}
+    .subject-appeal-argument h4{font:inherit;font-weight:bold;text-align:left;margin:0 0 2mm;white-space:pre-wrap;break-after:avoid}
+    .subject-appeal-argument h5{font:inherit;font-weight:bold;margin:2.5mm 0 1mm;break-after:avoid}
+    .subject-appeal-argument p{margin:0 0 0 2.5mm;orphans:2;widows:2}
+    .subject-appeal-evidence{margin:0;padding-left:7mm}
+    .subject-appeal-manifest{margin:0;padding-left:9.5mm}
+    li{overflow-wrap:anywhere;white-space:pre-wrap;orphans:2;widows:2}
+    .subject-appeal-signature{margin-top:6mm;break-inside:avoid}
+    .subject-appeal-signature-fields{display:grid;grid-template-columns:1fr 1.5fr;gap:5mm;margin-top:2mm}
+    .subject-appeal-signature-fields label:last-child{text-align:right}
+    .subject-appeal-signature-fields p{margin:0 0 1mm}
+    .subject-appeal-demo-signature{font-size:9pt;color:#666;margin-top:6mm}
+    @media(max-width:600px){body{padding:0 5mm}.subject-appeal-addressee{width:75%}.subject-appeal-signature-fields{grid-template-columns:1fr}.subject-appeal-signature-fields label:last-child{text-align:left}}
+    @media print{body{margin:0;max-width:none;padding:0}.subject-appeal-addressee{width:50.5%}.subject-appeal-signature-fields{grid-template-columns:1fr 1.5fr}.subject-appeal-signature-fields label:last-child{text-align:right}@page{size:A4;margin:16mm 20mm 15mm}}
+  `;
   return (
     '<!DOCTYPE html><html lang="' +
     (draft.language === "kk" ? "kk" : "ru") +

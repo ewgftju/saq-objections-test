@@ -357,7 +357,7 @@ test("поданная форма без результата программы
   const html = subjectAppealHtml(report, draft, "2026-09-08", true);
   assert.doesNotMatch(html, /<table|Нарушение, по которому поступило возражение/);
   assert.ok(html.includes(report.points[0].titleRu || report.points[0].title));
-  assert.match(html, /Обоснование:/);
+  assert.match(html, /<h5>Обоснование<\/h5>/);
 });
 
 test("в тестовом отчёте 1-АО доступны два результата без изменения существующих обращений", () => {
@@ -469,6 +469,12 @@ test("предпросмотр и поданная форма выводят д�
     };
     draft.argumentsByPoint[point.id] = `ДОВОД_${index + 1}\n` + `Подробное обоснование ${index + 1}. `.repeat(60);
   });
+  draft.attachments.push(
+    { ...draft.attachments[0], id: "proof-2", name: "Смета <пункт 1>.pdf", pointId: points[0].id },
+    { ...draft.attachments[0], id: "proof-3", name: "Акт по пункту 2.pdf", pointId: points[1].id },
+    { ...draft.attachments[0], id: "general-proof", name: "Общее приложение.pdf", pointId: undefined },
+  );
+  const attachments = draft.attachments;
   const snapshot = structuredClone(report);
   for (const language of ["ru", "kk"] as const) {
     draft.language = language;
@@ -479,13 +485,26 @@ test("предпросмотр и поданная форма выводят д�
       points.forEach((point, index) => {
         assert.ok(blocks[index].includes(`№ ${point.number}. ${language === "ru" ? point.titleRu : point.titleKk}`));
         assert.ok(blocks[index].includes(draft.argumentsByPoint[point.id]));
-        assert.ok(blocks[index].includes(language === "ru" ? "Обоснование:" : "Негіздеме:"));
+        assert.ok(blocks[index].includes(language === "ru" ? "<h5>Обоснование</h5>" : "<h5>Негіздеме</h5>"));
+        assert.ok(blocks[index].includes(language === "ru" ? "<h5>Доказательства</h5>" : "<h5>Дәлелдемелер</h5>"));
         assert.ok(!blocks[index].includes(`ДОВОД_${index === 0 ? 2 : 1}`));
+        const names = [...blocks[index].matchAll(/<li>(.*?)<\/li>/gs)].map(match => match[1]);
+        assert.deepEqual(names, index === 0
+          ? ["Договор.docx", "Смета &lt;пункт 1&gt;.pdf"]
+          : ["Акт по пункту 2.pdf"]);
+        assert.ok(blocks[index].indexOf("</p>") < blocks[index].indexOf('<ol class="subject-appeal-evidence">'));
       });
       assert.doesNotMatch(html, /<table|SOURCE_VIOLATION|Нарушение, по которому|Қарсылық келіп түскен бұзушылық/);
-      assert.equal((html.match(/Договор\.docx/g) || []).length, 1);
+      assert.equal((html.match(/Договор\.docx/g) || []).length, 2);
+      assert.equal((html.match(/Общее приложение\.pdf/g) || []).length, 1);
       assert.ok(html.indexOf('class="subject-appeal-argument"') < html.indexOf('class="subject-appeal-manifest"'));
     }
+    draft.attachments = [];
+    const empty = subjectAppealHtml(report, draft, "2026-09-08");
+    const emptyBlocks = [...empty.matchAll(/<div class="subject-appeal-argument">(.*?)<\/div>/gs)];
+    assert.equal(emptyBlocks.length, 2);
+    emptyBlocks.forEach(block => assert.ok(block[1].includes(language === "ru" ? "Не приложены" : "Қоса берілмеген")));
+    draft.attachments = attachments;
   }
   assert.deepEqual(report, snapshot);
 });
