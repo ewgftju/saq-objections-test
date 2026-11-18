@@ -92,6 +92,7 @@ export function createSubjectAppealDraft(
     language: "ru",
     circumstancesMode: "per-point",
     circumstances: "",
+    documentList: "",
     signerName: "",
     signerPosition: "Руководитель",
     place: report.address,
@@ -133,7 +134,7 @@ export function saveSubjectAppealDraft(
       ...(state.subjectAppealDrafts || []).filter(
         (item) => item.id !== draft.id,
       ),
-      structuredClone({ ...draft, circumstancesMode: "per-point" as const, savedAt: state.date }),
+      structuredClone({ ...draft, documentList: draft.documentList ?? "", circumstancesMode: "per-point" as const, savedAt: state.date }),
     ],
   };
 }
@@ -254,7 +255,7 @@ export function submitSubjectAppeal(
   });
   created.subjectAppeal = structuredClone({
     report,
-    draft: { ...draft, circumstancesMode: "per-point" },
+    draft: { ...draft, documentList: draft.documentList ?? "", circumstancesMode: "per-point" },
     submittedAt: state.date,
   });
   created.documents = [

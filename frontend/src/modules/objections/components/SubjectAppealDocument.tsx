@@ -15,7 +15,6 @@ export function SubjectAppealDocument({
   submitted = false,
   onChange,
   pointEditor,
-  attachmentsEditor,
 }: {
   report: SubjectAuditReport;
   draft: SubjectAppealDraft;
@@ -23,7 +22,6 @@ export function SubjectAppealDocument({
   submitted?: boolean;
   onChange?: (draft: SubjectAppealDraft) => void;
   pointEditor?: ReactNode;
-  attachmentsEditor?: ReactNode;
 }) {
   const kk = draft.language === "kk";
   const t = (ru: string, kz: string) => (kk ? kz : ru);
@@ -40,7 +38,12 @@ export function SubjectAppealDocument({
   const perPointCircumstances =
     !submitted || draft.circumstancesMode === "per-point";
   const field = (
-    key: "circumstances" | "signerName" | "signerPosition" | "place",
+    key:
+      | "circumstances"
+      | "documentList"
+      | "signerName"
+      | "signerPosition"
+      | "place",
     label: string,
     multiline = false,
   ) => {
@@ -48,8 +51,8 @@ export function SubjectAppealDocument({
       return <p className="subject-appeal-value">{draft[key] || "—"}</p>;
     const props = {
       "aria-label": label,
-      value: draft[key],
-      required: key !== "signerPosition",
+      value: draft[key] ?? "",
+      required: key !== "signerPosition" && key !== "documentList",
       onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
         onChange({ ...draft, [key]: event.target.value }),
     };
@@ -57,10 +60,17 @@ export function SubjectAppealDocument({
       <textarea
         {...props}
         rows={5}
-        placeholder={t(
-          "Опишите обстоятельства, ваши требования и подтверждающие их факты",
-          "Мән-жайларды, талаптарыңызды және оларды растайтын деректерді жазыңыз",
-        )}
+        placeholder={
+          key === "documentList"
+            ? t(
+                "Перечислите документы, которые прилагаете к возражению",
+                "Қарсылыққа қоса беретін құжаттарды тізіп жазыңыз",
+              )
+            : t(
+                "Опишите обстоятельства, ваши требования и подтверждающие их факты",
+                "Мән-жайларды, талаптарыңызды және оларды растайтын деректерді жазыңыз",
+              )
+        }
       />
     ) : (
       <input {...props} type="text" />
@@ -242,14 +252,26 @@ export function SubjectAppealDocument({
             "5. Қоса берілетін құжаттардың тізбесі",
           )}
         </h3>
-        {attachmentsEditor}
-        <ol className="subject-appeal-manifest">
-          {draft.attachments.map((file) => (
-            <li key={file.id}>{file.name}</li>
-          ))}
-        </ol>
-        {!draft.attachments.length && (
-          <p>{t("Не приложены", "Қоса берілмеген")}</p>
+        {!submitted || draft.documentList !== undefined ? (
+          field(
+            "documentList",
+            t(
+              "Перечень прилагаемых документов",
+              "Қоса берілетін құжаттардың тізбесі",
+            ),
+            true,
+          )
+        ) : (
+          <>
+            <ol className="subject-appeal-manifest">
+              {draft.attachments.map((file) => (
+                <li key={file.id}>{file.name}</li>
+              ))}
+            </ol>
+            {!draft.attachments.length && (
+              <p>{t("Не приложены", "Қоса берілмеген")}</p>
+            )}
+          </>
         )}
       </section>
       <section className="subject-appeal-signature">
