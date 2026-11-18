@@ -9,6 +9,7 @@ import type {
 } from "../../../types";
 import { formatDate } from "../../../utils/dateFormat";
 import { downloadFile } from "../../../utils/download";
+import { auditProgramResultText } from "../services/auditProgramResults";
 import {
   createSubjectAppealDraft,
   MAX_APPEAL_FILE_SIZE,
@@ -123,8 +124,8 @@ export default function SubjectAppealForm({
       <label className="field">
         <span>
           {pointId
-            ? t("Доказательства по пункту", "Тармақ бойынша дәлелдемелер")
-            : t("Другие приложения", "Басқа қосымшалар")}
+            ? t("Файлы доказательств по пункту", "Тармақ бойынша дәлелдеме файлдары")
+            : t("Файлы доказательств к обращению", "Жолданымға дәлелдеме файлдары")}
         </span>
         <input
           type="file"
@@ -314,7 +315,11 @@ export default function SubjectAppealForm({
                             />
                             <span>
                               <b>
-                                {t("Пункт", "Тармақ")} № {point.number}
+                                {t(
+                                  "Вопрос программы аудита",
+                                  "Аудит бағдарламасының сұрағы",
+                                )}{" "}
+                                № {point.number}
                               </b>
                               <span>
                                 {(kk ? point.titleKk : point.titleRu) ||
@@ -324,17 +329,43 @@ export default function SubjectAppealForm({
                           </label>
                           {selected && (
                             <div className="subject-appeal-point-body">
+                              <div className="subject-appeal-source-answer">
+                                <b>
+                                  {t(
+                                    "Нарушение, по которому поступило возражение",
+                                    "Қарсылық келіп түскен бұзушылық",
+                                  )}
+                                </b>
+                                <p>
+                                  {auditProgramResultText(
+                                    point.auditProgramResult,
+                                    "answer",
+                                    draft.language,
+                                    true,
+                                  ) ||
+                                    t(
+                                      "Ответ на вопрос программы аудита не передан из ВГА.",
+                                      "Аудит бағдарламасының сұрағына жауап ІМА модулінен берілмеген.",
+                                    )}
+                                </p>
+                                <small>
+                                  {t(
+                                    "Из поля «Ответ на вопрос программы аудита» аудиторского отчёта. Заполняется автоматически.",
+                                    "Аудиторлық есептің «Аудит бағдарламасының сұрағына жауап» өрісінен автоматты түрде толтырылады.",
+                                  )}
+                                </small>
+                              </div>
                               <label className="field">
                                 <span>
                                   {t(
-                                    "Довод заявителя",
-                                    "Өтініш берушінің уәжі",
+                                    "Обоснование (довод заявителя)",
+                                    "Негіздеме (өтініш берушінің уәжі)",
                                   )}{" "}
                                   <span className="required">*</span>
                                 </span>
                                 <textarea
                                   aria-label={
-                                    "Довод заявителя по пункту " + point.number
+                                    "Обоснование (довод заявителя) по пункту " + point.number
                                   }
                                   value={draft.argumentsByPoint[point.id] || ""}
                                   required
@@ -356,15 +387,19 @@ export default function SubjectAppealForm({
                         </section>
                       );
                     })}
-                    {fileInput()}
-                    <small>
-                      {t(
-                        "Перечень ниже формируется из выбранных пунктов и названий вложенных файлов.",
-                        "Төмендегі тізім таңдалған тармақтар мен тіркелген файл атауларынан құрылады.",
-                      )}
-                    </small>
                   </div>
                 )
+              }
+              attachmentsEditor={
+                <div className="subject-appeal-point-editor">
+                  {fileInput()}
+                  <small>
+                    {t(
+                      "Перечень формируется из названий приложенных файлов доказательств, в том числе по выбранным вопросам.",
+                      "Тізім тіркелген дәлелдеме файлдарының, соның ішінде таңдалған мәселелер бойынша файлдардың атауларынан құрылады.",
+                    )}
+                  </small>
+                </div>
               }
             />
           </div>

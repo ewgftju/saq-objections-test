@@ -1,4 +1,5 @@
 import { makeCase } from "../../../data/objections";
+import { testAuditReportPoints } from "../../../data/subjectAuditReportResults";
 import type {
   DemoState,
   ObjectionCase,
@@ -8,6 +9,7 @@ import type {
 } from "../../../types";
 import { nextCaseNumber } from "./caseNumbering";
 import { subjectRoleForIdentifier } from "./saqCabinets";
+import { auditProgramResultText } from "./auditProgramResults";
 
 export const SUBJECT_APPEAL_TYPE = "Возражение на аудиторский отчет";
 export const MAX_APPEAL_FILE_SIZE = 2 * 1024 * 1024;
@@ -51,13 +53,22 @@ export function subjectAuditReports(
         identifierType: c.applicantIdentifierType || "БИН",
         address: c.address,
         issuer: c.issuer,
-        points: c.issues.map((point) => ({
+        points: testAuditReportPoints(c) ?? c.issues.map((point) => ({
           id: point.id,
-          number: point.number,
-          title: point.title,
-          titleKk: point.translations?.kk?.title,
-          titleRu: point.translations?.ru?.title,
+          number: point.auditProgramResult?.number ?? point.number,
+          title: point.auditProgramResult?.name ?? point.title,
+          titleKk: point.auditProgramResult
+            ? auditProgramResultText(point.auditProgramResult, "name", "kk") ||
+              undefined
+            : point.translations?.kk?.title,
+          titleRu: point.auditProgramResult
+            ? auditProgramResultText(point.auditProgramResult, "name", "ru") ||
+              undefined
+            : point.translations?.ru?.title,
           finding: point.finding,
+          auditProgramResult:
+            point.auditProgramResult &&
+            structuredClone(point.auditProgramResult),
           amount: point.amount,
         })),
       },
@@ -192,7 +203,13 @@ export function submitSubjectAppeal(
         ...(p.titleKk ? { kk: { title: p.titleKk } } : {}),
       },
       finding: p.finding,
-      authorityFinding: p.finding || p.title,
+      authorityFinding: auditProgramResultText(
+        p.auditProgramResult,
+        "answer",
+        draft.language,
+      ),
+      auditProgramResult:
+        p.auditProgramResult && structuredClone(p.auditProgramResult),
       argument: draft.argumentsByPoint[p.id].trim(),
       disputed: true,
       amount: p.amount,

@@ -22,12 +22,14 @@ import {
   subjectAppealHtml,
 } from "../components/SubjectAppealDocument";
 import { DocumentContent } from "../components/DocumentModal";
+import SubjectAppealForm from "../components/SubjectAppealForm";
 
 function fixture() {
   const state = initialState();
   const source = state.cases.find(
     (c) => c.type === "audit" && c.bin === "001002003004",
   )!;
+  source.document.number = "FIXTURE-АО";
   source.issues.push({
     id: "another-report-point",
     number: "12",
@@ -38,6 +40,20 @@ function fixture() {
     disputed: false,
   });
   source.issues[0].translations = { kk: { title: "Есептің төртінші тармағы" } };
+  source.issues[0].auditProgramResult = {
+    number: "4",
+    name: source.issues[0].title,
+    answer:
+      "Ответ на вопрос программы аудита: подтверждающие документы не представлены.",
+    language: "ru",
+    translations: {
+      kk: {
+        name: "Есептің төртінші тармағы",
+        answer:
+          "Аудит бағдарламасының сұрағына жауап: растайтын құжаттар ұсынылмаған.",
+      },
+    },
+  };
   source.orgTranslations = { ru: source.org, kk: "«Аудит» ЖШС" };
   const report = subjectAuditReports(state.cases, "subject2")[0];
   const draft: SubjectAppealDraft = {
@@ -145,7 +161,7 @@ test("подача переносит выбранные пункты и фай�
   );
   assert.equal(
     c.issues[0].authorityFinding,
-    report.points[0].finding || report.points[0].title,
+    report.points[0].auditProgramResult?.answer,
   );
   assert.equal(c.issues[0].evidence, "Договор.docx");
   assert.equal(c.subjectAppeal?.draft.circumstances, draft.circumstances);
@@ -259,6 +275,7 @@ test("печатная форма выводит пять разделов, пр
   assert.match(html, /Мемлекеттік аудит жүргізген/);
   assert.match(html, /Атырау облысы/);
   assert.match(html, /Есептің төртінші тармағы/);
+  assert.match(html, /растайтын құжаттар ұсынылмаған/);
   assert.match(html, /Договор.docx/);
   assert.match(html, /Қоса берілетін құжаттардың тізбесі/);
   assert.match(html, /&lt;script&gt;/);
@@ -284,4 +301,130 @@ test("директор открывает ту же поданную форму,
     }),
   );
   assert.equal(html, expected);
+});
+
+test("номер, наименование и ответ берутся из результата программы аудита, а не из старых реквизитов пункта", () => {
+  const { state, source, draft } = fixture();
+  const point = source.issues[0];
+  point.number = "Старый номер";
+  point.title = "Старое описание";
+  point.finding = "Документ, подтверждающий нарушение.pdf";
+  point.authorityFinding = "Ответ органа аудита на запрос";
+  point.auditProgramResult!.number = "4.2";
+  point.auditProgramResult!.name = "Проверка исполнения договора";
+  const report = subjectAuditReports(state.cases, "subject2")[0];
+  draft.sourceFingerprint = reportFingerprint(report);
+  const submitted = submitSubjectAppeal(state, draft, "subject2").state
+    .cases[0];
+  assert.equal(submitted.issues[0].number, "4.2");
+  assert.equal(submitted.issues[0].title, "Проверка исполнения договора");
+  assert.equal(
+    submitted.issues[0].authorityFinding,
+    point.auditProgramResult!.answer,
+  );
+  assert.equal(submitted.issues[0].finding, point.finding);
+  point.auditProgramResult!.answer = "Позднее изменение исходного отчёта";
+  assert.notEqual(
+    submitted.subjectAppeal!.report.points[0].auditProgramResult!.answer,
+    point.auditProgramResult!.answer,
+  );
+});
+
+test("при отсутствии ответа отчёта нарушение не заменяется названием вопроса, доказательством или внутренним ответом органа", () => {
+  const { state, source, draft } = fixture();
+  delete source.issues[0].auditProgramResult;
+  source.issues[0].finding = "Доказательство.pdf";
+  source.issues[0].authorityFinding = "Внутренний ответ органа";
+  const report = subjectAuditReports(state.cases, "subject2")[0];
+  draft.sourceFingerprint = reportFingerprint(report);
+  const submitted = submitSubjectAppeal(state, draft, "subject2").state
+    .cases[0];
+  assert.equal(submitted.issues[0].authorityFinding, "");
+  assert.equal(submitted.issues[0].auditProgramResult, undefined);
+});
+
+test("приложение к запросу сохраняет ответ из исходного отчёта после ответа органа", () => {
+  const { state, draft } = fixture();
+  const c = submitSubjectAppeal(state, draft, "subject2").state.cases[0];
+  c.issues[0].authorityFinding = "Новый текст от органа аудита";
+  const html = renderToStaticMarkup(
+    createElement(DocumentContent, { c, kind: "request-appendix" }),
+  );
+  assert.match(html, /подтверждающие документы не представлены/);
+  assert.ok(!html.includes("Новый текст от органа аудита"));
+});
+
+test("поданная форма без результата программы аудита сохраняет прежние колонки", () => {
+  const { report, draft } = fixture();
+  delete report.points[0].auditProgramResult;
+  const html = subjectAppealHtml(report, draft, "2026-09-08", true);
+  assert.ok(
+    !html.includes("<th>Нарушение, по которому поступило возражение</th>"),
+  );
+  assert.match(html, /Описание оспариваемого вопроса/);
+});
+
+test("в тестовом отчёте 1-АО доступны два результата без изменения существующих обращений", () => {
+  const state = initialState();
+  const originalCases = structuredClone(state.cases);
+  const report = subjectAuditReports(state.cases, "subject2").find(
+    (item) => item.number === "1-АО",
+  )!;
+  assert.deepEqual(report.points.map((point) => [point.number, point.title]), [
+    ["1", "Представительские расходы"],
+    ["2", "Контроль приобретения, хранение и списание продуктов питания, медикаментов и мягкого инвентаря в сфере образования"],
+  ]);
+  assert.equal(report.points[0].auditProgramResult?.answer,
+    Array(5).fill("Расходы выявленные представителями были там то там то тестово направлены и сгенерированы.").join(" "));
+  assert.equal(report.points[1].auditProgramResult?.answer,
+    Array(4).fill("Ответ был тестовый нарушение не выявлены в части теста.").join(" "));
+  assert.deepEqual(state.cases, originalCases);
+  const repo = createDemoRepository({
+    getItem: () => JSON.stringify(state),
+    setItem() {},
+  });
+  assert.deepEqual(subjectAuditReports(repo.load().cases, "subject2").find(
+    (item) => item.number === "1-АО",
+  ), report);
+
+  const draft = {
+    ...createSubjectAppealDraft(report, "test-results"),
+    circumstances: "Тестовые обстоятельства",
+    signerName: "Тестовый подписант",
+    selectedPointIds: report.points.map((point) => point.id),
+    argumentsByPoint: Object.fromEntries(report.points.map((point) => [point.id, "Обоснование № " + point.number])),
+  };
+  const submitted = submitSubjectAppeal(state, draft, "subject2").state.cases[0];
+  assert.deepEqual(submitted.issues.map((point) => [point.number, point.title, point.authorityFinding, point.argument]),
+    report.points.map((point) => [point.number, point.title, point.auditProgramResult!.answer, draft.argumentsByPoint[point.id]]));
+  assert.deepEqual(submitted.subjectAppeal?.report, report);
+});
+
+test("перечень документов содержит только файлы доказательств; обоснование сохраняет довод заявителя", () => {
+  const { report, draft } = fixture();
+  draft.attachments.push({ ...draft.attachments[0], id: "general-proof", name: "Общее доказательство.pdf", pointId: undefined });
+  for (const language of ["ru", "kk"] as const) {
+    draft.language = language;
+    const html = subjectAppealHtml(report, draft, "2026-09-08", true);
+    const manifest = html.match(/<ol class="subject-appeal-manifest">(.*?)<\/ol>/s)![1];
+    assert.equal(manifest, "<li>Договор.docx</li><li>Общее доказательство.pdf</li>");
+    assert.ok(html.includes(draft.argumentsByPoint[report.points[0].id]));
+    assert.ok(html.includes(language === "ru" ? "Обоснование (довод заявителя)" : "Негіздеме (өтініш берушінің уәжі)"));
+  }
+  draft.attachments = [];
+  const emptyManifest = subjectAppealHtml(report, draft, "2026-09-08").match(/<ol class="subject-appeal-manifest">(.*?)<\/ol>/s)![1];
+  assert.equal(emptyManifest, "");
+});
+
+test("в редакторе обоснование находится в обстоятельствах, а общий ввод доказательств — в перечне документов", () => {
+  const { state, draft } = fixture();
+  state.subjectAppealDrafts = [draft];
+  const html = renderToStaticMarkup(createElement(SubjectAppealForm, {
+    state, role: "subject2", draftId: draft.id, onClose() {}, onSave() {}, onSubmit() {},
+  }));
+  const circumstances = html.indexOf("4. Обстоятельства");
+  const argument = html.indexOf("Обоснование (довод заявителя)");
+  const documents = html.indexOf("5. Перечень прилагаемых документов");
+  const files = html.indexOf("Файлы доказательств к обращению");
+  assert.ok(circumstances < argument && argument < documents && documents < files);
 });

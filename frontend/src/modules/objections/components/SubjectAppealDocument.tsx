@@ -6,6 +6,7 @@ import {
   auditAuthorityKazakhName,
 } from "../../../utils/auditAuthority";
 import { formatDate } from "../../../utils/dateFormat";
+import { auditProgramResultText } from "../services/auditProgramResults";
 
 export function SubjectAppealDocument({
   report,
@@ -14,6 +15,7 @@ export function SubjectAppealDocument({
   submitted = false,
   onChange,
   pointEditor,
+  attachmentsEditor,
 }: {
   report: SubjectAuditReport;
   draft: SubjectAppealDraft;
@@ -21,6 +23,7 @@ export function SubjectAppealDocument({
   submitted?: boolean;
   onChange?: (draft: SubjectAppealDraft) => void;
   pointEditor?: ReactNode;
+  attachmentsEditor?: ReactNode;
 }) {
   const kk = draft.language === "kk";
   const t = (ru: string, kz: string) => (kk ? kz : ru);
@@ -30,6 +33,9 @@ export function SubjectAppealDocument({
     : auditAuthorityFullName(report.issuer);
   const selected = report.points.filter((point) =>
     draft.selectedPointIds.includes(point.id),
+  );
+  const hasAuditProgramResults = selected.some(
+    (point) => point.auditProgramResult,
   );
   const field = (
     key: "circumstances" | "signerName" | "signerPosition" | "place",
@@ -139,6 +145,7 @@ export function SubjectAppealDocument({
           {onChange && <span className="required"> *</span>}
         </h3>
         {field("circumstances", t("Обстоятельства", "Мән-жайлар"), true)}
+        {pointEditor}
       </section>
       <section className="subject-appeal-section">
         <h3>
@@ -147,23 +154,13 @@ export function SubjectAppealDocument({
             "5. Қоса берілетін құжаттардың тізбесі",
           )}
         </h3>
-        {pointEditor}
+        {attachmentsEditor}
         <ol className="subject-appeal-manifest">
-          {selected.length > 0 && (
-            <li>
-              {t(
-                "Доводы по оспариваемым вопросам аудиторского отчёта",
-                "Аудиторлық есептің дауланатын мәселелері бойынша уәждер",
-              )}{" "}
-              № {report.number} — {t("пункты", "тармақтар")}{" "}
-              {selected.map((point) => point.number).join(", ")}.
-            </li>
-          )}
           {draft.attachments.map((file) => (
             <li key={file.id}>{file.name}</li>
           ))}
         </ol>
-        {!selected.length && !draft.attachments.length && !onChange && <p>—</p>}
+        {!draft.attachments.length && <p>{t("Не приложены", "Қоса берілмеген")}</p>}
       </section>
       <section className="subject-appeal-signature">
         <h3>
@@ -226,7 +223,15 @@ export function SubjectAppealDocument({
                     "Дауланатын мәселенің сипаттамасы",
                   )}
                 </th>
-                <th>{t("Довод заявителя", "Өтініш берушінің уәжі")}</th>
+                {hasAuditProgramResults && (
+                  <th>
+                    {t(
+                      "Нарушение, по которому поступило возражение",
+                      "Қарсылық келіп түскен бұзушылық",
+                    )}
+                  </th>
+                )}
+                <th>{t("Обоснование (довод заявителя)", "Негіздеме (өтініш берушінің уәжі)")}</th>
                 <th>{t("Доказательства", "Дәлелдемелер")}</th>
               </tr>
             </thead>
@@ -235,6 +240,16 @@ export function SubjectAppealDocument({
                 <tr key={point.id}>
                   <td>{point.number}</td>
                   <td>{(kk ? point.titleKk : point.titleRu) || point.title}</td>
+                  {hasAuditProgramResults && (
+                    <td>
+                      {auditProgramResultText(
+                        point.auditProgramResult,
+                        "answer",
+                        draft.language,
+                        true,
+                      )}
+                    </td>
+                  )}
                   <td>{draft.argumentsByPoint[point.id]}</td>
                   <td>
                     {draft.attachments
