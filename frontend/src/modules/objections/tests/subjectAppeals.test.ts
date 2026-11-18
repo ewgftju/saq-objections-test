@@ -397,9 +397,8 @@ test("в тестовом отчёте 1-АО доступны два резул
   assert.deepEqual(submitted.subjectAppeal?.report, report);
 });
 
-test("старые поданные формы сохраняют перечень названий файлов и доводы заявителя", () => {
+test("перечень документов содержит только файлы доказательств; обстоятельства сохраняют довод заявителя", () => {
   const { report, draft } = fixture();
-  delete draft.documentList;
   draft.attachments.push({ ...draft.attachments[0], id: "general-proof", name: "Общее доказательство.pdf", pointId: undefined });
   for (const language of ["ru", "kk"] as const) {
     draft.language = language;
@@ -410,7 +409,7 @@ test("старые поданные формы сохраняют перечен
     assert.ok(html.includes(language === "ru" ? "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования, и доказательства, подтверждающие эти обстоятельства" : "Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және осы мән-жайларды растайтын дәлелдемелер"));
   }
   draft.attachments = [];
-  const emptyManifest = subjectAppealHtml(report, draft, "2026-09-08", true).match(/<ol class="subject-appeal-manifest">(.*?)<\/ol>/s)![1];
+  const emptyManifest = subjectAppealHtml(report, draft, "2026-09-08").match(/<ol class="subject-appeal-manifest">(.*?)<\/ol>/s)![1];
   assert.equal(emptyManifest, "");
 });
 
@@ -422,12 +421,9 @@ test("в редакторе нет общего поля обстоятельс�
   }));
   const argument = html.indexOf("Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования, и доказательства, подтверждающие эти обстоятельства");
   const documents = html.indexOf("5. Перечень прилагаемых документов");
-  const list = html.indexOf('aria-label="Перечень прилагаемых документов"');
-  assert.ok(argument > 0 && argument < documents && documents < list);
-  assert.equal((html.match(/<textarea/g) || []).length, draft.selectedPointIds.length + 1);
-  assert.equal((html.match(/type="file"/g) || []).length, draft.selectedPointIds.length);
-  assert.ok(!html.includes("Файлы доказательств к обращению"));
-  assert.ok(!html.includes("Перечень формируется из названий"));
+  const files = html.indexOf("Файлы доказательств к обращению");
+  assert.ok(argument > 0 && argument < documents && documents < files);
+  assert.equal((html.match(/<textarea/g) || []).length, draft.selectedPointIds.length);
   assert.ok(!html.includes('aria-label="Обстоятельства"'));
   assert.ok(!html.includes("Обоснование (довод заявителя)"));
   assert.ok(html.includes("Документы, подтверждающие обстоятельства, на которых объект государственного аудита основывает свои требования, документы, имеющие отношение к возражению"));
@@ -453,32 +449,4 @@ test("новая поданная форма и предпросмотр исп�
   const legacy = subjectAppealHtml(report, draft, state.date, true);
   assert.ok(legacy.includes(originalCircumstances));
   assert.ok(legacy.includes(draft.argumentsByPoint[pointId]));
-});
-
-test("ручной перечень сохраняется в черновике и поданной форме и выводится без автоподстановки файлов", () => {
-  const { state, report, draft } = fixture();
-  draft.documentList = "1. Пояснения к расчёту — 2 листа.\n2. Копия договора <версия 1>.";
-  const saved = saveSubjectAppealDraft(state, draft, "subject2");
-  let stored = "";
-  const repo = createDemoRepository({
-    getItem: () => stored || null,
-    setItem(_key, value) { stored = value; },
-  });
-  repo.save(saved);
-  const reloaded = repo.load();
-  const restoredDraft = reloaded.subjectAppealDrafts![0];
-  assert.equal(restoredDraft.documentList, draft.documentList);
-  const submitted = submitSubjectAppeal(reloaded, restoredDraft, "subject2").state.cases[0];
-  assert.equal(submitted.subjectAppeal!.draft.documentList, draft.documentList);
-  assert.equal(submitted.documents.filter((document) => document.dataUrl).length, draft.attachments.length);
-  for (const language of ["ru", "kk"] as const) {
-    for (const signed of [false, true]) {
-      const html = subjectAppealHtml(report, { ...submitted.subjectAppeal!.draft, language }, state.date, signed);
-      const section = html.slice(html.indexOf("5. "), html.indexOf('class="subject-appeal-signature"'));
-      assert.ok(section.includes("1. Пояснения к расчёту — 2 листа.\n2. Копия договора &lt;версия 1&gt;."));
-      assert.ok(!section.includes("Договор.docx"));
-      assert.ok(!section.includes('type="file"'));
-      assert.ok(!section.includes("subject-appeal-manifest"));
-    }
-  }
 });

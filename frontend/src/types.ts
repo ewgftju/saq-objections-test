@@ -812,8 +812,6 @@ export interface SubjectAppealDraft {
   circumstancesMode?: "per-point";
   /** Общее поле старых поданных форм; в новой форме не заполняется. */
   circumstances: string;
-  /** Перечень документов, заполненный заявителем вручную. Нет в старых поданных формах. */
-  documentList?: string;
   signerName: string;
   signerPosition: string;
   place: string;
