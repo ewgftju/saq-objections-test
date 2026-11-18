@@ -11,6 +11,7 @@ import {
 import type { DemoState, Role } from "../types";
 import { formatDate } from "../utils/dateFormat";
 import { presidingChairId } from "../modules/objections/services/decisions";
+import { applySubject2Profile } from "../modules/objections/services/subjectProfile";
 
 /** The demo adapter is the only module that reads or writes case storage. */
 export interface ObjectionsRepository {
@@ -60,7 +61,7 @@ function isRemovedDemoCase(id: string) {
 // Version 6 distinguishes incoming SAQ appeals from manually created appeals.
 
 export function initialState(): DemoState {
-  return {
+  return applySubject2Profile({
     version: CURRENT_VERSION,
     date: "2026-09-08",
     cases: installComplaintTestCases(installKazakhTestStatements(installTestStatements(installAuditPlusCases(restoreRequestedComplaints(seed().filter(c => c.id !== "З-2026-002"))))).filter(c => !REQUESTED_REMOVAL_IDS.has(c.id) && c.id !== "Ж-2026-002")),
@@ -69,7 +70,7 @@ export function initialState(): DemoState {
     recommendations: [],
     attendancePolls: [],
     activeCommissionMemberId: COMMISSION_ATTENDANCE_MEMBERS[0].id,
-  };
+  });
 }
 
 /** Восстанавливаем только отсутствующие исходные тестовые карточки, не заменяя существующие. */
@@ -374,10 +375,11 @@ export function createDemoRepository(
           return value.version < 22 ? installComplaintTestCases(prior) : prior;
         })(),
       };
-      if (restoredProtocolCertificate || value.version < CURRENT_VERSION) {
-        try { storage.setItem(STORAGE_KEY, JSON.stringify(restoredState)); } catch { /* Restored data remains available in memory. */ }
+      const stateWithProfile = applySubject2Profile(restoredState);
+      if (restoredProtocolCertificate || value.version < CURRENT_VERSION || stateWithProfile !== restoredState) {
+        try { storage.setItem(STORAGE_KEY, JSON.stringify(stateWithProfile)); } catch { /* Restored data remains available in memory. */ }
       }
-      return restoredState;
+      return stateWithProfile;
     },
     save(state) {
       storage.setItem(STORAGE_KEY, JSON.stringify(state));
