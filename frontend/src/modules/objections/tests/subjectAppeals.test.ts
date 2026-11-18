@@ -421,8 +421,9 @@ test("в редакторе нет общего поля обстоятельс�
   }));
   const argument = html.indexOf("Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования, и доказательства, подтверждающие эти обстоятельства");
   const documents = html.indexOf("5. Перечень прилагаемых документов");
-  const files = html.indexOf("Файлы доказательств к обращению");
-  assert.ok(argument > 0 && argument < documents && documents < files);
+  assert.ok(argument > 0 && argument < documents);
+  assert.ok(!html.slice(documents).includes('type="file"'));
+  assert.equal((html.match(/type="file"/g) || []).length, draft.selectedPointIds.length);
   assert.equal((html.match(/<textarea/g) || []).length, draft.selectedPointIds.length);
   assert.ok(!html.includes('aria-label="Обстоятельства"'));
   assert.ok(!html.includes("Обоснование (довод заявителя)"));

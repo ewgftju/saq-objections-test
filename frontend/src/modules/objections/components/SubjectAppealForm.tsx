@@ -392,7 +392,6 @@ export default function SubjectAppealForm({
               }
               attachmentsEditor={
                 <div className="subject-appeal-point-editor">
-                  {fileInput()}
                   <small>
                     {t(
                       "Перечень формируется из названий приложенных файлов доказательств, в том числе по выбранным вопросам.",
