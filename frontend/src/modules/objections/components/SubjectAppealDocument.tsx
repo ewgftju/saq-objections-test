@@ -126,10 +126,12 @@ export function SubjectAppealDocument({
         <p>
           <b>{t("Копия:", "Көшірме:")}</b> {authority}
         </p>
-        <div className="subject-appeal-place">
-          {field("place", t("Место составления", "Жасалған жері"))}
-          <small>{t("Место составления", "Жасалған жері")}</small>
-        </div>
+        {!prescription && (
+          <div className="subject-appeal-place">
+            {field("place", t("Место составления", "Жасалған жері"))}
+            <small>{t("Место составления", "Жасалған жері")}</small>
+          </div>
+        )}
         <p>{formatDate(date)}</p>
       </header>
       <h2>{prescription ? t("Жалоба", "Шағым") : t("Возражение", "Қарсылық")}</h2>

@@ -137,7 +137,7 @@ export function createSubjectAppealDraft(
     circumstances: "",
     signerName: "",
     signerPosition: "Руководитель",
-    place: report.address,
+    place: report.documentKind === "prescription" ? "" : report.address,
     selectedPointIds: [],
     argumentsByPoint: {},
     attachments: [],
@@ -190,7 +190,8 @@ export function validateSubjectAppeal(
   if (!["ru", "kk"].includes(draft.language))
     throw new Error("Выберите язык обращения.");
   if (!draft.signerName.trim()) throw new Error("Укажите Ф.И.О. подписанта.");
-  if (!draft.place.trim()) throw new Error("Укажите место составления.");
+  if (report.documentKind !== "prescription" && !draft.place.trim())
+    throw new Error("Укажите место составления.");
   if (!draft.selectedPointIds.length)
     throw new Error(report.documentKind === "prescription" ? "Выберите хотя бы один оспариваемый пункт предписания." : "Выберите хотя бы один оспариваемый пункт отчёта.");
   if (new Set(draft.selectedPointIds).size !== draft.selectedPointIds.length)
