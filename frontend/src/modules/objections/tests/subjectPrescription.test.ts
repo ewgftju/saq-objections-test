@@ -196,7 +196,7 @@ for (const language of ["ru", "kk"] as const) {
       assert.doesNotMatch(html, /<h3>2\. (БИН|БСН)<\/h3>/);
       assert.ok(html.includes(language === "ru" ? "<h3>2. Наименование административного органа, должностного лица, которым подается обращение:" : "<h3>2. Жолданым берілетін әкімшілік органның, лауазымды адамның атауы:"));
       assert.ok(html.includes(language === "ru"
-        ? '<p class="subject-appeal-autofill">Апелляционную комиссию при уполномоченном органе по внутреннему государственному аудиту и финансовому контролю</p>'
+        ? '<p class="subject-appeal-autofill">Апелляционная комиссия при уполномоченном органе по внутреннему государственному аудиту и финансовому контролю</p>'
         : '<p class="subject-appeal-autofill">Ішкі мемлекеттік аудит және қаржылық бақылау жөніндегі уәкілетті орган жанындағы апелляциялық комиссия</p>'));
       assert.ok(html.includes(language === "ru" ? "<h3>3. Наименование уполномоченного органа" : "<h3>3. Мемлекеттік аудит жүргізген"));
       assert.ok(html.includes(language === "ru" ? "<h3>4. Суть обращения" : "<h3>4. Жолданымның мәні"));
@@ -253,7 +253,8 @@ test("черновик жалобы восстанавливается в сво
   );
   assert.ok(html.includes(source.number));
   assert.equal((html.match(/type="checkbox"/g) || []).length, 5);
-  assert.ok(html.includes("Обоснование по пункту 1"));
+  assert.ok(html.includes("Обстоятельства по пункту 1"));
+  assert.ok(html.includes("Документы, подтверждающие обстоятельства"));
   assert.doesNotMatch(html, /name="pointTitle|aria-label="Описание/);
   assert.ok(
     html.includes("Описание оспариваемого вопроса заполнит рабочий орган"),

@@ -225,14 +225,14 @@ export default function SubjectPrescriptionForm({
                             <div className="subject-appeal-point-body">
                               <label className="field">
                                 <span>
-                                  {t("Обоснование", "Негіздеме")}{" "}
+                                  {t("Обстоятельства", "Мән-жайлар")}{" "}
                                   <span className="required">*</span>
                                 </span>
                                 <textarea
                                   aria-label={
                                     t(
-                                      "Обоснование по пункту ",
-                                      "Тармақ бойынша негіздеме ",
+                                      "Обстоятельства по пункту ",
+                                      "Тармақ бойынша мән-жайлар ",
                                     ) + point.number
                                   }
                                   rows={5}
@@ -251,7 +251,7 @@ export default function SubjectPrescriptionForm({
                               </label>
                               <label className="field">
                                 <span>
-                                  {t("Доказательства", "Дәлелдемелер")}{" "}
+                                  {t("Документы, подтверждающие обстоятельства", "Мән-жайларды растайтын құжаттар")}{" "}
                                   <span className="required">*</span>
                                 </span>
                                 <SubjectAppealFilePicker
