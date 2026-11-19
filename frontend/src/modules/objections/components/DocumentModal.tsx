@@ -704,6 +704,7 @@ function LegacyDocumentContent({
                     <td>{point.number}</td>
                     <td>
                       {appendixFindingPreview?.[point.id] ??
+                        (!isResponseAppendix ? point.prescriptionText?.[language || snapshot.appealLanguage || "ru"] : undefined) ??
                         (isResponseAppendix
                           ? (request?.authorityResponses?.[point.id]?.finding ??
                             (useLegacyAuthorityValues

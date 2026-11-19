@@ -1,13 +1,7 @@
 import type { DemoState } from "../../../types";
 import { reportFingerprint, subjectAuditReports } from "./subjectAppeals";
-
-export const SUBJECT_2_PROFILE = {
-  bin: "001002003004",
-  orgTranslations: {
-    ru: 'Товарищество с ограниченной ответственностью "Audit plus #1"',
-    kk: "«Audit plus #1» жауапкершілігі шектеулі серіктестігі",
-  },
-} as const;
+import { SUBJECT_2_PROFILE } from "../../../data/subjectProfiles";
+export { SUBJECT_2_PROFILE } from "../../../data/subjectProfiles";
 
 /** Дополняет реквизиты объекта; поданные документы сохраняют свой снимок. */
 export function applySubject2Profile(state: DemoState): DemoState {

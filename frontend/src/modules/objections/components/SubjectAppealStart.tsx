@@ -7,6 +7,8 @@ import {
   subjectAppealFilingWindow,
 } from "../services/subjectAppeals";
 import SubjectAppealForm from "./SubjectAppealForm";
+import SubjectPrescriptionForm from "./SubjectPrescriptionForm";
+import { subjectPrescriptions } from "../services/subjectPrescriptions";
 
 type AppealKind = "" | "audit" | "prescription";
 
@@ -17,13 +19,31 @@ export default function SubjectAppealStart(
   const savedDraft = state.subjectAppealDrafts?.find(
     (draft) => draft.id === draftId && draft.ownerRole === role,
   );
-  const [kind, setKind] = useState<AppealKind>(savedDraft ? "audit" : "");
+  const [kind, setKind] = useState<AppealKind>(
+    savedDraft
+      ? savedDraft.documentKind === "prescription"
+        ? "prescription"
+        : "audit"
+      : "",
+  );
   const [reportId, setReportId] = useState(savedDraft?.sourceCaseId || "");
   const [openForm, setOpenForm] = useState(Boolean(savedDraft));
   const reports = availableSubjectAuditReports(state.cases, role, state.date);
+  const prescriptions = subjectPrescriptions(state, role);
   const selectedReport = reports.find(
     (report) => report.sourceCaseId === reportId,
   );
+  const selectedPrescription = prescriptions.find(
+    (p) => p.sourceCaseId === reportId,
+  );
+  if (kind === "prescription" && openForm && selectedPrescription) {
+    return (
+      <SubjectPrescriptionForm
+        {...props}
+        prescriptionId={selectedPrescription.sourceCaseId}
+      />
+    );
+  }
 
   if (kind === "audit" && openForm && selectedReport) {
     // Состав существующей формы сохранён; ей доступен только выбранный отчёт.
@@ -105,18 +125,38 @@ export default function SubjectAppealStart(
           </Notice>
         ))}
 
-      {/* Исходные предписания ещё не поступают из ВГА. Карточки ранее
-          зарегистрированных жалоб не подменяют список доступных документов. */}
-      {kind === "prescription" && (
-        <Notice tone="amber">Нет доступных для обжалования предписаний.</Notice>
-      )}
+      {kind === "prescription" &&
+        (prescriptions.length ? (
+          <label className="field">
+            <span>Предписание</span>
+            <select
+              aria-label="Предписание"
+              value={selectedPrescription?.sourceCaseId || ""}
+              onChange={(event) => setReportId(event.target.value)}
+            >
+              <option value="">Выберите предписание</option>
+              {prescriptions.map((p) => (
+                <option key={p.sourceCaseId} value={p.sourceCaseId}>
+                  № {p.number} от {formatDate(p.date)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : (
+          <Notice tone="amber">
+            Нет доступных для обжалования предписаний.
+          </Notice>
+        ))}
 
       <div className="actions">
         <Button onClick={onClose}>Закрыть</Button>
-        {kind === "audit" && reports.length > 0 && (
+        {((kind === "audit" && reports.length > 0) ||
+          (kind === "prescription" && prescriptions.length > 0)) && (
           <Button
             primary
-            disabled={!selectedReport}
+            disabled={
+              kind === "prescription" ? !selectedPrescription : !selectedReport
+            }
             onClick={() => setOpenForm(true)}
           >
             Продолжить

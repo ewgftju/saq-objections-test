@@ -100,7 +100,8 @@ export function reviewPauseDays(c: ObjectionCase) {
 }
 
 export function reviewDeadline(c: ObjectionCase) {
-  let d = addWorkdays(c.document.received, reviewDuration(c));
+  const received = c.subjectAppeal?.report.documentKind === "prescription" ? c.subjectAppeal.submittedAt : c.document.received;
+  let d = addWorkdays(received, reviewDuration(c));
   if (c.extensionDays) d = addWorkdays(d, c.extensionDays);
   if (reviewPauseDays(c)) d = addWorkdays(d, reviewPauseDays(c));
   return d;
@@ -161,13 +162,14 @@ export function executionDeadline(
       ? addWorkdays(request.sent, 2)
       : null;
   }
-  if (c.status === "received") return c.document.received;
+  const received = c.subjectAppeal?.report.documentKind === "prescription" ? c.subjectAppeal.submittedAt : c.document.received;
+  if (c.status === "received") return received;
   if (
     ["accepted", "requested", "request_approval", "request_signed"].includes(
       c.status,
     )
   )
-    return addWorkdays(c.document.received, 2);
+    return addWorkdays(received, 2);
   if (
     [
       "request_approved",
@@ -176,7 +178,7 @@ export function executionDeadline(
       "response_ready",
     ].includes(c.status)
   ) {
-    return authorityResponseDeadline(c) ?? addWorkdays(c.document.received, 2);
+    return authorityResponseDeadline(c) ?? addWorkdays(received, 2);
   }
   if (
     ["materials", "certificate_approval", "certificate_signed"].includes(

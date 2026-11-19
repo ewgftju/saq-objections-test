@@ -77,6 +77,8 @@ export interface AuditProgramResult {
 }
 
 export interface ViolationPoint {
+  /** Исходный текст пункта предписания; не является описанием вопроса. */
+  prescriptionText?: Partial<Record<DocumentLanguage, string>>;
   id: string;
   number: string;
   title: string;
@@ -773,6 +775,9 @@ export type NewCaseInput = Pick<
 
 /** Реквизиты и пункты отчёта, доступные объекту для подачи обращения. */
 export interface SubjectAuditReport {
+  documentKind?: "prescription";
+  relatedAuditReport?: { number: string; date: string };
+  available?: boolean;
   sourceCaseId: string;
   number: string;
   date: string;
@@ -786,6 +791,7 @@ export interface SubjectAuditReport {
   address: string;
   issuer: string;
   points: Array<{
+    prescriptionText?: Partial<Record<DocumentLanguage, string>>;
     id: string;
     number: string;
     title: string;
@@ -807,6 +813,7 @@ export interface SubjectAppealAttachment {
 }
 
 export interface SubjectAppealDraft {
+  documentKind?: "prescription";
   id: string;
   ownerRole: "subject2";
   sourceCaseId: string;
@@ -846,6 +853,8 @@ export interface DemoState {
   attendancePolls: CommissionAttendancePoll[];
   activeCommissionMemberId: string;
   subjectAppealDrafts?: SubjectAppealDraft[];
+  /** Отдельный каталог исходных предписаний. undefined включает демонстрационную заглушку. */
+  subjectPrescriptions?: SubjectAuditReport[];
 }
 export interface Route {
   page: Page;

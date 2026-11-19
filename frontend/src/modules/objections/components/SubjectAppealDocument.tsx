@@ -25,6 +25,7 @@ export function SubjectAppealDocument({
   attachmentsEditor?: ReactNode;
 }) {
   const kk = draft.language === "kk";
+  const prescription = report.documentKind === "prescription";
   const t = (ru: string, kz: string) => (kk ? kz : ru);
   const applicant = report.orgTranslations?.[draft.language] || report.org;
   const authority = kk
@@ -92,9 +93,10 @@ export function SubjectAppealDocument({
           <div className="subject-appeal-argument" key={point.id}>
             <h4>
               <strong>
-                № {point.number}. {(kk ? point.titleKk : point.titleRu) || point.title}
+                № {point.number}. {(kk ? point.titleKk : point.titleRu) || point.title || (prescription ? "—" : "")}
               </strong>
             </h4>
+            {prescription && <p><b>{t("Нарушение:", "Бұзушылық:")}</b> {point.prescriptionText?.[draft.language] || "—"}</p>}
             <h5>{t("Обоснование", "Негіздеме")}</h5>
             <p>{draft.argumentsByPoint[point.id]}</p>
             <h5>{t("Доказательства", "Дәлелдемелер")}</h5>
@@ -130,16 +132,17 @@ export function SubjectAppealDocument({
         </div>
         <p>{formatDate(date)}</p>
       </header>
-      <h2>{t("Возражение", "Қарсылық")}</h2>
+      <h2>{prescription ? t("Жалоба", "Шағым") : t("Возражение", "Қарсылық")}</h2>
       <p className="subject-appeal-reference">
-        {t("На аудиторский отчёт", "Аудиторлық есепке")} № {report.number}{" "}
+        {prescription ? t("На предписание об устранении нарушений", "Бұзушылықтарды жою туралы нұсқамаға") : t("На аудиторский отчёт", "Аудиторлық есепке")} № {report.number}{" "}
         {t("от", "күні")} {formatDate(report.date)}
       </p>
+      {prescription && report.relatedAuditReport && <p className="subject-appeal-reference">{t("Связанный аудиторский отчёт", "Байланысты аудиторлық есеп")} № {report.relatedAuditReport.number} {t("от", "күні")} {formatDate(report.relatedAuditReport.date)}</p>}
       <section className="subject-appeal-section">
         <h3>
           {t(
-            "1. Лицо, подающее возражение, и его место нахождения",
-            "1. Қарсылық беруші және оның орналасқан жері",
+            prescription ? "1. Лицо, подающее жалобу, и его место нахождения" : "1. Лицо, подающее возражение, и его место нахождения",
+            prescription ? "1. Шағым беруші және оның орналасқан жері" : "1. Қарсылық беруші және оның орналасқан жері",
           )}
         </h3>
         <p className="subject-appeal-autofill">
@@ -178,8 +181,8 @@ export function SubjectAppealDocument({
         {onChange && (
           <small>
             {t(
-              "Из исходного аудиторского отчёта ВГА",
-              "ІМА модулінің бастапқы аудиторлық есебінен",
+              prescription ? "Из исходного предписания ВГА" : "Из исходного аудиторского отчёта ВГА",
+              prescription ? "ІМА модулінің бастапқы нұсқамасынан" : "ІМА модулінің бастапқы аудиторлық есебінен",
             )}
           </small>
         )}
@@ -187,8 +190,8 @@ export function SubjectAppealDocument({
       <section className="subject-appeal-section">
         <h3>
           {t(
-            "4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования.",
-            "4. Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар.",
+            prescription ? "4. Обстоятельства, на которые объект государственного аудита, подающий жалобу, основывает свои требования." : "4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования.",
+            prescription ? "4. Шағым беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар." : "4. Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар.",
           )}
           {!perPointCircumstances && onChange && (
             <span className="required"> *</span>

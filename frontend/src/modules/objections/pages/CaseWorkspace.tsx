@@ -10,6 +10,7 @@ import type {
   CaseRequest,
   CaseRecommendation,
   CaseTab,
+  DocumentLanguage,
   ObjectionCase,
   Role,
   ViolationPoint,
@@ -266,13 +267,20 @@ function PointCard({
   documents,
   review = false,
   applicantView = false,
+  onSaveDescription,
+  language = "ru",
 }: {
   point: ViolationPoint;
   documents: CaseDocument[];
   review?: boolean;
   applicantView?: boolean;
+  onSaveDescription?: (pointId: string, description: string) => void;
+  language?: DocumentLanguage;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [description, setDescription] = useState(point.title);
+  const [descriptionError, setDescriptionError] = useState("");
   const result = point.final || point.proposal;
   const evidenceDocuments = point.evidence
     ? documents.filter(
@@ -288,7 +296,7 @@ function PointCard({
     <article className="point-card">
       <div className="point-head">
         <strong>
-          Пункт {point.number} · {point.title}
+          Пункт {point.number} · {point.title || "—"}
         </strong>
         <div className="point-head-actions">
           <span className={`badge ${point.disputed ? "blue" : "gray"}`}>
@@ -305,6 +313,14 @@ function PointCard({
         </div>
       </div>
       <div hidden={!expanded}>
+        {onSaveDescription && <div>
+          {editingDescription ? <form onSubmit={(event) => {
+            event.preventDefault();
+            try { onSaveDescription(point.id, description); setEditingDescription(false); setDescriptionError(""); }
+            catch (cause) { setDescriptionError(cause instanceof Error ? cause.message : "Не удалось сохранить описание."); }
+          }}><label className="field"><span>Описание оспариваемого вопроса</span><textarea aria-label={`Описание по пункту ${point.number}`} required value={description} onChange={(event) => setDescription(event.target.value)} rows={3} /></label>{descriptionError && <p className="form-error" role="alert">{descriptionError}</p>}<div className="actions"><Button primary type="submit">Сохранить описание</Button><Button onClick={() => setEditingDescription(false)}>Отмена</Button></div></form> : <Button onClick={() => { setDescription(point.title); setEditingDescription(true); }}>{point.title.trim() ? "Изменить описание" : "Заполнить описание"}</Button>}
+        </div>}
+        {point.prescriptionText && <p><b>{language === "kk" ? "Шағым түскен бұзушылық:" : "Нарушение, по которому поступила жалоба:"}</b> {point.prescriptionText[language] || "—"}</p>}
         {applicantView && point.auditProgramResult && <p><b>Нарушение, по которому поступило возражение:</b> {auditProgramResultText(point.auditProgramResult, "answer", point.auditProgramResult.language, true)}</p>}
         {point.finding && (
           <p>
@@ -695,6 +711,7 @@ export default function CaseWorkspace({
   onDocument,
   onUpload,
   selectedRequestId,
+  onSaveIssueDescription,
 }: {
   c: ObjectionCase;
   /** Текущая дата демонстрационного календаря SAQ. */
@@ -709,6 +726,7 @@ export default function CaseWorkspace({
   onDocument: (kind: string, document?: CaseDocument) => void;
   onUpload: () => void;
   selectedRequestId?: string;
+  onSaveIssueDescription?: (pointId: string, description: string) => void;
 }) {
   const [issuesExpanded, setIssuesExpanded] = useState(true);
   const [protocolHistoryOpen, setProtocolHistoryOpen] = useState(false);
@@ -1156,6 +1174,8 @@ export default function CaseWorkspace({
                       point={point}
                       applicantView={isSubjectRole(role)}
                       documents={c.documents}
+                      onSaveDescription={role === "work" ? onSaveIssueDescription : undefined}
+                      language={c.appealLanguage || "ru"}
                     />
                   ))}
                 {c.type === "notice" && (
@@ -1813,6 +1833,8 @@ export default function CaseWorkspace({
                             point={point}
                             documents={c.documents}
                             review
+                            onSaveDescription={role === "work" ? onSaveIssueDescription : undefined}
+                            language={c.appealLanguage || "ru"}
                           />
                         ))}
                       {c.memberPosition && !isClosed && (

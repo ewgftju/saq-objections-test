@@ -65,12 +65,12 @@ export default function SubjectRegistry(props: CasesListProps) {
     (status === "all" || rowStatus === status) &&
     (!from || rowDate.slice(0, 10) >= from) &&
     (!to || rowDate.slice(0, 10) <= to);
-  const typeFor = (c?: (typeof cases)[number]) =>
-    c ? c.appealType || TYPES[c.type] : "Возражение на аудиторский отчет";
+  const typeFor = (c?: (typeof cases)[number], draft?: (typeof subjectDrafts)[number]) =>
+    c ? c.appealType || TYPES[c.type] : draft?.documentKind === "prescription" ? "Жалоба на решение КВГА/ДВГА" : "Возражение на аудиторский отчет";
   const visibleAppeals = appeals.filter(
     (row) =>
       matches(row.search, row.date, row.status) &&
-      (appealType === "all" || typeFor(row.c) === appealType),
+      (appealType === "all" || typeFor(row.c, row.draft) === appealType),
   );
   const visibleRequests = requests
     .filter(
@@ -234,7 +234,7 @@ export default function SubjectRegistry(props: CasesListProps) {
               {[
                 ...new Set(
                   tab === "appeals"
-                    ? appeals.map((row) => typeFor(row.c))
+                    ? appeals.map((row) => typeFor(row.c, row.draft))
                     : requests.map((row) => typeFor(row.c)),
                 ),
               ].map((value) => (
@@ -299,10 +299,7 @@ export default function SubjectRegistry(props: CasesListProps) {
                     </td>
                     <td>{formatDate(row.date)}</td>
                     <td>
-                      {row.c?.appealType ||
-                        (row.c
-                          ? TYPES[row.c.type]
-                          : "Возражение на аудиторский отчет")}
+                      {typeFor(row.c, row.draft)}
                     </td>
                     <td>
                       {row.c?.document.number ? (

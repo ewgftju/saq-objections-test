@@ -12,6 +12,7 @@ import { subjectRoleForIdentifier } from "./saqCabinets";
 import { auditProgramResultText } from "./auditProgramResults";
 import { addWorkdays, dateObject } from "./deadlines";
 import { formatDate } from "../../../utils/dateFormat";
+import { subjectPrescriptions } from "./subjectPrescriptions";
 
 export const SUBJECT_APPEAL_TYPE = "Возражение на аудиторский отчет";
 export const MAX_APPEAL_FILE_SIZE = 2 * 1024 * 1024;
@@ -126,6 +127,7 @@ export function createSubjectAppealDraft(
 ): SubjectAppealDraft {
   return {
     id,
+    ...(report.documentKind === "prescription" ? { documentKind: "prescription" as const } : {}),
     ownerRole: "subject2",
     sourceCaseId: report.sourceCaseId,
     sourceFingerprint: reportFingerprint(report),
@@ -148,10 +150,10 @@ function reportForDraft(
 ) {
   if (role !== "subject2" || draft.ownerRole !== role)
     throw new Error("Подача доступна в кабинете объекта №2.");
-  const report = subjectAuditReports(state.cases, role).find(
+  const report = (draft.documentKind === "prescription" ? subjectPrescriptions(state, role) : subjectAuditReports(state.cases, role)).find(
     (item) => item.sourceCaseId === draft.sourceCaseId,
   );
-  if (!report) throw new Error("Отчёт недоступен в этом кабинете.");
+  if (!report) throw new Error(draft.documentKind === "prescription" ? "Предписание недоступно в этом кабинете." : "Отчёт недоступен в этом кабинете.");
   if (draft.sourceFingerprint !== reportFingerprint(report))
     throw new Error(
       "Реквизиты отчёта изменились. Проверьте отчёт и выберите его заново.",
@@ -183,19 +185,19 @@ export function validateSubjectAppeal(
   report: SubjectAuditReport,
   date: string,
 ) {
-  assertSubjectAppealFilingOpen(report, date);
+  if (report.documentKind !== "prescription") assertSubjectAppealFilingOpen(report, date);
   if (!["ru", "kk"].includes(draft.language))
     throw new Error("Выберите язык обращения.");
   if (!draft.signerName.trim()) throw new Error("Укажите Ф.И.О. подписанта.");
   if (!draft.place.trim()) throw new Error("Укажите место составления.");
   if (!draft.selectedPointIds.length)
-    throw new Error("Выберите хотя бы один оспариваемый пункт отчёта.");
+    throw new Error(report.documentKind === "prescription" ? "Выберите хотя бы один оспариваемый пункт предписания." : "Выберите хотя бы один оспариваемый пункт отчёта.");
   if (new Set(draft.selectedPointIds).size !== draft.selectedPointIds.length)
     throw new Error("Оспариваемые пункты не должны повторяться.");
   const selected = new Set(draft.selectedPointIds);
   for (const id of selected) {
     const point = report.points.find((item) => item.id === id);
-    if (!point) throw new Error("Выбран пункт, которого нет в этом отчёте.");
+    if (!point) throw new Error(report.documentKind === "prescription" ? "Выбран пункт, которого нет в этом предписании." : "Выбран пункт, которого нет в этом отчёте.");
     if (!draft.argumentsByPoint[id]?.trim())
       throw new Error(
         "Заполните обстоятельства (довод заявителя) по пункту № " + point.number + ".",
@@ -232,7 +234,9 @@ export function submitSubjectAppeal(
   const report = reportForDraft(state, draft, role);
   validateSubjectAppeal(draft, report, state.date);
   const selected = new Set(draft.selectedPointIds);
-  const id = nextCaseNumber(state.cases, SUBJECT_APPEAL_TYPE, state.date);
+  const prescription = report.documentKind === "prescription";
+  const appealType = prescription ? "Жалоба на решение КВГА/ДВГА" : SUBJECT_APPEAL_TYPE;
+  const id = nextCaseNumber(state.cases, appealType, state.date);
   const org = report.orgTranslations?.[draft.language] || report.org;
   const issues = report.points
     .filter((p) => selected.has(p.id))
@@ -245,7 +249,8 @@ export function submitSubjectAppeal(
         ...(p.titleKk ? { kk: { title: p.titleKk } } : {}),
       },
       finding: p.finding,
-      authorityFinding: auditProgramResultText(
+      ...(p.prescriptionText ? { prescriptionText: structuredClone(p.prescriptionText) } : {}),
+      authorityFinding: p.prescriptionText?.[draft.language] ?? auditProgramResultText(
         p.auditProgramResult,
         "answer",
         draft.language,
@@ -262,8 +267,8 @@ export function submitSubjectAppeal(
     }));
   const created = makeCase({
     id,
-    type: "audit",
-    appealType: SUBJECT_APPEAL_TYPE,
+    type: prescription ? "control" : "audit",
+    appealType,
     appealLanguage: draft.language,
     appealNumber: id,
     appealDate: state.date,
@@ -279,16 +284,23 @@ export function submitSubjectAppeal(
     issuer: report.issuer,
     authority: "Апелляционная комиссия при Министерстве финансов РК",
     document: {
-      name: "Аудиторский отчет",
+      name: prescription ? "Предписание" : "Аудиторский отчет",
       number: report.number,
       date: report.date,
       received: report.received,
       signedReportPresentedAt: report.signedReportPresentedAt,
     },
-    agendaDetails: { auditObjectName: report.org, auditObjectBin: report.bin },
+    agendaDetails: {
+      auditObjectName: report.org, auditObjectBin: report.bin,
+      ...(prescription ? {
+        decisionKind: "prescription-audit" as const,
+        relatedDocumentNumber: report.relatedAuditReport?.number,
+        relatedDocumentDate: report.relatedAuditReport?.date,
+      } : {}),
+    },
     amount: issues.reduce((sum, point) => sum + point.amount, 0),
     request:
-      "Возражение на аудиторский отчёт № " +
+      (prescription ? "Жалоба на предписание № " : "Возражение на аудиторский отчёт № ") +
       report.number +
       ". Оспариваемые пункты: " +
       issues.map((point) => point.number).join(", ") +
@@ -303,7 +315,7 @@ export function submitSubjectAppeal(
   created.documents = [
     {
       kind: "original",
-      name: draft.language === "kk" ? "Қарсылық" : "Возражение",
+      name: prescription ? (draft.language === "kk" ? "Шағым" : "Жалоба") : (draft.language === "kk" ? "Қарсылық" : "Возражение"),
       text: issues.map((point) => "№ " + point.number + ". " + point.argument).join("\n\n"),
       date: state.date,
       author: org,
@@ -338,7 +350,7 @@ export function submitSubjectAppeal(
         text:
           "Из кабинета объекта №2 поступило обращение " +
           id +
-          " по отчёту № " +
+          (prescription ? " по предписанию № " : " по отчёту № ") +
           report.number +
           ". Назначьте исполнителя рабочего органа.",
         date: state.date,

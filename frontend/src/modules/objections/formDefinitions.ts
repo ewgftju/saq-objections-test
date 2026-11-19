@@ -8,7 +8,7 @@ import { disputed } from "./services/decisions";
 import { certificateBasisForPoint, certificateDavgaDraft, decisionProjectDavga, motivatedResponseDavga, hasDavgaText, protocolDavgaFromReason } from "./services/protocolReason";
 import { controlDecisions } from "./services/workflow";
 import { hasSubjectSaqCabinet, subjectSaqCabinetLabel } from "./services/saqCabinets";
-import { auditProgramResultText } from "./services/auditProgramResults";
+import { sourceViolationText } from "./services/auditProgramResults";
 
 export interface FormField {
   language?: "ru" | "kk";
@@ -423,17 +423,17 @@ export function actionForm(
             `authorityFinding_${point.id}`,
             `Нарушение № ${point.number} — Русский`,
             authorityRequest?.authorityResponses?.[point.id]?.finding ??
-              auditProgramResultText(point.auditProgramResult, "answer", "ru"),
+              sourceViolationText(point, "ru"),
           ), language: "ru" },
           { ...area(
             `authorityResponse_${point.id}`,
             `Мотивированный ответ № ${point.number} — Русский`,
             authorityRequest?.authorityResponses?.[point.id]?.response,
           ), language: "ru" },
-          { ...area(`authorityFindingKk_${point.id}`, `Бұзушылық № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.finding ?? auditProgramResultText(point.auditProgramResult, "answer", "kk")), language: "kk" },
+          { ...area(`authorityFindingKk_${point.id}`, `Бұзушылық № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.finding ?? sourceViolationText(point, "kk")), language: "kk" },
           { ...area(`authorityResponseKk_${point.id}`, `Уәжді жауап № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.response), language: "kk" },
         );
-      note = "Поле «Нарушение» заполняется из ответа аудитора на соответствующий вопрос программы аудита. Русская и казахская версии подставляются при их наличии в исходном отчёте.";
+      note = c.subjectAppeal?.report.documentKind === "prescription" ? "Поле «Нарушение» заполняется из соответствующего пункта исходного предписания на русском и казахском языках." : "Поле «Нарушение» заполняется из ответа аудитора на соответствующий вопрос программы аудита. Русская и казахская версии подставляются при их наличии в исходном отчёте.";
       break;
     case "position":
       title = "Ответ получен";

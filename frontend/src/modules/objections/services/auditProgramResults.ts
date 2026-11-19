@@ -1,4 +1,11 @@
-import type { AuditProgramResult, DocumentLanguage } from "../../../types";
+import type { AuditProgramResult, DocumentLanguage, ViolationPoint } from "../../../types";
+
+export function sourceViolationText(
+  point: Pick<ViolationPoint, "auditProgramResult" | "prescriptionText">,
+  language: DocumentLanguage,
+) {
+  return point.prescriptionText?.[language] ?? auditProgramResultText(point.auditProgramResult, "answer", language);
+}
 
 /** Подтверждённый текст отчёта; наименование никогда не заменяет его ответ. */
 export function auditProgramResultText(

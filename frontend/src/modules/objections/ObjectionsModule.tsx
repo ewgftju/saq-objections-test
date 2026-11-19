@@ -3,7 +3,7 @@ import AppShell, { canViewBusinessProcesses } from "../../components/AppShell";
 import { Button, Modal, Notice } from "../../components/ui";
 import { initialState } from "../../api/objectionsRepository";
 import { DEMO_USER } from "../../config";
-import { ROLES } from "../../data/constants";
+import { CLOSED, ROLES } from "../../data/constants";
 import { COMMISSION_ATTENDANCE_MEMBERS } from "../../data/objections";
 import type {
   Action,
@@ -27,6 +27,7 @@ import { SubjectAppealReceipt } from "./components/SubjectAppealForm";
 import SubjectAppealStart from "./components/SubjectAppealStart";
 import { isApplicantCase, isSubjectRequest, subjectCanOpenCase } from "./services/subjectRegistry";
 import { saveSubjectAppealDraft, submitSubjectAppeal } from "./services/subjectAppeals";
+import { saveSubjectIssueDescription } from "./services/subjectPrescriptions";
 import CasesList from "./pages/CasesList";
 import CaseWorkspace from "./pages/CaseWorkspace";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -2305,6 +2306,9 @@ export default function ObjectionsModule() {
                 setDialog({ type: "document", kind, document })
               }
               onUpload={() => setDialog({ type: "upload" })}
+              onSaveIssueDescription={model.role === "work" && c.subjectAppeal?.report.documentKind === "prescription" && !c.certificate && !CLOSED.includes(c.status) && c.status !== "forwarded" ? (pointId, description) => {
+                model.commit(saveSubjectIssueDescription(model.state, c.id, pointId, description, model.role), "Описание оспариваемого вопроса сохранено");
+              } : undefined}
             />
           )
         ) : (
