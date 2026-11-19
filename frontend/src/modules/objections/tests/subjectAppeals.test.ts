@@ -447,7 +447,7 @@ test("в редакторе нет общего поля обстоятельс�
   assert.equal((html.match(/<textarea/g) || []).length, draft.selectedPointIds.length);
   assert.ok(!html.includes('aria-label="Обстоятельства"'));
   assert.ok(!html.includes("Обоснование (довод заявителя)"));
-  assert.ok(html.includes("Вложить файл"));
+  assert.ok(html.includes("Документы, подтверждающие обстоятельства"));
 });
 
 test("новая поданная форма и предпросмотр используют обстоятельства по пунктам; старые поданные формы сохраняют общее поле", () => {
