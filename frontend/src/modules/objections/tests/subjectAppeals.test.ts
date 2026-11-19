@@ -166,7 +166,9 @@ test("подача переносит выбранные пункты и фай�
   assert.equal(c.issues[0].evidence, "Договор.docx");
   assert.equal(c.subjectAppeal?.draft.circumstances, draft.circumstances);
   assert.notEqual(c.request, draft.circumstances);
-  assert.equal(c.documents.filter((document) => document.dataUrl).length, 1);
+  assert.equal(c.documents.filter((document) => document.dataUrl).length, 2);
+  assert.equal(c.documents.find((document) => document.filename === "Договор.docx")?.dataUrl, draft.attachments[0].dataUrl);
+  assert.equal(c.documents.filter((document) => document.text === "Требования заявителя").length, 1);
   assert.ok(
     result.state.notifications.some(
       (n) => n.recipientRole === "director" && n.caseId === c.id,

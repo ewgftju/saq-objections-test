@@ -13,6 +13,7 @@ import { auditProgramResultText } from "./auditProgramResults";
 import { addWorkdays, dateObject } from "./deadlines";
 import { formatDate } from "../../../utils/dateFormat";
 import { subjectPrescriptions } from "./subjectPrescriptions";
+import { subjectAppealRequirementDocument } from "./subjectAppealRequirements";
 
 export const SUBJECT_APPEAL_TYPE = "Возражение на аудиторский отчет";
 export const MAX_APPEAL_FILE_SIZE = 2 * 1024 * 1024;
@@ -338,6 +339,8 @@ export function submitSubjectAppeal(
       author: org,
     })),
   ];
+  const requirementDocument = subjectAppealRequirementDocument(created);
+  if (requirementDocument) created.documents.push(requirementDocument);
   const next = {
     ...state,
     cases: [created, ...state.cases],

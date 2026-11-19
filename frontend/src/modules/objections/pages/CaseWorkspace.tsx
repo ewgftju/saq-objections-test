@@ -46,6 +46,7 @@ import { downloadFile } from "../../../utils/download";
 import { isApplicantCase, isSubjectRequest } from "../services/subjectRegistry";
 import { auditProgramResultText } from "../services/auditProgramResults";
 import { protocolDavgaFromReason } from "../services/protocolReason";
+import { applicantRequirementFiles } from "../services/subjectAppealRequirements";
 
 function isSyntheticExternalResponse(document: CaseDocument, request: CaseRequest) {
   return request.template === "other" && !request.saqRecipient && document.kind === "position" && !document.dataUrl && document.name === `Ответ ${request.recipient}`;
@@ -733,11 +734,7 @@ export default function CaseWorkspace({
   const agendaDetails = c.agendaDetails;
   const isActionComplaint = c.appealType === "Жалоба на действие/бездействие";
   const actionAppealAuthorities = agendaDetails?.actionAppealAuthorities || [];
-  const requirementFiles = c.documents.filter(
-    (document) =>
-      document.kind === "attachment" &&
-      document.text === "Требования заявителя",
-  );
+  const requirementFiles = applicantRequirementFiles(c);
   const powerOfAttorney = c.documents.find(
     (document) =>
       document.kind === "attachment" &&

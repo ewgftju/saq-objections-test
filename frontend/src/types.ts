@@ -354,6 +354,8 @@ export interface CaseDocument {
   };
   dataUrl?: string;
   filename?: string;
+  /** Исходное поданное обращение для автоматически вложенной печатной формы. */
+  subjectAppealId?: string;
   requestId?: string;
   /** Рекомендация, к которой относится приложенный документ. */
   recommendationId?: string;
