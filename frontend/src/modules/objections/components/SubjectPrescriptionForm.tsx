@@ -41,8 +41,8 @@ export default function SubjectPrescriptionForm({
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
   const sending = useRef(false);
-  const kk = draft?.language === "kk";
-  const t = (ru: string, kz: string) => (kk ? kz : ru);
+  // Язык интерфейса пока русский; draft.language управляет только документом.
+  const t = (ru: string, _kz: string) => ru;
   const handleError = (cause: unknown) =>
     setError(
       cause instanceof Error ? cause.message : "Не удалось сохранить жалобу.",

@@ -85,7 +85,8 @@ export default function SubjectAppealForm({
   );
   const kk = draft?.language === "kk";
   const filing = report && subjectAppealFilingWindow(report, state.date);
-  const t = (ru: string, kz: string) => (kk ? kz : ru);
+  // Язык интерфейса пока русский; язык документа не переключает элементы формы.
+  const t = (ru: string, _kz: string) => ru;
   async function addFiles(files: FileList | null, pointId?: string) {
     if (!files?.length || !draft) return;
     setUploading(true);
