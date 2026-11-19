@@ -7,7 +7,7 @@ import type {
   DemoState,
   DocumentLanguage,
 } from "../../../types";
-import { applicantArgumentFieldLabel, applicantNameFieldLabel, procurementSubjectFieldLabel, statementFieldLabel } from "../services/documentLanguage";
+import { applicantArgumentFieldLabel, applicantNameFieldLabel, pointDescriptionFieldLabel, procurementSubjectFieldLabel, statementFieldLabel } from "../services/documentLanguage";
 import { dateObject } from "../services/deadlines";
 import { required } from "../services/workflow";
 import { nextCaseNumber } from "../services/caseNumbering";
@@ -413,7 +413,7 @@ export default function NewCaseModal({
                   number: pointNumber,
                   title: get(
                     `pointTitle_${pointId}`,
-                    `Описание пункта ${defaultPointNumber}`,
+                    `${pointDescriptionFieldLabel(appealLanguage || "ru")} (пункт № ${pointNumber})`,
                   ),
                   finding: "",
                   argument: get(
@@ -1111,7 +1111,7 @@ export default function NewCaseModal({
                 <Field
                   field={{
                     name: `pointTitle_${pointId}`,
-                    label: "Описание оспариваемого вопроса",
+                    label: pointDescriptionFieldLabel(appealLanguage || "ru"),
                     type: "textarea",
                     required: true,
                   }}

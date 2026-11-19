@@ -19,6 +19,9 @@ export function applicantArgumentFieldLabel(language: DocumentLanguage): string 
 export function procurementSubjectFieldLabel(language: DocumentLanguage): string {
   return `Предмет государственной закупки — ${LANGUAGE_LABELS[language]}`;
 }
+export function pointDescriptionFieldLabel(language: DocumentLanguage): string {
+  return `Описание оспариваемого вопроса — ${LANGUAGE_LABELS[language]}`;
+}
 export function appealLanguage(c: ObjectionCase): DocumentLanguage {
   return c.appealLanguage || "ru";
 }

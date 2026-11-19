@@ -1,4 +1,4 @@
-import { applicantArgumentFieldLabel, applicantNameFieldLabel, appealLanguage, documentLanguageLabel, languagesForDocument, procurementSubjectFieldLabel, statementFieldLabel } from "../services/documentLanguage";
+import { applicantArgumentFieldLabel, applicantNameFieldLabel, appealLanguage, documentLanguageLabel, languagesForDocument, pointDescriptionFieldLabel, procurementSubjectFieldLabel, statementFieldLabel } from "../services/documentLanguage";
 import { Fragment, useState, type ReactNode } from "react";
 import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import { ProtocolVersions } from "../components/ProtocolVersions";
@@ -234,9 +234,9 @@ function LanguageOverview({ c }: { c: ObjectionCase }) {
   for (const point of c.issues.filter(item => item.disputed)) {
     for (const language of languages) {
       const description = point.translations?.[language]?.title;
-      add(`Описание оспариваемого вопроса № ${point.number} (справка)`, language, description);
+      add("Описание оспариваемого вопроса", language, description, `пункт № ${point.number}, справка`);
       const protocolDescription = version?.pointTitles?.[point.id]?.[language];
-      if (protocolDescription && protocolDescription !== description) add(`Описание оспариваемого вопроса № ${point.number} (протокол)`, language, protocolDescription);
+      if (protocolDescription && protocolDescription !== description) add("Описание оспариваемого вопроса", language, protocolDescription, `пункт № ${point.number}, протокол`);
       add("Довод заявителя", language, point.certificateArgumentTranslations?.[language], `пункт № ${point.number}, справка`);
       if (point.protocolArgumentTranslations?.[language] && point.protocolArgumentTranslations[language] !== point.certificateArgumentTranslations?.[language]) add("Довод заявителя", language, point.protocolArgumentTranslations[language], `пункт № ${point.number}, протокол`);
       add(`Доводы ДАВГА по пункту № ${point.number} (справка)`, language, language === "ru" ? certificate?.davgaArgumentsByPoint?.[point.id] : certificate?.davgaArgumentsByPointKk?.[point.id]);
@@ -319,7 +319,7 @@ function PointCard({
             event.preventDefault();
             try { onSaveDescription(point.id, description); setEditingDescription(false); setDescriptionError(""); }
             catch (cause) { setDescriptionError(cause instanceof Error ? cause.message : "Не удалось сохранить описание."); }
-          }}><label className="field"><span>Описание оспариваемого вопроса</span><textarea aria-label={`Описание по пункту ${point.number}`} required value={description} onChange={(event) => setDescription(event.target.value)} rows={3} /></label>{descriptionError && <p className="form-error" role="alert">{descriptionError}</p>}<div className="actions"><Button primary type="submit">Сохранить описание</Button><Button onClick={() => setEditingDescription(false)}>Отмена</Button></div></form> : <Button onClick={() => { setDescription(point.title); setEditingDescription(true); }}>{point.title.trim() ? "Изменить описание" : "Заполнить описание"}</Button>}
+          }}><label className="field"><span>{pointDescriptionFieldLabel(language)}</span><textarea aria-label={`${pointDescriptionFieldLabel(language)} (пункт № ${point.number})`} required value={description} onChange={(event) => setDescription(event.target.value)} rows={3} /></label>{descriptionError && <p className="form-error" role="alert">{descriptionError}</p>}<div className="actions"><Button primary type="submit">Сохранить описание</Button><Button onClick={() => setEditingDescription(false)}>Отмена</Button></div></form> : <Button onClick={() => { setDescription(point.title); setEditingDescription(true); }}>{point.title.trim() ? "Изменить описание" : "Заполнить описание"}</Button>}
         </div>}
         {point.prescriptionText && <p><b>{language === "kk" ? "Шағым түскен бұзушылық:" : "Нарушение, по которому поступила жалоба:"}</b> {point.prescriptionText[language] || "—"}</p>}
         {applicantView && point.auditProgramResult && <p><b>Нарушение, по которому поступило возражение:</b> {auditProgramResultText(point.auditProgramResult, "answer", point.auditProgramResult.language, true)}</p>}

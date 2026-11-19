@@ -149,7 +149,7 @@ for (const primary of ["ru", "kk"] as const) {
         .filter((field) => field.name.startsWith("pointTitle_"))
         .every((field) => !field.readOnly),
     );
-    assert.ok(fields.some(field => field.label === `Описание оспариваемого вопроса № 1 — ${primary === "ru" ? "Русский" : "Қазақша"}`));
+    assert.ok(fields.some(field => field.label === `Описание оспариваемого вопроса — ${primary === "ru" ? "Русский" : "Қазақша"} (пункт № 1)`));
     assert.ok(fields.every(field => !field.name.startsWith("pointArgument_") && !field.name.startsWith("pointAdditional_")));
     const modal = renderToStaticMarkup(
       createElement(ActionModal, {
@@ -570,7 +570,7 @@ test("при добавлении второго языка на этапе пр
   const certificate = h.c.documents.find(item => item.kind === "certificate")!;
   h.c.certificate!.languages = ["ru", "kk"];
   const modal = renderToStaticMarkup(createElement(ActionModal, { c: h.c, action: "vote", role: "work", date: h.state.date, onClose() {}, onSubmit() {} }));
-  assert.ok(modal.indexOf("Участники заседания и результаты голосования") < modal.indexOf("Перевод описания пункта № 1"));
+  assert.ok(modal.indexOf("Участники заседания и результаты голосования") < modal.indexOf("Описание оспариваемого вопроса — Қазақша (пункт № 1)"));
   h.c.certificate!.languages = ["ru"];
   assert.throws(() => h.run("vote", "work", values), /Қазақша/);
   h.run("vote", "work", {
