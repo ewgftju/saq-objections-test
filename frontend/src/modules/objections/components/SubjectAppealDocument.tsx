@@ -41,6 +41,20 @@ export function SubjectAppealDocument({
   );
   const perPointCircumstances =
     !submitted || draft.circumstancesMode === "per-point";
+  const groupedDocuments = !prescription && perPointCircumstances;
+  const generalAttachments = draft.attachments.filter((file) => !file.pointId);
+  const attachmentGroups = [
+    ...selected.map((point) => ({
+      id: point.id,
+      title: t(`К пункту № ${point.number}:`, `№ ${point.number} тармаққа:`),
+      files: draft.attachments.filter((file) => file.pointId === point.id),
+    })),
+    ...(generalAttachments.length ? [{
+      id: "general-attachments",
+      title: t("Общие документы к возражению:", "Қарсылыққа қоса берілетін жалпы құжаттар:"),
+      files: generalAttachments,
+    }] : []),
+  ];
   const field = (
     key: "circumstances" | "signerName" | "signerPosition" | "place" | "postalAddress" | "otherInformation",
     label: string,
@@ -98,13 +112,17 @@ export function SubjectAppealDocument({
           <div className="subject-appeal-argument" key={point.id}>
             <h4>
               <strong>
-                № {point.number}. {prescription
+                {groupedDocuments ? t(
+                  `По пункту № ${point.number}. ${point.titleRu || point.title}:`,
+                  `№ ${point.number}. ${point.titleKk || point.title} тармағы бойынша:`,
+                ) : <>№ {point.number}. {prescription
                   ? point.prescriptionText?.[draft.language] || "—"
-                  : (kk ? point.titleKk : point.titleRu) || point.title}
+                  : (kk ? point.titleKk : point.titleRu) || point.title}</>}
               </strong>
             </h4>
-            <h5>{t("Довод заявителя", "Өтініш берушінің уәжі")}</h5>
+            {!groupedDocuments && <h5>{t("Довод заявителя", "Өтініш берушінің уәжі")}</h5>}
             <p>{draft.argumentsByPoint[point.id]}</p>
+            {!groupedDocuments && <>
             <h5>{t("Доказательства", "Дәлелдемелер")}</h5>
             {evidence.length ? (
               <ol className="subject-appeal-evidence">
@@ -115,6 +133,7 @@ export function SubjectAppealDocument({
             ) : (
               <p>{t("Не приложены", "Қоса берілмеген")}</p>
             )}
+            </>}
           </div>
         );
       })}
@@ -226,6 +245,18 @@ export function SubjectAppealDocument({
           )}
         </h3>
         {attachmentsEditor}
+        {groupedDocuments ? <>
+          {attachmentGroups.map((group) => (
+            <div className="subject-appeal-manifest-group" key={group.id}>
+              <h4>{group.title}</h4>
+              <ol className="subject-appeal-manifest">
+                {group.files.map((file) => <li key={file.id}>{file.name}</li>)}
+              </ol>
+              {!group.files.length && <p>{t("Не приложены", "Қоса берілмеген")}</p>}
+            </div>
+          ))}
+          {!attachmentGroups.length && <p>{t("Не приложены", "Қоса берілмеген")}</p>}
+        </> : <>
         <ol className="subject-appeal-manifest">
           {draft.attachments.map((file) => (
             <li key={file.id}>{file.name}</li>
@@ -234,6 +265,7 @@ export function SubjectAppealDocument({
         {!draft.attachments.length && (
           <p>{t("Не приложены", "Қоса берілмеген")}</p>
         )}
+        </>}
       </section>}
       <section className="subject-appeal-signature">
         <h3>
@@ -319,6 +351,9 @@ export function subjectAppealHtml(
     .subject-appeal-argument p{margin:0 0 0 2.5mm;orphans:2;widows:2}
     .subject-appeal-evidence{margin:0;padding-left:7mm}
     .subject-appeal-manifest{margin:0;padding-left:9.5mm}
+    .subject-appeal-manifest-group{margin:0 0 3mm 2.5mm}
+    .subject-appeal-manifest-group h4{font:inherit;font-weight:bold;margin:3mm 0 1mm;break-after:avoid}
+    .subject-appeal-manifest-group .subject-appeal-manifest{padding-left:7mm}
     li{overflow-wrap:anywhere;white-space:pre-wrap;orphans:2;widows:2}
     .subject-appeal-signature{margin-top:6mm;break-inside:avoid}
     .subject-appeal-signature-fields{display:grid;grid-template-columns:1fr 1.5fr;gap:5mm;margin-top:2mm}

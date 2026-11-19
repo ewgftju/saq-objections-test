@@ -377,7 +377,8 @@ test("поданная форма без результата программы
   const html = subjectAppealHtml(report, draft, "2026-09-08", true);
   assert.doesNotMatch(html, /<table|Нарушение, по которому поступило возражение/);
   assert.ok(html.includes(report.points[0].titleRu || report.points[0].title));
-  assert.match(html, /<h5>Довод заявителя<\/h5>/);
+  assert.ok(html.includes(draft.argumentsByPoint[report.points[0].id]));
+  assert.doesNotMatch(html, /<h5>Довод заявителя<\/h5>/);
 });
 
 test("в тестовом отчёте 1-АО доступны два результата без изменения существующих обращений", () => {
@@ -423,8 +424,9 @@ test("перечень документов содержит только фай
   for (const language of ["ru", "kk"] as const) {
     draft.language = language;
     const html = subjectAppealHtml(report, draft, "2026-09-08", true);
-    const manifest = html.match(/<ol class="subject-appeal-manifest">(.*?)<\/ol>/s)![1];
-    assert.equal(manifest, "<li>Договор.docx</li><li>Общее доказательство.pdf</li>");
+    const manifests = [...html.matchAll(/<ol class="subject-appeal-manifest">(.*?)<\/ol>/gs)].map(match => match[1]);
+    assert.deepEqual(manifests, ["<li>Договор.docx</li>", "<li>Общее доказательство.pdf</li>"]);
+    assert.ok(html.includes(language === "ru" ? "К пункту № 4:" : "№ 4 тармаққа:"));
     assert.ok(html.includes(draft.argumentsByPoint[report.points[0].id]));
     assert.ok(html.includes(language === "ru" ? "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования и доказательства, подтверждающие обстоятельства" : "Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және мән-жайларды растайтын дәлелдемелер"));
   }
@@ -504,19 +506,22 @@ test("предпросмотр и поданная форма выводят д�
       const blocks = [...html.matchAll(/<div class="subject-appeal-argument">(.*?)<\/div>/gs)].map(match => match[1]);
       assert.equal(blocks.length, 2);
       points.forEach((point, index) => {
-        assert.ok(blocks[index].includes(`№ ${point.number}. ${language === "ru" ? point.titleRu : point.titleKk}`));
+        assert.ok(blocks[index].includes(language === "ru"
+          ? `По пункту № ${point.number}. ${point.titleRu}:`
+          : `№ ${point.number}. ${point.titleKk} тармағы бойынша:`));
         assert.ok(blocks[index].includes(draft.argumentsByPoint[point.id]));
-        assert.ok(blocks[index].includes(language === "ru" ? "<h5>Довод заявителя</h5>" : "<h5>Өтініш берушінің уәжі</h5>"));
-        assert.ok(blocks[index].includes(language === "ru" ? "<h5>Доказательства</h5>" : "<h5>Дәлелдемелер</h5>"));
+        assert.doesNotMatch(blocks[index], /<h5>|<ol|\.docx|\.pdf/);
         assert.ok(!blocks[index].includes(`ДОВОД_${index === 0 ? 2 : 1}`));
-        const names = [...blocks[index].matchAll(/<li>(.*?)<\/li>/gs)].map(match => match[1]);
+        const groups = [...html.matchAll(/<div class="subject-appeal-manifest-group">(.*?)<\/div>/gs)].map(match => match[1]);
+        assert.equal(groups.length, 3);
+        assert.ok(groups[index].includes(language === "ru" ? `К пункту № ${point.number}:` : `№ ${point.number} тармаққа:`));
+        const names = [...groups[index].matchAll(/<li>(.*?)<\/li>/gs)].map(match => match[1]);
         assert.deepEqual(names, index === 0
           ? ["Договор.docx", "Смета &lt;пункт 1&gt;.pdf"]
           : ["Акт по пункту 2.pdf"]);
-        assert.ok(blocks[index].indexOf("</p>") < blocks[index].indexOf('<ol class="subject-appeal-evidence">'));
       });
       assert.doesNotMatch(html, /<table|SOURCE_VIOLATION|Нарушение, по которому|Қарсылық келіп түскен бұзушылық/);
-      assert.equal((html.match(/Договор\.docx/g) || []).length, 2);
+      assert.equal((html.match(/Договор\.docx/g) || []).length, 1);
       assert.equal((html.match(/Общее приложение\.pdf/g) || []).length, 1);
       assert.ok(html.indexOf('class="subject-appeal-argument"') < html.indexOf('class="subject-appeal-manifest"'));
     }
@@ -524,7 +529,10 @@ test("предпросмотр и поданная форма выводят д�
     const empty = subjectAppealHtml(report, draft, "2026-09-08");
     const emptyBlocks = [...empty.matchAll(/<div class="subject-appeal-argument">(.*?)<\/div>/gs)];
     assert.equal(emptyBlocks.length, 2);
-    emptyBlocks.forEach(block => assert.ok(block[1].includes(language === "ru" ? "Не приложены" : "Қоса берілмеген")));
+    emptyBlocks.forEach(block => assert.doesNotMatch(block[1], /Не приложены|Қоса берілмеген/));
+    const emptyGroups = [...empty.matchAll(/<div class="subject-appeal-manifest-group">(.*?)<\/div>/gs)];
+    assert.equal(emptyGroups.length, 2);
+    emptyGroups.forEach(group => assert.ok(group[1].includes(language === "ru" ? "Не приложены" : "Қоса берілмеген")));
     draft.attachments = attachments;
   }
   assert.deepEqual(report, snapshot);
