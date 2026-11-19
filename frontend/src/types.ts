@@ -648,6 +648,8 @@ export interface ObjectionCase {
   /** Тип идентификатора заявителя, выбранный при создании обращения. */
   applicantIdentifierType?: ApplicantIdentifierType;
   address: string;
+  /** Почтовый адрес, указанный заявителем в жалобе. */
+  postalAddress?: string;
   applicant: string;
   registered: string;
   filed: string;
@@ -814,6 +816,7 @@ export interface SubjectAppealAttachment {
 
 export interface SubjectAppealDraft {
   documentKind?: "prescription";
+  postalAddress?: string;
   id: string;
   ownerRole: "subject2";
   sourceCaseId: string;

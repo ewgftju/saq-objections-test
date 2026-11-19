@@ -958,6 +958,7 @@ export default function CaseWorkspace({
                     value={formatDate(c.appealDate)}
                   />
                   <Fact label="Местонахождение" value={c.address} />
+                  {c.postalAddress && <Fact label="Почтовый адрес" value={c.postalAddress} />}
                   <Fact label="Представитель" value={c.applicant} />
                   {supportsRepresentativeConfirmation && (
                     <Fact

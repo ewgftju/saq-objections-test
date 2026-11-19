@@ -37,7 +37,7 @@ export function SubjectAppealDocument({
   const perPointCircumstances =
     !submitted || draft.circumstancesMode === "per-point";
   const field = (
-    key: "circumstances" | "signerName" | "signerPosition" | "place",
+    key: "circumstances" | "signerName" | "signerPosition" | "place" | "postalAddress",
     label: string,
     multiline = false,
   ) => {
@@ -45,8 +45,8 @@ export function SubjectAppealDocument({
       return <p className="subject-appeal-value">{draft[key] || "—"}</p>;
     const props = {
       "aria-label": label,
-      value: draft[key],
-      required: key !== "signerPosition",
+      value: draft[key] ?? "",
+      required: key !== "signerPosition" && key !== "postalAddress",
       onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
         onChange({ ...draft, [key]: event.target.value }),
     };
@@ -157,6 +157,12 @@ export function SubjectAppealDocument({
               "Шағым беруші объектінің кабинетінен",
             )}
           </small>
+        )}
+        {prescription && (!submitted || draft.postalAddress !== undefined) && (
+          <label className="field subject-appeal-postal-address">
+            <span>{onChange ? "Почтовый адрес" : t("Почтовый адрес", "Пошталық мекенжай")}</span>
+            {field("postalAddress", "Почтовый адрес")}
+          </label>
         )}
       </section>
       <section className="subject-appeal-section">
@@ -291,6 +297,8 @@ export function subjectAppealHtml(
     .subject-appeal-reference{text-align:center;margin:0 0 7mm}
     .subject-appeal-section{margin-bottom:4mm}
     .subject-appeal-autofill{margin-left:2.5mm}
+    .subject-appeal-postal-address{display:block;margin-top:3mm}
+    .subject-appeal-postal-address>span{display:block;font-weight:bold;margin-bottom:1mm}
     .subject-appeal-arguments{break-before:page;margin-top:24mm}
     .subject-appeal-argument{margin:0 0 5mm 2.5mm;overflow-wrap:anywhere}
     .subject-appeal-argument h4{font:inherit;font-weight:bold;text-align:left;margin:0 0 2mm;white-space:pre-wrap;break-after:avoid}

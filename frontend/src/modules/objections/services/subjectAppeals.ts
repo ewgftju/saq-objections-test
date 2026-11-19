@@ -127,7 +127,7 @@ export function createSubjectAppealDraft(
 ): SubjectAppealDraft {
   return {
     id,
-    ...(report.documentKind === "prescription" ? { documentKind: "prescription" as const } : {}),
+    ...(report.documentKind === "prescription" ? { documentKind: "prescription" as const, postalAddress: "" } : {}),
     ownerRole: "subject2",
     sourceCaseId: report.sourceCaseId,
     sourceFingerprint: reportFingerprint(report),
@@ -312,6 +312,10 @@ export function submitSubjectAppeal(
     draft: { ...draft, circumstancesMode: "per-point" },
     submittedAt: state.date,
   });
+  if (prescription && draft.postalAddress !== undefined) {
+    created.postalAddress = draft.postalAddress.trim();
+    created.subjectAppeal.draft.postalAddress = created.postalAddress;
+  }
   created.documents = [
     {
       kind: "original",

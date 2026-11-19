@@ -114,6 +114,13 @@
   margin: 12px 0;
   padding-left: 23px;
 }
+.subject-appeal-postal-address {
+  display: block;
+  margin-top: 12px;
+}
+.subject-appeal-postal-address > span {
+  font-family: inherit;
+}
 .subject-appeal-manifest li {
   white-space: pre-wrap;
   margin: 5px 0;
