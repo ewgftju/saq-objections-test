@@ -15,6 +15,7 @@ import {
 } from "./SubjectAppealDocument";
 import { downloadFile } from "../../../utils/download";
 import type SubjectAppealForm from "./SubjectAppealForm";
+import { SubjectAppealFilePicker } from "./SubjectAppealFilePicker";
 
 export default function SubjectPrescriptionForm({
   prescriptionId,
@@ -253,13 +254,10 @@ export default function SubjectPrescriptionForm({
                                   {t("Доказательства", "Дәлелдемелер")}{" "}
                                   <span className="required">*</span>
                                 </span>
-                                <input
-                                  type="file"
-                                  multiple
+                                <SubjectAppealFilePicker
+                                  count={draft.attachments.filter((file) => file.pointId === point.id).length}
                                   required={!draft.attachments.some((file) => file.pointId === point.id)}
-                                  aria-required
                                   disabled={uploading}
-                                  accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
                                   onChange={(event) => {
                                     void addFiles(
                                       event.currentTarget.files,

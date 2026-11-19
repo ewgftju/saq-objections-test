@@ -103,7 +103,7 @@ export function SubjectAppealDocument({
                   : (kk ? point.titleKk : point.titleRu) || point.title}
               </strong>
             </h4>
-            <h5>{t("Обоснование", "Негіздеме")}</h5>
+            <h5>{t("Довод заявителя", "Өтініш берушінің уәжі")}</h5>
             <p>{draft.argumentsByPoint[point.id]}</p>
             <h5>{t("Доказательства", "Дәлелдемелер")}</h5>
             {evidence.length ? (

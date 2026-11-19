@@ -208,6 +208,62 @@
     sans-serif;
   max-width: 100%;
 }
+.field > .subject-evidence-control {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 0;
+  font: 14px/1.4 Roboto, sans-serif;
+}
+.subject-evidence-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 16px;
+  box-sizing: border-box;
+  border: 1px solid #a8c9dc;
+  border-radius: 8px;
+  background: #edf6fc;
+  color: #075e8b;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms ease, border-color 150ms ease;
+}
+.subject-evidence-button:hover:not([data-disabled="true"]) {
+  background: #dfeff9;
+  border-color: #679cbb;
+}
+.subject-evidence-button:focus-within {
+  outline: 3px solid #83bce1;
+  outline-offset: 2px;
+}
+.subject-evidence-button[data-disabled="true"] {
+  opacity: 0.55;
+  cursor: wait;
+}
+.subject-evidence-button svg {
+  flex-shrink: 0;
+}
+.subject-evidence-button input[type="file"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.subject-evidence-count {
+  color: #617385;
+  font-size: 13px;
+  font-weight: 400;
+}
 .subject-appeal-file {
   display: flex;
   justify-content: space-between;

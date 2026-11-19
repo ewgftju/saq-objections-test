@@ -377,7 +377,7 @@ test("поданная форма без результата программы
   const html = subjectAppealHtml(report, draft, "2026-09-08", true);
   assert.doesNotMatch(html, /<table|Нарушение, по которому поступило возражение/);
   assert.ok(html.includes(report.points[0].titleRu || report.points[0].title));
-  assert.match(html, /<h5>Обоснование<\/h5>/);
+  assert.match(html, /<h5>Довод заявителя<\/h5>/);
 });
 
 test("в тестовом отчёте 1-АО доступны два результата без изменения существующих обращений", () => {
@@ -447,7 +447,7 @@ test("в редакторе нет общего поля обстоятельс�
   assert.equal((html.match(/<textarea/g) || []).length, draft.selectedPointIds.length);
   assert.ok(!html.includes('aria-label="Обстоятельства"'));
   assert.ok(!html.includes("Обоснование (довод заявителя)"));
-  assert.ok(html.includes("доказательства, подтверждающие обстоятельства"));
+  assert.ok(html.includes("Вложить файл"));
 });
 
 test("новая поданная форма и предпросмотр используют обстоятельства по пунктам; старые поданные формы сохраняют общее поле", () => {
@@ -506,7 +506,7 @@ test("предпросмотр и поданная форма выводят д�
       points.forEach((point, index) => {
         assert.ok(blocks[index].includes(`№ ${point.number}. ${language === "ru" ? point.titleRu : point.titleKk}`));
         assert.ok(blocks[index].includes(draft.argumentsByPoint[point.id]));
-        assert.ok(blocks[index].includes(language === "ru" ? "<h5>Обоснование</h5>" : "<h5>Негіздеме</h5>"));
+        assert.ok(blocks[index].includes(language === "ru" ? "<h5>Довод заявителя</h5>" : "<h5>Өтініш берушінің уәжі</h5>"));
         assert.ok(blocks[index].includes(language === "ru" ? "<h5>Доказательства</h5>" : "<h5>Дәлелдемелер</h5>"));
         assert.ok(!blocks[index].includes(`ДОВОД_${index === 0 ? 2 : 1}`));
         const names = [...blocks[index].matchAll(/<li>(.*?)<\/li>/gs)].map(match => match[1]);

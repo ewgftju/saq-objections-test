@@ -10,6 +10,7 @@ import type {
 import { formatDate } from "../../../utils/dateFormat";
 import { downloadFile } from "../../../utils/download";
 import { auditProgramResultText } from "../services/auditProgramResults";
+import { SubjectAppealFilePicker } from "./SubjectAppealFilePicker";
 import {
   createSubjectAppealDraft,
   MAX_APPEAL_FILE_SIZE,
@@ -129,8 +130,8 @@ export default function SubjectAppealForm({
         <span>
           {pointId
             ? t(
-                "доказательства, подтверждающие обстоятельства",
-                "Мән-жайларды растайтын дәлелдемелер",
+                "Вложить файл",
+                "Файл тіркеу",
               )
             : t(
                 "Файлы доказательств к обращению",
@@ -138,13 +139,10 @@ export default function SubjectAppealForm({
               )}
           {pointId && <> <span className="required">*</span></>}
         </span>
-        <input
-          type="file"
-          multiple
+        <SubjectAppealFilePicker
+          count={filesFor(pointId).length}
           required={Boolean(pointId) && filesFor(pointId).length === 0}
-          aria-required={Boolean(pointId)}
           disabled={uploading}
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
           onChange={(event) => {
             void addFiles(event.currentTarget.files, pointId);
             event.currentTarget.value = "";
