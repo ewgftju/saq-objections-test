@@ -112,20 +112,21 @@ export function SubjectAppealDocument({
           <div className="subject-appeal-argument" key={point.id}>
             <h4>
               <strong>
-                {groupedDocuments ? t(
+                {prescription ? t(
+                  `По пункту № ${point.number}:`,
+                  `№ ${point.number} тармақ бойынша:`,
+                ) : groupedDocuments ? t(
                   `По пункту № ${point.number}. ${point.titleRu || point.title}:`,
                   `№ ${point.number}. ${point.titleKk || point.title} тармағы бойынша:`,
-                ) : <>№ {point.number}. {prescription
-                  ? point.prescriptionText?.[draft.language] || "—"
-                  : (kk ? point.titleKk : point.titleRu) || point.title}</>}
+                ) : <>№ {point.number}. {(kk ? point.titleKk : point.titleRu) || point.title}</>}
               </strong>
             </h4>
-            {!groupedDocuments && <h5>{t("Довод заявителя", "Өтініш берушінің уәжі")}</h5>}
+            {!groupedDocuments && !prescription && <h5>{t("Довод заявителя", "Өтініш берушінің уәжі")}</h5>}
             <p>{draft.argumentsByPoint[point.id]}</p>
             {!groupedDocuments && <>
             <h5>{t(
-              prescription ? "Документы, подтверждающие обстоятельства" : "Доказательства",
-              prescription ? "Мән-жайларды растайтын құжаттар" : "Дәлелдемелер",
+              prescription ? "Документы, подтверждающие обстоятельства:" : "Доказательства",
+              prescription ? "Мән-жайларды растайтын құжаттар:" : "Дәлелдемелер",
             )}</h5>
             {evidence.length ? (
               <ol className="subject-appeal-evidence">

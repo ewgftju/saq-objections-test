@@ -143,9 +143,16 @@ test("жалоба отправляется с пустыми описаниям
     assert.ok(html.includes(source.number));
     assert.ok(html.includes("17.11.2026"));
     assert.ok(html.includes("1-АО"));
-    for (const p of source.points)
-      assert.ok(html.includes(p.prescriptionText![language]!));
-    assert.ok(html.includes(`№ 1. ${source.points[0].prescriptionText![language]}`));
+    const blocks = [...html.matchAll(/<div class="subject-appeal-argument">(.*?)<\/div>/gs)].map(match => match[1]);
+    assert.equal(blocks.length, source.points.length);
+    source.points.forEach((point, index) => {
+      assert.ok(blocks[index].includes(language === "ru" ? `По пункту № ${point.number}:` : `№ ${point.number} тармақ бойынша:`));
+      assert.ok(blocks[index].includes(draft.argumentsByPoint[point.id]));
+      assert.ok(blocks[index].includes(language === "ru" ? "Документы, подтверждающие обстоятельства:" : "Мән-жайларды растайтын құжаттар:"));
+      assert.deepEqual([...blocks[index].matchAll(/<li>(.*?)<\/li>/gs)].map(match => match[1]), [`Доказательство ${point.number}.pdf`]);
+      assert.ok(!blocks[index].includes(point.prescriptionText![language]!));
+      assert.doesNotMatch(blocks[index], /<h5>Довод заявителя|<h5>Өтініш берушінің уәжі/);
+    });
     assert.doesNotMatch(html, /<b>(Нарушение:|Бұзушылық:)<\/b>/);
   }
 });
