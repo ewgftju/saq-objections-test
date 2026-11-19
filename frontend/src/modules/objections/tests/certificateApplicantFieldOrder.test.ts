@@ -37,6 +37,6 @@ test('поля каждого пункта справки сгруппирова
  const html=renderToStaticMarkup(createElement(LanguageFields,{fields,primary:'kk',values:{},certificatePoints:c.issues}));
  const first=html.split('aria-label="Пункт № 5"')[1].split('</section>')[0];
  const second=html.split('aria-label="Пункт № 10"')[1].split('</section>')[0];
- for(const [section,n] of [[first,5],[second,10]] as const){assert.match(section,new RegExp(`Описание оспариваемого вопроса № ${n}`));assert.match(section,new RegExp(`Перевод доводов заявителя по пункту № ${n}`));assert.match(section,new RegExp(`Доводы ДАВГА по пункту № ${n}`));}
+ for(const [section,n] of [[first,5],[second,10]] as const){assert.match(section,new RegExp(`Описание оспариваемого вопроса № ${n}`));assert.match(section,new RegExp(`Довод заявителя — Қазақша.*пункт № ${n}`));assert.match(section,new RegExp(`Доводы ДАВГА по пункту № ${n}`));}
  assert.ok(html.indexOf('Наименование заявителя в тексте документа — Қазақша')<html.indexOf('aria-label="Пункт № 5"'));
 });

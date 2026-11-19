@@ -12,7 +12,7 @@ test("перевод предмета в запросе сохраняется, 
   c.status = "accepted"; c.appealType = "Жалоба на действие/бездействие"; c.appealLanguage = "ru";
   c.agendaDetails = { procurementNumber: "123", procurementSubject: "Строительство" };
   const field = actionForm("request", c, state.date, {}).fields.find(f => f.name === "procurementSubject_kk");
-  assert.equal(field?.label, "Предмет — Қазақша"); assert.equal(field?.value, "");
+  assert.equal(field?.label, "Предмет государственной закупки — Қазақша"); assert.equal(field?.value, "");
   const form = new FormData(); form.set("recipient", "КВГА"); form.set("applicantName_kk", "Ұйым"); form.set("documentApplicantName_kk", "Ұйымның"); form.set("procurementSubject_kk", "Мектеп құрылысы");
   state = applyAction(state, c.id, "request", "work", form);
   const saved = state.cases.find(item => item.id === c.id)!; const doc = saved.documents.findLast(item => item.kind === "request")!;

@@ -78,7 +78,7 @@ test("поле перевода на казахской вкладке расп�
   const table = html.indexOf("Участники заседания и результаты голосования");
   const field = html.indexOf('name="protocolArgumentTranslation_kk_p1"');
   assert.ok(table >= 0 && field > table);
-  assert.match(html, /Перевод доводов заявителя по пункту № 1 — Қазақша/);
+  assert.match(html, /Довод заявителя — Қазақша \(пункт № 1\)/);
   assert.doesNotMatch(html, /name="protocolArgumentTranslation_ru_p1"/);
 });
 

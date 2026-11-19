@@ -1,4 +1,4 @@
-import { applicantNameFieldLabel, appealLanguage, documentLanguageLabel, languagesForDocument, statementFieldLabel } from "../services/documentLanguage";
+import { applicantArgumentFieldLabel, applicantNameFieldLabel, appealLanguage, documentLanguageLabel, languagesForDocument, procurementSubjectFieldLabel, statementFieldLabel } from "../services/documentLanguage";
 import { Fragment, useState, type ReactNode } from "react";
 import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import { ProtocolVersions } from "../components/ProtocolVersions";
@@ -217,18 +217,18 @@ function Fact({
 
 function LanguageOverview({ c }: { c: ObjectionCase }) {
   const records: Array<{ label: string; value: string }> = [];
-  const add = (label: string, language: "ru" | "kk", value?: string) => {
+  const add = (label: string, language: "ru" | "kk", value?: string, context?: string) => {
     const text = value?.trim();
-    if (text && text !== "—") records.push({ label: `${label} — ${language === "ru" ? "Русский" : "Қазақша"}`, value: text });
+    if (text && text !== "—") records.push({ label: `${label} — ${language === "ru" ? "Русский" : "Қазақша"}${context ? ` (${context})` : ""}`, value: text });
   };
   const languages = ["ru", "kk"] as const;
   const version = c.meeting?.protocolVersions?.at(-1);
   const certificate = [...c.documents].reverse().find(document => document.kind === "certificate" && document.snapshot?.certificate)?.snapshot?.certificate || c.certificate;
   for (const language of languages) {
     add("Наименование заявителя", language, c.orgTranslations?.[language] || (language === (c.appealLanguage || "ru") ? c.org : ""));
-    add("О чем заявление (справка)", language, c.statementTranslations?.[language]);
+    add("О чем заявление", language, c.statementTranslations?.[language], "справка");
     const protocolStatement = version?.statementTranslations?.[language];
-    if (protocolStatement && protocolStatement !== c.statementTranslations?.[language]) add("О чем заявление (протокол)", language, protocolStatement);
+    if (protocolStatement && protocolStatement !== c.statementTranslations?.[language]) add("О чем заявление", language, protocolStatement, "протокол");
     add("Предмет государственной закупки", language, c.agendaDetails?.procurementSubjectTranslations?.[language]);
   }
   for (const point of c.issues.filter(item => item.disputed)) {
@@ -237,8 +237,8 @@ function LanguageOverview({ c }: { c: ObjectionCase }) {
       add(`Описание оспариваемого вопроса № ${point.number} (справка)`, language, description);
       const protocolDescription = version?.pointTitles?.[point.id]?.[language];
       if (protocolDescription && protocolDescription !== description) add(`Описание оспариваемого вопроса № ${point.number} (протокол)`, language, protocolDescription);
-      add(`Перевод доводов заявителя по пункту № ${point.number}`, language, point.certificateArgumentTranslations?.[language]);
-      if (point.protocolArgumentTranslations?.[language] && point.protocolArgumentTranslations[language] !== point.certificateArgumentTranslations?.[language]) add(`Перевод доводов заявителя по пункту № ${point.number} (протокол)`, language, point.protocolArgumentTranslations[language]);
+      add("Довод заявителя", language, point.certificateArgumentTranslations?.[language], `пункт № ${point.number}, справка`);
+      if (point.protocolArgumentTranslations?.[language] && point.protocolArgumentTranslations[language] !== point.certificateArgumentTranslations?.[language]) add("Довод заявителя", language, point.protocolArgumentTranslations[language], `пункт № ${point.number}, протокол`);
       add(`Доводы ДАВГА по пункту № ${point.number} (справка)`, language, language === "ru" ? certificate?.davgaArgumentsByPoint?.[point.id] : certificate?.davgaArgumentsByPointKk?.[point.id]);
     }
     for (const request of c.requests.filter(item => item.responseSigned)) {
@@ -329,7 +329,7 @@ function PointCard({
           </p>
         )}
         <p>
-          <b>Довод заявителя:</b> {point.argument}
+          <b>{applicantArgumentFieldLabel(language)}:</b> {point.argument}
         </p>
         {point.evidence && (
           <p>
@@ -1082,7 +1082,7 @@ export default function CaseWorkspace({
                   )}
                   {agendaDetails?.procurementSubject && (
                     <Fact
-                      label="Предмет государственной закупки"
+                      label={procurementSubjectFieldLabel(appealLanguage(c))}
                       value={agendaDetails.procurementSubject}
                       wide
                     />

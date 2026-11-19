@@ -13,6 +13,12 @@ export function applicantNameFieldLabel(language: DocumentLanguage): string {
 export function statementFieldLabel(language: DocumentLanguage): string {
   return `О чем заявление — ${LANGUAGE_LABELS[language]}`;
 }
+export function applicantArgumentFieldLabel(language: DocumentLanguage): string {
+  return `Довод заявителя — ${LANGUAGE_LABELS[language]}`;
+}
+export function procurementSubjectFieldLabel(language: DocumentLanguage): string {
+  return `Предмет государственной закупки — ${LANGUAGE_LABELS[language]}`;
+}
 export function appealLanguage(c: ObjectionCase): DocumentLanguage {
   return c.appealLanguage || "ru";
 }

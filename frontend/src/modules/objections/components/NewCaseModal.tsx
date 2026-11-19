@@ -7,7 +7,7 @@ import type {
   DemoState,
   DocumentLanguage,
 } from "../../../types";
-import { applicantNameFieldLabel, statementFieldLabel } from "../services/documentLanguage";
+import { applicantArgumentFieldLabel, applicantNameFieldLabel, procurementSubjectFieldLabel, statementFieldLabel } from "../services/documentLanguage";
 import { dateObject } from "../services/deadlines";
 import { required } from "../services/workflow";
 import { nextCaseNumber } from "../services/caseNumbering";
@@ -383,7 +383,7 @@ export default function NewCaseModal({
                       lotNumber: optional("lotNumber"),
                       procurementSubject: get(
                         "procurementSubject",
-                        "Предмет государственной закупки",
+                        procurementSubjectFieldLabel(appealLanguage || "ru"),
                       ),
                     }
                   : {}),
@@ -418,7 +418,7 @@ export default function NewCaseModal({
                   finding: "",
                   argument: get(
                     `argument_${pointId}`,
-                    `Довод заявителя по пункту ${defaultPointNumber}`,
+                    `${applicantArgumentFieldLabel(appealLanguage || "ru")} (пункт № ${pointNumber})`,
                   ),
                   evidence: pointEvidenceFiles[index]
                     .map((file) => file.name)
@@ -886,7 +886,7 @@ export default function NewCaseModal({
                 <Field
                   field={{
                     name: "procurementSubject",
-                    label: "Предмет государственной закупки",
+                    label: procurementSubjectFieldLabel(appealLanguage || "ru"),
                     type: "text",
                     required: true,
                   }}
@@ -1119,7 +1119,7 @@ export default function NewCaseModal({
                 <Field
                   field={{
                     name: `argument_${pointId}`,
-                    label: "Довод заявителя",
+                    label: applicantArgumentFieldLabel(appealLanguage || "ru"),
                     type: "textarea",
                     placeholder:
                       "Укажите, с чем заявитель не согласен и почему",
