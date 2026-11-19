@@ -93,12 +93,13 @@ test("сохранение черновика и его повторное от�
   assert.doesNotMatch(render(), /<button[^>]*type="submit"[^>]*disabled=""/);
 });
 
-test("кнопка подачи в реестре недоступна, если по всем отчётам истёк срок", () => {
+test("кнопка в реестре открывает выбор вида; истёкший срок проверяется до открытия формы", () => {
   const { state } = fixture();
   const render = () => renderToStaticMarkup(createElement(CasesList, {
     cases: state.cases, date: state.date, role: "subject2", onOpen() {}, onCreate() {}, onExport() {}, onCreateSubjectAppeal() {},
   }));
   assert.doesNotMatch(render(), /<button[^>]*disabled=""[^>]*>Подать обращение<\/button>/);
   state.date = "2026-11-03";
-  assert.match(render(), /<button[^>]*disabled=""[^>]*>Подать обращение<\/button>/);
+  assert.doesNotMatch(render(), /<button[^>]*disabled=""[^>]*>Подать обращение<\/button>/);
+  assert.match(render(), />Подать обращение<\/button>/);
 });

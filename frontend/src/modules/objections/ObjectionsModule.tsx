@@ -23,7 +23,8 @@ import AgendaModal, { agendaDocumentHtml } from "./components/AgendaModal";
 import AgendaResultsModal from "./components/AgendaResultsModal";
 import DocumentModal from "./components/DocumentModal";
 import NewCaseModal from "./components/NewCaseModal";
-import SubjectAppealForm, { SubjectAppealReceipt } from "./components/SubjectAppealForm";
+import { SubjectAppealReceipt } from "./components/SubjectAppealForm";
+import SubjectAppealStart from "./components/SubjectAppealStart";
 import { isApplicantCase, isSubjectRequest, subjectCanOpenCase } from "./services/subjectRegistry";
 import { saveSubjectAppealDraft, submitSubjectAppeal } from "./services/subjectAppeals";
 import CasesList from "./pages/CasesList";
@@ -2678,7 +2679,7 @@ export default function ObjectionsModule() {
           );
         })()}
       {dialog?.type === "subject-appeal" && model.role === "subject2" && (
-        <SubjectAppealForm
+        <SubjectAppealStart
           state={model.state}
           role={model.role}
           draftId={dialog.draftId}

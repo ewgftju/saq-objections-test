@@ -110,6 +110,16 @@ export function reportFingerprint(report: SubjectAuditReport) {
   return JSON.stringify(report);
 }
 
+export function availableSubjectAuditReports(
+  cases: readonly ObjectionCase[],
+  role: Role,
+  date: string,
+): SubjectAuditReport[] {
+  return subjectAuditReports(cases, role).filter(
+    (report) => subjectAppealFilingWindow(report, date).allowed,
+  );
+}
+
 export function createSubjectAppealDraft(
   report: SubjectAuditReport,
   id: string,
