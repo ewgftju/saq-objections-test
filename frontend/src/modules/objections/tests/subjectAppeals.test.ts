@@ -426,7 +426,7 @@ test("перечень документов содержит только фай
     const manifest = html.match(/<ol class="subject-appeal-manifest">(.*?)<\/ol>/s)![1];
     assert.equal(manifest, "<li>Договор.docx</li><li>Общее доказательство.pdf</li>");
     assert.ok(html.includes(draft.argumentsByPoint[report.points[0].id]));
-    assert.ok(html.includes(language === "ru" ? "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования." : "Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар."));
+    assert.ok(html.includes(language === "ru" ? "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования и доказательства, подтверждающие обстоятельства" : "Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және мән-жайларды растайтын дәлелдемелер"));
   }
   draft.attachments = [];
   const emptyManifest = subjectAppealHtml(report, draft, "2026-09-08").match(/<ol class="subject-appeal-manifest">(.*?)<\/ol>/s)![1];
@@ -439,7 +439,7 @@ test("в редакторе нет общего поля обстоятельс�
   const html = renderToStaticMarkup(createElement(SubjectAppealForm, {
     state, role: "subject2", draftId: draft.id, onClose() {}, onSave() {}, onSubmit() {},
   }));
-  const argument = html.indexOf("Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования.");
+  const argument = html.indexOf("Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования и доказательства, подтверждающие обстоятельства");
   const documents = html.indexOf("5. Перечень прилагаемых документов");
   assert.ok(argument > 0 && argument < documents);
   assert.ok(!html.slice(documents).includes('type="file"'));
@@ -461,7 +461,7 @@ test("новая поданная форма и предпросмотр исп�
   assert.ok(submitted.documents[0].text.includes(draft.argumentsByPoint[pointId]));
   for (const signed of [false, true]) {
     const html = subjectAppealHtml(report, submitted.subjectAppeal!.draft, state.date, signed);
-    assert.ok(html.includes("4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования."));
+    assert.ok(html.includes("4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования и доказательства, подтверждающие обстоятельства"));
     assert.ok(html.includes(draft.argumentsByPoint[pointId]));
     assert.ok(html.indexOf('class="subject-appeal-argument"') < html.indexOf("5. Перечень прилагаемых документов"));
   }
