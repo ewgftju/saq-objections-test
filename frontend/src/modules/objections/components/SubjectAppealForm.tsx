@@ -149,12 +149,6 @@ export default function SubjectAppealForm({
           }}
         />
       </label>
-      <small>
-        {t(
-          "Можно добавить несколько файлов, до 2 МБ каждый.",
-          "Бірнеше файл қосуға болады, әрқайсысы 2 МБ-қа дейін.",
-        )}
-      </small>
       {filesFor(pointId).map((file) => (
         <div className="subject-appeal-file" key={file.id}>
           <span>{file.name}</span>
@@ -294,12 +288,6 @@ export default function SubjectAppealForm({
                         {draft.selectedPointIds.length}
                       </span>
                     </div>
-                    <p className="subject-appeal-hint">
-                      {t(
-                        "Выберите пункты этого отчёта. Описание подставляется автоматически, довод и доказательства добавьте по каждому выбранному пункту.",
-                        "Осы есептің тармақтарын таңдаңыз. Сипаттама автоматты түрде толтырылады; әр таңдалған тармақ бойынша уәж бен дәлелдемелерді қосыңыз.",
-                      )}
-                    </p>
                     {report.points.map((point) => {
                       const selected = draft.selectedPointIds.includes(
                         point.id,
