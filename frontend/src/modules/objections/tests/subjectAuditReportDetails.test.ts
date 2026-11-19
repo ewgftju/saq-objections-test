@@ -45,6 +45,8 @@ test("реквизиты и руководитель ВГА заполняют �
       assert.ok(html.includes(draft.signerName));
       assert.ok(html.includes(draft.signerPosition));
       assert.doesNotMatch(html, /Из кабинета объекта заявителя|Audit plus/);
+      assert.doesNotMatch(html, /Нарушение, по которому поступило возражение|Қарсылық келіп түскен бұзушылық|Ответ на вопрос программы аудита|subject-appeal-source-answer/);
+      assert.ok(!html.includes(report.points[0].auditProgramResult!.answer));
     }
     assert.equal(SUBJECT_2_PROFILE.orgTranslations.ru, 'Товарищество с ограниченной ответственностью "Audit plus #1"');
     assert.equal(state.cases.find(c => c.id === report.sourceCaseId)!.org, SUBJECT_2_PROFILE.orgTranslations.ru);
