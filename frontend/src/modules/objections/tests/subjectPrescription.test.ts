@@ -188,7 +188,11 @@ for (const language of ["ru", "kk"] as const) {
       assert.doesNotMatch(firstSection, /место нахождения|орналасқан жері/);
       assert.ok(!firstSection.includes(source.address));
       assert.ok(firstSection.includes("Отдельный почтовый адрес"));
-      assert.ok(html.includes(language === "ru" ? "5. Иные сведения" : "5. Өзге де мәліметтер"));
+      assert.ok(firstSection.includes(`, ${language === "ru" ? "БИН" : "БСН"}: ${source.bin}`));
+      assert.doesNotMatch(html, /<h3>2\. (БИН|БСН)<\/h3>/);
+      assert.ok(html.includes(language === "ru" ? "<h3>2. Наименование" : "<h3>2. Мемлекеттік"));
+      assert.ok(html.includes(language === "ru" ? "<h3>3. Обстоятельства" : "<h3>3. Шағым"));
+      assert.ok(html.includes(language === "ru" ? "4. Иные сведения" : "4. Өзге де мәліметтер"));
       if (otherInformation) assert.ok(html.includes(otherInformation));
       assert.ok(html.includes("Доказательство 2.pdf"));
       assert.doesNotMatch(html, /subject-appeal-manifest">/);

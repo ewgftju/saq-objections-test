@@ -30,6 +30,9 @@ export function SubjectAppealDocument({
   const prescription = report.documentKind === "prescription";
   const t = (ru: string, kz: string) => (kk ? kz : ru);
   const applicant = report.orgTranslations?.[draft.language] || report.org;
+  const identifier = kk
+    ? report.identifierType === "ИИН" ? "ЖСН" : "БСН"
+    : report.identifierType;
   const authority = kk
     ? auditAuthorityKazakhName(report.issuer)
     : auditAuthorityFullName(report.issuer);
@@ -155,6 +158,7 @@ export function SubjectAppealDocument({
         </h3>
         <p className="subject-appeal-autofill">
           {applicant}
+          {prescription && <>, {identifier}: {report.bin}</>}
           {!prescription && <><br />{report.address}</>}
         </p>
         {onChange && !prescription && (
@@ -172,22 +176,18 @@ export function SubjectAppealDocument({
           </label>
         )}
       </section>
-      <section className="subject-appeal-section">
+      {!prescription && <section className="subject-appeal-section">
         <h3>
-          2.{" "}
-          {kk
-            ? report.identifierType === "ИИН"
-              ? "ЖСН"
-              : "БСН"
-            : report.identifierType}
+          2. {identifier}
         </h3>
         <p className="subject-appeal-autofill">{report.bin}</p>
-      </section>
+      </section>}
       <section className="subject-appeal-section">
         <h3>
+          {prescription ? "2. " : "3. "}
           {t(
-            "3. Наименование уполномоченного органа по внутреннему государственному аудиту, проводившего государственный аудит",
-            "3. Мемлекеттік аудит жүргізген ішкі мемлекеттік аудит жөніндегі уәкілетті органның атауы",
+            "Наименование уполномоченного органа по внутреннему государственному аудиту, проводившего государственный аудит",
+            "Мемлекеттік аудит жүргізген ішкі мемлекеттік аудит жөніндегі уәкілетті органның атауы",
           )}
         </h3>
         <p className="subject-appeal-autofill">{authority}</p>
@@ -203,8 +203,8 @@ export function SubjectAppealDocument({
       <section className="subject-appeal-section">
         <h3>
           {t(
-            prescription ? "4. Обстоятельства, на которые объект государственного аудита, подающий жалобу, основывает свои требования." : "4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования.",
-            prescription ? "4. Шағым беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар." : "4. Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар.",
+            prescription ? "3. Обстоятельства, на которые объект государственного аудита, подающий жалобу, основывает свои требования." : "4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования.",
+            prescription ? "3. Шағым беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар." : "4. Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар.",
           )}
           {!perPointCircumstances && onChange && (
             <span className="required"> *</span>
@@ -215,7 +215,7 @@ export function SubjectAppealDocument({
         {pointEditor || (perPointCircumstances && pointSummary)}
       </section>
       {prescription ? <section className="subject-appeal-section">
-        <h3>{t("5. Иные сведения", "5. Өзге де мәліметтер")}</h3>
+        <h3>{t("4. Иные сведения", "4. Өзге де мәліметтер")}</h3>
         {field("otherInformation", onChange ? "Иные сведения" : t("Иные сведения", "Өзге де мәліметтер"), true)}
       </section> : <section className="subject-appeal-section">
         <h3>
