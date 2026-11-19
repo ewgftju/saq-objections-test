@@ -128,6 +128,7 @@ test("объекты получают две вкладки; свои обращ
     signerName: "Заявитель",
     selectedPointIds: [report.points[0].id],
     argumentsByPoint: { [report.points[0].id]: "Мой довод" },
+    attachments: [{ id: "proof", name: "Доказательство.pdf", size: 1, dataUrl: "data:application/pdf;base64,YQ==", pointId: report.points[0].id }],
   };
   const submitted = submitSubjectAppeal(state, draft, "subject2").state
     .cases[0];

@@ -98,10 +98,11 @@ export function SubjectAppealDocument({
           <div className="subject-appeal-argument" key={point.id}>
             <h4>
               <strong>
-                № {point.number}. {(kk ? point.titleKk : point.titleRu) || point.title || (prescription ? "—" : "")}
+                № {point.number}. {prescription
+                  ? point.prescriptionText?.[draft.language] || "—"
+                  : (kk ? point.titleKk : point.titleRu) || point.title}
               </strong>
             </h4>
-            {prescription && <p><b>{t("Нарушение:", "Бұзушылық:")}</b> {point.prescriptionText?.[draft.language] || "—"}</p>}
             <h5>{t("Обоснование", "Негіздеме")}</h5>
             <p>{draft.argumentsByPoint[point.id]}</p>
             <h5>{t("Доказательства", "Дәлелдемелер")}</h5>
@@ -191,11 +192,11 @@ export function SubjectAppealDocument({
           )}
         </h3>
         <p className="subject-appeal-autofill">{authority}</p>
-        {onChange && (
+        {onChange && !prescription && (
           <small>
             {t(
-              prescription ? "Из исходного предписания ВГА" : "Из исходного аудиторского отчёта ВГА",
-              prescription ? "ІМА модулінің бастапқы нұсқамасынан" : "ІМА модулінің бастапқы аудиторлық есебінен",
+              "Из исходного аудиторского отчёта ВГА",
+              "ІМА модулінің бастапқы аудиторлық есебінен",
             )}
           </small>
         )}
@@ -203,8 +204,8 @@ export function SubjectAppealDocument({
       <section className="subject-appeal-section">
         <h3>
           {t(
-            prescription ? "3. Обстоятельства, на которые объект государственного аудита, подающий жалобу, основывает свои требования." : "4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования.",
-            prescription ? "3. Шағым беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар." : "4. Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар.",
+            prescription ? "3. Суть обращения" : "4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования.",
+            prescription ? "3. Жолданымның мәні" : "4. Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар.",
           )}
           {!perPointCircumstances && onChange && (
             <span className="required"> *</span>
@@ -214,7 +215,7 @@ export function SubjectAppealDocument({
           field("circumstances", t("Обстоятельства", "Мән-жайлар"), true)}
         {pointEditor || (perPointCircumstances && pointSummary)}
       </section>
-      {prescription ? <section className="subject-appeal-section">
+      {prescription ? (onChange || draft.otherInformation?.trim()) && <section className="subject-appeal-section">
         <h3>{t("4. Иные сведения", "4. Өзге де мәліметтер")}</h3>
         {field("otherInformation", onChange ? "Иные сведения" : t("Иные сведения", "Өзге де мәліметтер"), true)}
       </section> : <section className="subject-appeal-section">

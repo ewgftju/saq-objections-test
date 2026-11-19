@@ -28,6 +28,7 @@ function fixture() {
     signerName: "Тестовый заявитель",
     selectedPointIds: [report.points[0].id],
     argumentsByPoint: { [report.points[0].id]: "Довод заявителя" },
+    attachments: [{ id: "proof", name: "Доказательство.pdf", size: 1, dataUrl: "data:application/pdf;base64,YQ==", pointId: report.points[0].id }],
   };
   state.subjectAppealDrafts = [draft];
   return { state, source, report, draft };

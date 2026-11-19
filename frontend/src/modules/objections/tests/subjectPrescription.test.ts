@@ -34,15 +34,13 @@ function fixture(language: "ru" | "kk" = "ru") {
   draft.argumentsByPoint = Object.fromEntries(
     source.points.map((p) => [p.id, `Довод ${p.number}`]),
   );
-  draft.attachments = [
-    {
-      id: "proof",
-      name: "Доказательство 2.pdf",
+  draft.attachments = source.points.map((point) => ({
+      id: "proof-" + point.id,
+      name: `Доказательство ${point.number}.pdf`,
       size: 1,
       dataUrl: "data:application/pdf;base64,YQ==",
-      pointId: source.points[1].id,
-    },
-  ];
+      pointId: point.id,
+    }));
   return { state, source, draft };
 }
 
@@ -118,7 +116,7 @@ test("жалоба отправляется с пустыми описаниям
       c.issues.map((p) => p.authorityFinding),
       source.points.map((p) => p.prescriptionText?.[language]),
     );
-    assert.equal(c.issues[0].evidence, "");
+    assert.equal(c.issues[0].evidence, "Доказательство 1.pdf");
     assert.equal(c.issues[1].evidence, "Доказательство 2.pdf");
     assert.equal(c.status, "received");
     assert.equal(reviewDeadline(c), addWorkdays(state.date, 20));
@@ -147,7 +145,8 @@ test("жалоба отправляется с пустыми описаниям
     assert.ok(html.includes("1-АО"));
     for (const p of source.points)
       assert.ok(html.includes(p.prescriptionText![language]!));
-    assert.ok(html.includes("№ 1. —"));
+    assert.ok(html.includes(`№ 1. ${source.points[0].prescriptionText![language]}`));
+    assert.doesNotMatch(html, /<b>(Нарушение:|Бұзушылық:)<\/b>/);
   }
 });
 
@@ -167,7 +166,7 @@ for (const language of ["ru", "kk"] as const) {
       const otherField = editor.match(/<textarea[^>]*aria-label="Иные сведения"[^>]*>/)?.[0];
       assert.ok(otherField);
       assert.doesNotMatch(otherField, /required/);
-      assert.doesNotMatch(editor, /Место составления|Жасалған жері|Старое место составления|Из кабинета объекта заявителя|Шағым беруші объектінің кабинетінен/);
+      assert.doesNotMatch(editor, /Место составления|Жасалған жері|Старое место составления|Из кабинета объекта заявителя|Шағым беруші объектінің кабинетінен|Из исходного предписания ВГА|ІМА модулінің бастапқы нұсқамасынан/);
       const preview = subjectAppealHtml(source, draft, state.date, false, "ещё не присвоен");
       assert.doesNotMatch(preview, /ещё не присвоен|Перечень прилагаемых документов|Қоса берілетін құжаттардың тізбесі/);
       savedState.date = "2026-11-20";
@@ -191,8 +190,8 @@ for (const language of ["ru", "kk"] as const) {
       assert.ok(firstSection.includes(`, ${language === "ru" ? "БИН" : "БСН"}: ${source.bin}`));
       assert.doesNotMatch(html, /<h3>2\. (БИН|БСН)<\/h3>/);
       assert.ok(html.includes(language === "ru" ? "<h3>2. Наименование" : "<h3>2. Мемлекеттік"));
-      assert.ok(html.includes(language === "ru" ? "<h3>3. Обстоятельства" : "<h3>3. Шағым"));
-      assert.ok(html.includes(language === "ru" ? "4. Иные сведения" : "4. Өзге де мәліметтер"));
+      assert.ok(html.includes(language === "ru" ? "<h3>3. Суть обращения" : "<h3>3. Жолданымның мәні"));
+      assert.equal(html.includes(language === "ru" ? "4. Иные сведения" : "4. Өзге де мәліметтер"), Boolean(otherInformation));
       if (otherInformation) assert.ok(html.includes(otherInformation));
       assert.ok(html.includes("Доказательство 2.pdf"));
       assert.doesNotMatch(html, /subject-appeal-manifest">/);
@@ -203,6 +202,31 @@ for (const language of ["ru", "kk"] as const) {
     });
   }
 }
+
+test("доказательства обязательны отдельно по каждому пункту жалобы, черновик допускает незаполненные вложения", () => {
+  for (const language of ["ru", "kk"] as const) {
+    const {state, source, draft} = fixture(language);
+    const before = structuredClone(state);
+    const missing = source.points[2];
+    const incomplete = {...draft, attachments: draft.attachments.filter(file => file.pointId !== missing.id)};
+    assert.throws(() => submitSubjectAppeal(state, incomplete, "subject2"), /Приложите доказательства по пункту № 3/);
+    assert.throws(() => submitSubjectAppeal(state, {...draft, attachments: []}, "subject2"), /Приложите доказательства/);
+    assert.throws(() => submitSubjectAppeal(state, {...draft, attachments: [{...draft.attachments[0], pointId: undefined}]}, "subject2"), /Приложите доказательства/);
+    assert.deepEqual(state, before);
+    const saved = saveSubjectAppealDraft(state, incomplete, "subject2");
+    const editor = renderToStaticMarkup(createElement(SubjectPrescriptionForm, {
+      state: saved, role: "subject2", prescriptionId: source.sourceCaseId,
+      draftId: draft.id, onClose() {}, onSave() {}, onSubmit() {},
+    }));
+    const inputs = [...editor.matchAll(/<input[^>]*type="file"[^>]*>/g)].map(match => match[0]);
+    assert.equal(inputs.length, source.points.length);
+    assert.ok(inputs.every(input => input.includes('aria-required="true"')));
+    assert.equal(inputs.filter(input => /\srequired=""/.test(input)).length, 1);
+    assert.ok(submitSubjectAppeal(saved, draft, "subject2").caseId);
+    const blank = subjectAppealHtml(source, {...draft, otherInformation: " \n "}, state.date);
+    assert.doesNotMatch(blank, /4\. Иные сведения|4\. Өзге де мәліметтер/);
+  }
+});
 
 test("черновик жалобы восстанавливается в своей форме; описание вопроса не требуется от заявителя", () => {
   const { state, source, draft } = fixture();

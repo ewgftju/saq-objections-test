@@ -218,6 +218,12 @@ export function validateSubjectAppeal(
     if (file.pointId && !selected.has(file.pointId))
       throw new Error("Доказательство привязано к невыбранному пункту.");
   }
+  for (const id of selected) {
+    if (!draft.attachments.some((file) => file.pointId === id)) {
+      const point = report.points.find((item) => item.id === id)!;
+      throw new Error("Приложите доказательства по пункту № " + point.number + ".");
+    }
+  }
 }
 
 export function submitSubjectAppeal(

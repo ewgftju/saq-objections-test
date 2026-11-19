@@ -136,10 +136,13 @@ export default function SubjectAppealForm({
                 "Файлы доказательств к обращению",
                 "Жолданымға дәлелдеме файлдары",
               )}
+          {pointId && <> <span className="required">*</span></>}
         </span>
         <input
           type="file"
           multiple
+          required={Boolean(pointId) && filesFor(pointId).length === 0}
+          aria-required={Boolean(pointId)}
           disabled={uploading}
           accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
           onChange={(event) => {

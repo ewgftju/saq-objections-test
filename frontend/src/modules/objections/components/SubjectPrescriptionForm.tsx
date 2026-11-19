@@ -250,11 +250,14 @@ export default function SubjectPrescriptionForm({
                               </label>
                               <label className="field">
                                 <span>
-                                  {t("Доказательства", "Дәлелдемелер")}
+                                  {t("Доказательства", "Дәлелдемелер")}{" "}
+                                  <span className="required">*</span>
                                 </span>
                                 <input
                                   type="file"
                                   multiple
+                                  required={!draft.attachments.some((file) => file.pointId === point.id)}
+                                  aria-required
                                   disabled={uploading}
                                   accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
                                   onChange={(event) => {

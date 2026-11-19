@@ -265,6 +265,24 @@ test("обстоятельства обязательны по каждому п
   );
 });
 
+test("возражение требует доказательства для каждого выбранного вопроса, общее вложение их не заменяет", () => {
+  const {state, report, draft} = fixture();
+  assert.throws(() => submitSubjectAppeal(state, {...draft, attachments: []}, "subject2"), /Приложите доказательства по пункту № 4/);
+  assert.throws(() => submitSubjectAppeal(state, {...draft, attachments: [{...draft.attachments[0], pointId: undefined}]}, "subject2"), /Приложите доказательства по пункту № 4/);
+  const second = report.points.at(-1)!;
+  const multiple = {...draft, selectedPointIds: [...draft.selectedPointIds, second.id], argumentsByPoint: {...draft.argumentsByPoint, [second.id]: "Обоснование второго пункта"}};
+  assert.throws(() => submitSubjectAppeal(state, multiple, "subject2"), /Приложите доказательства по пункту № 12/);
+  const completed = {...multiple, attachments: [...draft.attachments, {...draft.attachments[0], id: "second-proof", pointId: second.id}]};
+  assert.ok(submitSubjectAppeal(state, completed, "subject2").caseId);
+  const saved = saveSubjectAppealDraft(state, {...draft, attachments: []}, "subject2");
+  const editor = renderToStaticMarkup(createElement(SubjectAppealForm, {
+    state: saved, role: "subject2", draftId: draft.id, onClose() {}, onSave() {}, onSubmit() {},
+  }));
+  const input = editor.match(/<input[^>]*type="file"[^>]*>/)![0];
+  assert.match(input, /\srequired=""/);
+  assert.match(input, /aria-required="true"/);
+});
+
 test("печатная форма выводит пять разделов, приложение по пунктам и названия файлов на нужном языке", () => {
   const { report, draft } = fixture();
   draft.language = "kk";
@@ -391,6 +409,7 @@ test("в тестовом отчёте 1-АО доступны два резул
     signerName: "Тестовый подписант",
     selectedPointIds: report.points.map((point) => point.id),
     argumentsByPoint: Object.fromEntries(report.points.map((point) => [point.id, "Обоснование № " + point.number])),
+    attachments: report.points.map((point) => ({ id: "proof-" + point.id, name: "Доказательство.pdf", size: 1, dataUrl: "data:application/pdf;base64,YQ==", pointId: point.id })),
   };
   const submitted = submitSubjectAppeal(state, draft, "subject2").state.cases[0];
   assert.deepEqual(submitted.issues.map((point) => [point.number, point.title, point.authorityFinding, point.argument]),
