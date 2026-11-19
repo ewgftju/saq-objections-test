@@ -47,7 +47,7 @@ for (const prescription of [false, true]) {
       assert.deepEqual(file.languages, [language]);
       const saved = restored.subjectAppeal!;
       const html = decodeURIComponent(file.dataUrl!.split(",").slice(1).join(","));
-      assert.equal(html, subjectAppealHtml(saved.report, saved.draft, saved.submittedAt, true));
+      assert.equal(html, subjectAppealHtml(saved.report, saved.draft, saved.submittedAt, true, saved.number || restored.appealNumber || restored.id));
       assert.match(html, /Тестовый руководитель/);
       assert.match(html, /Доказательство.pdf/);
       assert.equal(restored.documents.filter(d => d.filename === "Доказательство.pdf").length, 1);

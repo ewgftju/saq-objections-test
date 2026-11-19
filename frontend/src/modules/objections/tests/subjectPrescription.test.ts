@@ -151,6 +151,55 @@ test("жалоба отправляется с пустыми описаниям
   }
 });
 
+for (const language of ["ru", "kk"] as const) {
+  for (const otherInformation of ["", "Дополнительные сведения / Қосымша мәліметтер"]) {
+    test(`${language}: новая форма жалобы, иные сведения ${otherInformation ? "заполнены" : "необязательны"}, реквизиты после подписания`, () => {
+      const { state, source, draft } = fixture(language);
+      draft.place = "Старое место составления";
+      draft.postalAddress = "Отдельный почтовый адрес";
+      draft.otherInformation = otherInformation;
+      const savedState = saveSubjectAppealDraft(state, draft, "subject2");
+      assert.equal(savedState.subjectAppealDrafts![0].otherInformation, otherInformation);
+      const editor = renderToStaticMarkup(createElement(SubjectPrescriptionForm, {
+        state: savedState, role: "subject2", prescriptionId: source.sourceCaseId,
+        draftId: draft.id, onClose() {}, onSave() {}, onSubmit() {},
+      }));
+      const otherField = editor.match(/<textarea[^>]*aria-label="Иные сведения"[^>]*>/)?.[0];
+      assert.ok(otherField);
+      assert.doesNotMatch(otherField, /required/);
+      assert.doesNotMatch(editor, /Место составления|Жасалған жері|Старое место составления|Из кабинета объекта заявителя|Шағым беруші объектінің кабинетінен/);
+      const preview = subjectAppealHtml(source, draft, state.date, false, "ещё не присвоен");
+      assert.doesNotMatch(preview, /ещё не присвоен|Перечень прилагаемых документов|Қоса берілетін құжаттардың тізбесі/);
+      savedState.date = "2026-11-20";
+      const c = submitSubjectAppeal(savedState, {...draft, place: ""}, "subject2").state.cases[0];
+      const saved = JSON.parse(JSON.stringify(c.subjectAppeal!));
+      assert.equal(saved.number, c.appealNumber);
+      assert.equal(saved.submittedAt, "2026-11-20");
+      assert.equal(saved.draft.otherInformation, otherInformation);
+      const html = subjectAppealHtml(saved.report, saved.draft, saved.submittedAt, true, saved.number);
+      const header = html.match(/<header[^>]*>([\s\S]*?)<\/header>/)![1];
+      assert.doesNotMatch(header, /20.11.2026/);
+      const title = language === "ru"
+        ? `Жалоба № ${saved.number} от 20.11.2026`
+        : `20.11.2026 жылғы № ${saved.number} шағым`;
+      assert.ok(html.includes(`<h2>${title}</h2>`));
+      const firstSection = html.match(/<section class="subject-appeal-section">([\s\S]*?)<\/section>/)![1];
+      assert.ok(firstSection.includes(language === "ru" ? "1. Лицо подающее жалобу" : "1. Шағым беруші"));
+      assert.doesNotMatch(firstSection, /место нахождения|орналасқан жері/);
+      assert.ok(!firstSection.includes(source.address));
+      assert.ok(firstSection.includes("Отдельный почтовый адрес"));
+      assert.ok(html.includes(language === "ru" ? "5. Иные сведения" : "5. Өзге де мәліметтер"));
+      if (otherInformation) assert.ok(html.includes(otherInformation));
+      assert.ok(html.includes("Доказательство 2.pdf"));
+      assert.doesNotMatch(html, /subject-appeal-manifest">/);
+      const file = c.documents.find(d => d.subjectAppealId === draft.id)!;
+      assert.equal(decodeURIComponent(file.dataUrl!.slice(file.dataUrl!.indexOf(",") + 1)), html);
+      const original = renderToStaticMarkup(createElement(DocumentContent, {c, kind: "original"}));
+      assert.ok(original.includes(`<h2>${title}</h2>`));
+    });
+  }
+}
+
 test("черновик жалобы восстанавливается в своей форме; описание вопроса не требуется от заявителя", () => {
   const { state, source, draft } = fixture();
   const saved = saveSubjectAppealDraft(state, draft, "subject2");

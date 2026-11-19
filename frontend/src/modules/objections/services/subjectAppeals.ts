@@ -128,7 +128,7 @@ export function createSubjectAppealDraft(
 ): SubjectAppealDraft {
   return {
     id,
-    ...(report.documentKind === "prescription" ? { documentKind: "prescription" as const, postalAddress: "" } : {}),
+    ...(report.documentKind === "prescription" ? { documentKind: "prescription" as const, postalAddress: "", otherInformation: "" } : {}),
     ownerRole: "subject2",
     sourceCaseId: report.sourceCaseId,
     sourceFingerprint: reportFingerprint(report),
@@ -312,6 +312,7 @@ export function submitSubjectAppeal(
   created.subjectAppeal = structuredClone({
     report,
     draft: { ...draft, circumstancesMode: "per-point" },
+    number: id,
     submittedAt: state.date,
   });
   if (prescription && draft.postalAddress !== undefined) {

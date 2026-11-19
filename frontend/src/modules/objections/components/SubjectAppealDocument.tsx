@@ -12,6 +12,7 @@ export function SubjectAppealDocument({
   draft,
   date,
   submitted = false,
+  number,
   onChange,
   pointEditor,
   attachmentsEditor,
@@ -20,6 +21,7 @@ export function SubjectAppealDocument({
   draft: SubjectAppealDraft;
   date: string;
   submitted?: boolean;
+  number?: string;
   onChange?: (draft: SubjectAppealDraft) => void;
   pointEditor?: ReactNode;
   attachmentsEditor?: ReactNode;
@@ -37,7 +39,7 @@ export function SubjectAppealDocument({
   const perPointCircumstances =
     !submitted || draft.circumstancesMode === "per-point";
   const field = (
-    key: "circumstances" | "signerName" | "signerPosition" | "place" | "postalAddress",
+    key: "circumstances" | "signerName" | "signerPosition" | "place" | "postalAddress" | "otherInformation",
     label: string,
     multiline = false,
   ) => {
@@ -46,7 +48,7 @@ export function SubjectAppealDocument({
     const props = {
       "aria-label": label,
       value: draft[key] ?? "",
-      required: key !== "signerPosition" && key !== "postalAddress",
+      required: key !== "signerPosition" && key !== "postalAddress" && key !== "otherInformation",
       onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
         onChange({ ...draft, [key]: event.target.value }),
     };
@@ -54,7 +56,7 @@ export function SubjectAppealDocument({
       <textarea
         {...props}
         rows={5}
-        placeholder={t(
+        placeholder={key === "otherInformation" ? t("Иные сведения (при наличии)", "Өзге де мәліметтер (бар болса)") : t(
           "Опишите обстоятельства, ваши требования и подтверждающие их факты",
           "Мән-жайларды, талаптарыңызды және оларды растайтын деректерді жазыңыз",
         )}
@@ -132,9 +134,13 @@ export function SubjectAppealDocument({
             <small>{t("Место составления", "Жасалған жері")}</small>
           </div>
         )}
-        <p>{formatDate(date)}</p>
+        {!prescription && <p>{formatDate(date)}</p>}
       </header>
-      <h2>{prescription ? t("Жалоба", "Шағым") : t("Возражение", "Қарсылық")}</h2>
+      <h2>{prescription
+        ? submitted && number
+          ? kk ? `${formatDate(date)} жылғы № ${number} шағым` : `Жалоба № ${number} от ${formatDate(date)}`
+          : t("Жалоба", "Шағым")
+        : t("Возражение", "Қарсылық")}</h2>
       <p className="subject-appeal-reference">
         {prescription ? t("На предписание об устранении нарушений", "Бұзушылықтарды жою туралы нұсқамаға") : t("На аудиторский отчёт", "Аудиторлық есепке")} № {report.number}{" "}
         {t("от", "күні")} {formatDate(report.date)}
@@ -143,16 +149,15 @@ export function SubjectAppealDocument({
       <section className="subject-appeal-section">
         <h3>
           {t(
-            prescription ? "1. Лицо, подающее жалобу, и его место нахождения" : "1. Лицо, подающее возражение, и его место нахождения",
-            prescription ? "1. Шағым беруші және оның орналасқан жері" : "1. Қарсылық беруші және оның орналасқан жері",
+            prescription ? "1. Лицо подающее жалобу" : "1. Лицо, подающее возражение, и его место нахождения",
+            prescription ? "1. Шағым беруші" : "1. Қарсылық беруші және оның орналасқан жері",
           )}
         </h3>
         <p className="subject-appeal-autofill">
           {applicant}
-          <br />
-          {report.address}
+          {!prescription && <><br />{report.address}</>}
         </p>
-        {onChange && (
+        {onChange && !prescription && (
           <small>
             {t(
               "Из кабинета объекта заявителя",
@@ -209,7 +214,10 @@ export function SubjectAppealDocument({
           field("circumstances", t("Обстоятельства", "Мән-жайлар"), true)}
         {pointEditor || (perPointCircumstances && pointSummary)}
       </section>
-      <section className="subject-appeal-section">
+      {prescription ? <section className="subject-appeal-section">
+        <h3>{t("5. Иные сведения", "5. Өзге де мәліметтер")}</h3>
+        {field("otherInformation", onChange ? "Иные сведения" : t("Иные сведения", "Өзге де мәліметтер"), true)}
+      </section> : <section className="subject-appeal-section">
         <h3>
           {t(
             "5. Перечень прилагаемых документов",
@@ -225,7 +233,7 @@ export function SubjectAppealDocument({
         {!draft.attachments.length && (
           <p>{t("Не приложены", "Қоса берілмеген")}</p>
         )}
-      </section>
+      </section>}
       <section className="subject-appeal-signature">
         <h3>
           {t(
@@ -277,6 +285,7 @@ export function subjectAppealHtml(
   draft: SubjectAppealDraft,
   date: string,
   submitted = false,
+  number?: string,
 ) {
   const body = renderToStaticMarkup(
     <SubjectAppealDocument
@@ -284,6 +293,7 @@ export function subjectAppealHtml(
       draft={draft}
       date={date}
       submitted={submitted}
+      number={number}
     />,
   );
   const css = `
@@ -333,11 +343,12 @@ export function printSubjectAppeal(
   draft: SubjectAppealDraft,
   date: string,
   submitted = false,
+  number?: string,
 ) {
   const popup = window.open("", "_blank");
   if (!popup) throw new Error("Разрешите открытие окна для печати.");
   popup.document.open();
-  popup.document.write(subjectAppealHtml(report, draft, date, submitted));
+  popup.document.write(subjectAppealHtml(report, draft, date, submitted, number));
   popup.document.close();
   popup.focus();
   popup.print();

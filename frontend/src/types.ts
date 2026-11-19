@@ -819,6 +819,7 @@ export interface SubjectAppealAttachment {
 export interface SubjectAppealDraft {
   documentKind?: "prescription";
   postalAddress?: string;
+  otherInformation?: string;
   id: string;
   ownerRole: "subject2";
   sourceCaseId: string;
@@ -841,6 +842,8 @@ export interface SubjectAppealDraft {
 export interface SubjectAppealSubmission {
   draft: SubjectAppealDraft;
   report: SubjectAuditReport;
+  /** Номер, присвоенный при подписании и направлении обращения. */
+  number?: string;
   submittedAt: string;
 }
 

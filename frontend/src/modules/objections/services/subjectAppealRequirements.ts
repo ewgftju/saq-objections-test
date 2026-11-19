@@ -21,7 +21,7 @@ export function subjectAppealRequirementDocument(
     languages: [saved.draft.language],
     subjectAppealId: saved.draft.id,
     dataUrl: "data:text/html;charset=utf-8," + encodeURIComponent(
-      subjectAppealHtml(saved.report, saved.draft, saved.submittedAt, true),
+      subjectAppealHtml(saved.report, saved.draft, saved.submittedAt, true, saved.number || c.appealNumber || c.id),
     ),
   };
 }

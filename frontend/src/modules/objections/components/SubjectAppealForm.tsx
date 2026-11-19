@@ -530,6 +530,7 @@ export function SubjectAppealReceipt({
                 saved.draft,
                 saved.submittedAt,
                 true,
+                saved.number || c.appealNumber || c.id,
               ),
               "text/html;charset=utf-8",
             )
@@ -546,6 +547,7 @@ export function SubjectAppealReceipt({
                 saved.draft,
                 saved.submittedAt,
                 true,
+                saved.number || c.appealNumber || c.id,
               );
             } catch (cause) {
               setError(message(cause));
@@ -564,6 +566,7 @@ export function SubjectAppealReceipt({
         report={saved.report}
         draft={saved.draft}
         date={saved.submittedAt}
+        number={saved.number || c.appealNumber || c.id}
         submitted
       />
       {saved.draft.attachments.length > 0 && (
