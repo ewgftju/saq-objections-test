@@ -1837,7 +1837,7 @@ function LegacyDocumentContent({
 function certificateLocalizedCase(c: ObjectionCase, language: DocumentLanguage, kind: string) {
   const localized = localizedCase(c, language);
   if ((kind === "certificate" || kind === "protocol") && c.appealType === "Заявление" && language !== (c.appealLanguage || "ru")) {
-    localized.request = c.statementTranslations?.[language]?.trim() || c.request;
+    localized.request = c.statementTranslations?.[language]?.trim() || "—";
   }
   if (kind === "certificate") {
     localized.issues = localized.issues.map(point => {
