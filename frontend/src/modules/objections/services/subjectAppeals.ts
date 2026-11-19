@@ -1,7 +1,8 @@
 import { makeCase } from "../../../data/objections";
-import { testAuditReportPoints } from "../../../data/subjectAuditReportResults";
+import { testAuditReportDetails, testAuditReportPoints } from "../../../data/subjectAuditReportResults";
 import type {
   DemoState,
+  DocumentLanguage,
   ObjectionCase,
   Role,
   SubjectAppealDraft,
@@ -46,8 +47,8 @@ function assertSubjectAppealFilingOpen(report: SubjectAuditReport, date: string)
 }
 
 /**
- * Адаптер исходных отчётов макета. В рабочей SAQ этот список поступает из ВГА,
- * а реквизиты заявителя — из профиля кабинета. Не переносим из дел внутренние
+ * Адаптер исходных отчётов макета. Документ и реквизиты объекта аудита,
+ * включая руководителя, поступают из ВГА. Не переносим из дел внутренние
  * материалы, ответы КВГА/ДВГА, результаты рассмотрения и доводы других лиц.
  */
 export function subjectAuditReports(
@@ -103,6 +104,7 @@ export function subjectAuditReports(
             structuredClone(point.auditProgramResult),
           amount: point.amount,
         })),
+        ...testAuditReportDetails(c),
       },
     ];
   });
@@ -110,6 +112,42 @@ export function subjectAuditReports(
 
 export function reportFingerprint(report: SubjectAuditReport) {
   return JSON.stringify(report);
+}
+
+/** Меняет язык подставленных из ВГА значений, сохраняя ручные правки. */
+export function localizeSubjectAppealDraft(draft: SubjectAppealDraft, report: SubjectAuditReport, language: DocumentLanguage = draft.language): SubjectAppealDraft {
+  const positions = report.signerPositionTranslations || {};
+  const addresses = [report.address, ...Object.values(report.addressTranslations || {})];
+  return {
+    ...draft,
+    language,
+    signerPosition: Object.values(positions).includes(draft.signerPosition) ? positions[language] || draft.signerPosition : draft.signerPosition,
+    place: addresses.includes(draft.place) ? report.addressTranslations?.[language] || report.address : draft.place,
+  };
+}
+
+/** Обновляет реквизиты открываемого черновика, только если содержание отчёта не менялось. */
+export function refreshSubjectAppealDraftSource(draft: SubjectAppealDraft, report: SubjectAuditReport): SubjectAppealDraft {
+  if (draft.sourceFingerprint === reportFingerprint(report)) return localizeSubjectAppealDraft(structuredClone(draft), report);
+  let prior: SubjectAuditReport;
+  try { prior = JSON.parse(draft.sourceFingerprint); } catch { return structuredClone(draft); }
+  if (!prior || typeof prior !== "object" || Array.isArray(prior)) return structuredClone(draft);
+  const priorContent: Record<string, unknown> = { ...prior };
+  const currentContent: Record<string, unknown> = { ...report };
+  for (const key of ["org", "orgTranslations", "bin", "identifierType", "address", "addressTranslations", "signerName", "signerPositionTranslations"]) {
+    delete priorContent[key]; delete currentContent[key];
+  }
+  if (JSON.stringify(priorContent) !== JSON.stringify(currentContent)) return structuredClone(draft);
+  const sourcePosition = report.signerPositionTranslations?.[draft.language];
+  const priorPositions = ["Руководитель", ...Object.values(prior.signerPositionTranslations || {})];
+  const priorAddresses = [prior.address, ...Object.values(prior.addressTranslations || {})];
+  return localizeSubjectAppealDraft({
+    ...structuredClone(draft),
+    sourceFingerprint: reportFingerprint(report),
+    signerName: draft.signerName || report.signerName || "",
+    signerPosition: sourcePosition && priorPositions.includes(draft.signerPosition) ? sourcePosition : draft.signerPosition,
+    place: priorAddresses.includes(draft.place) ? report.addressTranslations?.[draft.language] || report.address : draft.place,
+  }, report);
 }
 
 export function availableSubjectAuditReports(
@@ -135,8 +173,8 @@ export function createSubjectAppealDraft(
     language: "ru",
     circumstancesMode: "per-point",
     circumstances: "",
-    signerName: "",
-    signerPosition: "Руководитель",
+    signerName: report.signerName || "",
+    signerPosition: report.signerPositionTranslations?.ru || "Руководитель",
     place: report.documentKind === "prescription" ? "" : report.address,
     selectedPointIds: [],
     argumentsByPoint: {},
@@ -167,7 +205,8 @@ export function saveSubjectAppealDraft(
   draft: SubjectAppealDraft,
   role: Role,
 ): DemoState {
-  reportForDraft(state, draft, role);
+  const report = reportForDraft(state, draft, role);
+  draft = localizeSubjectAppealDraft(draft, report);
   if (state.cases.some((c) => c.subjectAppeal?.draft.id === draft.id))
     throw new Error("Это обращение уже направлено.");
   return {
@@ -240,6 +279,7 @@ export function submitSubjectAppeal(
   );
   if (existing) return { state, caseId: existing.id };
   const report = reportForDraft(state, draft, role);
+  draft = localizeSubjectAppealDraft(draft, report);
   validateSubjectAppeal(draft, report, state.date);
   const selected = new Set(draft.selectedPointIds);
   const prescription = report.documentKind === "prescription";
@@ -284,7 +324,7 @@ export function submitSubjectAppeal(
     orgTranslations: report.orgTranslations && { ...report.orgTranslations },
     bin: report.bin,
     applicantIdentifierType: report.identifierType,
-    address: report.address,
+    address: report.addressTranslations?.[draft.language] || report.address,
     applicant: "",
     registered: state.date,
     filed: state.date,
@@ -299,7 +339,7 @@ export function submitSubjectAppeal(
       signedReportPresentedAt: report.signedReportPresentedAt,
     },
     agendaDetails: {
-      auditObjectName: report.org, auditObjectBin: report.bin,
+      auditObjectName: org, auditObjectBin: report.bin,
       ...(prescription ? {
         decisionKind: "prescription-audit" as const,
         relatedDocumentNumber: report.relatedAuditReport?.number,

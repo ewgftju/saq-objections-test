@@ -184,16 +184,8 @@ export function SubjectAppealDocument({
           {applicant}
           {prescription && <>, {identifier}: {report.bin}</>}
           {prescription && !onChange && <>, {t("Почтовый адрес", "Пошталық мекенжай")}: {draft.postalAddress?.trim() || "—"}</>}
-          {!prescription && <><br />{report.address}</>}
+          {!prescription && <><br />{report.addressTranslations?.[draft.language] || report.address}</>}
         </p>
-        {onChange && !prescription && (
-          <small>
-            {t(
-              "Из кабинета объекта заявителя",
-              "Шағым беруші объектінің кабинетінен",
-            )}
-          </small>
-        )}
         {prescription && onChange && (
           <label className="field subject-appeal-postal-address">
             <span>Почтовый адрес</span>

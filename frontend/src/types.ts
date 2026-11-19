@@ -793,6 +793,9 @@ export interface SubjectAuditReport {
   bin: string;
   identifierType: ApplicantIdentifierType;
   address: string;
+  addressTranslations?: Partial<Record<DocumentLanguage, string>>;
+  signerName?: string;
+  signerPositionTranslations?: Partial<Record<DocumentLanguage, string>>;
   issuer: string;
   points: Array<{
     prescriptionText?: Partial<Record<DocumentLanguage, string>>;

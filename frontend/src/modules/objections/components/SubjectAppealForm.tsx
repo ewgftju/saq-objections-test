@@ -13,6 +13,8 @@ import { auditProgramResultText } from "../services/auditProgramResults";
 import { SubjectAppealFilePicker } from "./SubjectAppealFilePicker";
 import {
   createSubjectAppealDraft,
+  localizeSubjectAppealDraft,
+  refreshSubjectAppealDraftSource,
   MAX_APPEAL_FILE_SIZE,
   subjectAuditReports,
   subjectAppealFilingWindow,
@@ -41,12 +43,12 @@ function readFile(file: File) {
 }
 
 function newDraft(state: DemoState, report: SubjectAuditReport) {
-  return structuredClone(
+  return refreshSubjectAppealDraftSource(
     state.subjectAppealDrafts?.find(
       (draft) =>
         draft.ownerRole === "subject2" &&
         draft.sourceCaseId === report.sourceCaseId,
-    ) || createSubjectAppealDraft(report, crypto.randomUUID()),
+    ) || createSubjectAppealDraft(report, crypto.randomUUID()), report,
   );
 }
 
@@ -72,7 +74,9 @@ export default function SubjectAppealForm({
     );
     const firstReport = reports.find((item) => subjectAppealFilingWindow(item, state.date).allowed) || reports[0];
     return saved
-      ? structuredClone(saved)
+      ? reports.some(item => item.sourceCaseId === saved.sourceCaseId)
+        ? refreshSubjectAppealDraftSource(saved, reports.find(item => item.sourceCaseId === saved.sourceCaseId)!)
+        : structuredClone(saved)
       : firstReport
         ? newDraft(state, firstReport)
         : undefined;
@@ -223,7 +227,7 @@ export default function SubjectAppealForm({
                     name="appealLanguage"
                     value={value}
                     checked={draft.language === value}
-                    onChange={() => setDraft({ ...draft, language: value })}
+                    onChange={() => setDraft(localizeSubjectAppealDraft(draft, report, value))}
                   />
                   {label}
                 </label>
