@@ -88,6 +88,7 @@ export default function SubjectAppealForm({
   const filing = report && subjectAppealFilingWindow(report, state.date);
   // Язык интерфейса пока русский; язык документа не переключает элементы формы.
   const t = (ru: string, _kz: string) => ru;
+  const documentText = (ru: string, kz: string) => kk ? kz : ru;
   async function addFiles(files: FileList | null, pointId?: string) {
     if (!files?.length || !draft) return;
     setUploading(true);
@@ -129,9 +130,9 @@ export default function SubjectAppealForm({
       <label className="field">
         <span>
           {pointId
-            ? t(
+            ? documentText(
                 "Документы, подтверждающие обстоятельства, на которых объект государственного аудита основывает свои требования, документы, имеющие отношение к возражению",
-                "Мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайларды растайтын құжаттар, қарсылыққа қатысы бар құжаттар",
+                "Мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайларды растайтын құжаттар, қарсылыққа қатысы бар өзге де құжаттар",
               )
             : t(
                 "Файлы доказательств к обращению",
@@ -337,7 +338,7 @@ export default function SubjectAppealForm({
                           </label>
                           {selected && (
                             <div className="subject-appeal-point-body">
-                              <div className="subject-appeal-source-answer">
+                              <div className="subject-appeal-source-answer subject-appeal-no-print">
                                 <b>
                                   {t(
                                     "Нарушение, по которому поступило возражение",
@@ -365,9 +366,9 @@ export default function SubjectAppealForm({
                               </div>
                               <label className="field">
                                 <span>
-                                  {t(
+                                  {documentText(
                                     "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования и доказательства, подтверждающие обстоятельства",
-                                    "Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және мән-жайларды растайтын дәлелдемелер",
+                                    "Қарсылық беретін мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және осы мән-жайларды растайтын дәлелдемелер",
                                   )}{" "}
                                   <span className="required">*</span>
                                 </span>
@@ -397,16 +398,6 @@ export default function SubjectAppealForm({
                     })}
                   </div>
                 )
-              }
-              attachmentsEditor={
-                <div className="subject-appeal-point-editor">
-                  <small>
-                    {t(
-                      "Перечень формируется из названий приложенных файлов доказательств, в том числе по выбранным вопросам.",
-                      "Тізім тіркелген дәлелдеме файлдарының, соның ішінде таңдалған мәселелер бойынша файлдардың атауларынан құрылады.",
-                    )}
-                  </small>
-                </div>
               }
             />
           </div>

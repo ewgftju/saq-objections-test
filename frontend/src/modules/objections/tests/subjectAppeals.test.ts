@@ -294,7 +294,7 @@ test("печатная форма выводит пять разделов, пр
   assert.match(html, /Есептің төртінші тармағы/);
   assert.doesNotMatch(html, /растайтын құжаттар ұсынылмаған/);
   assert.match(html, /Договор.docx/);
-  assert.match(html, /Қоса берілетін құжаттардың тізбесі/);
+  assert.match(html, /Қоса тіркелген құжаттар тізімі:/);
   assert.match(html, /&lt;script&gt;/);
   assert.ok(!html.includes("<script>"));
   assert.ok(!html.includes("Неоспариваемое нарушение"));
@@ -428,7 +428,7 @@ test("перечень документов содержит только фай
     assert.deepEqual(manifests, ["<li>Договор.docx</li>", "<li>Общее доказательство.pdf</li>"]);
     assert.ok(html.includes(language === "ru" ? "К пункту № 4:" : "№ 4 тармаққа:"));
     assert.ok(html.includes(draft.argumentsByPoint[report.points[0].id]));
-    assert.ok(html.includes(language === "ru" ? "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования и доказательства, подтверждающие обстоятельства" : "Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және мән-жайларды растайтын дәлелдемелер"));
+    assert.ok(html.includes(language === "ru" ? "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования и доказательства, подтверждающие обстоятельства" : "Қарсылық беретін мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және осы мән-жайларды растайтын дәлелдемелер"));
   }
   draft.attachments = [];
   const emptyManifest = subjectAppealHtml(report, draft, "2026-09-08").match(/<ol class="subject-appeal-manifest">(.*?)<\/ol>/s)![1];

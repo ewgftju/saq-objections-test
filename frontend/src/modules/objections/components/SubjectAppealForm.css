@@ -211,6 +211,11 @@
 .subject-appeal-source-answer small {
   color: #617385;
 }
+@media print {
+  .subject-appeal-no-print {
+    display: none !important;
+  }
+}
 .subject-appeal-upload {
   margin: 14px 0 0;
 }
