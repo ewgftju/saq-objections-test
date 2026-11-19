@@ -183,15 +183,24 @@ for (const language of ["ru", "kk"] as const) {
         : `20.11.2026 жылғы № ${saved.number} шағым`;
       assert.ok(html.includes(`<h2>${title}</h2>`));
       const firstSection = html.match(/<section class="subject-appeal-section">([\s\S]*?)<\/section>/)![1];
-      assert.ok(firstSection.includes(language === "ru" ? "1. Лицо подающее жалобу" : "1. Шағым беруші"));
+      assert.ok(firstSection.includes(language === "ru" ? "1. Фамилия, имя, отчество (если оно указано в документе, удостоверяющем личность)" : "1. Жеке тұлғаның тегі, аты, әкесінің аты"));
       assert.doesNotMatch(firstSection, /место нахождения|орналасқан жері/);
       assert.ok(!firstSection.includes(source.address));
       assert.ok(firstSection.includes("Отдельный почтовый адрес"));
+      const applicantLine = firstSection.match(/<p class="subject-appeal-autofill">([\s\S]*?)<\/p>/)![1];
+      assert.ok(applicantLine.includes(language === "ru"
+        ? `, БИН: ${source.bin}, Почтовый адрес: Отдельный почтовый адрес`
+        : `, БСН: ${source.bin}, Пошталық мекенжай: Отдельный почтовый адрес`));
+      assert.doesNotMatch(firstSection, /subject-appeal-postal-address/);
       assert.ok(firstSection.includes(`, ${language === "ru" ? "БИН" : "БСН"}: ${source.bin}`));
       assert.doesNotMatch(html, /<h3>2\. (БИН|БСН)<\/h3>/);
-      assert.ok(html.includes(language === "ru" ? "<h3>2. Наименование" : "<h3>2. Мемлекеттік"));
-      assert.ok(html.includes(language === "ru" ? "<h3>3. Суть обращения" : "<h3>3. Жолданымның мәні"));
-      assert.equal(html.includes(language === "ru" ? "4. Иные сведения" : "4. Өзге де мәліметтер"), Boolean(otherInformation));
+      assert.ok(html.includes(language === "ru" ? "<h3>2. Наименование административного органа, должностного лица, которым подается обращение:" : "<h3>2. Жолданым берілетін әкімшілік органның, лауазымды адамның атауы:"));
+      assert.ok(html.includes(language === "ru"
+        ? '<p class="subject-appeal-autofill">Апелляционную комиссию при уполномоченном органе по внутреннему государственному аудиту и финансовому контролю</p>'
+        : '<p class="subject-appeal-autofill">Ішкі мемлекеттік аудит және қаржылық бақылау жөніндегі уәкілетті орган жанындағы апелляциялық комиссия</p>'));
+      assert.ok(html.includes(language === "ru" ? "<h3>3. Наименование уполномоченного органа" : "<h3>3. Мемлекеттік аудит жүргізген"));
+      assert.ok(html.includes(language === "ru" ? "<h3>4. Суть обращения" : "<h3>4. Жолданымның мәні"));
+      assert.equal(html.includes(language === "ru" ? "5. Иные сведения" : "5. Өзге де мәліметтер"), Boolean(otherInformation));
       if (otherInformation) assert.ok(html.includes(otherInformation));
       assert.ok(html.includes("Доказательство 2.pdf"));
       assert.doesNotMatch(html, /subject-appeal-manifest">/);
@@ -224,7 +233,7 @@ test("доказательства обязательны отдельно по 
     assert.equal(inputs.filter(input => /\srequired=""/.test(input)).length, 1);
     assert.ok(submitSubjectAppeal(saved, draft, "subject2").caseId);
     const blank = subjectAppealHtml(source, {...draft, otherInformation: " \n "}, state.date);
-    assert.doesNotMatch(blank, /4\. Иные сведения|4\. Өзге де мәліметтер/);
+    assert.doesNotMatch(blank, /5\. Иные сведения|5\. Өзге де мәліметтер/);
   }
 });
 

@@ -172,13 +172,14 @@ export function SubjectAppealDocument({
       <section className="subject-appeal-section">
         <h3>
           {t(
-            prescription ? "1. Лицо подающее жалобу" : "1. Лицо, подающее возражение, и его место нахождения",
-            prescription ? "1. Шағым беруші" : "1. Қарсылық беруші және оның орналасқан жері",
+            prescription ? "1. Фамилия, имя, отчество (если оно указано в документе, удостоверяющем личность), индивидуальный идентификационный номер (при его наличии), почтовый адрес физического лица либо наименование, почтовый адрес, бизнес-идентификационный номер юридического лица (при его наличии)." : "1. Лицо, подающее возражение, и его место нахождения",
+            prescription ? "1. Жеке тұлғаның тегі, аты, әкесінің аты (егер ол жеке басын куәландыратын құжатта көрсетілсе), жеке сәйкестендіру нөмірі (ол болған кезде), пошталық мекенжайы не заңды тұлғаның атауы, пошталық мекенжайы, бизнес-сәйкестендіру нөмірі (ол болған кезде)." : "1. Қарсылық беруші және оның орналасқан жері",
           )}
         </h3>
         <p className="subject-appeal-autofill">
           {applicant}
           {prescription && <>, {identifier}: {report.bin}</>}
+          {prescription && !onChange && <>, {t("Почтовый адрес", "Пошталық мекенжай")}: {draft.postalAddress?.trim() || "—"}</>}
           {!prescription && <><br />{report.address}</>}
         </p>
         {onChange && !prescription && (
@@ -189,13 +190,23 @@ export function SubjectAppealDocument({
             )}
           </small>
         )}
-        {prescription && (!submitted || draft.postalAddress !== undefined) && (
+        {prescription && onChange && (
           <label className="field subject-appeal-postal-address">
-            <span>{onChange ? "Почтовый адрес" : t("Почтовый адрес", "Пошталық мекенжай")}</span>
+            <span>Почтовый адрес</span>
             {field("postalAddress", "Почтовый адрес")}
           </label>
         )}
       </section>
+      {prescription && <section className="subject-appeal-section">
+        <h3>{t(
+          "2. Наименование административного органа, должностного лица, которым подается обращение:",
+          "2. Жолданым берілетін әкімшілік органның, лауазымды адамның атауы:",
+        )}</h3>
+        <p className="subject-appeal-autofill">{t(
+          "Апелляционную комиссию при уполномоченном органе по внутреннему государственному аудиту и финансовому контролю",
+          "Ішкі мемлекеттік аудит және қаржылық бақылау жөніндегі уәкілетті орган жанындағы апелляциялық комиссия",
+        )}</p>
+      </section>}
       {!prescription && <section className="subject-appeal-section">
         <h3>
           2. {identifier}
@@ -204,7 +215,7 @@ export function SubjectAppealDocument({
       </section>}
       <section className="subject-appeal-section">
         <h3>
-          {prescription ? "2. " : "3. "}
+          3.{" "}
           {t(
             "Наименование уполномоченного органа по внутреннему государственному аудиту, проводившего государственный аудит",
             "Мемлекеттік аудит жүргізген ішкі мемлекеттік аудит жөніндегі уәкілетті органның атауы",
@@ -223,8 +234,8 @@ export function SubjectAppealDocument({
       <section className="subject-appeal-section">
         <h3>
           {t(
-            prescription ? "3. Суть обращения" : "4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования и доказательства, подтверждающие обстоятельства",
-            prescription ? "3. Жолданымның мәні" : "4. Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және мән-жайларды растайтын дәлелдемелер",
+            prescription ? "4. Суть обращения" : "4. Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования и доказательства, подтверждающие обстоятельства",
+            prescription ? "4. Жолданымның мәні" : "4. Қарсылық беруші мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және мән-жайларды растайтын дәлелдемелер",
           )}
           {!perPointCircumstances && onChange && (
             <span className="required"> *</span>
@@ -235,7 +246,7 @@ export function SubjectAppealDocument({
         {pointEditor || (perPointCircumstances && pointSummary)}
       </section>
       {prescription ? (onChange || draft.otherInformation?.trim()) && <section className="subject-appeal-section">
-        <h3>{t("4. Иные сведения", "4. Өзге де мәліметтер")}</h3>
+        <h3>{t("5. Иные сведения", "5. Өзге де мәліметтер")}</h3>
         {field("otherInformation", onChange ? "Иные сведения" : t("Иные сведения", "Өзге де мәліметтер"), true)}
       </section> : <section className="subject-appeal-section">
         <h3>
