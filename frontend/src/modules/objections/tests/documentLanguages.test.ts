@@ -971,7 +971,7 @@ for (const primary of ["ru", "kk"] as const) for (const translatedInCertificate 
     if (field) {
       assert.equal(field.required, false);
       const modal = renderToStaticMarkup(createElement(ActionModal, { c: h.c, action: "vote", role: "work", date: h.state.date, onClose() {}, onSubmit() {} }));
-      assert.ok(modal.indexOf("Участники заседания и результаты голосования") < modal.indexOf("Перевод поля «О чем заявление»"));
+      assert.ok(modal.indexOf("Участники заседания и результаты голосования") < modal.indexOf(`О чем заявление — ${other === "ru" ? "Русский" : "Қазақша"}`));
     }
     h.run("vote", "work", values);
     if (!translatedInCertificate) {

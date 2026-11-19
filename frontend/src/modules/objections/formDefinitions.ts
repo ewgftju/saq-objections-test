@@ -1,4 +1,4 @@
-import { applicantNameFieldLabel, appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, certificateStatementSource, protocolStatementTranslation, certificateApplicantArgumentTranslation, protocolApplicantArgumentTranslation, LANGUAGE_LABELS, kazakhApplicantName, isAuditReport } from "./services/documentLanguage";
+import { statementFieldLabel, applicantNameFieldLabel, appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, certificateStatementSource, protocolStatementTranslation, certificateApplicantArgumentTranslation, protocolApplicantArgumentTranslation, LANGUAGE_LABELS, kazakhApplicantName, isAuditReport } from "./services/documentLanguage";
 import { preparedActionValues } from "./demoForm";
 import type { Action, ObjectionCase, Role } from "../../types";
 import { DEMO_USER } from "../../config";
@@ -340,7 +340,7 @@ export function actionForm(
       );
       fields.push(input("applicantName_kk", applicantNameFieldLabel("kk"), values.applicantName_kk ?? kazakhApplicantName(c)));
       if (c.appealType === "Заявление" && appealLanguage(c) === "ru") {
-        fields.push({ ...area("statementTranslation_kk", "О чём заявление — Қазақша", values.statementTranslation_kk ?? c.statementTranslations?.kk ?? ""), required: false });
+        fields.push({ ...area("statementTranslation_kk", statementFieldLabel("kk"), values.statementTranslation_kk ?? c.statementTranslations?.kk ?? ""), required: false });
       }
       if (c.appealType === "Жалоба на действие/бездействие" && appealLanguage(c) === "ru" && c.agendaDetails?.procurementSubject?.trim()) {
         fields.push({ ...area("procurementSubject_kk", "Предмет — Қазақша", values.procurementSubject_kk ?? c.agendaDetails.procurementSubjectTranslations?.kk ?? ""), required: false });
@@ -476,20 +476,20 @@ export function actionForm(
       if (appealLanguage(c) === "kk" && !langs.includes("ru")) {
         const agendaFields: FormField[] = [];
         if (!c.orgTranslations?.ru?.trim()) agendaFields.push({ ...input("agendaApplicantRu", applicantNameFieldLabel("ru"), values.agendaApplicantRu || ""), required: false });
-        if (c.appealType === "Заявление" && c.request && !c.statementTranslations?.ru?.trim()) agendaFields.push({ ...area("agendaStatementRu", "О чём заявление на русском", values.agendaStatementRu || ""), required: false });
+        if (c.appealType === "Заявление" && c.request && !c.statementTranslations?.ru?.trim()) agendaFields.push({ ...area("agendaStatementRu", statementFieldLabel("ru"), values.agendaStatementRu || ""), required: false });
         if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject && !c.agendaDetails.procurementSubjectTranslations?.ru?.trim()) agendaFields.push({ ...area("agendaProcurementRu", "Предмет государственной закупки на русском", values.agendaProcurementRu || ""), required: false });
         if (agendaFields.length) fields.push(heading("agendaRussianDetails", "Данные для повестки на русском языке"), ...agendaFields);
       }
       if (appealLanguage(c) === "ru" && !langs.includes("kk")) {
         const agendaFields: FormField[] = [];
-        if (c.appealType === "Заявление" && c.request?.trim() && !c.statementTranslations?.kk?.trim()) agendaFields.push({ ...area("agendaStatementKk", "О чём заявление — Қазақша", values.agendaStatementKk || ""), required: false });
+        if (c.appealType === "Заявление" && c.request?.trim() && !c.statementTranslations?.kk?.trim()) agendaFields.push({ ...area("agendaStatementKk", statementFieldLabel("kk"), values.agendaStatementKk || ""), required: false });
         if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementSubject?.trim() && !c.agendaDetails.procurementSubjectTranslations?.kk?.trim()) agendaFields.push({ ...area("agendaProcurementKk", "Предмет — Қазақша", values.agendaProcurementKk || ""), required: false });
         if (agendaFields.length) fields.push(heading("agendaKazakhDetails", "Данные для повестки на казахском языке"), ...agendaFields);
       }
       if (c.appealType === "Заявление" && c.request) {
         for (const language of langs.filter(item => item !== appealLanguage(c))) {
           const key = `statementTranslation_${language}`;
-          fields.push({ ...area(key, `Перевод поля «О чем заявление» — ${LANGUAGE_LABELS[language]}`, values[key] ?? c.statementTranslations?.[language] ?? ""), language, required: false });
+          fields.push({ ...area(key, statementFieldLabel(language), values[key] ?? c.statementTranslations?.[language] ?? ""), language, required: false });
         }
       }
       if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementSubject?.trim()) {
@@ -643,7 +643,7 @@ export function actionForm(
           ),
           readOnly: true,
         },
-        ...(c.appealType === "Заявление" && certificateStatementSource(c).request ? selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).filter(language => language !== appealLanguage(c) && !certificateStatementSource(c).translations?.[language]?.trim()).map(language => ({ ...area(`statementTranslation_${language}`, `Перевод поля «О чем заявление» — ${LANGUAGE_LABELS[language]}`, values[`statementTranslation_${language}`] ?? protocolStatementTranslation(c, language)), language, required: false })) : []),
+        ...(c.appealType === "Заявление" && certificateStatementSource(c).request ? selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).filter(language => language !== appealLanguage(c) && !certificateStatementSource(c).translations?.[language]?.trim()).map(language => ({ ...area(`statementTranslation_${language}`, statementFieldLabel(language), values[`statementTranslation_${language}`] ?? protocolStatementTranslation(c, language)), language, required: false })) : []),
         ...(c.appealType === "Жалоба на действие/бездействие" && appealLanguage(c) === "ru" && c.agendaDetails?.procurementSubject?.trim() && !c.agendaDetails.procurementSubjectTranslations?.kk?.trim() && selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).includes("kk") ? [{ ...area("procurementSubject_kk", "Предмет — Қазақша", values.procurementSubject_kk ?? ""), language: "kk" as const, required: false }] : []),
         ...disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).filter(language => !certificatePointTitle(c, point, language)).map(language => ({ ...area(`pointTitle_${language}_${point.id}`, `Перевод описания пункта № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`pointTitle_${language}_${point.id}`] ?? protocolPointTitle(c, point, language)), language }))),
         ...disputed(c).flatMap(point => selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0])).filter(language => language !== appealLanguage(c) && Boolean(point.argument.trim()) && !certificateApplicantArgumentTranslation(c, point, language)).map(language => ({ ...area(`protocolArgumentTranslation_${language}_${point.id}`, `Перевод доводов заявителя по пункту № ${point.number} — ${LANGUAGE_LABELS[language]}`, values[`protocolArgumentTranslation_${language}_${point.id}`] ?? protocolApplicantArgumentTranslation(c, point, language)), language }))),

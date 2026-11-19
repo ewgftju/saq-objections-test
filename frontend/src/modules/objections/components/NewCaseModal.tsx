@@ -7,7 +7,7 @@ import type {
   DemoState,
   DocumentLanguage,
 } from "../../../types";
-import { applicantNameFieldLabel } from "../services/documentLanguage";
+import { applicantNameFieldLabel, statementFieldLabel } from "../services/documentLanguage";
 import { dateObject } from "../services/deadlines";
 import { required } from "../services/workflow";
 import { nextCaseNumber } from "../services/caseNumbering";
@@ -400,7 +400,7 @@ export default function NewCaseModal({
                     }
                   : {}),
               },
-              request: get("request", "Требования"),
+              request: get("request", appealType === "statement" ? statementFieldLabel(appealLanguage || "ru") : "Краткое описание"),
               amount,
               issues: pointIds.map((pointId, index) => {
                 const defaultPointNumber = index + 1;
@@ -974,7 +974,7 @@ export default function NewCaseModal({
             name: "request",
             label:
               appealType === "statement"
-                ? "О чем заявление"
+                ? statementFieldLabel(appealLanguage || "ru")
                 : "Краткое описание",
             type: "textarea",
             required: true,

@@ -10,6 +10,9 @@ export const LANGUAGE_LABELS = { ru: "Русский", kk: "Қазақша" } as
 export function applicantNameFieldLabel(language: DocumentLanguage): string {
   return `Наименование заявителя — ${LANGUAGE_LABELS[language]}`;
 }
+export function statementFieldLabel(language: DocumentLanguage): string {
+  return `О чем заявление — ${LANGUAGE_LABELS[language]}`;
+}
 export function appealLanguage(c: ObjectionCase): DocumentLanguage {
   return c.appealLanguage || "ru";
 }

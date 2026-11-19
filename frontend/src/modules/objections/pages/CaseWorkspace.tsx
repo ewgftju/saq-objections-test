@@ -1,4 +1,4 @@
-import { applicantNameFieldLabel, appealLanguage, documentLanguageLabel, languagesForDocument } from "../services/documentLanguage";
+import { applicantNameFieldLabel, appealLanguage, documentLanguageLabel, languagesForDocument, statementFieldLabel } from "../services/documentLanguage";
 import { Fragment, useState, type ReactNode } from "react";
 import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import { ProtocolVersions } from "../components/ProtocolVersions";
@@ -1137,7 +1137,7 @@ export default function CaseWorkspace({
                   <Fact
                     label={
                       c.appealType === "Заявление"
-                        ? "О чем заявление"
+                        ? statementFieldLabel(appealLanguage(c))
                         : "Краткое описание"
                     }
                     value={c.request}
