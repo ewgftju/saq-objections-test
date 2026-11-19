@@ -5,6 +5,8 @@ import {
   localizedCase,
   languagesForDocument,
   LANGUAGE_LABELS,
+  applicantNameFieldLabel,
+  appealLanguage,
 } from "../services/documentLanguage";
 import type { DocumentLanguage } from "../../../types";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -1428,9 +1430,7 @@ function LegacyDocumentContent({
             {c.appealType || (c.type === "control" ? "Жалоба" : "Возражение")}
             <br />
             <b>
-              {hasSeparateAuditObject(c)
-                ? "Наименование объекта заявителя"
-                : "Наименование объекта аудита/заявителя"}
+              {applicantNameFieldLabel(appealLanguage(c))}
               :
             </b>{" "}
             {c.org}

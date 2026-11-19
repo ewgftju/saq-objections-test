@@ -7,6 +7,9 @@ import type {
 } from "../../../types";
 
 export const LANGUAGE_LABELS = { ru: "Русский", kk: "Қазақша" } as const;
+export function applicantNameFieldLabel(language: DocumentLanguage): string {
+  return `Наименование заявителя — ${LANGUAGE_LABELS[language]}`;
+}
 export function appealLanguage(c: ObjectionCase): DocumentLanguage {
   return c.appealLanguage || "ru";
 }

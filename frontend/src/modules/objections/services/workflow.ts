@@ -1,4 +1,4 @@
-import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, protocolIssuesWithTitles, certificateStatementSource, protocolStatementTranslation, certificateApplicantArgumentTranslation, protocolApplicantArgumentTranslation, LANGUAGE_LABELS, localizedCase, kazakhApplicantName, isAuditReport } from "./documentLanguage";
+import { applicantNameFieldLabel, appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, protocolIssuesWithTitles, certificateStatementSource, protocolStatementTranslation, certificateApplicantArgumentTranslation, protocolApplicantArgumentTranslation, LANGUAGE_LABELS, localizedCase, kazakhApplicantName, isAuditReport } from "./documentLanguage";
 import { CLOSED, OUTCOMES, ROLES } from "../../../data/constants";
 import { DEMO_USER } from "../../../config";
 import { formatDate } from "../../../utils/dateFormat";
@@ -1018,12 +1018,12 @@ export function applyAction(
       const key = `applicantName_${language}`;
       if (form.has(key)) {
         const value = String(form.get(key) || "").trim();
-        if (!value) throw new Error(`Заполните наименование заявителя — ${LANGUAGE_LABELS[language]}`);
+        if (!value) throw new Error(`Заполните поле «${applicantNameFieldLabel(language)}»`);
         c.orgTranslations = { ...c.orgTranslations, [language]: value };
       }
     }
   }
-  if (action === "request" && !kazakhApplicantName(c)) throw new Error("Заполните наименование заявителя — Қазақша.");
+  if (action === "request" && !kazakhApplicantName(c)) throw new Error(`Заполните поле «${applicantNameFieldLabel("kk")}»`);
   const applicantNameDocumentKind = action === "request" ? "request" : action === "analysis" ? "certificate" : action === "vote" ? "protocol" : action === "create-decision-project" ? "decision-project" : action === "deliver" && !requiresConclusion(c) ? "final-response" : undefined;
   if (applicantNameDocumentKind) {
     const names: Partial<Record<"ru" | "kk", string>> = {};
@@ -1045,7 +1045,7 @@ export function applyAction(
     c.documentApplicantNames = { ...c.documentApplicantNames, [applicantNameDocumentKind]: names };
   }
   if ((action === "create-decision-project" || (action === "deliver" && isMotivatedResponseStage(c))) && !kazakhApplicantName(c)) {
-    throw new Error("Заполните наименование объекта заявителя — Қазақша");
+    throw new Error(`Заполните поле «${applicantNameFieldLabel("kk")}»`);
   }
 
   switch (action) {

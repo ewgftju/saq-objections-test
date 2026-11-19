@@ -5,7 +5,9 @@ import type {
   ApplicantIdentifierType,
   CaseType,
   DemoState,
+  DocumentLanguage,
 } from "../../../types";
+import { applicantNameFieldLabel } from "../services/documentLanguage";
 import { dateObject } from "../services/deadlines";
 import { required } from "../services/workflow";
 import { nextCaseNumber } from "../services/caseNumbering";
@@ -117,6 +119,7 @@ export default function NewCaseModal({
     useState(false);
   const [isApplicantAuditObject, setIsApplicantAuditObject] = useState(false);
   const [applicantName, setApplicantName] = useState("");
+  const [appealLanguage, setAppealLanguage] = useState<DocumentLanguage | "">("");
   const [applicantIdentifier, setApplicantIdentifier] = useState("");
   const [auditObjectName, setAuditObjectName] = useState("");
   const [auditObjectIdentifier, setAuditObjectIdentifier] = useState("");
@@ -180,9 +183,7 @@ export default function NewCaseModal({
   const sourceDocumentDateLabel = isActionComplaint
     ? "Дата первичного обращения в ДВГА/КВГА"
     : `Дата: ${sourceDocumentLabel}`;
-  const applicantNameLabel = hasSeparateAuditObject
-    ? "Наименование объекта заявителя"
-    : "Наименование объекта аудита/заявителя";
+  const applicantNameLabel = applicantNameFieldLabel(appealLanguage || "ru");
   const applicantIdentifierLabel = `${applicantIdentifierType} заявителя`;
   const updateRequirementFiles = (files: File[]) => {
     if (!files.length) return;
@@ -519,7 +520,7 @@ export default function NewCaseModal({
             ))}
           </select>
         </label>
-        <label className="field"><span>Язык обращения <span className="required">*</span></span><select name="appealLanguage" required defaultValue=""><option value="" disabled>Выберите язык</option><option value="ru">Русский</option><option value="kk">Қазақша</option></select></label>
+        <label className="field"><span>Язык обращения <span className="required">*</span></span><select name="appealLanguage" required value={appealLanguage} onChange={event => setAppealLanguage(event.target.value as DocumentLanguage)}><option value="" disabled>Выберите язык</option><option value="ru">Русский</option><option value="kk">Қазақша</option></select></label>
         <div className="form-grid">
           <label className="field">
             <span>{applicantNameLabel}<span className="required"> *</span></span>

@@ -1,4 +1,4 @@
-import { appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, certificateStatementSource, protocolStatementTranslation, certificateApplicantArgumentTranslation, protocolApplicantArgumentTranslation, LANGUAGE_LABELS, kazakhApplicantName, isAuditReport } from "./services/documentLanguage";
+import { applicantNameFieldLabel, appealLanguage, selectedLanguages, pointText, certificatePointTitle, protocolPointTitle, certificateStatementSource, protocolStatementTranslation, certificateApplicantArgumentTranslation, protocolApplicantArgumentTranslation, LANGUAGE_LABELS, kazakhApplicantName, isAuditReport } from "./services/documentLanguage";
 import { preparedActionValues } from "./demoForm";
 import type { Action, ObjectionCase, Role } from "../../types";
 import { DEMO_USER } from "../../config";
@@ -168,7 +168,7 @@ function languageModeField(c: ObjectionCase, values: FormValues): FormField {
 }
 function applicantTranslationFields(c: ObjectionCase, values: FormValues, languages: Array<"ru" | "kk">): FormField[] {
   return languages.filter(language => language !== appealLanguage(c) && !c.orgTranslations?.[language]?.trim()).map(language => ({
-    ...input(`applicantName_${language}`, `Наименование заявителя — ${LANGUAGE_LABELS[language]}`, values[`applicantName_${language}`] || ""),
+    ...input(`applicantName_${language}`, applicantNameFieldLabel(language), values[`applicantName_${language}`] || ""),
     language,
   }));
 }
@@ -338,7 +338,7 @@ export function actionForm(
           readOnly: true,
         },
       );
-      fields.push(input("applicantName_kk", "Наименование заявителя — Қазақша", values.applicantName_kk ?? kazakhApplicantName(c)));
+      fields.push(input("applicantName_kk", applicantNameFieldLabel("kk"), values.applicantName_kk ?? kazakhApplicantName(c)));
       if (c.appealType === "Заявление" && appealLanguage(c) === "ru") {
         fields.push({ ...area("statementTranslation_kk", "О чём заявление — Қазақша", values.statementTranslation_kk ?? c.statementTranslations?.kk ?? ""), required: false });
       }
@@ -472,10 +472,10 @@ export function actionForm(
       title = "Сформировать справку";
       fields.push(languageModeField(c, values));
       const langs = selectedLanguages(c, values.documentLanguageMode || (c.certificate?.languages?.length === 2 ? "both" : c.certificate?.languages?.[0]));
-      fields.push(...applicantTranslationFields(c, values, langs.filter(language => language !== "kk")), ...(langs.includes("kk") ? [{ ...input("applicantName_kk", "Наименование заявителя — Қазақша", values.applicantName_kk ?? kazakhApplicantName(c)), language: "kk" as const }] : []), ...pointTranslationFields(c, values, true));
+      fields.push(...applicantTranslationFields(c, values, langs.filter(language => language !== "kk")), ...(langs.includes("kk") ? [{ ...input("applicantName_kk", applicantNameFieldLabel("kk"), values.applicantName_kk ?? kazakhApplicantName(c)), language: "kk" as const }] : []), ...pointTranslationFields(c, values, true));
       if (appealLanguage(c) === "kk" && !langs.includes("ru")) {
         const agendaFields: FormField[] = [];
-        if (!c.orgTranslations?.ru?.trim()) agendaFields.push({ ...input("agendaApplicantRu", "Наименование заявителя на русском", values.agendaApplicantRu || ""), required: false });
+        if (!c.orgTranslations?.ru?.trim()) agendaFields.push({ ...input("agendaApplicantRu", applicantNameFieldLabel("ru"), values.agendaApplicantRu || ""), required: false });
         if (c.appealType === "Заявление" && c.request && !c.statementTranslations?.ru?.trim()) agendaFields.push({ ...area("agendaStatementRu", "О чём заявление на русском", values.agendaStatementRu || ""), required: false });
         if (c.appealType === "Жалоба на действие/бездействие" && c.agendaDetails?.procurementNumber && c.agendaDetails.procurementSubject && !c.agendaDetails.procurementSubjectTranslations?.ru?.trim()) agendaFields.push({ ...area("agendaProcurementRu", "Предмет государственной закупки на русском", values.agendaProcurementRu || ""), required: false });
         if (agendaFields.length) fields.push(heading("agendaRussianDetails", "Данные для повестки на русском языке"), ...agendaFields);
@@ -741,7 +741,7 @@ export function actionForm(
             ? "Сформировать мотивированный ответ"
             : "Сформировать окончательный ответ";
       if ((action === "deliver" && isAuditReport(c)) || ((action === "create-decision-project" || requiresMotivatedResponse(c)) && !kazakhApplicantName(c))) {
-        fields.push(input("applicantName_kk", "Наименование объекта заявителя — Қазақша", values.applicantName_kk ?? kazakhApplicantName(c)));
+        fields.push(input("applicantName_kk", applicantNameFieldLabel("kk"), values.applicantName_kk ?? kazakhApplicantName(c)));
       }
       if (action === "create-decision-project") {
         const defaultChannel = defaultDecisionProjectChannel(c);

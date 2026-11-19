@@ -1,4 +1,4 @@
-import { documentLanguageLabel, languagesForDocument } from "../services/documentLanguage";
+import { applicantNameFieldLabel, appealLanguage, documentLanguageLabel, languagesForDocument } from "../services/documentLanguage";
 import { Fragment, useState, type ReactNode } from "react";
 import { Button, Modal, Notice, PageHeading } from "../../../components/ui";
 import { ProtocolVersions } from "../components/ProtocolVersions";
@@ -923,11 +923,7 @@ export default function CaseWorkspace({
                   <Fact label="Номер обращения в системе" value={c.id} />
                   {!isAuthorityRole(role) && !isCommission && <Fact label="Язык обращения" value={c.appealLanguage === "kk" ? "Казахский" : c.appealLanguage === "ru" ? "Русский" : "Не указан"} />}
                   <Fact
-                    label={
-                      hasSeparateAuditObject
-                        ? "Наименование объекта заявителя"
-                        : "Наименование объекта аудита/заявителя"
-                    }
+                    label={applicantNameFieldLabel(appealLanguage(c))}
                     value={c.org}
                   />
                   <Fact
