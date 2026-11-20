@@ -81,6 +81,7 @@ export interface ViolationPoint {
   prescriptionText?: Partial<Record<DocumentLanguage, string>>;
   id: string;
   number: string;
+  /** Описание оспариваемого вопроса; заполняется отдельно от результата ВГА. */
   title: string;
   finding: string;
   argument: string;
@@ -94,7 +95,7 @@ export interface ViolationPoint {
   disputed: boolean;
   evidence?: string;
   authorityFinding?: string;
-  /** Исходный ответ ВГА; не заменяется ответами на запросы КВГА/ДВГА. */
+  /** Нарушение из ВГА: наименование вопроса программы аудита и ответ аудитора; неизменяемый снимок. */
   auditProgramResult?: AuditProgramResult;
   position?: string;
   analysis?: string;
@@ -801,6 +802,7 @@ export interface SubjectAuditReport {
     prescriptionText?: Partial<Record<DocumentLanguage, string>>;
     id: string;
     number: string;
+    /** Наименование исходного пункта для выбора в форме, не описание вопроса в карточке. */
     title: string;
     titleKk?: string;
     titleRu?: string;

@@ -31,14 +31,14 @@ export function saveSubjectIssueDescription(
   const source = state.cases.find((c) => c.id === caseId);
   if (
     !source ||
-    source.subjectAppeal?.report.documentKind !== "prescription" ||
+    !source.subjectAppeal ||
     source.status === "received" ||
     source.status === "forwarded" ||
     CLOSED.includes(source.status) ||
     source.certificate
   )
     throw new Error(
-      "Описание доступно после назначения исполнителя по жалобе на предписание, до формирования справки и завершения рассмотрения.",
+      "Описание доступно после назначения исполнителя по обращению, до формирования справки и завершения рассмотрения.",
     );
   const point = source.issues.find((p) => p.id === pointId);
   if (!point) throw new Error("Оспариваемый пункт не найден.");

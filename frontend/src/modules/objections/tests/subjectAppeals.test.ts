@@ -320,7 +320,7 @@ test("директор открывает ту же поданную форму,
   assert.equal(html, expected);
 });
 
-test("номер, наименование и ответ берутся из результата программы аудита, а не из старых реквизитов пункта", () => {
+test("номер и нарушение берутся из результата программы аудита, описание вопроса остаётся пустым", () => {
   const { state, source, draft } = fixture();
   const point = source.issues[0];
   point.number = "Старый номер";
@@ -334,7 +334,9 @@ test("номер, наименование и ответ берутся из р�
   const submitted = submitSubjectAppeal(state, draft, "subject2").state
     .cases[0];
   assert.equal(submitted.issues[0].number, "4.2");
-  assert.equal(submitted.issues[0].title, "Проверка исполнения договора");
+  assert.equal(submitted.issues[0].title, "");
+  assert.deepEqual(submitted.issues[0].translations, {});
+  assert.equal(submitted.issues[0].auditProgramResult?.name, "Проверка исполнения договора");
   assert.equal(
     submitted.issues[0].authorityFinding,
     point.auditProgramResult!.answer,
@@ -414,7 +416,7 @@ test("в тестовом отчёте 1-АО доступны два резул
   };
   const submitted = submitSubjectAppeal(state, draft, "subject2").state.cases[0];
   assert.deepEqual(submitted.issues.map((point) => [point.number, point.title, point.authorityFinding, point.argument]),
-    report.points.map((point) => [point.number, point.title, point.auditProgramResult!.answer, draft.argumentsByPoint[point.id]]));
+    report.points.map((point) => [point.number, "", point.auditProgramResult!.answer, draft.argumentsByPoint[point.id]]));
   assert.deepEqual(submitted.subjectAppeal?.report, report);
 });
 

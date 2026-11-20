@@ -26,7 +26,7 @@ function fixture() {
       name: `Вопрос ${number}`,
       language: "ru" as const,
       answer: `AUDITOR_${number}_RU`,
-      translations: { kk: { answer: `AUDITOR_${number}_KK` } },
+      translations: { kk: { name: `Сұрақ ${number}`, answer: `AUDITOR_${number}_KK` } },
     },
   }));
   c.requests = ["ДВГА по Атырауской области", "КВГА"].map(
@@ -54,6 +54,11 @@ test("КВГА и ДВГА получают ответ аудитора по к�
       role,
     ).fields;
     for (const number of [1, 2]) {
+      for (const [suffix, title] of [["", `Вопрос ${number}`], ["Kk", `Сұрақ ${number}`]]) {
+        const field = fields.find((f) => f.name === `auditProgramName${suffix}_p${number}`)!;
+        assert.equal(field.value, title);
+        assert.equal(field.readOnly, true);
+      }
       assert.equal(
         fields.find((f) => f.name === `authorityFinding_p${number}`)?.value,
         `AUDITOR_${number}_RU`,
@@ -81,8 +86,9 @@ test("КВГА и ДВГА получают ответ аудитора по к�
       html,
       /<textarea name="authorityFinding_p1"[^>]*>AUDITOR_1_RU<\/textarea>/,
     );
-    assert.match(html, /<td>AUDITOR_1_RU<\/td>/);
-    assert.match(html, /<td>AUDITOR_2_RU<\/td>/);
+    for (const number of [1, 2]) {
+      assert.ok(html.includes(`<td><p><b>Наименование вопроса программы аудита:</b> Вопрос ${number}</p><p><b>Ответ на вопрос программы аудита:</b> AUDITOR_${number}_RU</p></td>`));
+    }
   }
 });
 
@@ -126,7 +132,7 @@ test("сохранённые значения и черновик своего �
     html,
     /<textarea name="authorityFinding_p2"[^>]*>Черновик нарушения<\/textarea>/,
   );
-  assert.match(html, /<td>Черновик нарушения<\/td>/);
+  assert.match(html, /<b>Ответ на вопрос программы аудита:<\/b> Черновик нарушения<\/p><\/td>/);
   assert.doesNotMatch(
     html,
     /AUDITOR_1_RU|AUDITOR_2_RU|Сохранённое нарушение ДВГА|Сохранённое нарушение КВГА/,

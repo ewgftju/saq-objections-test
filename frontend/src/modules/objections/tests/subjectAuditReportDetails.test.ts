@@ -3,11 +3,15 @@ import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { initialState } from "../../../api/objectionsRepository";
-import type { DocumentLanguage } from "../../../types";
+import type { DocumentLanguage, Role } from "../../../types";
 import { SUBJECT_2_PROFILE } from "../../../data/subjectProfiles";
 import SubjectAppealForm from "../components/SubjectAppealForm";
 import { subjectAppealHtml } from "../components/SubjectAppealDocument";
 import { isApplicantCase } from "../services/subjectRegistry";
+import { saveSubjectIssueDescription } from "../services/subjectPrescriptions";
+import CaseWorkspace from "../pages/CaseWorkspace";
+import { actionForm } from "../formDefinitions";
+import { DocumentContent } from "../components/DocumentModal";
 import {
   createSubjectAppealDraft,
   localizeSubjectAppealDraft,
@@ -107,5 +111,66 @@ test("карточка и поданная форма фиксируют рек�
     assert.notEqual(c.subjectAppeal!.report.orgTranslations![language], report.orgTranslations![language]);
     assert.notEqual(c.subjectAppeal!.report.addressTranslations![language], report.addressTranslations![language]);
     assert.equal(c.subjectAppeal!.draft.signerPosition, draft.signerPosition);
+  }
+});
+
+test("оба вопроса программы поступают в нарушение двумя полями, описание вопроса пустое на обоих языках", () => {
+  for (const language of ["ru", "kk"] as const) {
+    const { state, report, draft } = fixture(language);
+    draft.selectedPointIds = report.points.map(point => point.id);
+    draft.argumentsByPoint = Object.fromEntries(report.points.map(point => [point.id, `Довод ${point.number}`]));
+    draft.attachments = report.points.map(point => ({ ...draft.attachments[0], id: `proof-${point.id}`, pointId: point.id }));
+    const { state: saved, caseId } = submitSubjectAppeal(state, draft, "subject2");
+    const c = saved.cases.find(item => item.id === caseId)!;
+    c.requests = [{ id: "request", recipient: c.issuer, template: "dvga", date: state.date, sent: state.date, deadline: state.date, text: "Запрос" }];
+    for (const [index, point] of c.issues.entries()) {
+      assert.equal(point.title, "");
+      assert.deepEqual(point.translations, {});
+      assert.deepEqual(point.auditProgramResult, report.points[index].auditProgramResult);
+      assert.equal(point.argument, draft.argumentsByPoint[point.id]);
+    }
+    for (const role of ["dvga", "kvga"] as const) {
+      const fields = actionForm("fill-request-response", c, state.date, {}, role).fields;
+      for (const point of c.issues) {
+        assert.equal(fields.find(f => f.name === `auditProgramName_${point.id}`)?.value, point.auditProgramResult!.name);
+        assert.equal(fields.find(f => f.name === `authorityFinding_${point.id}`)?.value, point.auditProgramResult!.answer);
+        assert.equal(fields.find(f => f.name === `auditProgramNameKk_${point.id}`)?.value, "");
+        assert.equal(fields.find(f => f.name === `authorityFindingKk_${point.id}`)?.value, "");
+      }
+    }
+    const request = renderToStaticMarkup(createElement(DocumentContent, { c, kind: "request-appendix" }));
+    for (const point of c.issues) {
+      assert.equal(request.includes(point.auditProgramResult!.name), language === "ru");
+      assert.equal(request.includes(point.auditProgramResult!.answer), language === "ru");
+    }
+    assert.ok(request.includes("Наименование вопроса программы аудита:"));
+    assert.ok(request.includes("Ответ на вопрос программы аудита:"));
+    const view = renderToStaticMarkup(createElement(CaseWorkspace, { c, role: "director", tab: "overview", onBack() {}, onTab() {}, onAction() {}, onDocument() {}, onUpload() {} }));
+    assert.ok(view.includes(`Описание оспариваемого вопроса — ${language === "ru" ? "Русский" : "Қазақша"}:</b> —`));
+    for (const point of c.issues) assert.ok(view.includes(`<b>Наименование вопроса программы аудита:</b> ${point.auditProgramResult!.name}`));
+  }
+});
+
+test("описание аудиторского вопроса заполняет рабочий орган после назначения, нарушение и подписанная форма сохраняются", () => {
+  for (const language of ["ru", "kk"] as const) {
+    const { state, draft } = fixture(language);
+    const { state: saved, caseId } = submitSubjectAppeal(state, draft, "subject2");
+    const c = saved.cases.find(item => item.id === caseId)!;
+    const pointId = c.issues[0].id;
+    assert.throws(() => saveSubjectIssueDescription(saved, caseId, pointId, "Описание", "work"), /после назначения/);
+    c.status = "accepted";
+    for (const role of ["subject2", "director", "dvga", "kvga"] as Role[]) {
+      assert.throws(() => saveSubjectIssueDescription(saved, caseId, pointId, "Описание", role), /исполнитель рабочего органа/);
+    }
+    const snapshot = structuredClone(c);
+    const next = saveSubjectIssueDescription(saved, caseId, pointId, "Описание рабочего органа", "work");
+    const updated = next.cases.find(item => item.id === caseId)!;
+    assert.equal(updated.issues[0].title, "Описание рабочего органа");
+    assert.equal(updated.issues[0].translations?.[language]?.title, "Описание рабочего органа");
+    assert.deepEqual(updated.issues[0].auditProgramResult, snapshot.issues[0].auditProgramResult);
+    assert.equal(updated.issues[0].argument, snapshot.issues[0].argument);
+    assert.deepEqual(updated.subjectAppeal, snapshot.subjectAppeal);
+    assert.deepEqual(updated.documents, snapshot.documents);
+    assert.equal(c.issues[0].title, "");
   }
 });

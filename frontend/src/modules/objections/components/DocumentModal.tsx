@@ -701,21 +701,23 @@ function LegacyDocumentContent({
             <tbody>
               {snapshot.issues
                 .filter((point) => point.disputed)
-                .map((point) => (
+                .map((point) => {
+                  const violationAnswer = appendixFindingPreview?.[point.id] ??
+                    (!isResponseAppendix ? point.prescriptionText?.[language || snapshot.appealLanguage || "ru"] : undefined) ??
+                    (isResponseAppendix
+                      ? (request?.authorityResponses?.[point.id]?.finding ??
+                        (useLegacyAuthorityValues ? point.authorityFinding : ""))
+                      : point.auditProgramResult
+                        ? auditProgramResultText(point.auditProgramResult, "answer", language || snapshot.appealLanguage || "ru")
+                        : point.authorityFinding) ?? "";
+                  return (
                   <tr key={point.id}>
                     <td>{point.number}</td>
                     <td>
-                      {appendixFindingPreview?.[point.id] ??
-                        (!isResponseAppendix ? point.prescriptionText?.[language || snapshot.appealLanguage || "ru"] : undefined) ??
-                        (isResponseAppendix
-                          ? (request?.authorityResponses?.[point.id]?.finding ??
-                            (useLegacyAuthorityValues
-                              ? point.authorityFinding
-                              : ""))
-                          : point.auditProgramResult
-                            ? auditProgramResultText(point.auditProgramResult, "answer", language || snapshot.appealLanguage || "ru")
-                            : point.authorityFinding) ??
-                        ""}
+                      {point.auditProgramResult ? <>
+                        <p><b>{language === "kk" ? "Аудит бағдарламасы сұрағының атауы:" : "Наименование вопроса программы аудита:"}</b>{" "}{auditProgramResultText(point.auditProgramResult, "name", language || snapshot.appealLanguage || "ru") || "—"}</p>
+                        <p><b>{language === "kk" ? "Аудит бағдарламасының сұрағына жауап:" : "Ответ на вопрос программы аудита:"}</b>{" "}{violationAnswer}</p>
+                      </> : violationAnswer}
                     </td>
                     <td>
                       <div>{point.argument || "—"}</div>
@@ -744,7 +746,8 @@ function LegacyDocumentContent({
                         ""}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
             </tbody>
           </table>
         </div>

@@ -267,14 +267,12 @@ function PointCard({
   point,
   documents,
   review = false,
-  applicantView = false,
   onSaveDescription,
   language = "ru",
 }: {
   point: ViolationPoint;
   documents: CaseDocument[];
   review?: boolean;
-  applicantView?: boolean;
   onSaveDescription?: (pointId: string, description: string) => void;
   language?: DocumentLanguage;
 }) {
@@ -314,6 +312,7 @@ function PointCard({
         </div>
       </div>
       <div hidden={!expanded}>
+        {point.auditProgramResult && <p><b>{pointDescriptionFieldLabel(language)}:</b> {point.title || "—"}</p>}
         {onSaveDescription && <div>
           {editingDescription ? <form onSubmit={(event) => {
             event.preventDefault();
@@ -322,7 +321,11 @@ function PointCard({
           }}><label className="field"><span>{pointDescriptionFieldLabel(language)}</span><textarea aria-label={`${pointDescriptionFieldLabel(language)} (пункт № ${point.number})`} required value={description} onChange={(event) => setDescription(event.target.value)} rows={3} /></label>{descriptionError && <p className="form-error" role="alert">{descriptionError}</p>}<div className="actions"><Button primary type="submit">Сохранить описание</Button><Button onClick={() => setEditingDescription(false)}>Отмена</Button></div></form> : <Button onClick={() => { setDescription(point.title); setEditingDescription(true); }}>{point.title.trim() ? "Изменить описание" : "Заполнить описание"}</Button>}
         </div>}
         {point.prescriptionText && <p><b>{language === "kk" ? "Шағым түскен бұзушылық:" : "Нарушение, по которому поступила жалоба:"}</b> {point.prescriptionText[language] || "—"}</p>}
-        {applicantView && point.auditProgramResult && <p><b>Нарушение, по которому поступило возражение:</b> {auditProgramResultText(point.auditProgramResult, "answer", point.auditProgramResult.language, true)}</p>}
+        {point.auditProgramResult && <section>
+          <h4>Нарушение, по которому поступило возражение</h4>
+          <p><b>Наименование вопроса программы аудита:</b> {auditProgramResultText(point.auditProgramResult, "name", point.auditProgramResult.language, true) || "—"}</p>
+          <p><b>Ответ на вопрос программы аудита:</b> {auditProgramResultText(point.auditProgramResult, "answer", point.auditProgramResult.language, true) || "—"}</p>
+        </section>}
         {point.finding && (
           <p>
             <b>Документы подтверждающие нарушение:</b> {point.finding}
@@ -1166,7 +1169,6 @@ export default function CaseWorkspace({
                     <PointCard
                       key={point.id}
                       point={point}
-                      applicantView={isSubjectRole(role)}
                       documents={c.documents}
                       onSaveDescription={role === "work" ? onSaveIssueDescription : undefined}
                       language={c.appealLanguage || "ru"}

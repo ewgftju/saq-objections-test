@@ -8,7 +8,7 @@ import { disputed } from "./services/decisions";
 import { certificateBasisForPoint, certificateDavgaDraft, decisionProjectDavga, motivatedResponseDavga, hasDavgaText, protocolDavgaFromReason } from "./services/protocolReason";
 import { controlDecisions } from "./services/workflow";
 import { hasSubjectSaqCabinet, subjectSaqCabinetLabel } from "./services/saqCabinets";
-import { sourceViolationText } from "./services/auditProgramResults";
+import { auditProgramResultText, sourceViolationText } from "./services/auditProgramResults";
 
 export interface FormField {
   language?: "ru" | "kk";
@@ -418,10 +418,14 @@ export function actionForm(
       );
       for (const point of disputed(c))
         fields.push(
-          heading(point.id, `Пункт ${point.number} — ${point.title}`),
+          ...(!point.auditProgramResult ? [heading(point.id, `Пункт ${point.number}${point.title ? ` — ${point.title}` : ""}`)] : []),
+          ...(point.auditProgramResult ? [
+            { ...heading(`auditProgramViolation_${point.id}`, `Нарушение по пункту № ${point.number}`), language: "ru" as const },
+            { ...area(`auditProgramName_${point.id}`, `Наименование вопроса программы аудита № ${point.number} — Русский`, auditProgramResultText(point.auditProgramResult, "name", "ru")), language: "ru" as const, readOnly: true, required: false },
+          ] : []),
           { ...area(
             `authorityFinding_${point.id}`,
-            `Нарушение № ${point.number} — Русский`,
+            `${point.auditProgramResult ? "Ответ на вопрос программы аудита" : "Нарушение"} № ${point.number} — Русский`,
             authorityRequest?.authorityResponses?.[point.id]?.finding ??
               sourceViolationText(point, "ru"),
           ), language: "ru" },
@@ -430,10 +434,14 @@ export function actionForm(
             `Мотивированный ответ № ${point.number} — Русский`,
             authorityRequest?.authorityResponses?.[point.id]?.response,
           ), language: "ru" },
-          { ...area(`authorityFindingKk_${point.id}`, `Бұзушылық № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.finding ?? sourceViolationText(point, "kk")), language: "kk" },
+          ...(point.auditProgramResult ? [
+            { ...heading(`auditProgramViolationKk_${point.id}`, `Нарушение по пункту № ${point.number}`), language: "kk" as const },
+            { ...area(`auditProgramNameKk_${point.id}`, `Наименование вопроса программы аудита № ${point.number} — Қазақша`, auditProgramResultText(point.auditProgramResult, "name", "kk")), language: "kk" as const, readOnly: true, required: false },
+          ] : []),
+          { ...area(`authorityFindingKk_${point.id}`, `${point.auditProgramResult ? "Ответ на вопрос программы аудита" : "Бұзушылық"} № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.finding ?? sourceViolationText(point, "kk")), language: "kk" },
           { ...area(`authorityResponseKk_${point.id}`, `Уәжді жауап № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.response), language: "kk" },
         );
-      note = c.subjectAppeal?.report.documentKind === "prescription" ? "Поле «Нарушение» заполняется из соответствующего пункта исходного предписания на русском и казахском языках." : "Поле «Нарушение» заполняется из ответа аудитора на соответствующий вопрос программы аудита. Русская и казахская версии подставляются при их наличии в исходном отчёте.";
+      note = c.subjectAppeal?.report.documentKind === "prescription" ? "Поле «Нарушение» заполняется из соответствующего пункта исходного предписания на русском и казахском языках." : "Нарушение содержит наименование вопроса программы аудита и ответ аудитора. Русская и казахская версии подставляются при их наличии в исходном отчёте.";
       break;
     case "position":
       title = "Ответ получен";

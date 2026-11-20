@@ -2306,7 +2306,7 @@ export default function ObjectionsModule() {
                 setDialog({ type: "document", kind, document })
               }
               onUpload={() => setDialog({ type: "upload" })}
-              onSaveIssueDescription={model.role === "work" && c.subjectAppeal?.report.documentKind === "prescription" && !c.certificate && !CLOSED.includes(c.status) && c.status !== "forwarded" ? (pointId, description) => {
+              onSaveIssueDescription={model.role === "work" && c.subjectAppeal && !c.certificate && !CLOSED.includes(c.status) && c.status !== "received" && c.status !== "forwarded" ? (pointId, description) => {
                 model.commit(saveSubjectIssueDescription(model.state, c.id, pointId, description, model.role), "Описание оспариваемого вопроса сохранено");
               } : undefined}
             />

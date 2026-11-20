@@ -291,11 +291,9 @@ export function submitSubjectAppeal(
     .map((p) => ({
       id: p.id,
       number: p.number,
-      title: (draft.language === "kk" ? p.titleKk : p.titleRu) || p.title,
-      translations: {
-        ...(p.titleRu ? { ru: { title: p.titleRu } } : {}),
-        ...(p.titleKk ? { kk: { title: p.titleKk } } : {}),
-      },
+      // Название из ВГА относится к нарушению. Описание заполняет рабочий орган.
+      title: "",
+      translations: {},
       finding: p.finding,
       ...(p.prescriptionText ? { prescriptionText: structuredClone(p.prescriptionText) } : {}),
       authorityFinding: p.prescriptionText?.[draft.language] ?? auditProgramResultText(
