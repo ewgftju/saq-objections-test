@@ -288,7 +288,7 @@ export default function SubjectPrescriptionForm({
                             <div className="subject-appeal-point-body">
                               <label className="field">
                                 <span>
-                                  {t("Обстоятельства", "Мән-жайлар")}{" "}
+                                  {t(actionComplaint ? "Обоснование" : "Обстоятельства", actionComplaint ? "Негіздеме" : "Мән-жайлар")}{" "}
                                   <span className="required">*</span>
                                 </span>
                                 <textarea
