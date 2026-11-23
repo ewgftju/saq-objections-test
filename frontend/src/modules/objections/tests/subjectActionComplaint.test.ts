@@ -154,8 +154,9 @@ test("пункт 1 печатной жалобы автоматически ис
   assert.match(individualHtml, /123456789012/);
 });
 
-test("карточки пункта 4 имеют компактную кнопку удаления и отступы", () => {
+test("карточки пункта 4 отображают введённый номер пункта, а не порядковый номер карточки", () => {
   const { state, draft } = fixture();
+  draft.manualPoints![0].number = "5";
   const saved = saveSubjectAppealDraft(state, draft, "subject2");
   const html = renderToStaticMarkup(createElement(SubjectPrescriptionForm, {
     state: saved, role: "subject2", draftId: draft.id, actionComplaint: true,
@@ -163,8 +164,11 @@ test("карточки пункта 4 имеют компактную кнопк
   }));
   assert.match(html, /subject-appeal-manual-point-header/);
   assert.match(html, /subject-appeal-remove-point/);
-  assert.match(html, /Пункт 1/);
-  assert.match(html, /Удалить пункт 1/);
-  assert.match(html, /Обоснование по пункту 1/);
+  assert.match(html, /Пункт 5/);
+  assert.match(html, /Номер пункта 5/);
+  assert.match(html, /Удалить пункт 5/);
+  assert.match(html, /Обоснование по пункту 5/);
+  assert.match(html, /Пункт 2/);
+  assert.doesNotMatch(html, /<h4>Пункт 1<\/h4>/);
   assert.match(html, /subject-appeal-add-manual-point/);
 });

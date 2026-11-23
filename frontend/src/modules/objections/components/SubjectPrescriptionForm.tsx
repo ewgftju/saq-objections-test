@@ -230,10 +230,10 @@ export default function SubjectPrescriptionForm({
                           {actionComplaint ? (
                             <>
                               <div className="subject-appeal-manual-point-header">
-                                <h4>Пункт {index + 1}</h4>
+                                <h4>Пункт {point.number.trim() || "—"}</h4>
                                 <Button
                                   className="subject-appeal-remove-point"
-                                  aria-label={`Удалить пункт ${index + 1}`}
+                                  aria-label={`Удалить пункт ${point.number.trim() || index + 1}`}
                                   onClick={() => setDraft({
                                     ...draft,
                                     manualPoints: (draft.manualPoints || []).filter((item) => item.id !== point.id),
@@ -249,7 +249,7 @@ export default function SubjectPrescriptionForm({
                                 <label className="field">
                                   <span>Номер пункта <span className="required">*</span></span>
                                   <input
-                                    aria-label={`Номер пункта ${index + 1}`}
+                                    aria-label={`Номер пункта ${point.number.trim() || index + 1}`}
                                     required
                                     type="text"
                                     placeholder="Например, 1"
