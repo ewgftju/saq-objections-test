@@ -11,7 +11,7 @@ import SubjectPrescriptionForm from "./SubjectPrescriptionForm";
 import { subjectPrescriptions } from "../services/subjectPrescriptions";
 
 type AppealKind = "" | "audit" | "complaint";
-type PrescriptionSubtype = "" | "audit" | "preventive";
+type PrescriptionSubtype = "" | "audit" | "preventive" | "preventive-act";
 
 export default function SubjectAppealStart(
   props: ComponentProps<typeof SubjectAppealForm>,
@@ -22,16 +22,18 @@ export default function SubjectAppealStart(
   );
   const prescriptions = subjectPrescriptions(state, role);
   const savedPrescription =
-    savedDraft?.documentKind === "prescription"
+    Boolean(savedDraft?.documentKind)
       ? prescriptions.find((p) => p.sourceCaseId === savedDraft.sourceCaseId)
       : undefined;
   const [kind, setKind] = useState<AppealKind>(
-    savedDraft ? (savedDraft.documentKind === "prescription" ? "complaint" : "audit") : "",
+    savedDraft ? (savedDraft.documentKind ? "complaint" : "audit") : "",
   );
   const [prescriptionSubtype, setPrescriptionSubtype] =
     useState<PrescriptionSubtype>(
-      savedDraft?.documentKind === "prescription"
-        ? savedPrescription?.prescriptionSubtype ?? "audit"
+      Boolean(savedDraft?.documentKind)
+        ? savedPrescription?.documentKind === "preventive-act"
+          ? "preventive-act"
+          : savedPrescription?.prescriptionSubtype ?? "audit"
         : "",
     );
   const [reportId, setReportId] = useState(savedDraft?.sourceCaseId || "");
@@ -40,7 +42,7 @@ export default function SubjectAppealStart(
   const reports = availableSubjectAuditReports(state.cases, role, state.date);
   const selectedPrescriptions = prescriptions.filter(
     (p) => prescriptionSubtype !== "" &&
-      (p.prescriptionSubtype ?? "audit") === prescriptionSubtype,
+      (p.documentKind === "preventive-act" ? "preventive-act" : (p.prescriptionSubtype ?? "audit")) === prescriptionSubtype,
   );
   const selectedReport = reports.find((report) => report.sourceCaseId === reportId);
   const selectedPrescription = selectedPrescriptions.find(
@@ -104,6 +106,7 @@ export default function SubjectAppealStart(
             <option value="">Выберите подвид обращения</option>
             <option value="audit">Предписание на аудиторский отчёт</option>
             <option value="preventive">Предписание по профилактическому контролю</option>
+            <option value="preventive-act">Акт о результате профилактического контроля</option>
           </select>
         </label>
       )}
@@ -156,9 +159,9 @@ export default function SubjectAppealStart(
         prescriptionSubtype !== "" &&
         (selectedPrescriptions.length ? (
           <label className="field">
-            <span>Предписание</span>
+            <span>{prescriptionSubtype === "preventive-act" ? "Акт о результате профилактического контроля" : "Предписание"}</span>
             <select
-              aria-label="Предписание"
+              aria-label={prescriptionSubtype === "preventive-act" ? "Акт о результате профилактического контроля" : "Предписание"}
               value={selectedPrescription?.sourceCaseId || ""}
               onChange={(event) => setReportId(event.target.value)}
             >
@@ -172,7 +175,7 @@ export default function SubjectAppealStart(
           </label>
         ) : (
           <Notice tone="amber">
-            Нет доступных для обжалования предписаний по выбранному подвиду.
+            Нет доступных для обжалования документов по выбранному подвиду.
           </Notice>
         ))}
 

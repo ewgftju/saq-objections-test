@@ -27,7 +27,7 @@ export function SubjectAppealDocument({
   attachmentsEditor?: ReactNode;
 }) {
   const kk = draft.language === "kk";
-  const prescription = report.documentKind === "prescription";
+  const prescription = Boolean(report.documentKind); // общий шаблон жалобы для предписаний и актов
   const t = (ru: string, kz: string) => (kk ? kz : ru);
   const applicant = report.orgTranslations?.[draft.language] || report.org;
   const identifier = kk
@@ -170,7 +170,9 @@ export function SubjectAppealDocument({
         : t("Возражение", "Қарсылық")}</h2>
       <p className="subject-appeal-reference">
         {prescription
-          ? report.prescriptionSubtype === "preventive"
+          ? report.documentKind === "preventive-act"
+            ? t("На акт о результате профилактического контроля", "Профилактикалық бақылау нәтижелері туралы актіге")
+            : report.prescriptionSubtype === "preventive"
             ? t("На предписание об устранении нарушений по результатам профилактического контроля", "Профилактикалық бақылау нәтижелері бойынша бұзушылықтарды жою туралы нұсқамаға")
             : t("На предписание об устранении нарушений", "Бұзушылықтарды жою туралы нұсқамаға")
           : t("На аудиторский отчёт", "Аудиторлық есепке")} № {report.number}{" "}

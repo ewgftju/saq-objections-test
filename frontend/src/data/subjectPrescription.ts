@@ -83,3 +83,36 @@ export const DEMO_PREVENTIVE_PRESCRIPTION: SubjectAuditReport = {
     },
   ],
 };
+
+
+/** Тестовый акт о результате профилактического контроля, отдельно от предписания. */
+export const DEMO_PREVENTIVE_CONTROL_ACT: SubjectAuditReport = {
+  documentKind: "preventive-act",
+  sourceCaseId: "demo-preventive-control-act-001",
+  number: "ТЕСТ-АКТ-ПК-2026-001",
+  date: "2026-11-17",
+  received: "2026-11-17",
+  available: true,
+  org: SUBJECT_2_PROFILE.orgTranslations.ru,
+  orgTranslations: { ...SUBJECT_2_PROFILE.orgTranslations },
+  bin: SUBJECT_2_PROFILE.bin,
+  identifierType: "БИН",
+  address: "г. Алматы",
+  issuer: "ДВГА по Атырауской области",
+  points: [
+    {
+      id: "preventive-act-point-1",
+      number: "1",
+      title: "",
+      finding: "Тестовое нарушение № 1, выявленное по результатам профилактического контроля.",
+      amount: 0,
+    },
+    {
+      id: "preventive-act-point-2",
+      number: "2",
+      title: "",
+      finding: "Тестовое нарушение № 2, выявленное по результатам профилактического контроля.",
+      amount: 0,
+    },
+  ],
+};

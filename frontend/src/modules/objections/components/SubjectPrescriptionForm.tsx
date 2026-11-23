@@ -29,7 +29,7 @@ export default function SubjectPrescriptionForm({
     const saved = state.subjectAppealDrafts?.find(
       (d) =>
         d.ownerRole === role &&
-        d.documentKind === "prescription" &&
+        d.documentKind === source?.documentKind &&
         (draftId ? d.id === draftId : d.sourceCaseId === prescriptionId),
     );
     return saved
@@ -93,13 +93,13 @@ export default function SubjectPrescriptionForm({
   }
   return (
     <Modal
-      title={t("Жалоба на предписание", "Нұсқамаға шағым")}
+      title={source?.documentKind === "preventive-act" ? "Жалоба на акт о результате профилактического контроля" : t("Жалоба на предписание", "Нұсқамаға шағым")}
       onClose={onClose}
       wide
     >
       {!source || !draft ? (
         <Notice tone="amber">
-          Нет доступного предписания для подачи жалобы.
+          Нет доступного документа для подачи жалобы.
         </Notice>
       ) : (
         <form
@@ -148,7 +148,7 @@ export default function SubjectPrescriptionForm({
             </Button>
           </div>
           <Notice>
-            {t("Предписание", "Нұсқама")} № {source.number} {t("от", "күні")}{" "}
+            {source.documentKind === "preventive-act" ? "Акт о результате профилактического контроля" : t("Предписание", "Нұсқама")} № {source.number} {t("от", "күні")}{" "}
             {formatDate(source.date)}.<br />
             {source.relatedAuditReport ? (
               <>
@@ -156,6 +156,8 @@ export default function SubjectPrescriptionForm({
                 {source.relatedAuditReport.number} {t("от", "күні")}{" "}
                 {formatDate(source.relatedAuditReport.date)}.
               </>
+            ) : source.documentKind === "preventive-act" ? (
+              t("Акт по результатам профилактического контроля", "Профилактикалық бақылау нәтижелері туралы акт")
             ) : (
               t("Предписание по профилактическому контролю", "Профилактикалық бақылау бойынша нұсқама")
             )}
@@ -171,7 +173,9 @@ export default function SubjectPrescriptionForm({
                   <div className="subject-appeal-point-editor">
                     <p className="subject-appeal-hint">
                       {t(
-                        "Выберите оспариваемые пункты предписания и укажите по каждому обоснование. Описание оспариваемого вопроса заполнит рабочий орган.",
+                        source.documentKind === "preventive-act"
+                          ? "Выберите оспариваемые пункты акта и укажите по каждому обстоятельства. Описание оспариваемого вопроса заполнит рабочий орган."
+                          : "Выберите оспариваемые пункты предписания и укажите по каждому обоснование. Описание оспариваемого вопроса заполнит рабочий орган.",
                         "Нұсқаманың дауланатын тармақтарын таңдап, әрқайсысы бойынша негіздемені жазыңыз. Дауланатын мәселенің сипаттамасын жұмыс органы толтырады.",
                       )}
                     </p>
@@ -214,14 +218,14 @@ export default function SubjectPrescriptionForm({
                             <span>
                               <b>
                                 {t(
-                                  "Пункт предписания № ",
+                                  source.documentKind === "preventive-act" ? "Пункт акта № " : "Пункт предписания № ",
                                   "Нұсқама тармағы № ",
                                 )}
                                 {point.number}
                               </b>
                               <span>
                                 {point.prescriptionText?.[draft.language] ||
-                                  "—"}
+                                  point.finding || "—"}
                               </span>
                             </span>
                           </label>

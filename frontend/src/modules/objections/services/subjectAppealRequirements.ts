@@ -7,7 +7,7 @@ export function subjectAppealRequirementDocument(
 ): CaseDocument | undefined {
   const saved = c.subjectAppeal;
   if (!saved) return undefined;
-  const name = saved.report.documentKind === "prescription"
+  const name = Boolean(saved.report.documentKind)
     ? saved.draft.language === "kk" ? "Шағым" : "Жалоба"
     : saved.draft.language === "kk" ? "Қарсылық" : "Возражение";
   const filename = `${name}_${c.id}_${saved.draft.language}.html`;

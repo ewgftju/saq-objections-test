@@ -166,7 +166,7 @@ export function createSubjectAppealDraft(
 ): SubjectAppealDraft {
   return {
     id,
-    ...(report.documentKind === "prescription" ? { documentKind: "prescription" as const, postalAddress: "", otherInformation: "" } : {}),
+    ...(report.documentKind ? { documentKind: report.documentKind, postalAddress: "", otherInformation: "" } : {}),
     ownerRole: "subject2",
     sourceCaseId: report.sourceCaseId,
     sourceFingerprint: reportFingerprint(report),
@@ -175,7 +175,7 @@ export function createSubjectAppealDraft(
     circumstances: "",
     signerName: report.signerName || "",
     signerPosition: report.signerPositionTranslations?.ru || "Руководитель",
-    place: report.documentKind === "prescription" ? "" : report.address,
+    place: report.documentKind ? "" : report.address,
     selectedPointIds: [],
     argumentsByPoint: {},
     attachments: [],
@@ -189,10 +189,10 @@ function reportForDraft(
 ) {
   if (role !== "subject2" || draft.ownerRole !== role)
     throw new Error("Подача доступна в кабинете объекта №2.");
-  const report = (draft.documentKind === "prescription" ? subjectPrescriptions(state, role) : subjectAuditReports(state.cases, role)).find(
+  const report = (draft.documentKind ? subjectPrescriptions(state, role) : subjectAuditReports(state.cases, role)).find(
     (item) => item.sourceCaseId === draft.sourceCaseId,
   );
-  if (!report) throw new Error(draft.documentKind === "prescription" ? "Предписание недоступно в этом кабинете." : "Отчёт недоступен в этом кабинете.");
+  if (!report) throw new Error(draft.documentKind ? "Документ недоступен в этом кабинете." : "Отчёт недоступен в этом кабинете.");
   if (draft.sourceFingerprint !== reportFingerprint(report))
     throw new Error(
       "Реквизиты отчёта изменились. Проверьте отчёт и выберите его заново.",
@@ -225,20 +225,20 @@ export function validateSubjectAppeal(
   report: SubjectAuditReport,
   date: string,
 ) {
-  if (report.documentKind !== "prescription") assertSubjectAppealFilingOpen(report, date);
+  if (!report.documentKind) assertSubjectAppealFilingOpen(report, date);
   if (!["ru", "kk"].includes(draft.language))
     throw new Error("Выберите язык обращения.");
   if (!draft.signerName.trim()) throw new Error("Укажите Ф.И.О. подписанта.");
-  if (report.documentKind !== "prescription" && !draft.place.trim())
+  if (!report.documentKind && !draft.place.trim())
     throw new Error("Укажите место составления.");
   if (!draft.selectedPointIds.length)
-    throw new Error(report.documentKind === "prescription" ? "Выберите хотя бы один оспариваемый пункт предписания." : "Выберите хотя бы один оспариваемый пункт отчёта.");
+    throw new Error(report.documentKind === "preventive-act" ? "Выберите хотя бы один оспариваемый пункт акта." : report.documentKind === "prescription" ? "Выберите хотя бы один оспариваемый пункт предписания." : "Выберите хотя бы один оспариваемый пункт отчёта.");
   if (new Set(draft.selectedPointIds).size !== draft.selectedPointIds.length)
     throw new Error("Оспариваемые пункты не должны повторяться.");
   const selected = new Set(draft.selectedPointIds);
   for (const id of selected) {
     const point = report.points.find((item) => item.id === id);
-    if (!point) throw new Error(report.documentKind === "prescription" ? "Выбран пункт, которого нет в этом предписании." : "Выбран пункт, которого нет в этом отчёте.");
+    if (!point) throw new Error(report.documentKind === "preventive-act" ? "Выбран пункт, которого нет в этом акте." : report.documentKind === "prescription" ? "Выбран пункт, которого нет в этом предписании." : "Выбран пункт, которого нет в этом отчёте.");
     if (!draft.argumentsByPoint[id]?.trim())
       throw new Error(
         "Заполните обстоятельства (довод заявителя) по пункту № " + point.number + ".",
@@ -283,7 +283,9 @@ export function submitSubjectAppeal(
   validateSubjectAppeal(draft, report, state.date);
   const selected = new Set(draft.selectedPointIds);
   const prescription = report.documentKind === "prescription";
-  const appealType = prescription ? "Жалоба на решение КВГА/ДВГА" : SUBJECT_APPEAL_TYPE;
+  const preventiveAct = report.documentKind === "preventive-act";
+  const complaint = prescription || preventiveAct;
+  const appealType = complaint ? "Жалоба на решение КВГА/ДВГА" : SUBJECT_APPEAL_TYPE;
   const id = nextCaseNumber(state.cases, appealType, state.date);
   const org = report.orgTranslations?.[draft.language] || report.org;
   const issues = report.points
@@ -296,11 +298,11 @@ export function submitSubjectAppeal(
       translations: {},
       finding: p.finding,
       ...(p.prescriptionText ? { prescriptionText: structuredClone(p.prescriptionText) } : {}),
-      authorityFinding: p.prescriptionText?.[draft.language] ?? auditProgramResultText(
+      authorityFinding: preventiveAct ? p.finding : (p.prescriptionText?.[draft.language] ?? auditProgramResultText(
         p.auditProgramResult,
         "answer",
         draft.language,
-      ),
+      )),
       auditProgramResult:
         p.auditProgramResult && structuredClone(p.auditProgramResult),
       argument: draft.argumentsByPoint[p.id].trim(),
@@ -313,7 +315,7 @@ export function submitSubjectAppeal(
     }));
   const created = makeCase({
     id,
-    type: prescription ? "control" : "audit",
+    type: complaint ? "control" : "audit",
     appealType,
     appealLanguage: draft.language,
     appealNumber: id,
@@ -330,9 +332,11 @@ export function submitSubjectAppeal(
     issuer: report.issuer,
     authority: "Апелляционная комиссия при Министерстве финансов РК",
     document: {
-      name: prescription
-        ? report.prescriptionSubtype === "preventive" ? "Предписание по профилактическому контролю" : "Предписание"
-        : "Аудиторский отчет",
+      name: preventiveAct
+        ? "Акт о результате профилактического контроля"
+        : prescription
+          ? report.prescriptionSubtype === "preventive" ? "Предписание по профилактическому контролю" : "Предписание"
+          : "Аудиторский отчет",
       number: report.number,
       date: report.date,
       received: report.received,
@@ -340,8 +344,9 @@ export function submitSubjectAppeal(
     },
     agendaDetails: {
       auditObjectName: org, auditObjectBin: report.bin,
-      ...(prescription ? {
-        decisionKind: report.prescriptionSubtype === "preventive" ? "prescription-preventive" as const : "prescription-audit" as const,
+      ...(complaint ? {
+        decisionKind: preventiveAct ? "preventive-control-act" as const
+          : report.prescriptionSubtype === "preventive" ? "prescription-preventive" as const : "prescription-audit" as const,
         ...(report.relatedAuditReport ? {
           relatedDocumentNumber: report.relatedAuditReport.number,
           relatedDocumentDate: report.relatedAuditReport.date,
@@ -350,7 +355,7 @@ export function submitSubjectAppeal(
     },
     amount: issues.reduce((sum, point) => sum + point.amount, 0),
     request:
-      (prescription ? "Жалоба на предписание № " : "Возражение на аудиторский отчёт № ") +
+      (preventiveAct ? "Жалоба на акт о результате профилактического контроля № " : prescription ? "Жалоба на предписание № " : "Возражение на аудиторский отчёт № ") +
       report.number +
       ". Оспариваемые пункты: " +
       issues.map((point) => point.number).join(", ") +
@@ -363,14 +368,14 @@ export function submitSubjectAppeal(
     number: id,
     submittedAt: state.date,
   });
-  if (prescription && draft.postalAddress !== undefined) {
+  if (complaint && draft.postalAddress !== undefined) {
     created.postalAddress = draft.postalAddress.trim();
     created.subjectAppeal.draft.postalAddress = created.postalAddress;
   }
   created.documents = [
     {
       kind: "original",
-      name: prescription ? (draft.language === "kk" ? "Шағым" : "Жалоба") : (draft.language === "kk" ? "Қарсылық" : "Возражение"),
+      name: complaint ? (draft.language === "kk" ? "Шағым" : "Жалоба") : (draft.language === "kk" ? "Қарсылық" : "Возражение"),
       text: issues.map((point) => "№ " + point.number + ". " + point.argument).join("\n\n"),
       date: state.date,
       author: org,
@@ -407,7 +412,7 @@ export function submitSubjectAppeal(
         text:
           "Из кабинета объекта №2 поступило обращение " +
           id +
-          (prescription ? " по предписанию № " : " по отчёту № ") +
+          (preventiveAct ? " по акту № " : prescription ? " по предписанию № " : " по отчёту № ") +
           report.number +
           ". Назначьте исполнителя рабочего органа.",
         date: state.date,

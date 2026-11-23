@@ -780,7 +780,7 @@ export type NewCaseInput = Pick<
 
 /** Реквизиты и пункты отчёта, доступные объекту для подачи обращения. */
 export interface SubjectAuditReport {
-  documentKind?: "prescription";
+  documentKind?: "prescription" | "preventive-act";
   /** Подвид предписания. Без значения — предписание на аудиторский отчёт. */
   prescriptionSubtype?: "audit" | "preventive";
   relatedAuditReport?: { number: string; date: string };
@@ -824,7 +824,7 @@ export interface SubjectAppealAttachment {
 }
 
 export interface SubjectAppealDraft {
-  documentKind?: "prescription";
+  documentKind?: "prescription" | "preventive-act";
   postalAddress?: string;
   otherInformation?: string;
   id: string;

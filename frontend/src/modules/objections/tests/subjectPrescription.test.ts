@@ -131,9 +131,7 @@ test("жалоба отправляется с пустыми описаниям
     );
     assert.deepEqual(c.subjectAppeal?.report, source);
     assert.deepEqual(state, before);
-    assert.deepEqual(subjectPrescriptions(submitted.state, "subject2"), [
-      source,
-    ]);
+    assert.deepEqual(subjectPrescriptions(submitted.state, "subject2"), subjectPrescriptions(state, "subject2"));
     assert.equal(
       submitSubjectAppeal(submitted.state, draft, "subject2").caseId,
       c.id,
@@ -474,4 +472,54 @@ test("жалоба на предписание по профилактическ
   }));
   assert.match(editor, /ТЕСТ-ПК-2026-001/);
   assert.match(editor, /subject-appeal-paper/);
+});
+
+
+test("жалоба на акт о результате профилактического контроля: форма, регистрация и отправка", () => {
+  const state = initialState();
+  state.date = "2026-11-19";
+  const act = subjectPrescriptions(state, "subject2").find(
+    (source) => source.documentKind === "preventive-act",
+  );
+  assert.ok(act);
+  assert.equal(act.relatedAuditReport, undefined);
+  const draft = createSubjectAppealDraft(act, "control-act-draft");
+  assert.equal(draft.documentKind, "preventive-act");
+  draft.signerName = "Тестовый подписант";
+  draft.selectedPointIds = [act.points[0].id];
+  draft.argumentsByPoint = { [act.points[0].id]: "Обстоятельства по акту" };
+  draft.attachments = [{
+    id: "proof-act-1",
+    name: "Доказательство.pdf",
+    size: 1,
+    dataUrl: "data:application/pdf;base64,YQ==",
+    pointId: act.points[0].id,
+  }];
+  const html = subjectAppealHtml(act, draft, state.date);
+  assert.match(html, /На акт о результате профилактического контроля/);
+  assert.doesNotMatch(html, /На предписание об устранении нарушений/);
+  const form = renderToStaticMarkup(createElement(SubjectPrescriptionForm, {
+    state, role: "subject2", prescriptionId: act.sourceCaseId,
+    onClose() {}, onSave() {}, onSubmit() {},
+  }));
+  assert.match(form, /Жалоба на акт о результате профилактического контроля/);
+  assert.match(form, /Пункт акта №/);
+  assert.match(form, /Тестовое нарушение № 1/);
+  const result = submitSubjectAppeal(state, draft, "subject2");
+  const submitted = result.state.cases[0];
+  assert.match(submitted.id, /^Ж-2026-/);
+  assert.equal(submitted.type, "control");
+  assert.equal(submitted.appealType, "Жалоба на решение КВГА/ДВГА");
+  assert.equal(submitted.agendaDetails?.decisionKind, "preventive-control-act");
+  assert.equal(submitted.document.name, "Акт о результате профилактического контроля");
+  assert.equal(submitted.issues[0].authorityFinding, act.points[0].finding);
+  assert.match(submitted.request, /Жалоба на акт о результате профилактического контроля/);
+  assert.equal(submitted.subjectAppeal?.draft.documentKind, "preventive-act");
+  assert.ok(result.state.notifications.some((n) => n.caseId === submitted.id && n.recipientRole === "director"));
+  const stored = saveSubjectAppealDraft(state, draft, "subject2");
+  const continued = renderToStaticMarkup(createElement(SubjectAppealStart, {
+    state: stored, role: "subject2", draftId: draft.id,
+    onClose() {}, onSave() {}, onSubmit() {},
+  }));
+  assert.match(continued, /Жалоба на акт о результате профилактического контроля/);
 });
