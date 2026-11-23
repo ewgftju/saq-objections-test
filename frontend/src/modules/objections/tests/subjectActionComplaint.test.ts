@@ -10,6 +10,8 @@ import { actionComplaintReport, newActionComplaintDraft } from "../services/subj
 import { saveSubjectAppealDraft, submitSubjectAppeal, validateSubjectAppeal } from "../services/subjectAppeals";
 import { auditAuthorityFullName } from "../../../utils/auditAuthority";
 import { SUBJECT_2_PROFILE } from "../../../data/subjectProfiles";
+import { evidenceDocumentsForPoint } from "../services/pointEvidence";
+import CaseWorkspace from "../pages/CaseWorkspace";
 
 function fixture() {
   const state = initialState();
@@ -171,4 +173,83 @@ test("карточки пункта 4 отображают введённый н
   assert.match(html, /Пункт 2/);
   assert.doesNotMatch(html, /<h4>Пункт 1<\/h4>/);
   assert.match(html, /subject-appeal-add-manual-point/);
+});
+
+
+test("доказательства в пунктах 5 и 6 не смешиваются даже при одинаковом имени файла", () => {
+  const { state, draft } = fixture();
+  draft.manualPoints = [
+    { id: "manual-point-1", number: "5" },
+    { id: "manual-point-2", number: "6" },
+  ];
+  draft.attachments = [
+    {
+      id: "doc-for-5", pointId: "manual-point-1", name: "Тест 01.docx",
+      dataUrl: "data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,YQ==",
+      size: 1,
+    },
+    {
+      id: "doc-for-6", pointId: "manual-point-2", name: "Тест 01.docx",
+      dataUrl: "data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,Yg==",
+      size: 1,
+    },
+  ];
+  const { state: submitted, caseId } = submitSubjectAppeal(state, draft, "subject2");
+  const c = submitted.cases.find(item => item.id === caseId)!;
+  const p5 = c.issues.find(point => point.number === "5")!;
+  const p6 = c.issues.find(point => point.number === "6")!;
+
+  assert.deepEqual(p5.evidenceAttachmentIds, ["doc-for-5"]);
+  assert.deepEqual(p6.evidenceAttachmentIds, ["doc-for-6"]);
+  const docs5 = evidenceDocumentsForPoint(p5, c.documents);
+  const docs6 = evidenceDocumentsForPoint(p6, c.documents);
+  assert.deepEqual(docs5.map(doc => doc.evidenceAttachmentId), ["doc-for-5"]);
+  assert.deepEqual(docs6.map(doc => doc.evidenceAttachmentId), ["doc-for-6"]);
+  assert.notEqual(docs5[0].dataUrl, docs6[0].dataUrl);
+  assert.equal(docs5[0].evidencePointId, p5.id);
+  assert.equal(docs6[0].evidencePointId, p6.id);
+
+  const view = renderToStaticMarkup(createElement(CaseWorkspace, {
+    c, role: "work", tab: "overview",
+    onBack() {}, onTab() {}, onAction() {}, onDocument() {}, onUpload() {},
+  }));
+  const index5 = view.indexOf("Пункт 5 ·");
+  const index6 = view.indexOf("Пункт 6 ·");
+  assert.ok(index5 !== -1 && index6 > index5);
+  const card5 = view.slice(index5, index6);
+  const card6 = view.slice(index6);
+  assert.ok(card5.includes(docs5[0].dataUrl!));
+  assert.ok(!card5.includes(docs6[0].dataUrl!));
+  assert.ok(card6.includes(docs6[0].dataUrl!));
+  assert.ok(!card6.includes(docs5[0].dataUrl!));
+
+  // Старые обращения сохранили привязку в text, без новых идентификаторов.
+  const oldCase = structuredClone(c);
+  for (const point of oldCase.issues) delete point.evidenceAttachmentIds;
+  for (const document of oldCase.documents) {
+    delete document.evidenceAttachmentId;
+    delete document.evidencePointId;
+  }
+  const oldP5 = oldCase.issues.find(point => point.number === "5")!;
+  const oldP6 = oldCase.issues.find(point => point.number === "6")!;
+  assert.equal(evidenceDocumentsForPoint(oldP5, oldCase.documents).length, 1);
+  assert.equal(evidenceDocumentsForPoint(oldP6, oldCase.documents).length, 1);
+  assert.equal(evidenceDocumentsForPoint(oldP5, oldCase.documents)[0].dataUrl, docs5[0].dataUrl);
+  assert.equal(evidenceDocumentsForPoint(oldP6, oldCase.documents)[0].dataUrl, docs6[0].dataUrl);
+});
+
+test("пункт получает только свой отдельный файл при разных именах", () => {
+  const { state, draft } = fixture();
+  draft.manualPoints = [
+    { id: "manual-point-1", number: "5" },
+    { id: "manual-point-2", number: "6" },
+  ];
+  draft.attachments[0].name = "Для пункта 5.docx";
+  draft.attachments[1].name = "Для пункта 6.docx";
+  const result = submitSubjectAppeal(state, draft, "subject2");
+  const c = result.state.cases.find(item => item.id === result.caseId)!;
+  const p5 = c.issues.find(point => point.number === "5")!;
+  const p6 = c.issues.find(point => point.number === "6")!;
+  assert.deepEqual(evidenceDocumentsForPoint(p5, c.documents).map(doc => doc.name), ["Для пункта 5.docx"]);
+  assert.deepEqual(evidenceDocumentsForPoint(p6, c.documents).map(doc => doc.name), ["Для пункта 6.docx"]);
 });

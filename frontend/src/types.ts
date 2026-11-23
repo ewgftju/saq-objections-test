@@ -94,6 +94,8 @@ export interface ViolationPoint {
   amount: number;
   disputed: boolean;
   evidence?: string;
+  /** Идентификаторы приложенных к этому пункту файлов (не зависят от названий файлов). */
+  evidenceAttachmentIds?: string[];
   authorityFinding?: string;
   /** Нарушение из ВГА: наименование вопроса программы аудита и ответ аудитора; неизменяемый снимок. */
   auditProgramResult?: AuditProgramResult;
@@ -355,6 +357,10 @@ export interface CaseDocument {
   };
   dataUrl?: string;
   filename?: string;
+  /** Идентификатор исходного доказательства в поданной жалобе. */
+  evidenceAttachmentId?: string;
+  /** Идентификатор оспариваемого пункта, к которому приложен файл. */
+  evidencePointId?: string;
   /** Исходное поданное обращение для автоматически вложенной печатной формы. */
   subjectAppealId?: string;
   requestId?: string;

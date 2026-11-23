@@ -47,6 +47,7 @@ import { isApplicantCase, isSubjectRequest } from "../services/subjectRegistry";
 import { auditProgramResultText } from "../services/auditProgramResults";
 import { protocolDavgaFromReason } from "../services/protocolReason";
 import { applicantRequirementFiles } from "../services/subjectAppealRequirements";
+import { evidenceDocumentsForPoint } from "../services/pointEvidence";
 
 function isSyntheticExternalResponse(document: CaseDocument, request: CaseRequest) {
   return request.template === "other" && !request.saqRecipient && document.kind === "position" && !document.dataUrl && document.name === `Ответ ${request.recipient}`;
@@ -281,16 +282,7 @@ function PointCard({
   const [description, setDescription] = useState(point.title);
   const [descriptionError, setDescriptionError] = useState("");
   const result = point.final || point.proposal;
-  const evidenceDocuments = point.evidence
-    ? documents.filter(
-        (document) =>
-          !!document.dataUrl &&
-          point
-            .evidence!.split(",")
-            .map((name) => name.trim())
-            .includes(document.filename || document.name),
-      )
-    : [];
+  const evidenceDocuments = evidenceDocumentsForPoint(point, documents);
   return (
     <article className="point-card">
       <div className="point-head">
@@ -334,12 +326,12 @@ function PointCard({
         <p>
           <b>{applicantArgumentFieldLabel(language)}:</b> {point.argument}
         </p>
-        {point.evidence && (
+        {(point.evidence || evidenceDocuments.length > 0) && (
           <p>
             <b>Доказательства:</b>{" "}
             {evidenceDocuments.length
               ? evidenceDocuments.map((document, index) => (
-                  <span key={`${document.filename}-${index}`}>
+                  <span key={document.evidenceAttachmentId || `${document.filename}-${index}`}>
                     {index > 0 && ", "}
                     <a
                       href={document.dataUrl}
@@ -349,7 +341,9 @@ function PointCard({
                     </a>
                   </span>
                 ))
-              : point.evidence}
+              : point.evidenceAttachmentIds?.length
+                ? "Файлы недоступны"
+                : point.evidence}
           </p>
         )}
         {point.amount > 0 && (

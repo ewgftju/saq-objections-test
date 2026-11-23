@@ -333,6 +333,9 @@ export function submitSubjectAppeal(
         .filter((file) => file.pointId === p.id)
         .map((file) => file.name)
         .join(", "),
+      evidenceAttachmentIds: draft.attachments
+        .filter((file) => file.pointId === p.id)
+        .map((file) => file.id),
     }));
   const created = makeCase({
     id,
@@ -416,6 +419,8 @@ export function submitSubjectAppeal(
       name: file.name,
       filename: file.name,
       dataUrl: file.dataUrl,
+      evidenceAttachmentId: file.pointId ? file.id : undefined,
+      evidencePointId: file.pointId,
       text: file.pointId
         ? "Доказательства по пункту № " +
           report.points.find((point) => point.id === file.pointId)?.number
