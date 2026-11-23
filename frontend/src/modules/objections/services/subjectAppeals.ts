@@ -330,7 +330,9 @@ export function submitSubjectAppeal(
     issuer: report.issuer,
     authority: "Апелляционная комиссия при Министерстве финансов РК",
     document: {
-      name: prescription ? "Предписание" : "Аудиторский отчет",
+      name: prescription
+        ? report.prescriptionSubtype === "preventive" ? "Предписание по профилактическому контролю" : "Предписание"
+        : "Аудиторский отчет",
       number: report.number,
       date: report.date,
       received: report.received,
@@ -339,9 +341,11 @@ export function submitSubjectAppeal(
     agendaDetails: {
       auditObjectName: org, auditObjectBin: report.bin,
       ...(prescription ? {
-        decisionKind: "prescription-audit" as const,
-        relatedDocumentNumber: report.relatedAuditReport?.number,
-        relatedDocumentDate: report.relatedAuditReport?.date,
+        decisionKind: report.prescriptionSubtype === "preventive" ? "prescription-preventive" as const : "prescription-audit" as const,
+        ...(report.relatedAuditReport ? {
+          relatedDocumentNumber: report.relatedAuditReport.number,
+          relatedDocumentDate: report.relatedAuditReport.date,
+        } : {}),
       } : {}),
     },
     amount: issues.reduce((sum, point) => sum + point.amount, 0),

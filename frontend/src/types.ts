@@ -781,6 +781,8 @@ export type NewCaseInput = Pick<
 /** Реквизиты и пункты отчёта, доступные объекту для подачи обращения. */
 export interface SubjectAuditReport {
   documentKind?: "prescription";
+  /** Подвид предписания. Без значения — предписание на аудиторский отчёт. */
+  prescriptionSubtype?: "audit" | "preventive";
   relatedAuditReport?: { number: string; date: string };
   available?: boolean;
   sourceCaseId: string;

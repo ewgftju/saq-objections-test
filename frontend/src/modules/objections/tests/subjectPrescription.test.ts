@@ -438,3 +438,40 @@ test("нарушения из предписания поступают в за�
   }
   assert.deepEqual(DEMO_SUBJECT_PRESCRIPTION, source);
 });
+
+
+test("жалоба на предписание по профилактическому контролю сохраняет нужный подвид", () => {
+  const state = initialState();
+  state.date = "2026-11-19";
+  const available = subjectPrescriptions(state, "subject2");
+  const preventive = available.find((p) => p.prescriptionSubtype === "preventive");
+  assert.ok(preventive);
+  assert.equal(preventive.relatedAuditReport, undefined);
+  assert.equal(preventive.points.length, 2);
+  const draft = createSubjectAppealDraft(preventive, "preventive-draft");
+  draft.signerName = "Тестовый подписант";
+  draft.selectedPointIds = [preventive.points[0].id];
+  draft.argumentsByPoint = { [preventive.points[0].id]: "Обстоятельства по пункту 1" };
+  draft.attachments = [{
+    id: "proof-preventive-1",
+    name: "Документ.pdf",
+    size: 1,
+    dataUrl: "data:application/pdf;base64,YQ==",
+    pointId: preventive.points[0].id,
+  }];
+  const submitted = submitSubjectAppeal(state, draft, "subject2").state.cases[0];
+  assert.equal(submitted.appealType, "Жалоба на решение КВГА/ДВГА");
+  assert.equal(submitted.agendaDetails?.decisionKind, "prescription-preventive");
+  assert.equal(submitted.agendaDetails?.relatedDocumentNumber, undefined);
+  assert.equal(submitted.document.name, "Предписание по профилактическому контролю");
+  const html = subjectAppealHtml(preventive, draft, state.date);
+  assert.match(html, /На предписание об устранении нарушений по результатам профилактического контроля/);
+  assert.doesNotMatch(html, /Связанный аудиторский отчёт/);
+  const saved = { ...state, subjectAppealDrafts: [draft] };
+  const editor = renderToStaticMarkup(createElement(SubjectAppealStart, {
+    state: saved, role: "subject2", draftId: draft.id,
+    onClose() {}, onSave() {}, onSubmit() {},
+  }));
+  assert.match(editor, /ТЕСТ-ПК-2026-001/);
+  assert.match(editor, /subject-appeal-paper/);
+});

@@ -150,11 +150,15 @@ export default function SubjectPrescriptionForm({
           <Notice>
             {t("Предписание", "Нұсқама")} № {source.number} {t("от", "күні")}{" "}
             {formatDate(source.date)}.<br />
-            {t(
-              "Связанный аудиторский отчёт",
-              "Байланысты аудиторлық есеп",
-            )} № {source.relatedAuditReport?.number} {t("от", "күні")}{" "}
-            {formatDate(source.relatedAuditReport?.date)}.
+            {source.relatedAuditReport ? (
+              <>
+                {t("Связанный аудиторский отчёт", "Байланысты аудиторлық есеп")} №{" "}
+                {source.relatedAuditReport.number} {t("от", "күні")}{" "}
+                {formatDate(source.relatedAuditReport.date)}.
+              </>
+            ) : (
+              t("Предписание по профилактическому контролю", "Профилактикалық бақылау бойынша нұсқама")
+            )}
           </Notice>
           <div className="subject-appeal-paper-background">
             <SubjectAppealDocument

@@ -1,20 +1,20 @@
 import type { DemoState, Role } from "../../../types";
-import { DEMO_SUBJECT_PRESCRIPTION } from "../../../data/subjectPrescription";
+import { DEMO_SUBJECT_PRESCRIPTION, DEMO_PREVENTIVE_PRESCRIPTION } from "../../../data/subjectPrescription";
 import { subjectRoleForIdentifier } from "./saqCabinets";
 import { CLOSED } from "../../../data/constants";
 
 export function subjectPrescriptions(state: DemoState, role: Role) {
   if (role !== "subject2") return [];
   return structuredClone(
-    (state.subjectPrescriptions ?? [DEMO_SUBJECT_PRESCRIPTION]).filter(
+    (state.subjectPrescriptions ?? [DEMO_SUBJECT_PRESCRIPTION, DEMO_PREVENTIVE_PRESCRIPTION]).filter(
       (source) =>
         source.documentKind === "prescription" &&
         source.available !== false &&
         subjectRoleForIdentifier(source.bin) === role &&
         source.number.trim() &&
         source.date &&
-        source.relatedAuditReport?.number.trim() &&
-        source.relatedAuditReport.date,
+        (source.prescriptionSubtype === "preventive" ||
+          (source.relatedAuditReport?.number.trim() && source.relatedAuditReport.date)),
     ),
   );
 }

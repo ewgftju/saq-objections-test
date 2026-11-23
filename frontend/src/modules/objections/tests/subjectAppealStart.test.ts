@@ -34,11 +34,11 @@ test("новая подача начинается с выбора вида бе
   assert.match(html, /Возражение на аудиторский отчёт/);
   assert.match(
     html,
-    /Жалоба на предписание об устранении нарушений по аудиторскому отчёту/,
+    /Жалоба на решение КВГА\/ДВГА/,
   );
   assert.doesNotMatch(
     html,
-    /aria-label="Аудиторский отчёт"|subject-appeal-paper|<textarea|Подписать и направить/,
+    /aria-label="Аудиторский отчёт"|aria-label="Подвид обращения"|subject-appeal-paper|<textarea|Подписать и направить/,
   );
   assert.deepEqual(state, before);
 });

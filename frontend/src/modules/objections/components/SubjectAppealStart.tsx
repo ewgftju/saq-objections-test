@@ -10,7 +10,8 @@ import SubjectAppealForm from "./SubjectAppealForm";
 import SubjectPrescriptionForm from "./SubjectPrescriptionForm";
 import { subjectPrescriptions } from "../services/subjectPrescriptions";
 
-type AppealKind = "" | "audit" | "prescription";
+type AppealKind = "" | "audit" | "complaint";
+type PrescriptionSubtype = "" | "audit" | "preventive";
 
 export default function SubjectAppealStart(
   props: ComponentProps<typeof SubjectAppealForm>,
@@ -19,24 +20,34 @@ export default function SubjectAppealStart(
   const savedDraft = state.subjectAppealDrafts?.find(
     (draft) => draft.id === draftId && draft.ownerRole === role,
   );
+  const prescriptions = subjectPrescriptions(state, role);
+  const savedPrescription =
+    savedDraft?.documentKind === "prescription"
+      ? prescriptions.find((p) => p.sourceCaseId === savedDraft.sourceCaseId)
+      : undefined;
   const [kind, setKind] = useState<AppealKind>(
-    savedDraft
-      ? savedDraft.documentKind === "prescription"
-        ? "prescription"
-        : "audit"
-      : "",
+    savedDraft ? (savedDraft.documentKind === "prescription" ? "complaint" : "audit") : "",
   );
+  const [prescriptionSubtype, setPrescriptionSubtype] =
+    useState<PrescriptionSubtype>(
+      savedDraft?.documentKind === "prescription"
+        ? savedPrescription?.prescriptionSubtype ?? "audit"
+        : "",
+    );
   const [reportId, setReportId] = useState(savedDraft?.sourceCaseId || "");
   const [openForm, setOpenForm] = useState(Boolean(savedDraft));
+
   const reports = availableSubjectAuditReports(state.cases, role, state.date);
-  const prescriptions = subjectPrescriptions(state, role);
-  const selectedReport = reports.find(
-    (report) => report.sourceCaseId === reportId,
+  const selectedPrescriptions = prescriptions.filter(
+    (p) => prescriptionSubtype !== "" &&
+      (p.prescriptionSubtype ?? "audit") === prescriptionSubtype,
   );
-  const selectedPrescription = prescriptions.find(
+  const selectedReport = reports.find((report) => report.sourceCaseId === reportId);
+  const selectedPrescription = selectedPrescriptions.find(
     (p) => p.sourceCaseId === reportId,
   );
-  if (kind === "prescription" && openForm && selectedPrescription) {
+
+  if (kind === "complaint" && openForm && selectedPrescription) {
     return (
       <SubjectPrescriptionForm
         {...props}
@@ -52,9 +63,7 @@ export default function SubjectAppealStart(
         {...props}
         state={{
           ...state,
-          cases: state.cases.filter(
-            (c) => c.id === selectedReport.sourceCaseId,
-          ),
+          cases: state.cases.filter((c) => c.id === selectedReport.sourceCaseId),
         }}
       />
     );
@@ -69,17 +78,35 @@ export default function SubjectAppealStart(
           value={kind}
           onChange={(event) => {
             setKind(event.target.value as AppealKind);
+            setPrescriptionSubtype("");
             setReportId("");
             setOpenForm(false);
           }}
         >
           <option value="">Выберите вид обращения</option>
           <option value="audit">Возражение на аудиторский отчёт</option>
-          <option value="prescription">
-            Жалоба на предписание об устранении нарушений по аудиторскому отчёту
-          </option>
+          <option value="complaint">Жалоба на решение КВГА/ДВГА</option>
         </select>
       </label>
+
+      {kind === "complaint" && (
+        <label className="field">
+          <span>Подвид обращения</span>
+          <select
+            aria-label="Подвид обращения"
+            value={prescriptionSubtype}
+            onChange={(event) => {
+              setPrescriptionSubtype(event.target.value as PrescriptionSubtype);
+              setReportId("");
+              setOpenForm(false);
+            }}
+          >
+            <option value="">Выберите подвид обращения</option>
+            <option value="audit">Предписание на аудиторский отчёт</option>
+            <option value="preventive">Предписание по профилактическому контролю</option>
+          </select>
+        </label>
+      )}
 
       {kind === "audit" &&
         (reports.length ? (
@@ -125,8 +152,9 @@ export default function SubjectAppealStart(
           </Notice>
         ))}
 
-      {kind === "prescription" &&
-        (prescriptions.length ? (
+      {kind === "complaint" &&
+        prescriptionSubtype !== "" &&
+        (selectedPrescriptions.length ? (
           <label className="field">
             <span>Предписание</span>
             <select
@@ -135,7 +163,7 @@ export default function SubjectAppealStart(
               onChange={(event) => setReportId(event.target.value)}
             >
               <option value="">Выберите предписание</option>
-              {prescriptions.map((p) => (
+              {selectedPrescriptions.map((p) => (
                 <option key={p.sourceCaseId} value={p.sourceCaseId}>
                   № {p.number} от {formatDate(p.date)}
                 </option>
@@ -144,19 +172,17 @@ export default function SubjectAppealStart(
           </label>
         ) : (
           <Notice tone="amber">
-            Нет доступных для обжалования предписаний.
+            Нет доступных для обжалования предписаний по выбранному подвиду.
           </Notice>
         ))}
 
       <div className="actions">
         <Button onClick={onClose}>Закрыть</Button>
         {((kind === "audit" && reports.length > 0) ||
-          (kind === "prescription" && prescriptions.length > 0)) && (
+          (kind === "complaint" && selectedPrescriptions.length > 0)) && (
           <Button
             primary
-            disabled={
-              kind === "prescription" ? !selectedPrescription : !selectedReport
-            }
+            disabled={kind === "complaint" ? !selectedPrescription : !selectedReport}
             onClick={() => setOpenForm(true)}
           >
             Продолжить

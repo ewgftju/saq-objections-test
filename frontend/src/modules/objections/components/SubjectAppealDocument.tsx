@@ -169,7 +169,11 @@ export function SubjectAppealDocument({
           : t("Жалоба", "Шағым")
         : t("Возражение", "Қарсылық")}</h2>
       <p className="subject-appeal-reference">
-        {prescription ? t("На предписание об устранении нарушений", "Бұзушылықтарды жою туралы нұсқамаға") : t("На аудиторский отчёт", "Аудиторлық есепке")} № {report.number}{" "}
+        {prescription
+          ? report.prescriptionSubtype === "preventive"
+            ? t("На предписание об устранении нарушений по результатам профилактического контроля", "Профилактикалық бақылау нәтижелері бойынша бұзушылықтарды жою туралы нұсқамаға")
+            : t("На предписание об устранении нарушений", "Бұзушылықтарды жою туралы нұсқамаға")
+          : t("На аудиторский отчёт", "Аудиторлық есепке")} № {report.number}{" "}
         {t("от", "күні")} {formatDate(report.date)}
       </p>
       {prescription && report.relatedAuditReport && <p className="subject-appeal-reference">{t("Связанный аудиторский отчёт", "Байланысты аудиторлық есеп")} № {report.relatedAuditReport.number} {t("от", "күні")} {formatDate(report.relatedAuditReport.date)}</p>}

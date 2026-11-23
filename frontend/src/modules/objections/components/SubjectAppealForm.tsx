@@ -447,7 +447,11 @@ export function SubjectAppealsPanel({
         <div className="subject-appeal-registry-row" key={c.id}>
           <div>
             <b>
-              {c.id} · Аудиторский отчёт № {c.subjectAppeal!.report.number}
+              {c.id} · {c.subjectAppeal!.report.documentKind === "prescription"
+                ? c.subjectAppeal!.report.prescriptionSubtype === "preventive"
+                  ? "Предписание по профилактическому контролю"
+                  : "Предписание"
+                : "Аудиторский отчёт"} № {c.subjectAppeal!.report.number}
             </b>
             <small>
               Направлено {formatDate(c.registered)} ·{" "}
