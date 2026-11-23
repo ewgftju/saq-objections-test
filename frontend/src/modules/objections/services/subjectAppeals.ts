@@ -385,7 +385,7 @@ export function submitSubjectAppeal(
     },
     amount: issues.reduce((sum, point) => sum + point.amount, 0),
     request:
-      (actionComplaint ? "Жалоба на действие/бездействие органа аудита по первичному обращению № " : preventiveAct ? "Жалоба на акт о результате профилактического контроля № " : prescription ? "Жалоба на предписание № " : "Возражение на аудиторский отчёт № ") +
+      (actionComplaint ? "Жалоба на действие/бездействие органа аудита по обращению № " : preventiveAct ? "Жалоба на акт о результате профилактического контроля № " : prescription ? "Жалоба на предписание № " : "Возражение на аудиторский отчёт № ") +
       report.number +
       ". Оспариваемые пункты: " +
       issues.map((point) => point.number).join(", ") +

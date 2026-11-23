@@ -12,7 +12,8 @@ export function actionComplaintReport(draft: SubjectAppealDraft, today: string):
     org: SUBJECT_2_PROFILE.orgTranslations.ru,
     orgTranslations: { ...SUBJECT_2_PROFILE.orgTranslations },
     bin: SUBJECT_2_PROFILE.bin,
-    identifierType: "БИН",
+    // Тип идентификатора и реквизиты берём из профиля кабинета, а не из формы жалобы.
+    identifierType: SUBJECT_2_PROFILE.identifierType,
     address: "г. Алматы",
     issuer: draft.auditAuthority || "",
     points: (draft.manualPoints || []).map((point) => ({

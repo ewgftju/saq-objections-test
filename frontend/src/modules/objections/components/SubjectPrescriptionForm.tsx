@@ -207,14 +207,14 @@ export default function SubjectPrescriptionForm({
                     <p className="subject-appeal-hint">
                       {t(
                         actionComplaint
-                          ? "Добавьте пункты вручную: номер пункта, обстоятельства и документы, подтверждающие обстоятельства."
+                          ? "Добавьте пункты вручную: укажите номер пункта, обоснование и приложите подтверждающие документы."
                           : source.documentKind === "preventive-act"
                           ? "Выберите оспариваемые пункты акта и укажите по каждому обстоятельства. Описание оспариваемого вопроса заполнит рабочий орган."
                           : "Выберите оспариваемые пункты предписания и укажите по каждому обоснование. Описание оспариваемого вопроса заполнит рабочий орган.",
                         "Нұсқаманың дауланатын тармақтарын таңдап, әрқайсысы бойынша негіздемені жазыңыз. Дауланатын мәселенің сипаттамасын жұмыс органы толтырады.",
                       )}
                     </p>
-                    {source.points.map((point) => {
+                    {source.points.map((point, index) => {
                       const selected = draft.selectedPointIds.includes(
                         point.id,
                       );
@@ -223,29 +223,47 @@ export default function SubjectPrescriptionForm({
                           key={point.id}
                           className={
                             "subject-appeal-point" +
-                            (selected ? " selected" : "")
+                            (selected ? " selected" : "") +
+                            (actionComplaint ? " subject-appeal-manual-point" : "")
                           }
                         >
                           {actionComplaint ? (
-                            <div className="form-grid">
-                              <label className="field">
-                                <span>Номер пункта <span className="required">*</span></span>
-                                <input aria-label="Номер пункта" required type="text"
-                                  value={draft.manualPoints?.find((item) => item.id === point.id)?.number || ""}
-                                  onChange={(event) => setDraft({
+                            <>
+                              <div className="subject-appeal-manual-point-header">
+                                <h4>Пункт {index + 1}</h4>
+                                <Button
+                                  className="subject-appeal-remove-point"
+                                  aria-label={`Удалить пункт ${index + 1}`}
+                                  onClick={() => setDraft({
                                     ...draft,
-                                    manualPoints: (draft.manualPoints || []).map((item) => item.id === point.id ? {...item,number:event.target.value} : item),
+                                    manualPoints: (draft.manualPoints || []).filter((item) => item.id !== point.id),
+                                    selectedPointIds: draft.selectedPointIds.filter((id) => id !== point.id),
+                                    attachments: draft.attachments.filter((file) => file.pointId !== point.id),
+                                    argumentsByPoint: Object.fromEntries(Object.entries(draft.argumentsByPoint).filter(([id]) => id !== point.id)),
                                   })}
-                                />
-                              </label>
-                              <Button onClick={() => setDraft({
-                                ...draft,
-                                manualPoints: (draft.manualPoints || []).filter((item) => item.id !== point.id),
-                                selectedPointIds: draft.selectedPointIds.filter((id) => id !== point.id),
-                                attachments: draft.attachments.filter((file) => file.pointId !== point.id),
-                                argumentsByPoint: Object.fromEntries(Object.entries(draft.argumentsByPoint).filter(([id]) => id !== point.id)),
-                              })}>Удалить пункт</Button>
-                            </div>
+                                >
+                                  <span aria-hidden="true">×</span> Удалить пункт
+                                </Button>
+                              </div>
+                              <div className="subject-appeal-manual-point-number">
+                                <label className="field">
+                                  <span>Номер пункта <span className="required">*</span></span>
+                                  <input
+                                    aria-label={`Номер пункта ${index + 1}`}
+                                    required
+                                    type="text"
+                                    placeholder="Например, 1"
+                                    value={draft.manualPoints?.find((item) => item.id === point.id)?.number || ""}
+                                    onChange={(event) => setDraft({
+                                      ...draft,
+                                      manualPoints: (draft.manualPoints || []).map((item) =>
+                                        item.id === point.id ? { ...item, number: event.target.value } : item,
+                                      ),
+                                    })}
+                                  />
+                                </label>
+                              </div>
+                            </>
                           ) : <label className="subject-appeal-point-toggle">
                             <input
                               type="checkbox"
@@ -294,8 +312,8 @@ export default function SubjectPrescriptionForm({
                                 <textarea
                                   aria-label={
                                     t(
-                                      "Обстоятельства по пункту ",
-                                      "Тармақ бойынша мән-жайлар ",
+                                      actionComplaint ? "Обоснование по пункту " : "Обстоятельства по пункту ",
+                                      actionComplaint ? "Тармақ бойынша негіздеме " : "Тармақ бойынша мән-жайлар ",
                                     ) + point.number
                                   }
                                   rows={5}
@@ -365,7 +383,7 @@ export default function SubjectPrescriptionForm({
                           manualPoints: [...(draft.manualPoints || []), { id, number: "" }],
                           selectedPointIds: [...draft.selectedPointIds, id],
                         });
-                      }}>+ Добавить пункт</Button>
+                      }} className="subject-appeal-add-manual-point">+ Добавить пункт</Button>
                     )}
                   </div>
                 )

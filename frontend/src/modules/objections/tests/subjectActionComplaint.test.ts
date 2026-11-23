@@ -9,6 +9,7 @@ import { subjectAppealHtml } from "../components/SubjectAppealDocument";
 import { actionComplaintReport, newActionComplaintDraft } from "../services/subjectActionComplaint";
 import { saveSubjectAppealDraft, submitSubjectAppeal, validateSubjectAppeal } from "../services/subjectAppeals";
 import { auditAuthorityFullName } from "../../../utils/auditAuthority";
+import { SUBJECT_2_PROFILE } from "../../../data/subjectProfiles";
 
 function fixture() {
   const state = initialState();
@@ -65,6 +66,13 @@ test("печатная жалоба использует выбранный ор
   const fullName = auditAuthorityFullName(draft.auditAuthority);
   assert.ok(html.includes(fullName));
   assert.ok(html.includes("Копия:"));
+  assert.match(html, /На действия \(бездействие\) органа аудита по обращению/);
+  assert.doesNotMatch(html, /по первичному обращению|Реквизиты первичного обращения/);
+  assert.match(html, /Наименование заявителя:/);
+  assert.match(html, /БИН:/);
+  assert.ok(html.includes(SUBJECT_2_PROFILE.orgTranslations.ru.replaceAll('"', "&quot;")) ||
+    html.includes(SUBJECT_2_PROFILE.orgTranslations.ru));
+  assert.ok(html.includes(SUBJECT_2_PROFILE.bin));
   assert.ok(html.includes("3."));
   assert.ok(html.includes("Исх-123"));
   assert.ok(html.includes("12.10.2026"));
@@ -122,4 +130,41 @@ test("нельзя отправить жалобу без реквизитов, 
   broken.manualPoints=draft.manualPoints;
   broken.attachments=[];
   assert.throws(()=>validateSubjectAppeal(broken,actionComplaintReport(broken,state.date),state.date),/Приложите доказательства/);
+});
+
+
+test("пункт 1 печатной жалобы автоматически использует ФИО/наименование и ИИН/БИН из кабинета", () => {
+  const { state, draft } = fixture();
+  const report = actionComplaintReport(draft, state.date);
+  assert.equal(report.org, SUBJECT_2_PROFILE.orgTranslations.ru);
+  assert.equal(report.bin, SUBJECT_2_PROFILE.bin);
+  assert.equal(report.identifierType, SUBJECT_2_PROFILE.identifierType);
+  const html = subjectAppealHtml(report, draft, state.date);
+  assert.match(html, /1\. Фамилия, имя, отчество/);
+  assert.match(html, /Наименование заявителя:/);
+  assert.match(html, /БИН:/);
+  assert.match(html, /001002003004/);
+  assert.doesNotMatch(html, /Реквизиты первичного обращения/);
+  const individualHtml = subjectAppealHtml({
+    ...report, identifierType: "ИИН", bin: "123456789012", org: "Иванов Иван Иванович",
+    orgTranslations: undefined,
+  }, draft, state.date);
+  assert.match(individualHtml, /ФИО заявителя:/);
+  assert.match(individualHtml, /ИИН:/);
+  assert.match(individualHtml, /123456789012/);
+});
+
+test("карточки пункта 4 имеют компактную кнопку удаления и отступы", () => {
+  const { state, draft } = fixture();
+  const saved = saveSubjectAppealDraft(state, draft, "subject2");
+  const html = renderToStaticMarkup(createElement(SubjectPrescriptionForm, {
+    state: saved, role: "subject2", draftId: draft.id, actionComplaint: true,
+    onClose() {}, onSave() {}, onSubmit() {},
+  }));
+  assert.match(html, /subject-appeal-manual-point-header/);
+  assert.match(html, /subject-appeal-remove-point/);
+  assert.match(html, /Пункт 1/);
+  assert.match(html, /Удалить пункт 1/);
+  assert.match(html, /Обоснование по пункту 1/);
+  assert.match(html, /subject-appeal-add-manual-point/);
 });

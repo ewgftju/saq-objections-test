@@ -172,7 +172,7 @@ export function SubjectAppealDocument({
       <p className="subject-appeal-reference">
         {prescription
           ? report.documentKind === "action-inaction"
-            ? t("На действия (бездействие) органа аудита по первичному обращению", "Аудит органының бастапқы жолданым бойынша әрекеттеріне (әрекетсіздігіне)")
+            ? t("На действия (бездействие) органа аудита по обращению", "Аудит органының жолданым бойынша әрекеттеріне (әрекетсіздігіне)")
             : report.documentKind === "preventive-act"
             ? t("На акт о результате профилактического контроля", "Профилактикалық бақылау нәтижелері туралы актіге")
             : report.prescriptionSubtype === "preventive"
@@ -182,14 +182,6 @@ export function SubjectAppealDocument({
         {t("от", "күні")} {formatDate(report.date)}
       </p>
       {prescription && report.relatedAuditReport && <p className="subject-appeal-reference">{t("Связанный аудиторский отчёт", "Байланысты аудиторлық есеп")} № {report.relatedAuditReport.number} {t("от", "күні")} {formatDate(report.relatedAuditReport.date)}</p>}
-      {report.documentKind === "action-inaction" && (
-        <section className="subject-appeal-section">
-          <h3>{t("Реквизиты первичного обращения", "Бастапқы жолданым деректемелері")}</h3>
-          <p>{t("Номер первичного обращения в КВГА/ДВГА", "КВГА/ДВГА-ға бастапқы жолданымның нөмірі")}: {draft.initialAppealNumber || "—"}</p>
-          <p>{t("Дата первичного обращения в КВГА/ДВГА", "КВГА/ДВГА-ға бастапқы жолданымның күні")}: {draft.initialAppealDate ? formatDate(draft.initialAppealDate) : "—"}</p>
-          <p>{t("Орган аудита (КВГА/ДВГА)", "Аудит органы (КВГА/ДВГА)")}: {authority}</p>
-        </section>
-      )}
       <section className="subject-appeal-section">
         <h3>
           {t(
@@ -197,12 +189,27 @@ export function SubjectAppealDocument({
             prescription ? "1. Жеке тұлғаның тегі, аты, әкесінің аты (егер ол жеке басын куәландыратын құжатта көрсетілсе), жеке сәйкестендіру нөмірі (ол болған кезде), пошталық мекенжайы не заңды тұлғаның атауы, пошталық мекенжайы, бизнес-сәйкестендіру нөмірі (ол болған кезде)." : "1. Тегі, аты, әкесінің аты (ол болған кезде) не қарсылық беруші тұлғаның толық атауы, оның тұрғылықты жері (орналасқан жері):",
           )}
         </h3>
-        <p className="subject-appeal-autofill">
-          {applicant}
-          {prescription && <>, {identifier}: {report.bin}</>}
-          {prescription && !onChange && <>, {t("Почтовый адрес", "Пошталық мекенжай")}: {draft.postalAddress?.trim() || "—"}</>}
-          {!prescription && <><br />{report.addressTranslations?.[draft.language] || report.address}</>}
-        </p>
+        {report.documentKind === "action-inaction" ? (
+          <div className="subject-appeal-autofill subject-appeal-applicant-details">
+            <p>
+              <strong>{report.identifierType === "ИИН" ? t("ФИО заявителя", "Өтініш берушінің аты-жөні") : t("Наименование заявителя", "Өтініш берушінің атауы")}:</strong>{" "}
+              {applicant}
+            </p>
+            <p>
+              <strong>{identifier}:</strong> {report.bin}
+            </p>
+            {!onChange && draft.postalAddress?.trim() && (
+              <p><strong>{t("Почтовый адрес", "Пошталық мекенжай")}:</strong> {draft.postalAddress.trim()}</p>
+            )}
+          </div>
+        ) : (
+          <p className="subject-appeal-autofill">
+            {applicant}
+            {prescription && <>, {identifier}: {report.bin}</>}
+            {prescription && !onChange && <>, {t("Почтовый адрес", "Пошталық мекенжай")}: {draft.postalAddress?.trim() || "—"}</>}
+            {!prescription && <><br />{report.addressTranslations?.[draft.language] || report.address}</>}
+          </p>
+        )}
         {prescription && onChange && (
           <label className="field subject-appeal-postal-address">
             <span>Почтовый адрес</span>
@@ -359,6 +366,9 @@ export function subjectAppealHtml(
     .subject-appeal-section{margin-bottom:4mm}
     .subject-appeal-autofill{margin-left:2.5mm}
     .subject-appeal-postal-address{display:block;margin-top:3mm}
+    .subject-appeal-applicant-details{margin:2mm 0 3mm 2.5mm;white-space:normal}
+    .subject-appeal-applicant-details p{margin:0 0 1.5mm}
+    .subject-appeal-applicant-details p:last-child{margin-bottom:0}
     .subject-appeal-postal-address>span{display:block;font-weight:bold;margin-bottom:1mm}
     .subject-appeal-arguments{break-before:page;margin-top:24mm}
     .subject-appeal-argument{margin:0 0 5mm 2.5mm;overflow-wrap:anywhere}
@@ -382,7 +392,9 @@ export function subjectAppealHtml(
   return (
     '<!DOCTYPE html><html lang="' +
     (draft.language === "kk" ? "kk" : "ru") +
-    '"><head><meta charset="UTF-8"><title>Обращение по отчёту</title><style>' +
+    '"><head><meta charset="UTF-8"><title>' +
+    (report.documentKind === "action-inaction" ? "Жалоба на действие/бездействие" : "Обращение") +
+    '</title><style>' +
     css +
     "</style></head><body>" +
     body +
