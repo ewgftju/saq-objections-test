@@ -122,6 +122,7 @@ export function SubjectAppealDocument({
               </strong>
             </h4>
             {!groupedDocuments && !prescription && <h5>{t("Довод заявителя", "Өтініш берушінің уәжі")}</h5>}
+            {report.documentKind === "action-inaction" && <h5>{t("Обоснование:", "Негіздеме:")}</h5>}
             <p>{draft.argumentsByPoint[point.id]}</p>
             {!groupedDocuments && <>
             <h5>{t(
