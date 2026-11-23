@@ -29,6 +29,9 @@ const FULL_AUDIT_AUTHORITIES: Record<string, string> = {
   "ДВГА по области Абай": `Департамент внутреннего государственного аудита по области Абай ${DVGA_SUFFIX}`,
 };
 
+/** Единый справочник органов аудита для подачи жалоб. */
+export const AUDIT_AUTHORITY_OPTIONS = Object.keys(FULL_AUDIT_AUTHORITIES);
+
 const KAZAKH_AUDIT_AUTHORITIES: Record<string, string> = {
   КВГА: "Қазақстан Республикасы Қаржы министрлігінің Ішкі мемлекеттік аудит комитеті",
   "ДВГА по Акмолинской области":

@@ -10,7 +10,7 @@ import SubjectAppealForm from "./SubjectAppealForm";
 import SubjectPrescriptionForm from "./SubjectPrescriptionForm";
 import { subjectPrescriptions } from "../services/subjectPrescriptions";
 
-type AppealKind = "" | "audit" | "complaint";
+type AppealKind = "" | "audit" | "complaint" | "action";
 type PrescriptionSubtype = "" | "audit" | "preventive" | "preventive-act";
 
 export default function SubjectAppealStart(
@@ -25,7 +25,7 @@ export default function SubjectAppealStart(
     ? prescriptions.find((p) => p.sourceCaseId === savedDraft.sourceCaseId)
     : undefined;
   const [kind, setKind] = useState<AppealKind>(
-    savedDraft ? (savedDraft.documentKind ? "complaint" : "audit") : "",
+    savedDraft ? (savedDraft.documentKind === "action-inaction" ? "action" : savedDraft.documentKind ? "complaint" : "audit") : "",
   );
   const [prescriptionSubtype, setPrescriptionSubtype] =
     useState<PrescriptionSubtype>(
@@ -47,6 +47,10 @@ export default function SubjectAppealStart(
   const selectedPrescription = selectedPrescriptions.find(
     (p) => p.sourceCaseId === reportId,
   );
+
+  if (kind === "action" && openForm) {
+    return <SubjectPrescriptionForm {...props} actionComplaint />;
+  }
 
   if (kind === "complaint" && openForm && selectedPrescription) {
     return (
@@ -87,6 +91,7 @@ export default function SubjectAppealStart(
           <option value="">Выберите вид обращения</option>
           <option value="audit">Возражение на аудиторский отчёт</option>
           <option value="complaint">Жалоба на решение КВГА/ДВГА</option>
+          <option value="action">Жалоба на действие/бездействие</option>
         </select>
       </label>
 
@@ -180,11 +185,11 @@ export default function SubjectAppealStart(
 
       <div className="actions">
         <Button onClick={onClose}>Закрыть</Button>
-        {((kind === "audit" && reports.length > 0) ||
+        {(kind === "action" || (kind === "audit" && reports.length > 0) ||
           (kind === "complaint" && selectedPrescriptions.length > 0)) && (
           <Button
             primary
-            disabled={kind === "complaint" ? !selectedPrescription : !selectedReport}
+            disabled={kind === "action" ? false : kind === "complaint" ? !selectedPrescription : !selectedReport}
             onClick={() => setOpenForm(true)}
           >
             Продолжить

@@ -8,6 +8,8 @@ import {
   validateSubjectAppeal,
 } from "../services/subjectAppeals";
 import { subjectPrescriptions } from "../services/subjectPrescriptions";
+import { actionComplaintReport, newActionComplaintDraft } from "../services/subjectActionComplaint";
+import { AUDIT_AUTHORITY_OPTIONS } from "../../../utils/auditAuthority";
 import {
   printSubjectAppeal,
   subjectAppealHtml,
@@ -19,25 +21,29 @@ import { SubjectAppealFilePicker } from "./SubjectAppealFilePicker";
 
 export default function SubjectPrescriptionForm({
   prescriptionId,
+  actionComplaint = false,
   ...props
-}: ComponentProps<typeof SubjectAppealForm> & { prescriptionId: string }) {
+}: ComponentProps<typeof SubjectAppealForm> & { prescriptionId?: string; actionComplaint?: boolean }) {
   const { state, role, draftId, onClose, onSave, onSubmit } = props;
-  const source = subjectPrescriptions(state, role).find(
+  const sourceFromRegistry = actionComplaint ? undefined : subjectPrescriptions(state, role).find(
     (p) => p.sourceCaseId === prescriptionId,
   );
   const [draft, setDraft] = useState(() => {
     const saved = state.subjectAppealDrafts?.find(
       (d) =>
         d.ownerRole === role &&
-        d.documentKind === source?.documentKind &&
+        d.documentKind === (actionComplaint ? "action-inaction" : sourceFromRegistry?.documentKind) &&
         (draftId ? d.id === draftId : d.sourceCaseId === prescriptionId),
     );
     return saved
       ? structuredClone(saved)
-      : source
-        ? createSubjectAppealDraft(source, crypto.randomUUID())
-        : undefined;
+      : actionComplaint
+        ? newActionComplaintDraft(crypto.randomUUID())
+        : sourceFromRegistry
+          ? createSubjectAppealDraft(sourceFromRegistry, crypto.randomUUID())
+          : undefined;
   });
+  const source = actionComplaint && draft ? actionComplaintReport(draft, state.date) : sourceFromRegistry;
   const [preview, setPreview] = useState(false);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -93,7 +99,7 @@ export default function SubjectPrescriptionForm({
   }
   return (
     <Modal
-      title={source?.documentKind === "preventive-act" ? "Жалоба на акт о результате профилактического контроля" : t("Жалоба на предписание", "Нұсқамаға шағым")}
+      title={actionComplaint ? "Жалоба на действие/бездействие — не связанная с ГЗ" : source?.documentKind === "preventive-act" ? "Жалоба на акт о результате профилактического контроля" : t("Жалоба на предписание", "Нұсқамаға шағым")}
       onClose={onClose}
       wide
     >
@@ -147,7 +153,34 @@ export default function SubjectPrescriptionForm({
                 : t("Предпросмотр", "Алдын ала қарау")}
             </Button>
           </div>
-          <Notice>
+          {actionComplaint && (
+            <div className="form-grid">
+              <label className="field">
+                <span>Номер первичного обращения в КВГА/ДВГА <span className="required">*</span></span>
+                <input required type="text" aria-label="Номер первичного обращения в КВГА/ДВГА"
+                  value={draft.initialAppealNumber || ""}
+                  onChange={(event) => setDraft({...draft,initialAppealNumber:event.target.value})} />
+              </label>
+              <label className="field">
+                <span>Дата первичного обращения в КВГА/ДВГА <span className="required">*</span></span>
+                <input required type="date" aria-label="Дата первичного обращения в КВГА/ДВГА"
+                  value={draft.initialAppealDate || ""}
+                  onChange={(event) => setDraft({...draft,initialAppealDate:event.target.value})} />
+              </label>
+              <label className="field">
+                <span>Орган аудита (КВГА/ДВГА) <span className="required">*</span></span>
+                <select required aria-label="Орган аудита (КВГА/ДВГА)"
+                  value={draft.auditAuthority || ""}
+                  onChange={(event) => setDraft({...draft,auditAuthority:event.target.value})}>
+                  <option value="">Выберите орган аудита</option>
+                  {AUDIT_AUTHORITY_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+          {!actionComplaint && <Notice>
             {source.documentKind === "preventive-act" ? "Акт о результате профилактического контроля" : t("Предписание", "Нұсқама")} № {source.number} {t("от", "күні")}{" "}
             {formatDate(source.date)}.<br />
             {source.relatedAuditReport ? (
@@ -161,7 +194,7 @@ export default function SubjectPrescriptionForm({
             ) : (
               t("Предписание по профилактическому контролю", "Профилактикалық бақылау бойынша нұсқама")
             )}
-          </Notice>
+          </Notice>}
           <div className="subject-appeal-paper-background">
             <SubjectAppealDocument
               report={source}
@@ -173,7 +206,9 @@ export default function SubjectPrescriptionForm({
                   <div className="subject-appeal-point-editor">
                     <p className="subject-appeal-hint">
                       {t(
-                        source.documentKind === "preventive-act"
+                        actionComplaint
+                          ? "Добавьте пункты вручную: номер пункта, обстоятельства и документы, подтверждающие обстоятельства."
+                          : source.documentKind === "preventive-act"
                           ? "Выберите оспариваемые пункты акта и укажите по каждому обстоятельства. Описание оспариваемого вопроса заполнит рабочий орган."
                           : "Выберите оспариваемые пункты предписания и укажите по каждому обоснование. Описание оспариваемого вопроса заполнит рабочий орган.",
                         "Нұсқаманың дауланатын тармақтарын таңдап, әрқайсысы бойынша негіздемені жазыңыз. Дауланатын мәселенің сипаттамасын жұмыс органы толтырады.",
@@ -191,7 +226,27 @@ export default function SubjectPrescriptionForm({
                             (selected ? " selected" : "")
                           }
                         >
-                          <label className="subject-appeal-point-toggle">
+                          {actionComplaint ? (
+                            <div className="form-grid">
+                              <label className="field">
+                                <span>Номер пункта <span className="required">*</span></span>
+                                <input aria-label="Номер пункта" required type="text"
+                                  value={draft.manualPoints?.find((item) => item.id === point.id)?.number || ""}
+                                  onChange={(event) => setDraft({
+                                    ...draft,
+                                    manualPoints: (draft.manualPoints || []).map((item) => item.id === point.id ? {...item,number:event.target.value} : item),
+                                  })}
+                                />
+                              </label>
+                              <Button onClick={() => setDraft({
+                                ...draft,
+                                manualPoints: (draft.manualPoints || []).filter((item) => item.id !== point.id),
+                                selectedPointIds: draft.selectedPointIds.filter((id) => id !== point.id),
+                                attachments: draft.attachments.filter((file) => file.pointId !== point.id),
+                                argumentsByPoint: Object.fromEntries(Object.entries(draft.argumentsByPoint).filter(([id]) => id !== point.id)),
+                              })}>Удалить пункт</Button>
+                            </div>
+                          ) : <label className="subject-appeal-point-toggle">
                             <input
                               type="checkbox"
                               aria-label={
@@ -228,7 +283,7 @@ export default function SubjectPrescriptionForm({
                                   point.finding || "—"}
                               </span>
                             </span>
-                          </label>
+                          </label>}
                           {selected && (
                             <div className="subject-appeal-point-body">
                               <label className="field">
@@ -302,6 +357,16 @@ export default function SubjectPrescriptionForm({
                         </section>
                       );
                     })}
+                    {actionComplaint && (
+                      <Button onClick={() => {
+                        const id = crypto.randomUUID();
+                        setDraft({
+                          ...draft,
+                          manualPoints: [...(draft.manualPoints || []), { id, number: "" }],
+                          selectedPointIds: [...draft.selectedPointIds, id],
+                        });
+                      }}>+ Добавить пункт</Button>
+                    )}
                   </div>
                 )
               }

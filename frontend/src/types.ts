@@ -563,6 +563,8 @@ export interface AgendaDetails {
   auditObjectBin?: string;
   /** Заявитель действует от имени объекта аудита по доверенности. */
   applicantIsAuditObjectRepresentative?: boolean;
+  /** Жалоба на действие/бездействие, не связанная с ГЗ. */
+  actionComplaintSubtype?: "non-procurement";
   /** Реквизиты каждого обжалованного действия/бездействия. */
   actionAppealAuthorities?: Array<{
     issuer: string;
@@ -780,7 +782,7 @@ export type NewCaseInput = Pick<
 
 /** Реквизиты и пункты отчёта, доступные объекту для подачи обращения. */
 export interface SubjectAuditReport {
-  documentKind?: "prescription" | "preventive-act";
+  documentKind?: "prescription" | "preventive-act" | "action-inaction";
   /** Подвид предписания. Без значения — предписание на аудиторский отчёт. */
   prescriptionSubtype?: "audit" | "preventive";
   relatedAuditReport?: { number: string; date: string };
@@ -824,7 +826,12 @@ export interface SubjectAppealAttachment {
 }
 
 export interface SubjectAppealDraft {
-  documentKind?: "prescription" | "preventive-act";
+  documentKind?: "prescription" | "preventive-act" | "action-inaction";
+  /** Реквизиты первичного обращения для жалобы на действие/бездействие, не связанной с ГЗ. */
+  initialAppealNumber?: string;
+  initialAppealDate?: string;
+  auditAuthority?: string;
+  manualPoints?: Array<{ id: string; number: string }>;
   postalAddress?: string;
   otherInformation?: string;
   id: string;

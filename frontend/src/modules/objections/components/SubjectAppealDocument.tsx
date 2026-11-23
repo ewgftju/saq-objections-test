@@ -170,7 +170,9 @@ export function SubjectAppealDocument({
         : t("Возражение", "Қарсылық")}</h2>
       <p className="subject-appeal-reference">
         {prescription
-          ? report.documentKind === "preventive-act"
+          ? report.documentKind === "action-inaction"
+            ? t("На действия (бездействие) органа аудита по первичному обращению", "Аудит органының бастапқы жолданым бойынша әрекеттеріне (әрекетсіздігіне)")
+            : report.documentKind === "preventive-act"
             ? t("На акт о результате профилактического контроля", "Профилактикалық бақылау нәтижелері туралы актіге")
             : report.prescriptionSubtype === "preventive"
             ? t("На предписание об устранении нарушений по результатам профилактического контроля", "Профилактикалық бақылау нәтижелері бойынша бұзушылықтарды жою туралы нұсқамаға")
@@ -179,6 +181,14 @@ export function SubjectAppealDocument({
         {t("от", "күні")} {formatDate(report.date)}
       </p>
       {prescription && report.relatedAuditReport && <p className="subject-appeal-reference">{t("Связанный аудиторский отчёт", "Байланысты аудиторлық есеп")} № {report.relatedAuditReport.number} {t("от", "күні")} {formatDate(report.relatedAuditReport.date)}</p>}
+      {report.documentKind === "action-inaction" && (
+        <section className="subject-appeal-section">
+          <h3>{t("Реквизиты первичного обращения", "Бастапқы жолданым деректемелері")}</h3>
+          <p>{t("Номер первичного обращения в КВГА/ДВГА", "КВГА/ДВГА-ға бастапқы жолданымның нөмірі")}: {draft.initialAppealNumber || "—"}</p>
+          <p>{t("Дата первичного обращения в КВГА/ДВГА", "КВГА/ДВГА-ға бастапқы жолданымның күні")}: {draft.initialAppealDate ? formatDate(draft.initialAppealDate) : "—"}</p>
+          <p>{t("Орган аудита (КВГА/ДВГА)", "Аудит органы (КВГА/ДВГА)")}: {authority}</p>
+        </section>
+      )}
       <section className="subject-appeal-section">
         <h3>
           {t(
@@ -219,7 +229,7 @@ export function SubjectAppealDocument({
         <h3>
           3.{" "}
           {t(
-            "Наименование уполномоченного органа по внутреннему государственному аудиту, проводившего государственный аудит",
+            report.documentKind === "action-inaction" ? "Орган аудита (КВГА/ДВГА), действия (бездействие) которого обжалуются" : "Наименование уполномоченного органа по внутреннему государственному аудиту, проводившего государственный аудит",
             prescription ? "Мемлекеттік аудит жүргізген ішкі мемлекеттік аудит жөніндегі уәкілетті органның атауы" : "Мемлекеттік аудит жүргізген ішкі мемлекеттік аудит жөніндегі уәкілетті органның атауы:",
           )}
         </h3>

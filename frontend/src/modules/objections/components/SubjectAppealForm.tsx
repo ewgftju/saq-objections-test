@@ -447,7 +447,9 @@ export function SubjectAppealsPanel({
         <div className="subject-appeal-registry-row" key={c.id}>
           <div>
             <b>
-              {c.id} · {c.subjectAppeal!.report.documentKind === "preventive-act"
+              {c.id} · {c.subjectAppeal!.report.documentKind === "action-inaction"
+                ? "Жалоба на действие/бездействие (не связанная с ГЗ)"
+                : c.subjectAppeal!.report.documentKind === "preventive-act"
                 ? "Акт о результате профилактического контроля"
                 : c.subjectAppeal!.report.documentKind === "prescription"
                 ? c.subjectAppeal!.report.prescriptionSubtype === "preventive"

@@ -15,6 +15,8 @@ import { addWorkdays, dateObject } from "./deadlines";
 import { formatDate } from "../../../utils/dateFormat";
 import { subjectPrescriptions } from "./subjectPrescriptions";
 import { subjectAppealRequirementDocument } from "./subjectAppealRequirements";
+import { actionComplaintReport } from "./subjectActionComplaint";
+import { AUDIT_AUTHORITY_OPTIONS } from "../../../utils/auditAuthority";
 
 export const SUBJECT_APPEAL_TYPE = "Возражение на аудиторский отчет";
 export const MAX_APPEAL_FILE_SIZE = 2 * 1024 * 1024;
@@ -189,6 +191,7 @@ function reportForDraft(
 ) {
   if (role !== "subject2" || draft.ownerRole !== role)
     throw new Error("Подача доступна в кабинете объекта №2.");
+  if (draft.documentKind === "action-inaction") return actionComplaintReport(draft, state.date);
   const report = (draft.documentKind ? subjectPrescriptions(state, role) : subjectAuditReports(state.cases, role)).find(
     (item) => item.sourceCaseId === draft.sourceCaseId,
   );
@@ -225,7 +228,24 @@ export function validateSubjectAppeal(
   report: SubjectAuditReport,
   date: string,
 ) {
-  if (!report.documentKind) assertSubjectAppealFilingOpen(report, date);
+  if (report.documentKind === "action-inaction") {
+    if (!draft.initialAppealNumber?.trim())
+      throw new Error("Заполните номер первичного обращения в КВГА/ДВГА.");
+    if (!draft.initialAppealDate)
+      throw new Error("Заполните дату первичного обращения в КВГА/ДВГА.");
+    dateObject(draft.initialAppealDate);
+    if (!draft.auditAuthority || !AUDIT_AUTHORITY_OPTIONS.includes(draft.auditAuthority))
+      throw new Error("Выберите орган аудита (КВГА/ДВГА) из списка.");
+    if (!draft.manualPoints?.length)
+      throw new Error("Добавьте хотя бы один пункт в блоке «Суть обращения».");
+    if (draft.manualPoints.some(point => !point.number.trim()))
+      throw new Error("Укажите номер каждого добавленного пункта.");
+    if (new Set(draft.manualPoints.map(point => point.number.trim())).size !== draft.manualPoints.length)
+      throw new Error("Номера оспариваемых пунктов не должны повторяться.");
+    if (draft.manualPoints.length !== draft.selectedPointIds.length ||
+      draft.manualPoints.some(point => !draft.selectedPointIds.includes(point.id)))
+      throw new Error("Проверьте добавленные пункты.");
+  } else if (!report.documentKind) assertSubjectAppealFilingOpen(report, date);
   if (!["ru", "kk"].includes(draft.language))
     throw new Error("Выберите язык обращения.");
   if (!draft.signerName.trim()) throw new Error("Укажите Ф.И.О. подписанта.");
@@ -284,8 +304,9 @@ export function submitSubjectAppeal(
   const selected = new Set(draft.selectedPointIds);
   const prescription = report.documentKind === "prescription";
   const preventiveAct = report.documentKind === "preventive-act";
-  const complaint = prescription || preventiveAct;
-  const appealType = complaint ? "Жалоба на решение КВГА/ДВГА" : SUBJECT_APPEAL_TYPE;
+  const actionComplaint = report.documentKind === "action-inaction";
+  const complaint = prescription || preventiveAct || actionComplaint;
+  const appealType = actionComplaint ? "Жалоба на действие/бездействие" : complaint ? "Жалоба на решение КВГА/ДВГА" : SUBJECT_APPEAL_TYPE;
   const id = nextCaseNumber(state.cases, appealType, state.date);
   const org = report.orgTranslations?.[draft.language] || report.org;
   const issues = report.points
@@ -298,7 +319,7 @@ export function submitSubjectAppeal(
       translations: {},
       finding: p.finding,
       ...(p.prescriptionText ? { prescriptionText: structuredClone(p.prescriptionText) } : {}),
-      authorityFinding: preventiveAct ? p.finding : (p.prescriptionText?.[draft.language] ?? auditProgramResultText(
+      authorityFinding: actionComplaint ? "" : preventiveAct ? p.finding : (p.prescriptionText?.[draft.language] ?? auditProgramResultText(
         p.auditProgramResult,
         "answer",
         draft.language,
@@ -332,7 +353,9 @@ export function submitSubjectAppeal(
     issuer: report.issuer,
     authority: "Апелляционная комиссия при Министерстве финансов РК",
     document: {
-      name: preventiveAct
+      name: actionComplaint
+        ? "Первичное обращение в КВГА/ДВГА"
+        : preventiveAct
         ? "Акт о результате профилактического контроля"
         : prescription
           ? report.prescriptionSubtype === "preventive" ? "Предписание по профилактическому контролю" : "Предписание"
@@ -344,7 +367,14 @@ export function submitSubjectAppeal(
     },
     agendaDetails: {
       auditObjectName: org, auditObjectBin: report.bin,
-      ...(complaint ? {
+      ...(actionComplaint ? {
+        actionComplaintSubtype: "non-procurement" as const,
+        actionAppealAuthorities: [{
+          issuer: draft.auditAuthority!.trim(),
+          documentNumber: draft.initialAppealNumber!.trim(),
+          documentDate: draft.initialAppealDate!,
+        }],
+      } : complaint ? {
         decisionKind: preventiveAct ? "preventive-control-act" as const
           : report.prescriptionSubtype === "preventive" ? "prescription-preventive" as const : "prescription-audit" as const,
         ...(report.relatedAuditReport ? {
@@ -355,7 +385,7 @@ export function submitSubjectAppeal(
     },
     amount: issues.reduce((sum, point) => sum + point.amount, 0),
     request:
-      (preventiveAct ? "Жалоба на акт о результате профилактического контроля № " : prescription ? "Жалоба на предписание № " : "Возражение на аудиторский отчёт № ") +
+      (actionComplaint ? "Жалоба на действие/бездействие органа аудита по первичному обращению № " : preventiveAct ? "Жалоба на акт о результате профилактического контроля № " : prescription ? "Жалоба на предписание № " : "Возражение на аудиторский отчёт № ") +
       report.number +
       ". Оспариваемые пункты: " +
       issues.map((point) => point.number).join(", ") +
@@ -412,8 +442,9 @@ export function submitSubjectAppeal(
         text:
           "Из кабинета объекта №2 поступило обращение " +
           id +
-          (preventiveAct ? " по акту № " : prescription ? " по предписанию № " : " по отчёту № ") +
+          (actionComplaint ? " по действию/бездействию (первичное обращение № " : preventiveAct ? " по акту № " : prescription ? " по предписанию № " : " по отчёту № ") +
           report.number +
+          (actionComplaint ? ")" : "") +
           ". Назначьте исполнителя рабочего органа.",
         date: state.date,
         read: false,
