@@ -21,10 +21,9 @@ export default function SubjectAppealStart(
     (draft) => draft.id === draftId && draft.ownerRole === role,
   );
   const prescriptions = subjectPrescriptions(state, role);
-  const savedPrescription =
-    Boolean(savedDraft?.documentKind)
-      ? prescriptions.find((p) => p.sourceCaseId === savedDraft.sourceCaseId)
-      : undefined;
+  const savedPrescription = savedDraft?.documentKind
+    ? prescriptions.find((p) => p.sourceCaseId === savedDraft.sourceCaseId)
+    : undefined;
   const [kind, setKind] = useState<AppealKind>(
     savedDraft ? (savedDraft.documentKind ? "complaint" : "audit") : "",
   );
