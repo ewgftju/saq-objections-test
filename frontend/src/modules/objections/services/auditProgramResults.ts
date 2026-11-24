@@ -1,10 +1,15 @@
-import type { AuditProgramResult, DocumentLanguage, ViolationPoint } from "../../../types";
+import type { AuditProgramResult, AuditReportPoint, DocumentLanguage, ViolationPoint } from "../../../types";
 
 export function sourceViolationText(
-  point: Pick<ViolationPoint, "auditProgramResult" | "prescriptionText">,
+  point: Pick<ViolationPoint, "auditProgramResult" | "auditReportPoint" | "prescriptionText">,
   language: DocumentLanguage,
 ) {
-  return point.prescriptionText?.[language] ?? auditProgramResultText(point.auditProgramResult, "answer", language);
+  return point.prescriptionText?.[language] ?? (point.auditReportPoint ? auditReportPointText(point.auditReportPoint, "text", language) : auditProgramResultText(point.auditProgramResult, "answer", language));
+}
+
+export function auditReportPointText(point: AuditReportPoint | undefined, field: "name" | "text", language: DocumentLanguage, includeOriginal = false): string {
+  if (!point) return "";
+  return point.translations?.[language]?.[field] ?? (point.language === language || includeOriginal ? point[field] : "");
 }
 
 /** Подтверждённый текст отчёта; наименование никогда не заменяет его ответ. */

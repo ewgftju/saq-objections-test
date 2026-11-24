@@ -26,7 +26,7 @@ function fixture(language: DocumentLanguage = "ru") {
   const state = initialState();
   const report = subjectAuditReports(state.cases, "subject2").find(r => r.number === "1-АО" && r.date === "2026-09-05")!;
   const draft = localizeSubjectAppealDraft(createSubjectAppealDraft(report, "vga-details-" + language), report, language);
-  const pointId = report.points[0].id;
+  const pointId = report.points.find(point => point.auditProgramResult)!.id;
   draft.selectedPointIds = [pointId];
   draft.argumentsByPoint = { [pointId]: "Обстоятельства заявителя" };
   draft.attachments = [{ id: "proof", pointId, name: "Доказательство.pdf", size: 1, dataUrl: "data:application/pdf;base64,YQ==" }];
@@ -50,7 +50,7 @@ test("реквизиты и руководитель ВГА заполняют �
       assert.ok(html.includes(draft.signerPosition));
       assert.doesNotMatch(html, /Из кабинета объекта заявителя|Audit plus/);
       assert.doesNotMatch(html, /Нарушение, по которому поступило возражение|Қарсылық келіп түскен бұзушылық|Ответ на вопрос программы аудита|subject-appeal-source-answer/);
-      assert.ok(!html.includes(report.points[0].auditProgramResult!.answer));
+      assert.ok(!html.includes(report.points.find(point => point.auditProgramResult)!.auditProgramResult!.answer));
     }
     assert.equal(SUBJECT_2_PROFILE.orgTranslations.ru, 'Товарищество с ограниченной ответственностью "Audit plus #1"');
     assert.equal(state.cases.find(c => c.id === report.sourceCaseId)!.org, SUBJECT_2_PROFILE.orgTranslations.ru);
@@ -117,16 +117,17 @@ test("карточка и поданная форма фиксируют рек�
 test("оба вопроса программы поступают в нарушение двумя полями, описание вопроса пустое на обоих языках", () => {
   for (const language of ["ru", "kk"] as const) {
     const { state, report, draft } = fixture(language);
-    draft.selectedPointIds = report.points.map(point => point.id);
-    draft.argumentsByPoint = Object.fromEntries(report.points.map(point => [point.id, `Довод ${point.number}`]));
-    draft.attachments = report.points.map(point => ({ ...draft.attachments[0], id: `proof-${point.id}`, pointId: point.id }));
+    const questions = report.points.filter(point => point.auditProgramResult);
+    draft.selectedPointIds = questions.map(point => point.id);
+    draft.argumentsByPoint = Object.fromEntries(questions.map(point => [point.id, `Довод ${point.number}`]));
+    draft.attachments = questions.map(point => ({ ...draft.attachments[0], id: `proof-${point.id}`, pointId: point.id }));
     const { state: saved, caseId } = submitSubjectAppeal(state, draft, "subject2");
     const c = saved.cases.find(item => item.id === caseId)!;
     c.requests = [{ id: "request", recipient: c.issuer, template: "dvga", date: state.date, sent: state.date, deadline: state.date, text: "Запрос" }];
     for (const [index, point] of c.issues.entries()) {
       assert.equal(point.title, "");
       assert.deepEqual(point.translations, {});
-      assert.deepEqual(point.auditProgramResult, report.points[index].auditProgramResult);
+      assert.deepEqual(point.auditProgramResult, questions[index].auditProgramResult);
       assert.equal(point.argument, draft.argumentsByPoint[point.id]);
     }
     for (const role of ["dvga", "kvga"] as const) {

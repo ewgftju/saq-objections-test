@@ -10,7 +10,7 @@ import type {
 } from "../../../types";
 import { nextCaseNumber } from "./caseNumbering";
 import { subjectRoleForIdentifier } from "./saqCabinets";
-import { auditProgramResultText } from "./auditProgramResults";
+import { auditProgramResultText, auditReportPointText, sourceViolationText } from "./auditProgramResults";
 import { addWorkdays, dateObject } from "./deadlines";
 import { formatDate } from "../../../utils/dateFormat";
 import { subjectPrescriptions } from "./subjectPrescriptions";
@@ -88,15 +88,15 @@ export function subjectAuditReports(
         identifierType: c.applicantIdentifierType || "БИН",
         address: c.address,
         issuer: c.issuer,
-        points: testAuditReportPoints(c) ?? c.issues.map((point) => ({
+        points: c.auditReportPoints ? structuredClone(c.auditReportPoints) : testAuditReportPoints(c) ?? c.issues.map((point) => ({
           id: point.id,
-          number: point.auditProgramResult?.number ?? point.number,
-          title: point.auditProgramResult?.name ?? point.title,
-          titleKk: point.auditProgramResult
+          number: point.auditReportPoint?.number ?? point.auditProgramResult?.number ?? point.number,
+          title: point.auditReportPoint?.name ?? point.auditProgramResult?.name ?? point.title,
+          titleKk: point.auditReportPoint ? auditReportPointText(point.auditReportPoint, "name", "kk") || undefined : point.auditProgramResult
             ? auditProgramResultText(point.auditProgramResult, "name", "kk") ||
               undefined
             : point.translations?.kk?.title,
-          titleRu: point.auditProgramResult
+          titleRu: point.auditReportPoint ? auditReportPointText(point.auditReportPoint, "name", "ru") || undefined : point.auditProgramResult
             ? auditProgramResultText(point.auditProgramResult, "name", "ru") ||
               undefined
             : point.translations?.ru?.title,
@@ -104,6 +104,7 @@ export function subjectAuditReports(
           auditProgramResult:
             point.auditProgramResult &&
             structuredClone(point.auditProgramResult),
+          ...(point.auditReportPoint ? { auditReportPoint: structuredClone(point.auditReportPoint) } : {}),
           amount: point.amount,
         })),
         ...testAuditReportDetails(c),
@@ -128,7 +129,19 @@ export function localizeSubjectAppealDraft(draft: SubjectAppealDraft, report: Su
   };
 }
 
-/** Обновляет реквизиты открываемого черновика, только если содержание отчёта не менялось. */
+/** Дополняет тестовый источник полным составом пунктов без изменения уже выбранных данных. */
+function compatibleReportPoints(prior: SubjectAuditReport, current: SubjectAuditReport) {
+  if (!Array.isArray(prior.points) || !Array.isArray(current.points)) return false;
+  return prior.points.every(point => {
+    const actual = current.points.find(candidate => candidate.id === point.id);
+    if (!actual) return false;
+    const normalized = { ...point };
+    if (point.id.startsWith("vga-test-question-") && actual.number === `11.${point.number}` && actual.auditProgramResult?.number === point.number) normalized.number = actual.number;
+    return JSON.stringify(normalized) === JSON.stringify(actual);
+  });
+}
+
+/** Обновляет реквизиты и добавленные пункты черновика, сохраняя проверку содержания. */
 export function refreshSubjectAppealDraftSource(draft: SubjectAppealDraft, report: SubjectAuditReport): SubjectAppealDraft {
   if (draft.sourceFingerprint === reportFingerprint(report)) return localizeSubjectAppealDraft(structuredClone(draft), report);
   let prior: SubjectAuditReport;
@@ -138,6 +151,9 @@ export function refreshSubjectAppealDraftSource(draft: SubjectAppealDraft, repor
   const currentContent: Record<string, unknown> = { ...report };
   for (const key of ["org", "orgTranslations", "bin", "identifierType", "address", "addressTranslations", "signerName", "signerPositionTranslations"]) {
     delete priorContent[key]; delete currentContent[key];
+  }
+  if (report.bin === "001002003004" && report.number === "1-АО" && report.date === "2026-09-05" && compatibleReportPoints(prior, report)) {
+    delete priorContent.points; delete currentContent.points;
   }
   if (JSON.stringify(priorContent) !== JSON.stringify(currentContent)) return structuredClone(draft);
   const sourcePosition = report.signerPositionTranslations?.[draft.language];
@@ -319,13 +335,10 @@ export function submitSubjectAppeal(
       translations: {},
       finding: p.finding,
       ...(p.prescriptionText ? { prescriptionText: structuredClone(p.prescriptionText) } : {}),
-      authorityFinding: actionComplaint ? "" : preventiveAct ? p.finding : (p.prescriptionText?.[draft.language] ?? auditProgramResultText(
-        p.auditProgramResult,
-        "answer",
-        draft.language,
-      )),
+      authorityFinding: actionComplaint ? "" : preventiveAct ? p.finding : sourceViolationText(p, draft.language),
       auditProgramResult:
         p.auditProgramResult && structuredClone(p.auditProgramResult),
+      ...(p.auditReportPoint ? { auditReportPoint: structuredClone(p.auditReportPoint) } : {}),
       argument: draft.argumentsByPoint[p.id].trim(),
       disputed: true,
       amount: p.amount,

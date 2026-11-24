@@ -383,19 +383,21 @@ test("поданная форма без результата программы
   assert.doesNotMatch(html, /<h5>Довод заявителя<\/h5>/);
 });
 
-test("в тестовом отчёте 1-АО доступны два результата без изменения существующих обращений", () => {
+test("в тестовом отчёте 1-АО доступны все разделы и прежние результаты без изменения существующих обращений", () => {
   const state = initialState();
   const originalCases = structuredClone(state.cases);
   const report = subjectAuditReports(state.cases, "subject2").find(
     (item) => item.number === "1-АО",
   )!;
-  assert.deepEqual(report.points.map((point) => [point.number, point.title]), [
-    ["1", "Представительские расходы"],
-    ["2", "Контроль приобретения, хранение и списание продуктов питания, медикаментов и мягкого инвентаря в сфере образования"],
+  const questions = report.points.filter(point => point.auditProgramResult);
+  assert.deepEqual(questions.map((point) => [point.number, point.title]), [
+    ["11.1", "Представительские расходы"],
+    ["11.2", "Контроль приобретения, хранение и списание продуктов питания, медикаментов и мягкого инвентаря в сфере образования"],
   ]);
-  assert.equal(report.points[0].auditProgramResult?.answer,
+  assert.deepEqual(report.points.filter(point => point.auditReportPoint).map(point => point.number), Array.from({ length: 15 }, (_, i) => String(i + 1)));
+  assert.equal(questions[0].auditProgramResult?.answer,
     Array(5).fill("Расходы выявленные представителями были там то там то тестово направлены и сгенерированы.").join(" "));
-  assert.equal(report.points[1].auditProgramResult?.answer,
+  assert.equal(questions[1].auditProgramResult?.answer,
     Array(4).fill("Ответ был тестовый нарушение не выявлены в части теста.").join(" "));
   assert.deepEqual(state.cases, originalCases);
   const repo = createDemoRepository({
@@ -416,7 +418,7 @@ test("в тестовом отчёте 1-АО доступны два резул
   };
   const submitted = submitSubjectAppeal(state, draft, "subject2").state.cases[0];
   assert.deepEqual(submitted.issues.map((point) => [point.number, point.title, point.authorityFinding, point.argument]),
-    report.points.map((point) => [point.number, "", point.auditProgramResult!.answer, draft.argumentsByPoint[point.id]]));
+    report.points.map((point) => [point.number, "", point.auditProgramResult?.answer || point.auditReportPoint!.text, draft.argumentsByPoint[point.id]]));
   assert.deepEqual(submitted.subjectAppeal?.report, report);
 });
 

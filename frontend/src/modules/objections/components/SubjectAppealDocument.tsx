@@ -1,6 +1,7 @@
 import type { ChangeEvent, ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { SubjectAppealDraft, SubjectAuditReport } from "../../../types";
+import { auditReportPointText } from "../services/auditProgramResults";
 import {
   auditAuthorityFullName,
   auditAuthorityKazakhName,
@@ -116,9 +117,9 @@ export function SubjectAppealDocument({
                   `По пункту № ${point.number}:`,
                   `№ ${point.number} тармақ бойынша:`,
                 ) : groupedDocuments ? t(
-                  `По пункту № ${point.number}. ${point.titleRu || point.title}:`,
-                  `№ ${point.number}. ${point.titleKk || point.title} тармағы бойынша:`,
-                ) : <>№ {point.number}. {(kk ? point.titleKk : point.titleRu) || point.title}</>}
+                  `По пункту № ${point.number}. ${auditReportPointText(point.auditReportPoint, "name", "ru", true) || point.titleRu || point.title}:`,
+                  `№ ${point.number}. ${auditReportPointText(point.auditReportPoint, "name", "kk", true) || point.titleKk || point.title} тармағы бойынша:`,
+                ) : <>№ {point.number}. {auditReportPointText(point.auditReportPoint, "name", draft.language, true) || (kk ? point.titleKk : point.titleRu) || point.title}</>}
               </strong>
             </h4>
             {!groupedDocuments && !prescription && <h5>{t("Довод заявителя", "Өтініш берушінің уәжі")}</h5>}

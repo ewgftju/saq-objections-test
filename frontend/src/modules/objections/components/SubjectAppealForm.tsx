@@ -10,6 +10,7 @@ import type {
 import { formatDate } from "../../../utils/dateFormat";
 import { downloadFile } from "../../../utils/download";
 import { SubjectAppealFilePicker } from "./SubjectAppealFilePicker";
+import SubjectAuditPointEditor from "./SubjectAuditPointEditor";
 import {
   createSubjectAppealDraft,
   localizeSubjectAppealDraft,
@@ -285,95 +286,10 @@ export default function SubjectAppealForm({
               onChange={preview ? undefined : setDraft}
               pointEditor={
                 preview ? undefined : (
-                  <div className="subject-appeal-point-editor">
-                    <div className="subject-appeal-point-heading">
-                      <span>
-                        {t("Выбрано:", "Таңдалды:")}{" "}
-                        {draft.selectedPointIds.length}
-                      </span>
-                    </div>
-                    {report.points.map((point) => {
-                      const selected = draft.selectedPointIds.includes(
-                        point.id,
-                      );
-                      return (
-                        <section
-                          className={
-                            "subject-appeal-point" +
-                            (selected ? " selected" : "")
-                          }
-                          key={point.id}
-                        >
-                          <label className="subject-appeal-point-toggle">
-                            <input
-                              type="checkbox"
-                              checked={selected}
-                              aria-label={"Оспорить пункт " + point.number}
-                              onChange={(event) =>
-                                setDraft({
-                                  ...draft,
-                                  selectedPointIds: event.target.checked
-                                    ? [...draft.selectedPointIds, point.id]
-                                    : draft.selectedPointIds.filter(
-                                        (id) => id !== point.id,
-                                      ),
-                                  attachments: event.target.checked
-                                    ? draft.attachments
-                                    : draft.attachments.filter(
-                                        (file) => file.pointId !== point.id,
-                                      ),
-                                })
-                              }
-                            />
-                            <span>
-                              <b>
-                                {t(
-                                  "Вопрос программы аудита",
-                                  "Аудит бағдарламасының сұрағы",
-                                )}{" "}
-                                № {point.number}
-                              </b>
-                              <span>
-                                {(kk ? point.titleKk : point.titleRu) ||
-                                  point.title}
-                              </span>
-                            </span>
-                          </label>
-                          {selected && (
-                            <div className="subject-appeal-point-body">
-                              <label className="field">
-                                <span>
-                                  {documentText(
-                                    "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования и доказательства, подтверждающие обстоятельства",
-                                    "Қарсылық беретін мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және осы мән-жайларды растайтын дәлелдемелер",
-                                  )}{" "}
-                                  <span className="required">*</span>
-                                </span>
-                                <textarea
-                                  aria-label={
-                                    "Обстоятельства по пункту " + point.number
-                                  }
-                                  value={draft.argumentsByPoint[point.id] || ""}
-                                  required
-                                  rows={4}
-                                  onChange={(event) =>
-                                    setDraft({
-                                      ...draft,
-                                      argumentsByPoint: {
-                                        ...draft.argumentsByPoint,
-                                        [point.id]: event.target.value,
-                                      },
-                                    })
-                                  }
-                                />
-                              </label>
-                              {fileInput(point.id)}
-                            </div>
-                          )}
-                        </section>
-                      );
-                    })}
-                  </div>
+                  <SubjectAuditPointEditor key={report.sourceCaseId} report={report} draft={draft} onChange={setDraft} disabled={uploading} renderFiles={fileInput} circumstancesLabel={documentText(
+                    "Обстоятельства, на которые объект государственного аудита, подающий возражение, основывает свои требования и доказательства, подтверждающие обстоятельства",
+                    "Қарсылық беретін мемлекеттік аудит объектісі өз талаптарын негіздейтін мән-жайлар және осы мән-жайларды растайтын дәлелдемелер",
+                  )} />
                 )
               }
             />

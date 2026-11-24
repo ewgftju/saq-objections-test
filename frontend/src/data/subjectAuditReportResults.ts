@@ -21,7 +21,7 @@ export function testAuditReportDetails(source: ObjectionCase) {
   };
 }
 
-/** Результаты исходного тестового отчёта ВГА, доступного в кабинете объекта №2. */
+/** Все пункты тестового отчёта по структуре формы, включая вопросы программы в разделе 11. */
 export function testAuditReportPoints(
   source: ObjectionCase,
 ): SubjectAuditReport["points"] | undefined {
@@ -34,7 +34,7 @@ export function testAuditReportPoints(
   )
     return undefined;
 
-  return [
+  const questions = [
     {
       number: "1",
       name: "Представительские расходы",
@@ -51,11 +51,44 @@ export function testAuditReportPoints(
     },
   ].map((result) => ({
     id: "vga-test-question-" + result.number,
-    number: result.number,
+    number: "11." + result.number,
     title: result.name,
     titleRu: result.name,
     finding: "",
     amount: 0,
-    auditProgramResult: { ...result, language: "ru" },
+    auditProgramResult: { ...result, language: "ru" as const },
   }));
+  const details = testAuditReportDetails(source)!;
+  const notice = "В соответствии со статьей 37 Закона Республики Казахстан «О государственном аудите и финансовом контроле» руководитель объекта государственного аудита в течение двух рабочих дней со дня получения аудиторского отчета уведомляет о выявленных нарушениях субъектов предпринимательства и иных лиц, интересы которых затронуты аудиторскими мероприятиями государственного аудита.";
+  const names = [
+    "Наименование объекта государственного аудита",
+    "Тип внутреннего государственного аудита",
+    "Вид проверки",
+    "Поручение на проведение аудиторского мероприятия",
+    "Внутренний государственный аудит проведен",
+    "Цель, предмет внутреннего государственного аудита",
+    "Период, охваченный внутренним государственным аудитом",
+    "Сроки проведения внутреннего государственного аудита",
+    "Должностные лица объекта государственного аудита",
+    "Сведения о результатах предыдущего государственного аудита (контроля) и проверок",
+    "Сведения о результатах проведенного внутреннего государственного аудита",
+    "Оценка в области государственного аудита или деятельности объекта аудита на предмет соответствия выявленных результатов показателям государственного аудита",
+    "Воспрепятствования в проведении внутреннего государственного аудита",
+    "Меры, принятые в ходе внутреннего государственного аудита",
+    notice,
+  ];
+  const texts: Record<number, string> = {
+    1: `${details.org}, БИН ${details.bin}, ${details.address}`,
+    2: "Соответствие",
+    9: `${details.signerName}, ${details.signerPositionTranslations.ru}`,
+    11: questions.map(p => `${p.auditProgramResult.number}. ${p.title}\n${p.auditProgramResult.answer}`).join("\n\n"),
+    15: notice,
+  };
+  const sections: SubjectAuditReport["points"] = names.map((name, index) => ({
+    id: `vga-report-section-${index + 1}`,
+    number: String(index + 1), title: name, titleRu: name, finding: "", amount: 0,
+    auditReportPoint: { number: String(index + 1), name, text: texts[index + 1] || "—", language: "ru" },
+  }));
+  // Стабильные идентификаторы прежних вопросов сохраняют доводы и файлы черновиков.
+  return sections.flatMap(section => section.number === "11" ? [section, ...questions] : [section]);
 }

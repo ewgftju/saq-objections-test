@@ -76,6 +76,15 @@ export interface AuditProgramResult {
   translations?: Partial<Record<DocumentLanguage, { name?: string; answer?: string }>>;
 }
 
+/** Любой нумерованный пункт исходного аудиторского отчёта, включая общие сведения. */
+export interface AuditReportPoint {
+  number: string;
+  name: string;
+  text: string;
+  language: DocumentLanguage;
+  translations?: Partial<Record<DocumentLanguage, { name?: string; text?: string }>>;
+}
+
 export interface ViolationPoint {
   /** Исходный текст пункта предписания; не является описанием вопроса. */
   prescriptionText?: Partial<Record<DocumentLanguage, string>>;
@@ -99,6 +108,7 @@ export interface ViolationPoint {
   authorityFinding?: string;
   /** Нарушение из ВГА: наименование вопроса программы аудита и ответ аудитора; неизменяемый снимок. */
   auditProgramResult?: AuditProgramResult;
+  auditReportPoint?: AuditReportPoint;
   position?: string;
   analysis?: string;
   legal?: string;
@@ -683,6 +693,8 @@ export interface ObjectionCase {
   affectedParties?: string;
   issues: ViolationPoint[];
   status: CaseStatus;
+  /** Полный состав исходного отчёта ВГА; не ограничивается выявленными нарушениями. */
+  auditReportPoints?: SubjectAuditReport["points"];
   assignee: string;
   extensionDays: number;
   pauseDays: number;
@@ -818,6 +830,7 @@ export interface SubjectAuditReport {
     titleRu?: string;
     finding: string;
     auditProgramResult?: AuditProgramResult;
+    auditReportPoint?: AuditReportPoint;
     amount: number;
   }>;
 }

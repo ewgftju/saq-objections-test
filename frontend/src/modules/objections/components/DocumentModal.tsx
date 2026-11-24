@@ -1,6 +1,6 @@
 import { documentLabel } from "../services/documentLabels";
 import { SubjectAppealDocument, subjectAppealHtml } from "./SubjectAppealDocument";
-import { auditProgramResultText } from "../services/auditProgramResults";
+import { auditProgramResultText, auditReportPointText } from "../services/auditProgramResults";
 import {
   localizedCase,
   languagesForDocument,
@@ -683,7 +683,7 @@ function LegacyDocumentContent({
             <thead>
               <tr>
                 <th>№ п-п</th>
-                <th>{t("Нарушение, по которым поступило возражение")}</th>
+                <th>{snapshot.issues.some(point => point.auditReportPoint) ? (language === "kk" ? "Аудиторлық есептің дауланатын тармағы" : "Оспариваемый пункт аудиторского отчёта") : t("Нарушение, по которым поступило возражение")}</th>
                 <th>{t("Возражение объекта аудита")}</th>
                 <th>
                   {language === "kk" ? (
@@ -707,14 +707,17 @@ function LegacyDocumentContent({
                     (isResponseAppendix
                       ? (request?.authorityResponses?.[point.id]?.finding ??
                         (useLegacyAuthorityValues ? point.authorityFinding : ""))
-                      : point.auditProgramResult
+                      : point.auditReportPoint ? auditReportPointText(point.auditReportPoint, "text", language || snapshot.appealLanguage || "ru") : point.auditProgramResult
                         ? auditProgramResultText(point.auditProgramResult, "answer", language || snapshot.appealLanguage || "ru")
                         : point.authorityFinding) ?? "";
                   return (
                   <tr key={point.id}>
                     <td>{point.number}</td>
                     <td>
-                      {point.auditProgramResult ? <>
+                      {point.auditReportPoint ? <>
+                        <p><b>{language === "kk" ? "Тармақтың атауы:" : "Наименование пункта:"}</b>{" "}{auditReportPointText(point.auditReportPoint, "name", language || snapshot.appealLanguage || "ru") || "—"}</p>
+                        <p><b>{language === "kk" ? "Тармақтың мазмұны:" : "Содержание пункта:"}</b>{" "}{violationAnswer}</p>
+                      </> : point.auditProgramResult ? <>
                         <p><b>{language === "kk" ? "Аудит бағдарламасы сұрағының атауы:" : "Наименование вопроса программы аудита:"}</b>{" "}{auditProgramResultText(point.auditProgramResult, "name", language || snapshot.appealLanguage || "ru") || "—"}</p>
                         <p><b>{language === "kk" ? "Аудит бағдарламасының сұрағына жауап:" : "Ответ на вопрос программы аудита:"}</b>{" "}{violationAnswer}</p>
                       </> : violationAnswer}

@@ -44,7 +44,7 @@ import ConsiderationProcess from "../components/ConsiderationProcess";
 import { wordDocumentHtml } from "../components/DocumentModal";
 import { downloadFile } from "../../../utils/download";
 import { isApplicantCase, isSubjectRequest } from "../services/subjectRegistry";
-import { auditProgramResultText } from "../services/auditProgramResults";
+import { auditProgramResultText, auditReportPointText } from "../services/auditProgramResults";
 import { protocolDavgaFromReason } from "../services/protocolReason";
 import { applicantRequirementFiles } from "../services/subjectAppealRequirements";
 import { evidenceDocumentsForPoint } from "../services/pointEvidence";
@@ -304,7 +304,7 @@ function PointCard({
         </div>
       </div>
       <div hidden={!expanded}>
-        {point.auditProgramResult && <p><b>{pointDescriptionFieldLabel(language)}:</b> {point.title || "—"}</p>}
+        {(point.auditProgramResult || point.auditReportPoint) && <p><b>{pointDescriptionFieldLabel(language)}:</b> {point.title || "—"}</p>}
         {onSaveDescription && <div>
           {editingDescription ? <form onSubmit={(event) => {
             event.preventDefault();
@@ -317,6 +317,11 @@ function PointCard({
           <h4>Нарушение, по которому поступило возражение</h4>
           <p><b>Наименование вопроса программы аудита:</b> {auditProgramResultText(point.auditProgramResult, "name", point.auditProgramResult.language, true) || "—"}</p>
           <p><b>Ответ на вопрос программы аудита:</b> {auditProgramResultText(point.auditProgramResult, "answer", point.auditProgramResult.language, true) || "—"}</p>
+        </section>}
+        {point.auditReportPoint && <section>
+          <h4>Пункт аудиторского отчёта</h4>
+          <p><b>Наименование пункта:</b> {auditReportPointText(point.auditReportPoint, "name", point.auditReportPoint.language, true) || "—"}</p>
+          <p><b>Содержание пункта:</b> {auditReportPointText(point.auditReportPoint, "text", point.auditReportPoint.language, true) || "—"}</p>
         </section>}
         {point.finding && (
           <p>

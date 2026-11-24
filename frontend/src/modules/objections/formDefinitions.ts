@@ -8,7 +8,7 @@ import { disputed } from "./services/decisions";
 import { certificateBasisForPoint, certificateDavgaDraft, decisionProjectDavga, motivatedResponseDavga, hasDavgaText, protocolDavgaFromReason } from "./services/protocolReason";
 import { controlDecisions } from "./services/workflow";
 import { hasSubjectSaqCabinet, subjectSaqCabinetLabel } from "./services/saqCabinets";
-import { auditProgramResultText, sourceViolationText } from "./services/auditProgramResults";
+import { auditProgramResultText, auditReportPointText, sourceViolationText } from "./services/auditProgramResults";
 
 export interface FormField {
   language?: "ru" | "kk";
@@ -416,16 +416,20 @@ export function actionForm(
               ? request.recipient.toUpperCase().includes("КВГА")
               : request.recipient.toUpperCase().includes("ДВГА"))),
       );
-      for (const point of disputed(c))
+      for (const point of disputed(c)) {
+        const source = point.auditReportPoint || point.auditProgramResult;
+        const sourceName = (language: "ru" | "kk") => point.auditReportPoint ? auditReportPointText(point.auditReportPoint, "name", language) : auditProgramResultText(point.auditProgramResult, "name", language);
+        const nameLabel = point.auditReportPoint ? "Наименование пункта аудиторского отчёта" : "Наименование вопроса программы аудита";
+        const answerLabel = point.auditReportPoint ? "Содержание пункта аудиторского отчёта" : "Ответ на вопрос программы аудита";
         fields.push(
-          ...(!point.auditProgramResult ? [heading(point.id, `Пункт ${point.number}${point.title ? ` — ${point.title}` : ""}`)] : []),
-          ...(point.auditProgramResult ? [
-            { ...heading(`auditProgramViolation_${point.id}`, `Нарушение по пункту № ${point.number}`), language: "ru" as const },
-            { ...area(`auditProgramName_${point.id}`, `Наименование вопроса программы аудита № ${point.number} — Русский`, auditProgramResultText(point.auditProgramResult, "name", "ru")), language: "ru" as const, readOnly: true, required: false },
+          ...(!source ? [heading(point.id, `Пункт ${point.number}${point.title ? ` — ${point.title}` : ""}`)] : []),
+          ...(source ? [
+            { ...heading(`auditProgramViolation_${point.id}`, `${point.auditReportPoint ? "Пункт аудиторского отчёта" : "Нарушение по пункту"} № ${point.number}`), language: "ru" as const },
+            { ...area(`auditProgramName_${point.id}`, `${nameLabel} № ${point.number} — Русский`, sourceName("ru")), language: "ru" as const, readOnly: true, required: false },
           ] : []),
           { ...area(
             `authorityFinding_${point.id}`,
-            `${point.auditProgramResult ? "Ответ на вопрос программы аудита" : "Нарушение"} № ${point.number} — Русский`,
+            `${source ? answerLabel : "Нарушение"} № ${point.number} — Русский`,
             authorityRequest?.authorityResponses?.[point.id]?.finding ??
               sourceViolationText(point, "ru"),
           ), language: "ru" },
@@ -434,14 +438,15 @@ export function actionForm(
             `Мотивированный ответ № ${point.number} — Русский`,
             authorityRequest?.authorityResponses?.[point.id]?.response,
           ), language: "ru" },
-          ...(point.auditProgramResult ? [
-            { ...heading(`auditProgramViolationKk_${point.id}`, `Нарушение по пункту № ${point.number}`), language: "kk" as const },
-            { ...area(`auditProgramNameKk_${point.id}`, `Наименование вопроса программы аудита № ${point.number} — Қазақша`, auditProgramResultText(point.auditProgramResult, "name", "kk")), language: "kk" as const, readOnly: true, required: false },
+          ...(source ? [
+            { ...heading(`auditProgramViolationKk_${point.id}`, `${point.auditReportPoint ? "Пункт аудиторского отчёта" : "Нарушение по пункту"} № ${point.number}`), language: "kk" as const },
+            { ...area(`auditProgramNameKk_${point.id}`, `${nameLabel} № ${point.number} — Қазақша`, sourceName("kk")), language: "kk" as const, readOnly: true, required: false },
           ] : []),
-          { ...area(`authorityFindingKk_${point.id}`, `${point.auditProgramResult ? "Ответ на вопрос программы аудита" : "Бұзушылық"} № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.finding ?? sourceViolationText(point, "kk")), language: "kk" },
+          { ...area(`authorityFindingKk_${point.id}`, `${source ? answerLabel : "Бұзушылық"} № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.finding ?? sourceViolationText(point, "kk")), language: "kk" },
           { ...area(`authorityResponseKk_${point.id}`, `Уәжді жауап № ${point.number} — Қазақша`, authorityRequest?.authorityResponsesKk?.[point.id]?.response), language: "kk" },
         );
-      note = c.subjectAppeal?.report.documentKind === "prescription" ? "Поле «Нарушение» заполняется из соответствующего пункта исходного предписания на русском и казахском языках." : "Нарушение содержит наименование вопроса программы аудита и ответ аудитора. Русская и казахская версии подставляются при их наличии в исходном отчёте.";
+      }
+      note = c.subjectAppeal?.report.documentKind === "prescription" ? "Поле «Нарушение» заполняется из соответствующего пункта исходного предписания на русском и казахском языках." : c.issues.some(point => point.auditReportPoint) ? "По каждому выбранному пункту подставляются его наименование и содержание из исходного аудиторского отчёта. Текст доступен для уточнения при подготовке ответа." : "Нарушение содержит наименование вопроса программы аудита и ответ аудитора. Русская и казахская версии подставляются при их наличии в исходном отчёте.";
       break;
     case "position":
       title = "Ответ получен";
