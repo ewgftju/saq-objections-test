@@ -4,6 +4,7 @@ import { Button } from "../../../components/ui";
 import type { SubjectAppealDraft, SubjectAuditReport } from "../../../types";
 import { addSubjectAppealPoint, removeSubjectAppealPoint } from "../services/subjectAppealPoints";
 import { auditReportPointText } from "../services/auditProgramResults";
+import AuditReportPointPicker from "./AuditReportPointPicker";
 
 export default function SubjectAuditPointEditor({ report, draft, onChange, renderFiles, circumstancesLabel, disabled = false }: {
   report: SubjectAuditReport;
@@ -14,6 +15,7 @@ export default function SubjectAuditPointEditor({ report, draft, onChange, rende
   disabled?: boolean;
 }) {
   const [adding, setAdding] = useState(false);
+  const [focusPointId, setFocusPointId] = useState<string>();
   const available = report.points.filter(point => !draft.selectedPointIds.includes(point.id));
   const selected = report.points.filter(point => draft.selectedPointIds.includes(point.id));
   const title = (point: SubjectAuditReport["points"][number]) => auditReportPointText(point.auditReportPoint, "name", draft.language, true) || (draft.language === "kk" ? point.titleKk : point.titleRu) || point.title;
@@ -23,17 +25,12 @@ export default function SubjectAuditPointEditor({ report, draft, onChange, rende
       <Button disabled={disabled || adding || !available.length} onClick={() => setAdding(true)}>+ Добавить пункт</Button>
     </div>
     {adding && <section className="subject-appeal-point subject-audit-new-point">
-      <label className="field">
-        <span>Пункт аудиторского отчёта <span className="required">*</span></span>
-        <select aria-label="Выберите пункт аудиторского отчёта" required value="" disabled={disabled} onChange={event => {
-          if (!event.target.value) return;
-          onChange(addSubjectAppealPoint(draft, report, event.target.value));
+      <AuditReportPointPicker points={available.map(point => ({ id: point.id, number: point.number, title: title(point) }))} disabled={disabled}
+        onSelect={pointId => {
+          onChange(addSubjectAppealPoint(draft, report, pointId));
+          setFocusPointId(pointId);
           setAdding(false);
-        }}>
-          <option value="">Выберите номер и наименование пункта</option>
-          {available.map(point => <option key={point.id} value={point.id}>№ {point.number}. {title(point)}</option>)}
-        </select>
-      </label>
+        }} />
       <Button disabled={disabled} onClick={() => setAdding(false)}>Отмена</Button>
     </section>}
     {!selected.length && !adding && <p className="subject-appeal-hint">Добавьте пункт аудиторского отчёта, по которому подаёте возражение.</p>}
@@ -45,7 +42,7 @@ export default function SubjectAuditPointEditor({ report, draft, onChange, rende
       <div className="subject-appeal-point-body">
         <label className="field">
           <span>{circumstancesLabel} <span className="required">*</span></span>
-          <textarea aria-label={`Обстоятельства по пункту ${point.number}`} required rows={4} value={draft.argumentsByPoint[point.id] || ""} onChange={event => onChange({ ...draft, argumentsByPoint: { ...draft.argumentsByPoint, [point.id]: event.target.value } })} />
+          <textarea autoFocus={focusPointId === point.id} aria-label={`Обстоятельства по пункту ${point.number}`} required rows={4} value={draft.argumentsByPoint[point.id] || ""} onChange={event => onChange({ ...draft, argumentsByPoint: { ...draft.argumentsByPoint, [point.id]: event.target.value } })} />
         </label>
         {renderFiles(point.id)}
       </div>
