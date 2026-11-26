@@ -681,6 +681,8 @@ export interface ObjectionCase {
     number: string;
     date: string;
     received: string;
+    /** Исходный отчёт ВГА, выбранный рабочим органом при ручной регистрации. */
+    sourceReportId?: string;
     /** Дата представления объекту подписанного аудиторского отчёта из ВГА. */
     signedReportPresentedAt?: string;
     name: string;

@@ -1503,6 +1503,9 @@ td .subline {
   color: #a93b3b;
 }
 .disputed-point-form-body {
+  min-width: 0;
+  margin: 0;
+  border: 0;
   padding: 20px 18px 4px;
   background: white;
 }
@@ -1647,7 +1650,8 @@ td .subline {
   font-size: 13px;
   font-weight: 500;
 }
-.point-number-field input {
+.point-number-field input,
+.point-number-field select {
   width: 58px;
   min-height: 32px;
   padding: 5px 8px;
@@ -1656,6 +1660,42 @@ td .subline {
   color: var(--text);
   font: inherit;
   text-align: center;
+}
+.point-number-field select {
+  width: auto;
+  min-width: 86px;
+  background-color: white;
+  text-align: start;
+}
+.work-audit-number {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.work-audit-number input {
+  min-width: 0;
+  flex: 1;
+}
+.work-audit-status,
+.work-audit-results {
+  grid-column: 1 / -1;
+  margin: 0 0 14px;
+  color: var(--muted);
+}
+.work-audit-results .button {
+  display: grid;
+  width: 100%;
+  justify-content: start;
+  gap: 3px;
+  margin-top: 6px;
+  text-align: left;
+  white-space: normal;
+}
+@media (max-width: 560px) {
+  .disputed-point-form-head {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
 }
 .new-case-actions {
   position: sticky;

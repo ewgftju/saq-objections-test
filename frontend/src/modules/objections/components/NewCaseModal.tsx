@@ -6,12 +6,22 @@ import type {
   CaseType,
   DemoState,
   DocumentLanguage,
+  SubjectAuditReport,
 } from "../../../types";
+import { auditAuthorityKazakhName } from "../../../utils/auditAuthority";
+import { reportPointTitle, sourceViolationText, workAuditPointSource } from "../services/auditProgramResults";
 import { applicantArgumentFieldLabel, applicantNameFieldLabel, pointDescriptionFieldLabel, procurementSubjectFieldLabel, statementFieldLabel } from "../services/documentLanguage";
 import { dateObject } from "../services/deadlines";
 import { required } from "../services/workflow";
 import { nextCaseNumber } from "../services/caseNumbering";
 import { Field } from "./ActionModal";
+import WorkAuditReportLookup from "./WorkAuditReportLookup";
+
+interface WorkAuditRow {
+  sourceId: string;
+  titles: Partial<Record<DocumentLanguage, string>>;
+  arguments: Partial<Record<DocumentLanguage, string>>;
+}
 
 const AUDIT_ORGAN_OPTIONS = [
   "КВГА",
@@ -115,11 +125,16 @@ export default function NewCaseModal({
     Record<string, File[]>
   >({});
   const [requirementFiles, setRequirementFiles] = useState<File[]>([]);
+  const formRef = useRef<HTMLFormElement>(null);
   const [isApplicantRepresentative, setIsApplicantRepresentative] =
     useState(false);
   const [isApplicantAuditObject, setIsApplicantAuditObject] = useState(false);
   const [applicantName, setApplicantName] = useState("");
   const [appealLanguage, setAppealLanguage] = useState<DocumentLanguage | "">("");
+  const language = appealLanguage || "ru";
+  const [auditReport, setAuditReport] = useState<SubjectAuditReport>();
+  const [auditRows, setAuditRows] = useState<Record<string, WorkAuditRow>>({});
+  const [manualAddress, setManualAddress] = useState("");
   const [applicantIdentifier, setApplicantIdentifier] = useState("");
   const [auditObjectName, setAuditObjectName] = useState("");
   const [auditObjectIdentifier, setAuditObjectIdentifier] = useState("");
@@ -144,6 +159,9 @@ export default function NewCaseModal({
   const isNoticeComplaint = appealType === "notice-complaint";
   const isNotice = appealType === "notice-objection" || isNoticeComplaint;
   const isAudit = appealType === "audit-objection";
+  const reportAddress = isAudit && isApplicantAuditObject && auditReport
+    ? auditReport.addressTranslations?.[language] || (language === "ru" ? auditReport.address : "")
+    : "";
   const isActionComplaint = appealType === "action-inaction-complaint";
   const isDecisionComplaint = appealType === "kvga-dvga-decision-complaint";
   const hasSeparateAuditObject =
@@ -198,10 +216,10 @@ export default function NewCaseModal({
       return next;
     });
   };
-  const updatePointEvidenceFiles = (pointId: string, files: File[]) => {
-    if (!files.length) return;
+  const updatePointEvidenceFiles = (pointId: string, files: File[], append = true) => {
+    if (append && !files.length) return;
     setPointEvidenceFiles((current) => {
-      const nextFiles = [...(current[pointId] || []), ...files];
+      const nextFiles = append ? [...(current[pointId] || []), ...files] : files;
       const input = evidenceInputs.current[pointId];
       if (input) {
         const dataTransfer = new DataTransfer();
@@ -212,6 +230,10 @@ export default function NewCaseModal({
     });
   };
   const removePoint = (pointId: string) => {
+    setAuditRows(current => {
+      const { [pointId]: removed, ...rest } = current;
+      return rest;
+    });
     setPointIds((current) => current.filter((id) => id !== pointId));
     setCollapsedPoints((current) => {
       const next = new Set(current);
@@ -224,19 +246,52 @@ export default function NewCaseModal({
     });
     delete evidenceInputs.current[pointId];
   };
+  const clearAuditReport = () => {
+    const manualPointFields = formRef.current?.querySelectorAll<HTMLTextAreaElement>('textarea[name^="pointTitle_"], textarea[name^="argument_"]');
+    const hasManualText = !isAudit && Array.from(manualPointFields ?? []).some(field => field.value.trim());
+    const hasInput = hasManualText || Object.values(auditRows).some(row =>
+      Object.keys(row.titles).length || Object.values(row.arguments).some(Boolean)
+    ) || Object.values(pointEvidenceFilesByPoint).some(files => files.length);
+    if (hasInput && !window.confirm("Очистить пункты, их описания, доводы и доказательства? Остальные поля обращения сохранятся.")) return false;
+    setAuditReport(undefined);
+    setAuditRows({});
+    setPointIds([`point${nextPointId.current++}`]);
+    setCollapsedPoints(new Set());
+    setPointEvidenceFiles({});
+    setError("");
+    return true;
+  };
+  const chooseAuditPoint = (rowId: string, sourceId: string) => {
+    const previous = auditRows[rowId];
+    if (previous?.sourceId === sourceId) return;
+    if (previous && (Object.keys(previous.titles).length || Object.values(previous.arguments).some(Boolean) || pointEvidenceFilesByPoint[rowId]?.length)) {
+      if (!window.confirm("При смене пункта его описание, довод и доказательства будут очищены. Сменить пункт?")) return;
+    }
+    setAuditRows(current => ({ ...current, [rowId]: { sourceId, titles: {}, arguments: {} } }));
+    setPointEvidenceFiles(current => ({ ...current, [rowId]: [] }));
+  };
+  const editAuditText = (rowId: string, field: "titles" | "arguments", value: string) => {
+    setAuditRows(current => {
+      const row = current[rowId];
+      return { ...current, [rowId]: { ...row, [field]: { ...row[field], [language]: value } } };
+    });
+  };
   return (
     <Modal title="Новое тестовое обращение" onClose={onClose}>
       <form
+        ref={formRef}
         onSubmit={async (event) => {
           event.preventDefault();
           try {
             const data = new FormData(event.currentTarget);
+            if (isAudit && !auditReport) throw new Error("Найдите аудиторский отчёт по номеру.");
+            if (isAudit && !auditReport?.points.length) throw new Error("В выбранном отчёте отсутствуют пункты для выбора.");
             const pointEvidenceFiles = pointIds.map((pointId, index) => {
               const files = pointEvidenceFilesByPoint[pointId] || [];
-              if (!files.length)
-                throw new Error(
-                  `Вложите доказательства по пункту ${index + 1}`,
-                );
+              if (!files.length) {
+                const number = auditReport?.points.find(p => p.id === auditRows[pointId]?.sourceId)?.number;
+                throw new Error(`Вложите доказательства по пункту ${number ?? index + 1}`);
+              }
               return files;
             });
             if (isApplicantRepresentative && !powerOfAttorneyFile)
@@ -300,6 +355,10 @@ export default function NewCaseModal({
               throw new Error(
                 "БИН/ИИН объекта аудита должен содержать 12 цифр",
               );
+            if (isAudit && auditReport && auditObjectBin !== auditReport.bin)
+              throw new Error(
+                "БИН/ИИН объекта аудита должен совпадать с объектом выбранного отчёта: " + auditReport.bin,
+              );
             const id = nextCaseNumber(
               state.cases,
               selectedAppealType.label,
@@ -324,14 +383,15 @@ export default function NewCaseModal({
               registered: state.date,
               filed,
               channel: get("channel", "Портал / цифровая система"),
-              issuer: isActionComplaint
+              issuer: auditReport?.issuer ?? (isActionComplaint
                 ? (primaryActionAppeal?.issuer ?? "")
-                : get("issuer", "Орган"),
+                : get("issuer", "Орган")),
               authority:
                 type === "control"
                   ? "Вышестоящий орган — определить компетенцию"
                   : "Апелляционная комиссия при Министерстве финансов РК",
               document: {
+                ...(isAudit && auditReport && { sourceReportId: auditReport.sourceCaseId, signedReportPresentedAt: auditReport.signedReportPresentedAt }),
                 number: isActionComplaint
                   ? (primaryActionAppeal?.documentNumber ?? "")
                   : needsAgendaTemplateFields
@@ -404,18 +464,31 @@ export default function NewCaseModal({
               amount,
               issues: pointIds.map((pointId, index) => {
                 const defaultPointNumber = index + 1;
-                const pointNumber = get(
-                  `pointNumber_${pointId}`,
-                  `Номер пункта ${defaultPointNumber}`,
-                );
+                const selectedId = get(`pointNumber_${pointId}`, `Номер пункта ${defaultPointNumber}`);
+                const source = isAudit ? auditReport?.points.find(p => p.id === selectedId) : undefined;
+                if (isAudit && !source) throw new Error("Выберите пункт найденного аудиторского отчёта.");
+                const pointNumber = source?.number ?? selectedId;
+                const id = source?.id ?? pointId;
+                const snapshot = source && workAuditPointSource(source);
+                const otherLanguage = language === "ru" ? "kk" : "ru";
+                const otherTitle = auditRows[pointId]?.titles[otherLanguage];
+                const otherArgument = auditRows[pointId]?.arguments[otherLanguage];
                 return {
-                  id: pointId,
+                  id,
                   number: pointNumber,
                   title: get(
                     `pointTitle_${pointId}`,
                     `${pointDescriptionFieldLabel(appealLanguage || "ru")} (пункт № ${pointNumber})`,
                   ),
-                  finding: "",
+                  finding: source?.finding ?? "",
+                  ...(snapshot && {
+                    ...snapshot,
+                    authorityFinding: sourceViolationText(snapshot, language),
+                    evidenceAttachmentIds: pointEvidenceFiles[index].map((_, i) => `${id}-file-${i + 1}`),
+                  }),
+                  ...(source && (otherTitle !== undefined || otherArgument !== undefined) && {
+                    translations: { [otherLanguage]: { title: otherTitle, argument: otherArgument } },
+                  }),
                   argument: get(
                     `argument_${pointId}`,
                     `${applicantArgumentFieldLabel(appealLanguage || "ru")} (пункт № ${pointNumber})`,
@@ -436,10 +509,14 @@ export default function NewCaseModal({
                   author: "Заявитель",
                 })),
                 ...pointEvidenceFiles.flatMap((files, index) =>
-                  files.map((file) => ({
+                  files.map((file, fileIndex) => ({
                     file,
-                    text: `Доказательства по оспариваемому пункту ${index + 1}`,
+                    text: isAudit ? `Доказательства по пункту № ${c.issues[index].number}` : `Доказательства по оспариваемому пункту ${index + 1}`,
                     author: "Заявитель",
+                    ...(isAudit && {
+                      evidencePointId: c.issues[index].id,
+                      evidenceAttachmentId: c.issues[index].evidenceAttachmentIds![fileIndex],
+                    }),
                   })),
                 ),
                 ...(isApplicantRepresentative && powerOfAttorneyFile
@@ -451,12 +528,11 @@ export default function NewCaseModal({
                       },
                     ]
                   : []),
-              ].map(async ({ file, text, author }) => ({
+              ].map(async ({ file, ...metadata }) => ({
                 name: file.name,
                 filename: file.name,
                 kind: "attachment",
-                text,
-                author,
+                ...metadata,
                 date: state.date,
                 dataUrl: await fileDataUrl(file),
               })),
@@ -511,7 +587,12 @@ export default function NewCaseModal({
           <span>Вид обращения</span>
           <select
             value={appealType}
-            onChange={(event) => setAppealType(event.target.value)}
+            onChange={event => {
+              const next = event.target.value;
+              if (isAudit && auditReport && !clearAuditReport()) return;
+              if (next === "audit-objection" && !clearAuditReport()) return;
+              setAppealType(next);
+            }}
           >
             {APPEAL_TYPES.map(({ value, label }) => (
               <option value={value} key={value}>
@@ -681,13 +762,25 @@ export default function NewCaseModal({
               label: "Представитель",
               type: "text" as const,
             },
-          ].map((field) => (
+          ].map((field) => field.name === "address" ? (
+            <label className="field" key={field.name}>
+              <span>Местонахождение <span className="required">*</span></span>
+              <input name="address" required readOnly={!!reportAddress} value={reportAddress || manualAddress}
+                onChange={event => setManualAddress(event.target.value)} />
+            </label>
+          ) : (
             <Field
               field={{ ...field, required: field.name !== "applicant" }}
               key={field.name}
             />
           ))}
-          {!isActionComplaint && (
+          {isAudit ? (
+            <label className="field">
+              <span>Орган аудита (КВГА/ДВГА) <span className="required">*</span></span>
+              <textarea name="issuer" rows={language === "kk" && auditReport ? 2 : 1} readOnly
+                value={auditReport ? (language === "kk" ? auditAuthorityKazakhName(auditReport.issuer) : auditReport.issuer) : ""} />
+            </label>
+          ) : !isActionComplaint && (
             <Field
               field={{
                 name: "issuer",
@@ -716,23 +809,15 @@ export default function NewCaseModal({
         {needsAgendaTemplateFields && !isActionComplaint && (
           <>
             <div className="form-grid">
-              <Field
-                field={{
-                  name: "documentNumber",
-                  label: sourceDocumentNumberLabel,
-                  type: "text",
-                  required: true,
-                }}
-              />
-              <Field
-                field={{
-                  name: "documentDate",
-                  label: sourceDocumentDateLabel,
-                  type: "date",
-                  value: state.date,
-                  required: true,
-                }}
-              />
+              {isAudit ? (
+                <WorkAuditReportLookup cases={state.cases} language={language} report={auditReport}
+                  onSelect={report => { setAuditReport(report); setError(""); }} onClear={clearAuditReport} />
+              ) : (
+                <>
+                  <Field field={{ name: "documentNumber", label: sourceDocumentNumberLabel, type: "text", required: true }} />
+                  <Field field={{ name: "documentDate", label: sourceDocumentDateLabel, type: "date", value: state.date, required: true }} />
+                </>
+              )}
               {isNotice && (
                 <>
                   <Field
@@ -1056,19 +1141,30 @@ export default function NewCaseModal({
         {pointIds.map((pointId, index) => {
           const pointNumber = index + 1;
           const isCollapsed = collapsedPoints.has(pointId);
+          const row = auditRows[pointId];
+          const sourcePoint = isAudit ? auditReport?.points.find(p => p.id === row?.sourceId) : undefined;
+          const sourceTitle = sourcePoint ? reportPointTitle(sourcePoint, language) : "";
+          const displayedNumber = sourcePoint?.number ?? pointNumber;
           return (
             <section className="disputed-point-form-card" key={pointId}>
               <div className="disputed-point-form-head">
                 <h3>Оспариваемый пункт</h3>
                 <label className="point-number-field">
                   <span>№ пункта</span>
-                  <input
+                  {isAudit ? <select
+                    name={`pointNumber_${pointId}`} aria-label={`Номер пункта ${pointNumber}`} required
+                    disabled={!auditReport?.points.length} value={row?.sourceId ?? ""}
+                    onChange={event => chooseAuditPoint(pointId, event.target.value)}>
+                    <option value="" disabled>Выбрать</option>
+                    {auditReport?.points.filter(p => p.id === row?.sourceId || !Object.values(auditRows).some(other => other.sourceId === p.id))
+                      .map(p => <option key={p.id} value={p.id}>{p.number}</option>)}
+                  </select> : <input
                     name={`pointNumber_${pointId}`}
                     type="text"
                     defaultValue={String(pointNumber)}
                     required
                     aria-label={`Номер пункта ${pointNumber}`}
-                  />
+                  />}
                 </label>
                 <div className="point-card-actions">
                   <Button
@@ -1077,8 +1173,8 @@ export default function NewCaseModal({
                     aria-expanded={!isCollapsed}
                     aria-label={
                       isCollapsed
-                        ? `Развернуть пункт ${pointNumber}`
-                        : `Свернуть пункт ${pointNumber}`
+                        ? `Развернуть пункт ${displayedNumber}`
+                        : `Свернуть пункт ${displayedNumber}`
                     }
                     onClick={() =>
                       setCollapsedPoints((current) => {
@@ -1095,7 +1191,7 @@ export default function NewCaseModal({
                     <Button
                       className="point-card-icon-button point-delete-button"
                       type="button"
-                      aria-label={`Удалить пункт ${pointNumber}`}
+                      aria-label={`Удалить пункт ${displayedNumber}`}
                       onClick={() => removePoint(pointId)}
                     >
                       <span aria-hidden="true">×</span>
@@ -1103,29 +1199,27 @@ export default function NewCaseModal({
                   )}
                 </div>
               </div>
-              <div
+              <fieldset
                 className="disputed-point-form-body"
+                key={isAudit ? sourcePoint?.id ?? "select" : "manual"}
+                disabled={isAudit && !sourcePoint}
                 hidden={isCollapsed}
                 aria-hidden={isCollapsed}
               >
-                <Field
-                  field={{
-                    name: `pointTitle_${pointId}`,
-                    label: pointDescriptionFieldLabel(appealLanguage || "ru"),
-                    type: "textarea",
-                    required: true,
-                  }}
-                />
-                <Field
-                  field={{
-                    name: `argument_${pointId}`,
-                    label: applicantArgumentFieldLabel(appealLanguage || "ru"),
-                    type: "textarea",
-                    placeholder:
-                      "Укажите, с чем заявитель не согласен и почему",
-                    required: true,
-                  }}
-                />
+                <label className="field">
+                  <span>{pointDescriptionFieldLabel(language)} <span className="required">*</span></span>
+                  <textarea name={`pointTitle_${pointId}`} rows={3} required
+                    placeholder={sourcePoint && !sourceTitle ? "В ВГА нет наименования на этом языке. Введите описание." : undefined}
+                    value={isAudit ? row?.titles[language] ?? sourceTitle : undefined}
+                    onChange={isAudit ? event => editAuditText(pointId, "titles", event.target.value) : undefined} />
+                </label>
+                <label className="field">
+                  <span>{applicantArgumentFieldLabel(language)} <span className="required">*</span></span>
+                  <textarea name={`argument_${pointId}`} rows={3} required
+                    placeholder="Укажите, с чем заявитель не согласен и почему"
+                    value={isAudit ? row?.arguments[language] ?? "" : undefined}
+                    onChange={isAudit ? event => editAuditText(pointId, "arguments", event.target.value) : undefined} />
+                </label>
                 <div className="point-evidence-field">
                   <span>Доказательства</span>
                   <label
@@ -1134,6 +1228,7 @@ export default function NewCaseModal({
                     onDragOver={(event) => event.preventDefault()}
                     onDrop={(event) => {
                       event.preventDefault();
+                      if (isAudit && !sourcePoint) return;
                       updatePointEvidenceFiles(
                         pointId,
                         Array.from(event.dataTransfer.files),
@@ -1188,6 +1283,7 @@ export default function NewCaseModal({
                                   pointEvidenceFilesByPoint[pointId].filter(
                                     (_, index) => index !== fileIndex,
                                   ),
+                                  false,
                                 )
                               }
                             >
@@ -1199,13 +1295,14 @@ export default function NewCaseModal({
                     </span>
                   ) : null}
                 </div>
-              </div>
+              </fieldset>
             </section>
           );
         })}
         <Button
           className="add-disputed-point-button"
           type="button"
+          disabled={isAudit && (!auditReport || pointIds.length >= auditReport.points.length || pointIds.some(id => !auditRows[id]?.sourceId))}
           onClick={() =>
             setPointIds((current) => [
               ...current,

@@ -58,12 +58,35 @@ export function subjectAuditReports(
   role: Role,
 ): SubjectAuditReport[] {
   if (role !== "subject2") return [];
+  return auditReportsFromSources(cases.filter(c => subjectRoleForIdentifier(c.bin) === role));
+}
+
+/** Для регистрации входящего документа поиск охватывает источники ВГА всех объектов. */
+export function findWorkAuditReports(cases: readonly ObjectionCase[], number: string): SubjectAuditReport[] {
+  const normalize = (value: string) => value.trim().replace(/^№\s*/, "").replace(/\s+/g, "").toUpperCase();
+  const query = normalize(number);
+  if (!query) return [];
+  const sources = cases.flatMap(c => {
+    if (c.type !== "audit" || c.subjectAppeal || c.document.sourceReportId || normalize(c.document.number) !== query) return [];
+    if (testAuditReportDetails(c)) return [c];
+    const issues = c.issues.filter(p => p.auditProgramResult || p.auditReportPoint);
+    if (!c.auditReportPoints && !issues.length) return [];
+    const object = c.agendaDetails;
+    if (object?.auditObjectBin && object.auditObjectBin !== c.bin) {
+      return [{ ...c, issues, bin: object.auditObjectBin, org: object.auditObjectName ?? "", orgTranslations: undefined, address: "" }];
+    }
+    return [{ ...c, issues }];
+  });
+  return auditReportsFromSources(sources);
+}
+
+function auditReportsFromSources(cases: readonly ObjectionCase[]): SubjectAuditReport[] {
   const seen = new Set<string>();
   return cases.flatMap((c) => {
     if (
       c.type !== "audit" ||
       c.subjectAppeal ||
-      subjectRoleForIdentifier(c.bin) !== role ||
+      c.document.sourceReportId ||
       !c.document.number.trim()
     )
       return [];
@@ -137,6 +160,7 @@ function compatibleReportPoints(prior: SubjectAuditReport, current: SubjectAudit
     if (!actual) return false;
     const normalized = { ...point };
     if (point.id.startsWith("vga-test-question-") && actual.number === `11.${point.number}` && actual.auditProgramResult?.number === point.number) normalized.number = actual.number;
+    if (!point.titleKk && actual.titleKk) normalized.titleKk = actual.titleKk;
     return JSON.stringify(normalized) === JSON.stringify(actual);
   });
 }

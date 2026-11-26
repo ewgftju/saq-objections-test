@@ -1,4 +1,30 @@
-import type { AuditProgramResult, AuditReportPoint, DocumentLanguage, ViolationPoint } from "../../../types";
+import type { AuditProgramResult, AuditReportPoint, DocumentLanguage, SubjectAuditReport, ViolationPoint } from "../../../types";
+
+type ReportPoint = SubjectAuditReport["points"][number];
+
+export function reportPointTitle(point: ReportPoint, language: DocumentLanguage): string {
+  const localized = language === "kk" ? point.titleKk : point.titleRu;
+  return localized || auditReportPointText(point.auditReportPoint, "name", language)
+    || auditProgramResultText(point.auditProgramResult, "name", language)
+    || (!point.auditReportPoint && !point.auditProgramResult && language === "ru" ? point.title : "");
+}
+
+/** Сохраняет исходный пункт для ответа органа независимо от описания исполнителя. */
+export function workAuditPointSource(point: ReportPoint) {
+  const source = point.auditReportPoint || point.auditProgramResult;
+  const language = source?.language ?? (point.titleKk === point.title && !point.titleRu ? "kk" : "ru");
+  const otherLanguage = language === "ru" ? "kk" : "ru";
+  const otherTitle = reportPointTitle(point, otherLanguage);
+  const translations = structuredClone(source?.translations ?? {});
+  if (otherTitle) translations[otherLanguage] = { ...translations[otherLanguage], name: otherTitle };
+  if (point.auditProgramResult) {
+    return { auditProgramResult: { ...structuredClone(point.auditProgramResult), translations } };
+  }
+  const section = point.auditReportPoint ?? {
+    number: point.number, name: point.title, text: point.finding, language,
+  };
+  return { auditReportPoint: { ...structuredClone(section), translations } };
+}
 
 export function sourceViolationText(
   point: Pick<ViolationPoint, "auditProgramResult" | "auditReportPoint" | "prescriptionText">,
