@@ -159,6 +159,10 @@ export default function NewCaseModal({
   const isNoticeComplaint = appealType === "notice-complaint";
   const isNotice = appealType === "notice-objection" || isNoticeComplaint;
   const isAudit = appealType === "audit-objection";
+  const reportObjectName = isAudit && auditReport
+    ? auditReport.orgTranslations?.[language] || (language === "ru" ? auditReport.org : "")
+    : "";
+  const applicantNameValue = isApplicantAuditObject && reportObjectName ? reportObjectName : applicantName;
   const reportAddress = isAudit && isApplicantAuditObject && auditReport
     ? auditReport.addressTranslations?.[language] || (language === "ru" ? auditReport.address : "")
     : "";
@@ -605,7 +609,8 @@ export default function NewCaseModal({
         <div className="form-grid">
           <label className="field">
             <span>{applicantNameLabel}<span className="required"> *</span></span>
-            <input name="org" type="text" required value={applicantName} onChange={(event) => setApplicantName(event.target.value)} />
+            <input name="org" type="text" required readOnly={isApplicantAuditObject && !!reportObjectName}
+              value={applicantNameValue} onChange={(event) => setApplicantName(event.target.value)} />
           </label>
           <label className="field">
             <span>
@@ -732,7 +737,9 @@ export default function NewCaseModal({
             <>
               <label className="field">
                 <span>Наименование объекта аудита<span className="required"> *</span></span>
-                <input name="auditObjectName" type="text" required readOnly={isApplicantAuditObject} value={isApplicantAuditObject ? applicantName : auditObjectName} onChange={(event) => setAuditObjectName(event.target.value)} />
+                <input name="auditObjectName" type="text" required readOnly={isApplicantAuditObject || !!reportObjectName}
+                  value={reportObjectName || (isApplicantAuditObject ? applicantName : auditObjectName)}
+                  onChange={(event) => setAuditObjectName(event.target.value)} />
               </label>
               <label className="field">
                 <span>БИН/ИИН<span className="required"> *</span></span>
