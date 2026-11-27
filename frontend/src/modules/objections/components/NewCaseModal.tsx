@@ -163,6 +163,11 @@ export default function NewCaseModal({
     ? auditReport.orgTranslations?.[language] || (language === "ru" ? auditReport.org : "")
     : "";
   const applicantNameValue = isApplicantAuditObject && reportObjectName ? reportObjectName : applicantName;
+  const reportObjectIdentifier = isAudit ? auditReport?.bin || "" : "";
+  const applicantIdentifierValue = isApplicantAuditObject && reportObjectIdentifier
+    ? reportObjectIdentifier : applicantIdentifier;
+  const applicantIdentifierTypeValue = isApplicantAuditObject && isAudit && auditReport
+    ? auditReport.identifierType : applicantIdentifierType;
   const reportAddress = isAudit && isApplicantAuditObject && auditReport
     ? auditReport.addressTranslations?.[language] || (language === "ru" ? auditReport.address : "")
     : "";
@@ -206,7 +211,7 @@ export default function NewCaseModal({
     ? "Дата первичного обращения в ДВГА/КВГА"
     : `Дата: ${sourceDocumentLabel}`;
   const applicantNameLabel = applicantNameFieldLabel(appealLanguage || "ru");
-  const applicantIdentifierLabel = `${applicantIdentifierType} заявителя`;
+  const applicantIdentifierLabel = `${applicantIdentifierTypeValue} заявителя`;
   const updateRequirementFiles = (files: File[]) => {
     if (!files.length) return;
     setRequirementFiles((current) => {
@@ -381,7 +386,7 @@ export default function NewCaseModal({
               org: get("org", applicantNameLabel),
               orgTranslations: { [get("appealLanguage", "Язык обращения")]: get("org", applicantNameLabel) },
               bin,
-              applicantIdentifierType,
+              applicantIdentifierType: applicantIdentifierTypeValue,
               address: get("address", "Местонахождение"),
               applicant: String(data.get("applicant") || "").trim(),
               registered: state.date,
@@ -619,7 +624,8 @@ export default function NewCaseModal({
             </span>
             <select
               name="applicantIdentifierType"
-              value={applicantIdentifierType}
+              value={applicantIdentifierTypeValue}
+              disabled={isApplicantAuditObject && !!reportObjectIdentifier}
               onChange={(event) =>
                 setApplicantIdentifierType(
                   event.target.value as ApplicantIdentifierType,
@@ -632,7 +638,8 @@ export default function NewCaseModal({
           </label>
           <label className="field">
             <span>{applicantIdentifierLabel}<span className="required"> *</span></span>
-            <input name="bin" type="text" required value={applicantIdentifier} onChange={(event) => setApplicantIdentifier(event.target.value)} />
+            <input name="bin" type="text" required readOnly={isApplicantAuditObject && !!reportObjectIdentifier}
+              value={applicantIdentifierValue} onChange={(event) => setApplicantIdentifier(event.target.value)} />
           </label>
         </div>
         {supportsRepresentativeConfirmation && (
@@ -743,7 +750,9 @@ export default function NewCaseModal({
               </label>
               <label className="field">
                 <span>БИН/ИИН<span className="required"> *</span></span>
-                <input name="auditObjectBin" type="text" required readOnly={isApplicantAuditObject} value={isApplicantAuditObject ? applicantIdentifier : auditObjectIdentifier} onChange={(event) => setAuditObjectIdentifier(event.target.value)} />
+                <input name="auditObjectBin" type="text" required readOnly={isApplicantAuditObject || !!reportObjectIdentifier}
+                  value={reportObjectIdentifier || (isApplicantAuditObject ? applicantIdentifier : auditObjectIdentifier)}
+                  onChange={(event) => setAuditObjectIdentifier(event.target.value)} />
               </label>
             </>
           )}
